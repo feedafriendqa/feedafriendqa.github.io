@@ -1,625 +1,514 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
   <title>Feed a Friend — Volunteer Portal</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>" />
-  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-
-  <!-- Load libraries BEFORE the app script -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-
+  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
-    body { background: #F0FDF4; font-family: Poppins, sans-serif; -webkit-font-smoothing: antialiased; }
-    #root { min-height: 100vh; }
-    input, select, textarea, button { font-family: inherit; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0A3D1F;font-family:Poppins,sans-serif;-webkit-font-smoothing:antialiased}
+    input,select,textarea,button{font-family:inherit}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    .fade{animation:fadein .25s ease}
+    .card{transition:transform .15s,box-shadow .15s}
+    .card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.1)}
   </style>
 </head>
 <body>
-  <div id="root">
-    <!-- Loading indicator shown before React kicks in -->
-    <div style="min-height:100vh;background:#0A3D1F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
-      <div style="width:40px;height:40px;border:4px solid #22C55E;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-      <p style="color:#BBF7D0;font-family:Poppins,sans-serif;font-size:14px;letter-spacing:2px;text-transform:uppercase;">Loading...</p>
-    </div>
+<div id="app">
+  <div style="min-height:100vh;background:#0A3D1F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px">
+    <div style="width:44px;height:44px;border:4px solid #22C55E;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></div>
+    <p style="color:#BBF7D0;font-family:Poppins,sans-serif;font-size:13px;letter-spacing:2px">LOADING...</p>
   </div>
-
-  <script type="text/babel" data-type="module">
-    const { useState, useEffect, useRef } = React;
-    const { createClient } = supabase;
-
-const SUPABASE_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-const LOGO = "data:image/png;base64,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";
-
-const PROJECTS = [
-  { id: "food-boxes",        label: "Food Boxes",        emoji: "📦", bg: "#F5A623", light: "#FEF3C7", text: "#7C4D00" },
-  { id: "welcome-baby",      label: "Welcome Baby",      emoji: "👶", bg: "#9B59B6", light: "#F3E8FF", text: "#5B21B6" },
-  { id: "community-fridges", label: "Community Fridges", emoji: "🧊", bg: "#E8732A", light: "#FFEDD5", text: "#9A3412" },
-  { id: "little-learners",   label: "Little Learners",   emoji: "📚", bg: "#1A9E8F", light: "#CCFBF1", text: "#134E4A" },
-  { id: "pay-it-forward",    label: "Pay it Forward",    emoji: "🎁", bg: "#E74C3C", light: "#FEE2E2", text: "#991B1B" },
-  { id: "giving-garden",     label: "Giving Garden",     emoji: "🌱", bg: "#8E44AD", light: "#EDE9FE", text: "#4C1D95" },
+</div>
+<script type="module">
+import{h,render}from"https://esm.sh/preact@10.19.2";
+import{useState,useEffect}from"https://esm.sh/preact@10.19.2/hooks";
+import htm from"https://esm.sh/htm@3.1.1";
+import{createClient}from"https://esm.sh/@supabase/supabase-js@2";
+const html=htm.bind(h);
+const sb=createClient("https://xbxagukdvgyaoqvbqoic.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4");
+const LOGO="data:image/png;base64,data:image/png;base64,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";
+const PROJECTS=[
+  {id:"food-boxes",label:"Food Boxes",emoji:"📦",bg:"#F5A623",light:"#FEF3C7",text:"#7C4D00"},
+  {id:"welcome-baby",label:"Welcome Baby",emoji:"👶",bg:"#9B59B6",light:"#F3E8FF",text:"#5B21B6"},
+  {id:"community-fridges",label:"Community Fridges",emoji:"🧊",bg:"#E8732A",light:"#FFEDD5",text:"#9A3412"},
+  {id:"little-learners",label:"Little Learners",emoji:"📚",bg:"#1A9E8F",light:"#CCFBF1",text:"#134E4A"},
+  {id:"pay-it-forward",label:"Pay it Forward",emoji:"🎁",bg:"#E74C3C",light:"#FEE2E2",text:"#991B1B"},
+  {id:"giving-garden",label:"Giving Garden",emoji:"🌱",bg:"#8E44AD",light:"#EDE9FE",text:"#4C1D95"},
 ];
+const DK="#0A3D1F",GN="#15803D",MD="#22C55E",PL="#F0FDF4",BR="#BBF7D0",MT="#4B7C5A";
+const HF="'League Spartan',sans-serif",BF="'Poppins',sans-serif";
+const inp={width:"100%",padding:"12px 14px",border:"1.5px solid #BBF7D0",borderRadius:10,fontSize:15,outline:"none",boxSizing:"border-box",background:"#fff",color:DK};
+const gp=id=>PROJECTS.find(p=>p.id===id)||PROJECTS[0];
 
-const H = "\'League Spartan\', sans-serif";
-const B = "\'Poppins\', sans-serif";
-const DARK = "#0A3D1F"; const GREEN = "#15803D"; const MID = "#22C55E";
-const PALE = "#F0FDF4"; const BORDER = "#BBF7D0"; const MUTED = "#4B7C5A";
-const GP = id => PROJECTS.find(p => p.id === id) || PROJECTS[0];
-const inp = { width: "100%", padding: "12px 14px", border: "1.5px solid #BBF7D0", borderRadius: 10, fontSize: 15, fontFamily: B, outline: "none", boxSizing: "border-box", background: "#fff", color: DARK };
+const Spin=()=>html`<div style=${{minHeight:"100vh",background:DK,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:20}}>
+  <img src=${LOGO} style=${{height:70}}/>
+  <div style=${{width:40,height:40,border:"4px solid "+MD,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite"}}/>
+</div>`;
 
-function Tag({ projectId, small }) {
-  const p = GP(projectId);
-  return <span style={{ background: p.light, color: p.text, border: `1px solid ${p.bg}50`, padding: small?"2px 8px":"3px 10px", borderRadius:20, fontSize:small?10:11, fontWeight:700, fontFamily:B, display:"inline-flex", alignItems:"center", gap:4, whiteSpace:"nowrap" }}>{p.emoji} {p.label}</span>;
-}
-function Field({ label, children }) {
-  return <div><label style={{ display:"block", fontFamily:B, fontWeight:700, fontSize:13, color:DARK, marginBottom:6 }}>{label}</label>{children}</div>;
-}
-function Toast({ msg }) {
-  if (!msg) return null;
-  return <div style={{ position:"fixed", top:68, left:12, right:12, background:DARK, color:"#fff", padding:"12px 16px", borderRadius:12, zIndex:999, fontSize:14, fontWeight:600, textAlign:"center", fontFamily:B, border:`1px solid ${MID}`, boxShadow:"0 4px 20px rgba(0,0,0,0.3)" }}>{msg}</div>;
-}
-function Avatar({ profile, size=40 }) {
-  if (profile?.photo_url) return <img src={profile.photo_url} alt="Profile" style={{ width:size, height:size, borderRadius:"50%", objectFit:"cover", flexShrink:0, border:`2px solid ${MID}` }} />;
-  const initials = `${profile?.first_name?.[0]||""}${profile?.surname?.[0]||""}`;
-  return <div style={{ width:size, height:size, borderRadius:"50%", background:MID, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:H, fontWeight:900, fontSize:size*0.35, color:DARK, flexShrink:0 }}>{initials}</div>;
-}
-function Spinner() {
-  return <div style={{ minHeight:"100vh", background:DARK, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}>
-    <img src={LOGO} alt="Feed a Friend" style={{ height:70 }} />
-    <div style={{ width:32, height:32, border:`3px solid ${MID}`, borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
-    <style>{"@keyframes spin{to{transform:rotate(360deg)}}"}</style>
-  </div>;
-}
+const Toast=({msg})=>!msg?null:html`<div style=${{position:"fixed",top:68,left:12,right:12,background:DK,color:"#fff",padding:"12px 16px",borderRadius:12,zIndex:999,fontSize:14,fontWeight:600,textAlign:"center",border:"1px solid "+MD,boxShadow:"0 4px 20px rgba(0,0,0,.3)"}}>${msg}</div>`;
 
-// ── AUTH ──────────────────────────────────────────────────────
-function AuthScreen({ onAuth }) {
-  const [mode, setMode] = useState("login");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
-  const [msg, setMsg] = useState("");
-  const [showPw, setShowPw] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [reg, setReg] = useState({ firstName:"", surname:"", dob:"", email:"", password:"", confirm:"", isStudent:false, isWorking:false, profession:"", projects:[], photo:null });
+const Tag=({pid,sm})=>{const p=gp(pid);return html`<span style=${{background:p.light,color:p.text,padding:sm?"2px 8px":"3px 10px",borderRadius:20,fontSize:sm?10:11,fontWeight:700,display:"inline-flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>${p.emoji} ${p.label}</span>`;};
 
-  async function doLogin() {
-    setErr(""); setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { setErr(error.message); setLoading(false); return; }
-    const { data: profile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single();
-    if (profile && !profile.approved && profile.role !== "admin") {
-      await supabase.auth.signOut();
-      setErr("Your registration is pending admin approval. We\'ll be in touch soon!");
-      setLoading(false); return;
-    }
-    onAuth(profile);
-    setLoading(false);
+const Avtr=({u,sz=40})=>{
+  if(u?.photo_url)return html`<img src=${u.photo_url} style=${{width:sz,height:sz,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:"2px solid "+MD}}/>`;
+  const i=(u?.first_name?.[0]||"")+(u?.surname?.[0]||"");
+  return html`<div style=${{width:sz,height:sz,borderRadius:"50%",background:MD,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:HF,fontWeight:900,fontSize:sz*.35,color:DK,flexShrink:0}}>${i}</div>`;
+};
+
+const Fld=({lbl,children})=>html`<div><label style=${{display:"block",fontWeight:700,fontSize:13,color:DK,marginBottom:6}}>${lbl}</label>${children}</div>`;
+
+function Auth({onAuth}){
+  const[mode,setMode]=useState("login");
+  const[loading,setLoading]=useState(false);
+  const[err,setErr]=useState(""), [msg,setMsg]=useState("");
+  const[showPw,setShowPw]=useState(false);
+  const[em,setEm]=useState(""), [pw,setPw]=useState("");
+  const[r,setR]=useState({fn:"",sn:"",dob:"",email:"",pw:"",pw2:"",student:false,working:false,prof:"",projs:[],photo:null});
+  const ur=k=>e=>setR(x=>({...x,[k]:e.target.value}));
+  const urb=k=>e=>setR(x=>({...x,[k]:e.target.checked}));
+  const tp=id=>setR(x=>({...x,projs:x.projs.includes(id)?x.projs.filter(p=>p!==id):[...x.projs,id]}));
+
+  async function login(){
+    setErr("");setLoading(true);
+    const{data,error}=await sb.auth.signInWithPassword({email:em,password:pw});
+    if(error){setErr(error.message);setLoading(false);return;}
+    const{data:p}=await sb.from("profiles").select("*").eq("id",data.user.id).single();
+    if(p&&!p.approved&&p.role!=="admin"){await sb.auth.signOut();setErr("Your registration is pending admin approval.");setLoading(false);return;}
+    onAuth(p);setLoading(false);
   }
-
-  async function doRegister() {
+  async function register(){
     setErr("");
-    if (!reg.firstName||!reg.surname||!reg.dob||!reg.email||!reg.password) { setErr("Please fill in all required fields."); return; }
-    if (reg.password !== reg.confirm) { setErr("Passwords do not match."); return; }
-    if (reg.password.length < 6) { setErr("Password must be at least 6 characters."); return; }
+    if(!r.fn||!r.sn||!r.dob||!r.email||!r.pw){setErr("Please fill in all required fields.");return;}
+    if(r.pw!==r.pw2){setErr("Passwords do not match.");return;}
+    if(r.pw.length<6){setErr("Password must be at least 6 characters.");return;}
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({ email: reg.email, password: reg.password });
-    if (error) { setErr(error.message); setLoading(false); return; }
-    let photo_url = null;
-    if (reg.photo && data.user) {
-      const res = await fetch(reg.photo);
-      const blob = await res.blob();
-      const ext = blob.type.split("/")[1] || "jpg";
-      const { data: up } = await supabase.storage.from("avatars").upload(`${data.user.id}/avatar.${ext}`, blob, { upsert: true });
-      if (up) { const { data: url } = supabase.storage.from("avatars").getPublicUrl(up.path); photo_url = url.publicUrl; }
+    const{data,error}=await sb.auth.signUp({email:r.email,password:r.pw});
+    if(error){setErr(error.message);setLoading(false);return;}
+    let photo_url=null;
+    if(r.photo&&data.user){
+      const res=await fetch(r.photo);const blob=await res.blob();
+      const ext=blob.type.split("/")[1]||"jpg";
+      const{data:up}=await sb.storage.from("avatars").upload(data.user.id+"/avatar."+ext,blob,{upsert:true});
+      if(up){const{data:u}=sb.storage.from("avatars").getPublicUrl(up.path);photo_url=u.publicUrl;}
     }
-    await supabase.from("profiles").insert({
-      id: data.user.id, first_name: reg.firstName, surname: reg.surname,
-      email: reg.email, dob: reg.dob, is_student: reg.isStudent,
-      is_working: reg.isWorking, profession: reg.profession,
-      projects: reg.projects, photo_url, role: "volunteer", approved: false
-    });
-    setMsg("Registration submitted! An admin will review and approve your account.");
-    setMode("login"); setLoading(false);
+    await sb.from("profiles").insert({id:data.user.id,first_name:r.fn,surname:r.sn,email:r.email,dob:r.dob,is_student:r.student,is_working:r.working,profession:r.prof,projects:r.projs,photo_url,role:"volunteer",approved:false});
+    setMsg("Registration submitted! An admin will approve your account shortly.");
+    setMode("login");setLoading(false);
+  }
+  async function forgot(){
+    if(!em){setErr("Please enter your email.");return;}
+    await sb.auth.resetPasswordForEmail(em,{redirectTo:window.location.href});
+    setMsg("Reset email sent! Check your inbox.");setMode("login");
   }
 
-  async function doForgot() {
-    if (!email) { setErr("Please enter your email."); return; }
-    await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
-    setMsg("Password reset email sent! Check your inbox.");
-    setMode("login");
-  }
+  const bg={minHeight:"100vh",background:DK,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 16px"};
+  const card={background:"#fff",borderRadius:20,padding:"28px 22px",width:"100%",maxWidth:420};
 
-  const toggleProject = id => setReg(r => ({ ...r, projects: r.projects.includes(id) ? r.projects.filter(p=>p!==id) : [...r.projects,id] }));
-  const bg = { minHeight:"100vh", background:DARK, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"24px 16px", fontFamily:B };
-  const card = { background:"#fff", borderRadius:20, padding:"28px 22px", width:"100%", maxWidth:420 };
+  return html`<div class="fade" style=${bg}>
+    <img src=${LOGO} style=${{height:70,marginBottom:6}}/>
+    <p style=${{fontSize:11,color:MD,letterSpacing:2,textTransform:"uppercase",marginBottom:20}}>Volunteer Portal</p>
+    ${msg&&html`<div style=${{background:"#DCFCE7",color:DK,borderRadius:12,padding:"12px 16px",marginBottom:16,fontSize:13,width:"100%",maxWidth:420,textAlign:"center",fontWeight:600}}>${msg}</div>`}
 
-  return (
-    <>
-      <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      <style>{"*{box-sizing:border-box;margin:0;padding:0}"}</style>
-      <div style={bg}>
-        <img src={LOGO} alt="Feed a Friend" style={{ height:70, marginBottom:6 }} />
-        <p style={{ fontFamily:B, fontSize:11, color:MID, letterSpacing:2, textTransform:"uppercase", marginBottom:20 }}>Volunteer Portal</p>
-        {msg && <div style={{ background:"#DCFCE7", color:DARK, borderRadius:12, padding:"12px 16px", marginBottom:16, fontSize:13, fontFamily:B, width:"100%", maxWidth:420, textAlign:"center", fontWeight:600 }}>{msg}</div>}
-
-        {mode==="login" && <div style={card}>
-          <h2 style={{ fontFamily:H, fontSize:22, fontWeight:900, textTransform:"uppercase", color:DARK, marginBottom:4 }}>Sign In</h2>
-          <p style={{ fontFamily:B, color:MUTED, fontSize:13, marginBottom:20 }}>Welcome back!</p>
-          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-            <Field label="Email"><input type="email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)} style={inp} /></Field>
-            <Field label="Password">
-              <div style={{ position:"relative" }}>
-                <input type={showPw?"text":"password"} placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} style={{ ...inp, paddingRight:50 }} />
-                <button onClick={()=>setShowPw(s=>!s)} style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:12, color:MUTED, fontFamily:B }}>{showPw?"Hide":"Show"}</button>
-              </div>
-            </Field>
-            {err && <p style={{ color:"#DC2626", fontSize:13, fontFamily:B, fontWeight:600 }}>{err}</p>}
-            <button onClick={doLogin} disabled={loading} style={{ background:MID, color:DARK, border:"none", borderRadius:12, padding:"14px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:B, opacity:loading?0.7:1 }}>{loading?"Signing in…":"Sign In →"}</button>
-            <button onClick={()=>{setMode("forgot");setErr("");}} style={{ background:"none", border:"none", color:MUTED, fontSize:13, cursor:"pointer", fontFamily:B, textDecoration:"underline" }}>Forgot password?</button>
+    ${mode==="login"&&html`<div style=${card}>
+      <h2 style=${{fontFamily:HF,fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Sign In</h2>
+      <p style=${{color:MT,fontSize:13,marginBottom:20}}>Welcome back!</p>
+      <div style=${{display:"flex",flexDirection:"column",gap:14}}>
+        <${Fld} lbl="Email"><input type="email" placeholder="you@email.com" value=${em} onInput=${e=>setEm(e.target.value)} style=${inp}/></${Fld}>
+        <${Fld} lbl="Password">
+          <div style=${{position:"relative"}}>
+            <input type=${showPw?"text":"password"} placeholder="••••••••" value=${pw} onInput=${e=>setPw(e.target.value)} style=${{...inp,paddingRight:50}}/>
+            <button onClick=${()=>setShowPw(s=>!s)} style=${{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:12,color:MT}}>${showPw?"Hide":"Show"}</button>
           </div>
-          <div style={{ borderTop:`1px solid ${BORDER}`, marginTop:20, paddingTop:16, textAlign:"center" }}>
-            <p style={{ fontFamily:B, fontSize:13, color:MUTED }}>New volunteer? <span onClick={()=>{setMode("register");setErr("");}} style={{ color:GREEN, fontWeight:700, cursor:"pointer" }}>Register here</span></p>
-          </div>
-        </div>}
-
-        {mode==="forgot" && <div style={card}>
-          <h2 style={{ fontFamily:H, fontSize:22, fontWeight:900, textTransform:"uppercase", color:DARK, marginBottom:4 }}>Reset Password</h2>
-          <p style={{ fontFamily:B, color:MUTED, fontSize:13, marginBottom:20 }}>Enter your email and we\'ll send a reset link.</p>
-          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-            <Field label="Email"><input type="email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)} style={inp} /></Field>
-            {err && <p style={{ color:"#DC2626", fontSize:13, fontFamily:B, fontWeight:600 }}>{err}</p>}
-            <button onClick={doForgot} style={{ background:MID, color:DARK, border:"none", borderRadius:12, padding:"14px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:B }}>Send Reset Link</button>
-            <button onClick={()=>setMode("login")} style={{ background:"none", border:"none", color:MUTED, fontSize:13, cursor:"pointer", fontFamily:B, textDecoration:"underline" }}>← Back to Sign In</button>
-          </div>
-        </div>}
-
-        {mode==="register" && <div style={{ ...card, maxHeight:"85vh", overflowY:"auto" }}>
-          <h2 style={{ fontFamily:H, fontSize:22, fontWeight:900, textTransform:"uppercase", color:DARK, marginBottom:4 }}>Register</h2>
-          <p style={{ fontFamily:B, color:MUTED, fontSize:13, marginBottom:20 }}>Join our volunteer community.</p>
-          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-            <Field label="Profile Photo">
-              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
-                {reg.photo ? <img src={reg.photo} alt="Profile" style={{ width:80, height:80, borderRadius:"50%", objectFit:"cover", border:`3px solid ${MID}` }} />
-                  : <div style={{ width:80, height:80, borderRadius:"50%", background:PALE, border:`2px dashed ${BORDER}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28 }}>👤</div>}
-                <label style={{ background:DARK, color:"#fff", borderRadius:10, padding:"8px 16px", fontSize:13, fontWeight:700, fontFamily:B, cursor:"pointer" }}>
-                  {reg.photo?"Change Photo":"Upload Photo"}
-                  <input type="file" accept="image/*" style={{ display:"none" }} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>setReg(r=>({...r,photo:ev.target.result}));r.readAsDataURL(f);}} />
-                </label>
-                {reg.photo && <button onClick={()=>setReg(r=>({...r,photo:null}))} style={{ background:"none", border:"none", color:MUTED, fontSize:12, cursor:"pointer", fontFamily:B, textDecoration:"underline" }}>Remove</button>}
-              </div>
-            </Field>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-              <Field label="First Name *"><input type="text" placeholder="Sara" value={reg.firstName} onChange={e=>setReg(r=>({...r,firstName:e.target.value}))} style={inp} /></Field>
-              <Field label="Surname *"><input type="text" placeholder="Ahmed" value={reg.surname} onChange={e=>setReg(r=>({...r,surname:e.target.value}))} style={inp} /></Field>
-            </div>
-            <Field label="Date of Birth *"><input type="date" value={reg.dob} onChange={e=>setReg(r=>({...r,dob:e.target.value}))} style={inp} /></Field>
-            <Field label="Email *"><input type="email" placeholder="you@email.com" value={reg.email} onChange={e=>setReg(r=>({...r,email:e.target.value}))} style={inp} /></Field>
-            <Field label="Password *"><input type="password" placeholder="Min. 6 characters" value={reg.password} onChange={e=>setReg(r=>({...r,password:e.target.value}))} style={inp} /></Field>
-            <Field label="Confirm Password *"><input type="password" placeholder="Repeat password" value={reg.confirm} onChange={e=>setReg(r=>({...r,confirm:e.target.value}))} style={inp} /></Field>
-            <div style={{ background:PALE, borderRadius:12, padding:"14px 16px", display:"flex", flexDirection:"column", gap:12 }}>
-              <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", fontFamily:B, fontSize:14, fontWeight:600, color:DARK }}>
-                <input type="checkbox" checked={reg.isStudent} onChange={e=>setReg(r=>({...r,isStudent:e.target.checked}))} style={{ width:18, height:18, accentColor:GREEN }} />
-                Are you a student?
-              </label>
-              <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", fontFamily:B, fontSize:14, fontWeight:600, color:DARK }}>
-                <input type="checkbox" checked={reg.isWorking} onChange={e=>setReg(r=>({...r,isWorking:e.target.checked}))} style={{ width:18, height:18, accentColor:GREEN }} />
-                Are you currently working?
-              </label>
-              {reg.isWorking && <Field label="Profession"><input type="text" placeholder="e.g. Teacher, Nurse…" value={reg.profession} onChange={e=>setReg(r=>({...r,profession:e.target.value}))} style={inp} /></Field>}
-            </div>
-            <Field label="Projects you\'re interested in">
-              <div style={{ display:"flex", flexDirection:"column", gap:8, marginTop:4 }}>
-                {PROJECTS.map(p=>(
-                  <label key={p.id} style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", padding:"10px 12px", borderRadius:10, background:reg.projects.includes(p.id)?p.light:"#fff", border:`1.5px solid ${reg.projects.includes(p.id)?p.bg:BORDER}`, transition:"all 0.15s" }}>
-                    <input type="checkbox" checked={reg.projects.includes(p.id)} onChange={()=>toggleProject(p.id)} style={{ width:18, height:18, accentColor:p.bg }} />
-                    <span style={{ fontSize:18 }}>{p.emoji}</span>
-                    <span style={{ fontFamily:B, fontSize:14, fontWeight:600, color:reg.projects.includes(p.id)?p.text:DARK }}>{p.label}</span>
-                  </label>
-                ))}
-              </div>
-            </Field>
-            {err && <p style={{ color:"#DC2626", fontSize:13, fontFamily:B, fontWeight:600 }}>{err}</p>}
-            <button onClick={doRegister} disabled={loading} style={{ background:DARK, color:"#fff", border:"none", borderRadius:12, padding:"14px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:B, opacity:loading?0.7:1 }}>{loading?"Submitting…":"Submit Registration"}</button>
-            <button onClick={()=>{setMode("login");setErr("");}} style={{ background:"none", border:"none", color:MUTED, fontSize:13, cursor:"pointer", fontFamily:B, textDecoration:"underline" }}>← Back to Sign In</button>
-          </div>
-        </div>}
-        <p style={{ fontFamily:B, fontSize:11, color:"rgba(255,255,255,0.3)", marginTop:20 }}>feedafriend.org · Volunteer Portal</p>
+        </${Fld}>
+        ${err&&html`<p style=${{color:"#DC2626",fontSize:13,fontWeight:600}}>${err}</p>`}
+        <button onClick=${login} disabled=${loading} style=${{background:MD,color:DK,border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",opacity:loading?.7:1}}>${loading?"Signing in...":"Sign In →"}</button>
+        <button onClick=${()=>{setMode("forgot");setErr("");}} style=${{background:"none",border:"none",color:MT,fontSize:13,cursor:"pointer",textDecoration:"underline"}}>Forgot password?</button>
       </div>
-    </>
-  );
+      <div style=${{borderTop:"1px solid "+BR,marginTop:20,paddingTop:16,textAlign:"center"}}>
+        <p style=${{fontSize:13,color:MT}}>New volunteer? <span onClick=${()=>{setMode("register");setErr("");}} style=${{color:GN,fontWeight:700,cursor:"pointer"}}>Register here</span></p>
+      </div>
+    </div>`}
+
+    ${mode==="forgot"&&html`<div style=${card}>
+      <h2 style=${{fontFamily:HF,fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Reset Password</h2>
+      <p style=${{color:MT,fontSize:13,marginBottom:20}}>Enter your email for a reset link.</p>
+      <div style=${{display:"flex",flexDirection:"column",gap:14}}>
+        <${Fld} lbl="Email"><input type="email" placeholder="you@email.com" value=${em} onInput=${e=>setEm(e.target.value)} style=${inp}/></${Fld}>
+        ${err&&html`<p style=${{color:"#DC2626",fontSize:13,fontWeight:600}}>${err}</p>`}
+        <button onClick=${forgot} style=${{background:MD,color:DK,border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Send Reset Link</button>
+        <button onClick=${()=>setMode("login")} style=${{background:"none",border:"none",color:MT,fontSize:13,cursor:"pointer",textDecoration:"underline"}}>← Back to Sign In</button>
+      </div>
+    </div>`}
+
+    ${mode==="register"&&html`<div style=${{...card,maxHeight:"85vh",overflowY:"auto"}}>
+      <h2 style=${{fontFamily:HF,fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Register</h2>
+      <p style=${{color:MT,fontSize:13,marginBottom:20}}>Join our volunteer community.</p>
+      <div style=${{display:"flex",flexDirection:"column",gap:14}}>
+        <${Fld} lbl="Profile Photo">
+          <div style=${{display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
+            ${r.photo?html`<img src=${r.photo} style=${{width:80,height:80,borderRadius:"50%",objectFit:"cover",border:"3px solid "+MD}}/>`:html`<div style=${{width:80,height:80,borderRadius:"50%",background:PL,border:"2px dashed "+BR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>👤</div>`}
+            <label style=${{background:DK,color:"#fff",borderRadius:10,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+              ${r.photo?"Change Photo":"Upload Photo"}
+              <input type="file" accept="image/*" style=${{display:"none"}} onChange=${e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=ev=>setR(x=>({...x,photo:ev.target.result}));rd.readAsDataURL(f);}}/>
+            </label>
+            ${r.photo&&html`<button onClick=${()=>setR(x=>({...x,photo:null}))} style=${{background:"none",border:"none",color:MT,fontSize:12,cursor:"pointer",textDecoration:"underline"}}>Remove</button>`}
+          </div>
+        </${Fld}>
+        <div style=${{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <${Fld} lbl="First Name *"><input type="text" placeholder="Sara" value=${r.fn} onInput=${ur("fn")} style=${inp}/></${Fld}>
+          <${Fld} lbl="Surname *"><input type="text" placeholder="Ahmed" value=${r.sn} onInput=${ur("sn")} style=${inp}/></${Fld}>
+        </div>
+        <${Fld} lbl="Date of Birth *"><input type="date" value=${r.dob} onInput=${ur("dob")} style=${inp}/></${Fld}>
+        <${Fld} lbl="Email *"><input type="email" placeholder="you@email.com" value=${r.email} onInput=${ur("email")} style=${inp}/></${Fld}>
+        <${Fld} lbl="Password *"><input type="password" placeholder="Min. 6 characters" value=${r.pw} onInput=${ur("pw")} style=${inp}/></${Fld}>
+        <${Fld} lbl="Confirm Password *"><input type="password" placeholder="Repeat password" value=${r.pw2} onInput=${ur("pw2")} style=${inp}/></${Fld}>
+        <div style=${{background:PL,borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:12}}>
+          <label style=${{display:"flex",alignItems:"center",gap:10,cursor:"pointer",fontSize:14,fontWeight:600,color:DK}}>
+            <input type="checkbox" checked=${r.student} onChange=${urb("student")} style=${{width:18,height:18,accentColor:GN}}/>Are you a student?</label>
+          <label style=${{display:"flex",alignItems:"center",gap:10,cursor:"pointer",fontSize:14,fontWeight:600,color:DK}}>
+            <input type="checkbox" checked=${r.working} onChange=${urb("working")} style=${{width:18,height:18,accentColor:GN}}/>Are you currently working?</label>
+          ${r.working&&html`<${Fld} lbl="Profession"><input type="text" placeholder="e.g. Teacher, Nurse..." value=${r.prof} onInput=${ur("prof")} style=${inp}/></${Fld}>`}
+        </div>
+        <${Fld} lbl="Projects you're interested in">
+          <div style=${{display:"flex",flexDirection:"column",gap:8,marginTop:4}}>
+            ${PROJECTS.map(p=>html`<label key=${p.id} style=${{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 12px",borderRadius:10,background:r.projs.includes(p.id)?p.light:"#fff",border:"1.5px solid "+(r.projs.includes(p.id)?p.bg:BR),transition:"all .15s"}}>
+              <input type="checkbox" checked=${r.projs.includes(p.id)} onChange=${()=>tp(p.id)} style=${{width:18,height:18,accentColor:p.bg}}/>
+              <span style=${{fontSize:18}}>${p.emoji}</span>
+              <span style=${{fontSize:14,fontWeight:600,color:r.projs.includes(p.id)?p.text:DK}}>${p.label}</span>
+            </label>`)}
+          </div>
+        </${Fld}>
+        ${err&&html`<p style=${{color:"#DC2626",fontSize:13,fontWeight:600}}>${err}</p>`}
+        <button onClick=${register} disabled=${loading} style=${{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",opacity:loading?.7:1}}>${loading?"Submitting...":"Submit Registration"}</button>
+        <button onClick=${()=>{setMode("login");setErr("");}} style=${{background:"none",border:"none",color:MT,fontSize:13,cursor:"pointer",textDecoration:"underline"}}>← Back to Sign In</button>
+      </div>
+    </div>`}
+    <p style=${{fontSize:11,color:"rgba(255,255,255,0.3)",marginTop:20}}>feedafriend.org · Volunteer Portal</p>
+  </div>`;
 }
 
-// ── ADMIN PANEL ───────────────────────────────────────────────
-function AdminPanel({ profile, onLogout }) {
-  const [tab, setTab] = useState("pending");
-  const [pending, setPending] = useState([]);
-  const [volunteers, setVolunteers] = useState([]);
-  const [opps, setOpps] = useState([]);
-  const [toast, setToast] = useState(null);
-  const [newOpp, setNewOpp] = useState({ title:"", project:"food-boxes", date:"", spots:"", hours:"", location:"", description:"" });
-  const showToast = m => { setToast(m); setTimeout(()=>setToast(null),3000); };
+function Admin({profile,onLogout}){
+  const[tab,setTab]=useState("pending");
+  const[pending,setPending]=useState([]);
+  const[vols,setVols]=useState([]);
+  const[opps,setOpps]=useState([]);
+  const[toast,setToast]=useState(null);
+  const[no,setNo]=useState({title:"",project:"food-boxes",date:"",spots:"",hours:"",location:"",description:""});
+  const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
+  const sn=k=>e=>setNo(n=>({...n,[k]:e.target.value}));
 
-  useEffect(() => { loadAll(); }, []);
-  async function loadAll() {
-    const { data: p } = await supabase.from("profiles").select("*").eq("approved", false).eq("role","volunteer");
-    const { data: v } = await supabase.from("profiles").select("*").eq("approved", true).eq("role","volunteer");
-    const { data: o } = await supabase.from("opportunities").select("*").order("date");
-    setPending(p||[]); setVolunteers(v||[]); setOpps(o||[]);
+  useEffect(()=>{load();},[]);
+  async function load(){
+    const[{data:p},{data:v},{data:o}]=await Promise.all([
+      sb.from("profiles").select("*").eq("approved",false).eq("role","volunteer"),
+      sb.from("profiles").select("*").eq("approved",true).eq("role","volunteer"),
+      sb.from("opportunities").select("*").order("date"),
+    ]);
+    setPending(p||[]);setVols(v||[]);setOpps(o||[]);
   }
-  async function approve(id) {
-    await supabase.from("profiles").update({ approved:true }).eq("id",id);
-    showToast("✓ Volunteer approved!"); loadAll();
+  const approve=async id=>{await sb.from("profiles").update({approved:true}).eq("id",id);st("✓ Approved!");load();};
+  const decline=async id=>{await sb.from("profiles").delete().eq("id",id);st("Declined.");load();};
+  async function addOpp(){
+    if(!no.title||!no.date||!no.location){st("Fill title, date and location.");return;}
+    await sb.from("opportunities").insert({...no,spots:Number(no.spots)||10,hours:Number(no.hours)||2,created_by:profile.id});
+    setNo({title:"",project:"food-boxes",date:"",spots:"",hours:"",location:"",description:""});
+    st("✓ Published!");setTab("opps");load();
   }
-  async function decline(id) {
-    await supabase.from("profiles").delete().eq("id",id);
-    await supabase.auth.admin.deleteUser(id).catch(()=>{});
-    showToast("Volunteer declined."); loadAll();
-  }
-  async function addOpp() {
-    if (!newOpp.title||!newOpp.date||!newOpp.location) { showToast("Please fill title, date and location."); return; }
-    await supabase.from("opportunities").insert({ ...newOpp, spots:Number(newOpp.spots)||10, hours:Number(newOpp.hours)||2, created_by:profile.id });
-    setNewOpp({ title:"", project:"food-boxes", date:"", spots:"", hours:"", location:"", description:"" });
-    showToast("✓ Opportunity published!"); setTab("opps"); loadAll();
-  }
-  async function deleteOpp(id) {
-    await supabase.from("opportunities").delete().eq("id",id);
-    showToast("Opportunity removed."); loadAll();
-  }
+  const delOpp=async id=>{await sb.from("opportunities").delete().eq("id",id);st("Removed.");load();};
 
-  const TABS = [
-    { id:"pending", label:`Pending (${pending.length})` },
-    { id:"volunteers", label:`Volunteers (${volunteers.length})` },
-    { id:"opps", label:`Opportunities (${opps.length})` },
-    { id:"add", label:"+ Add Opportunity" },
-  ];
+  const TABS=[{id:"pending",label:"Pending ("+pending.length+")"},{id:"vols",label:"Volunteers ("+vols.length+")"},{id:"opps",label:"Opps ("+opps.length+")"},{id:"add",label:"+ Add"}];
 
-  return (
-    <>
-      <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      <style>{"*{box-sizing:border-box;margin:0;padding:0}body{background:#F0FDF4}"}</style>
-      <div style={{ minHeight:"100vh", background:PALE, fontFamily:B }}>
-        <header style={{ background:DARK, height:60, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 16px", position:"sticky", top:0, zIndex:100 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <img src={LOGO} alt="Feed a Friend" style={{ height:40 }} />
-            <span style={{ fontFamily:H, fontWeight:900, fontSize:13, color:MID, textTransform:"uppercase", letterSpacing:1 }}>Admin</span>
-          </div>
-          <button onClick={onLogout} style={{ background:"#DC2626", color:"#fff", border:"none", borderRadius:8, padding:"6px 14px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:B }}>Sign Out</button>
-        </header>
-        <Toast msg={toast} />
-        <main style={{ maxWidth:640, margin:"0 auto", padding:"16px 14px" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
-            <Avatar profile={profile} size={48} />
+  return html`<div style=${{minHeight:"100vh",background:PL}}>
+    <header style=${{background:DK,height:60,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",position:"sticky",top:0,zIndex:100}}>
+      <div style=${{display:"flex",alignItems:"center",gap:10}}>
+        <img src=${LOGO} style=${{height:40}}/>
+        <span style=${{fontFamily:HF,fontWeight:900,fontSize:13,color:MD,textTransform:"uppercase",letterSpacing:1}}>Admin</span>
+      </div>
+      <button onClick=${onLogout} style=${{background:"#DC2626",color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sign Out</button>
+    </header>
+    <${Toast} msg=${toast}/>
+    <main style=${{maxWidth:640,margin:"0 auto",padding:"16px 14px"}}>
+      <div style=${{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+        <${Avtr} u=${profile} sz=${48}/>
+        <div>
+          <h1 style=${{fontFamily:HF,fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK}}>Admin Panel</h1>
+          <p style=${{color:MT,fontSize:12}}>Welcome, ${profile.first_name}</p>
+        </div>
+      </div>
+      <div style=${{display:"flex",gap:6,flexWrap:"wrap",marginBottom:20}}>
+        ${TABS.map(t=>html`<button key=${t.id} onClick=${()=>setTab(t.id)} style=${{background:tab===t.id?DK:"#fff",color:tab===t.id?"#fff":DK,border:"1.5px solid "+(tab===t.id?DK:BR),borderRadius:20,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>${t.label}</button>`)}
+      </div>
+
+      ${tab==="pending"&&html`<div>
+        <h2 style=${{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Pending Registrations</h2>
+        ${pending.length===0&&html`<p style=${{color:MT,fontSize:14}}>No pending registrations 🎉</p>`}
+        ${pending.map(u=>html`<div key=${u.id} style=${{background:"#fff",borderRadius:14,padding:16,border:"1px solid "+BR,marginBottom:10}}>
+          <div style=${{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+            <${Avtr} u=${u} sz=${44}/>
             <div>
-              <h1 style={{ fontFamily:H, fontSize:22, fontWeight:900, textTransform:"uppercase", color:DARK }}>Admin Panel</h1>
-              <p style={{ fontFamily:B, color:MUTED, fontSize:12 }}>Welcome, {profile.first_name}</p>
+              <div style=${{fontWeight:700,fontSize:15}}>${u.first_name} ${u.surname}</div>
+              <div style=${{fontSize:12,color:MT}}>${u.email} · DOB: ${u.dob}</div>
             </div>
           </div>
-          <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:20 }}>
-            {TABS.map(t=>(
-              <button key={t.id} onClick={()=>setTab(t.id)} style={{ background:tab===t.id?DARK:"#fff", color:tab===t.id?"#fff":DARK, border:`1.5px solid ${tab===t.id?DARK:BORDER}`, borderRadius:20, padding:"7px 14px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:B }}>{t.label}</button>
-            ))}
+          <div style=${{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+            ${u.is_student&&html`<span style=${{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>🎓 Student</span>`}
+            ${u.is_working&&html`<span style=${{background:"#FFEDD5",color:"#9A3412",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>💼 ${u.profession||"Working"}</span>`}
           </div>
+          ${u.projects?.length>0&&html`<div style=${{display:"flex",flexWrap:"wrap",gap:4,marginBottom:10}}>${u.projects.map(pid=>html`<${Tag} key=${pid} pid=${pid} sm=${true}/>`)}</div>`}
+          <div style=${{display:"flex",gap:8}}>
+            <button onClick=${()=>approve(u.id)} style=${{flex:1,background:MD,color:DK,border:"none",borderRadius:8,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ Approve</button>
+            <button onClick=${()=>decline(u.id)} style=${{flex:1,background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕ Decline</button>
+          </div>
+        </div>`)}
+      </div>`}
 
-          {tab==="pending" && <div>
-            <h2 style={{ fontFamily:H, fontSize:16, fontWeight:900, textTransform:"uppercase", color:DARK, marginBottom:12 }}>Pending Registrations</h2>
-            {pending.length===0 && <p style={{ color:MUTED, fontFamily:B, fontSize:14 }}>No pending registrations. 🎉</p>}
-            {pending.map(u=>(
-              <div key={u.id} style={{ background:"#fff", borderRadius:14, padding:"16px", border:`1px solid ${BORDER}`, marginBottom:10 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
-                  <Avatar profile={u} size={44} />
-                  <div>
-                    <div style={{ fontWeight:700, fontSize:15, fontFamily:B }}>{u.first_name} {u.surname}</div>
-                    <div style={{ fontSize:12, color:MUTED, fontFamily:B }}>{u.email}</div>
-                    <div style={{ fontSize:12, color:MUTED, fontFamily:B }}>DOB: {u.dob}</div>
-                  </div>
-                </div>
-                <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:10 }}>
-                  {u.is_student && <span style={{ background:"#EDE9FE", color:"#5B21B6", borderRadius:20, padding:"2px 8px", fontSize:11, fontWeight:700, fontFamily:B }}>🎓 Student</span>}
-                  {u.is_working && <span style={{ background:"#FFEDD5", color:"#9A3412", borderRadius:20, padding:"2px 8px", fontSize:11, fontWeight:700, fontFamily:B }}>💼 {u.profession||"Working"}</span>}
-                </div>
-                {u.projects?.length>0 && <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:10 }}>{u.projects.map(pid=><Tag key={pid} projectId={pid} small />)}</div>}
-                <div style={{ display:"flex", gap:8 }}>
-                  <button onClick={()=>approve(u.id)} style={{ flex:1, background:MID, color:DARK, border:"none", borderRadius:8, padding:"10px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:B }}>✓ Approve</button>
-                  <button onClick={()=>decline(u.id)} style={{ flex:1, background:"#FEE2E2", color:"#DC2626", border:"none", borderRadius:8, padding:"10px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:B }}>✕ Decline</button>
-                </div>
-              </div>
-            ))}
-          </div>}
+      ${tab==="vols"&&html`<div>
+        <h2 style=${{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Active Volunteers (${vols.length})</h2>
+        ${vols.map(u=>html`<div key=${u.id} style=${{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
+          <${Avtr} u=${u} sz=${40}/>
+          <div style=${{flex:1}}>
+            <div style=${{fontWeight:700,fontSize:14}}>${u.first_name} ${u.surname}</div>
+            <div style=${{fontSize:12,color:MT}}>${u.email}</div>
+          </div>
+          <span style=${{fontSize:11,background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"3px 10px",fontWeight:700}}>Active</span>
+        </div>`)}
+      </div>`}
 
-          {tab==="volunteers" && <div>
-            <h2 style={{ fontFamily:H, fontSize:16, fontWeight:900, textTransform:"uppercase", color:DARK, marginBottom:12 }}>Active Volunteers ({volunteers.length})</h2>
-            {volunteers.map(u=>(
-              <div key={u.id} style={{ background:"#fff", borderRadius:14, padding:"12px 14px", border:`1px solid ${BORDER}`, marginBottom:8, display:"flex", alignItems:"center", gap:12 }}>
-                <Avatar profile={u} size={40} />
-                <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:700, fontSize:14, fontFamily:B }}>{u.first_name} {u.surname}</div>
-                  <div style={{ fontSize:12, color:MUTED, fontFamily:B }}>{u.email}</div>
-                  <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginTop:4 }}>
-                    {u.is_student && <span style={{ background:"#EDE9FE", color:"#5B21B6", borderRadius:20, padding:"1px 6px", fontSize:10, fontWeight:700, fontFamily:B }}>🎓 Student</span>}
-                    {u.is_working && <span style={{ background:"#FFEDD5", color:"#9A3412", borderRadius:20, padding:"1px 6px", fontSize:10, fontWeight:700, fontFamily:B }}>💼 {u.profession}</span>}
-                  </div>
-                </div>
-                <span style={{ fontSize:11, background:"#DCFCE7", color:"#166534", borderRadius:20, padding:"3px 10px", fontWeight:700, fontFamily:B }}>Active</span>
-              </div>
-            ))}
-          </div>}
-
-          {tab==="opps" && <div>
-            <h2 style={{ fontFamily:H, fontSize:16, fontWeight:900, textTransform:"uppercase", color:DARK, marginBottom:12 }}>All Opportunities</h2>
-            {opps.map(o=>{ const p=GP(o.project); return (
-              <div key={o.id} style={{ background:"#fff", borderRadius:14, padding:"12px 14px", border:`1px solid ${BORDER}`, marginBottom:8, borderLeft:`4px solid ${p.bg}` }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                  <div style={{ flex:1 }}>
-                    <Tag projectId={o.project} small />
-                    <div style={{ fontWeight:700, fontSize:14, fontFamily:B, marginTop:6 }}>{o.title}</div>
-                    <div style={{ fontSize:12, color:MUTED, fontFamily:B, marginTop:2 }}>📅 {o.date} · 📍 {o.location} · {o.hours}h · {o.spots} spots</div>
-                  </div>
-                  <button onClick={()=>deleteOpp(o.id)} style={{ background:"#FEE2E2", color:"#DC2626", border:"none", borderRadius:8, padding:"6px 10px", fontSize:12, cursor:"pointer", fontFamily:B, fontWeight:700, marginLeft:10, flexShrink:0 }}>Remove</button>
-                </div>
-              </div>
-            );})}
-          </div>}
-
-          {tab==="add" && <div>
-            <h2 style={{ fontFamily:H, fontSize:16, fontWeight:900, textTransform:"uppercase", color:DARK, marginBottom:16 }}>Add New Opportunity</h2>
-            <div style={{ background:"#fff", borderRadius:18, padding:"20px 16px", border:`1px solid ${BORDER}` }}>
-              <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-                <Field label="Project"><select value={newOpp.project} onChange={e=>setNewOpp(n=>({...n,project:e.target.value}))} style={inp}>{PROJECTS.map(p=><option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}</select></Field>
-                <Field label="Title *"><input type="text" placeholder="e.g. Box Packing Day" value={newOpp.title} onChange={e=>setNewOpp(n=>({...n,title:e.target.value}))} style={inp} /></Field>
-                <Field label="Description"><textarea value={newOpp.description} onChange={e=>setNewOpp(n=>({...n,description:e.target.value}))} rows={3} placeholder="What will volunteers do?" style={{ ...inp, resize:"vertical" }} /></Field>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                  <Field label="Date *"><input type="date" value={newOpp.date} onChange={e=>setNewOpp(n=>({...n,date:e.target.value}))} style={inp} /></Field>
-                  <Field label="Hours"><input type="number" placeholder="e.g. 3" value={newOpp.hours} onChange={e=>setNewOpp(n=>({...n,hours:e.target.value}))} style={inp} /></Field>
-                </div>
-                <Field label="Location *"><input type="text" placeholder="e.g. Feed a Friend HQ" value={newOpp.location} onChange={e=>setNewOpp(n=>({...n,location:e.target.value}))} style={inp} /></Field>
-                <Field label="Spots"><input type="number" placeholder="e.g. 10" value={newOpp.spots} onChange={e=>setNewOpp(n=>({...n,spots:e.target.value}))} style={inp} /></Field>
-                <button onClick={addOpp} style={{ background:DARK, color:"#fff", border:"none", borderRadius:12, padding:"14px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:B }}>Publish Opportunity</button>
-              </div>
+      ${tab==="opps"&&html`<div>
+        <h2 style=${{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>All Opportunities</h2>
+        ${opps.map(o=>{const p=gp(o.project);return html`<div key=${o.id} style=${{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,marginBottom:8,borderLeft:"4px solid "+p.bg}}>
+          <div style=${{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+            <div style=${{flex:1}}>
+              <${Tag} pid=${o.project} sm=${true}/>
+              <div style=${{fontWeight:700,fontSize:14,marginTop:6}}>${o.title}</div>
+              <div style=${{fontSize:12,color:MT,marginTop:2}}>📅 ${o.date} · 📍 ${o.location} · ${o.hours}h · ${o.spots} spots</div>
             </div>
-          </div>}
-        </main>
-      </div>
-    </>
-  );
+            <button onClick=${()=>delOpp(o.id)} style=${{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700,marginLeft:10}}>Remove</button>
+          </div>
+        </div>`;})}
+      </div>`}
+
+      ${tab==="add"&&html`<div>
+        <h2 style=${{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:16}}>Add New Opportunity</h2>
+        <div style=${{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
+          <div style=${{display:"flex",flexDirection:"column",gap:14}}>
+            <${Fld} lbl="Project"><select value=${no.project} onChange=${sn("project")} style=${inp}>${PROJECTS.map(p=>html`<option key=${p.id} value=${p.id}>${p.emoji} ${p.label}</option>`)}</select></${Fld}>
+            <${Fld} lbl="Title *"><input type="text" placeholder="e.g. Box Packing Day" value=${no.title} onInput=${sn("title")} style=${inp}/></${Fld}>
+            <${Fld} lbl="Description"><textarea value=${no.description} onInput=${sn("description")} rows=3 placeholder="What will volunteers do?" style=${{...inp,resize:"vertical"}}/></${Fld}>
+            <div style=${{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <${Fld} lbl="Date *"><input type="date" value=${no.date} onInput=${sn("date")} style=${inp}/></${Fld}>
+              <${Fld} lbl="Hours"><input type="number" placeholder="3" value=${no.hours} onInput=${sn("hours")} style=${inp}/></${Fld}>
+            </div>
+            <${Fld} lbl="Location *"><input type="text" placeholder="e.g. Feed a Friend HQ" value=${no.location} onInput=${sn("location")} style=${inp}/></${Fld}>
+            <${Fld} lbl="Spots"><input type="number" placeholder="10" value=${no.spots} onInput=${sn("spots")} style=${inp}/></${Fld}>
+            <button onClick=${addOpp} style=${{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Publish Opportunity</button>
+          </div>
+        </div>
+      </div>`}
+    </main>
+  </div>`;
 }
 
-// ── VOLUNTEER APP ─────────────────────────────────────────────
-function VolunteerApp({ profile, onLogout, onUpdateProfile }) {
-  const [view, setView] = useState("dashboard");
-  const [logs, setLogs] = useState([]);
-  const [opps, setOpps] = useState([]);
-  const [signedUp, setSignedUp] = useState([]);
-  const [filterP, setFilterP] = useState("all");
-  const [form, setForm] = useState({ activity:"", hours:"", date:"", project:"food-boxes", notes:"" });
-  const [toast, setToast] = useState(null);
-  const showToast = m => { setToast(m); setTimeout(()=>setToast(null),3000); };
+function Volunteer({profile,onLogout,onUpdateProfile}){
+  const[view,setView]=useState("dashboard");
+  const[logs,setLogs]=useState([]);
+  const[opps,setOpps]=useState([]);
+  const[su,setSu]=useState([]);
+  const[fp,setFp]=useState("all");
+  const[form,setForm]=useState({activity:"",hours:"",date:"",project:"food-boxes",notes:""});
+  const[toast,setToast]=useState(null);
+  const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
+  const sf=k=>e=>setForm(f=>({...f,[k]:e.target.value}));
 
-  useEffect(() => { loadData(); }, []);
-  async function loadData() {
-    const { data: o } = await supabase.from("opportunities").select("*").order("date");
-    const { data: l } = await supabase.from("hour_logs").select("*").eq("volunteer_id", profile.id).order("created_at", { ascending:false });
-    const { data: s } = await supabase.from("signups").select("opportunity_id").eq("volunteer_id", profile.id);
-    setOpps(o||[]); setLogs(l||[]); setSignedUp((s||[]).map(x=>x.opportunity_id));
+  useEffect(()=>{load();},[]);
+  async function load(){
+    const[{data:o},{data:l},{data:s}]=await Promise.all([
+      sb.from("opportunities").select("*").order("date"),
+      sb.from("hour_logs").select("*").eq("volunteer_id",profile.id).order("created_at",{ascending:false}),
+      sb.from("signups").select("opportunity_id").eq("volunteer_id",profile.id),
+    ]);
+    setOpps(o||[]);setLogs(l||[]);setSu((s||[]).map(x=>x.opportunity_id));
   }
-  async function submitLog() {
-    if (!form.activity||!form.hours||!form.date) return;
-    await supabase.from("hour_logs").insert({ ...form, hours:Number(form.hours), volunteer_id:profile.id });
-    setForm({ activity:"", hours:"", date:"", project:"food-boxes", notes:"" });
-    showToast("✓ Hours logged — thank you!"); loadData();
+  async function submitLog(){
+    if(!form.activity||!form.hours||!form.date)return;
+    await sb.from("hour_logs").insert({...form,hours:Number(form.hours),volunteer_id:profile.id});
+    setForm({activity:"",hours:"",date:"",project:"food-boxes",notes:""});
+    st("✓ Hours logged — thank you!");load();
   }
-  async function signUp(opp) {
-    if (signedUp.includes(opp.id)) return;
-    await supabase.from("signups").insert({ volunteer_id:profile.id, opportunity_id:opp.id });
-    showToast(`✓ Signed up for "${opp.title}"!`); loadData();
+  async function signUp(o){
+    if(su.includes(o.id))return;
+    await sb.from("signups").insert({volunteer_id:profile.id,opportunity_id:o.id});
+    st("✓ Signed up for "+o.title+"!");load();
   }
-  async function uploadPhoto(file) {
-    const ext = file.name.split(".").pop();
-    const { data } = await supabase.storage.from("avatars").upload(`${profile.id}/avatar.${ext}`, file, { upsert:true });
-    if (data) {
-      const { data: url } = supabase.storage.from("avatars").getPublicUrl(data.path);
-      await supabase.from("profiles").update({ photo_url: url.publicUrl }).eq("id", profile.id);
-      onUpdateProfile({ ...profile, photo_url: url.publicUrl });
-      showToast("✓ Photo updated!");
-    }
+  async function uploadPhoto(file){
+    const ext=file.name.split(".").pop();
+    const{data}=await sb.storage.from("avatars").upload(profile.id+"/avatar."+ext,file,{upsert:true});
+    if(data){const{data:u}=sb.storage.from("avatars").getPublicUrl(data.path);
+      await sb.from("profiles").update({photo_url:u.publicUrl}).eq("id",profile.id);
+      onUpdateProfile({...profile,photo_url:u.publicUrl});st("✓ Photo updated!");}
   }
 
-  const totalHours = logs.reduce((s,l)=>s+Number(l.hours),0);
-  const filteredOpps = filterP==="all" ? opps : opps.filter(o=>o.project===filterP);
-  const NAV = [{id:"dashboard",label:"Home"},{id:"opportunities",label:"Opportunities"},{id:"log",label:"Log Hours"},{id:"history",label:"My Hours"}];
+  const th=logs.reduce((s,l)=>s+Number(l.hours),0);
+  const fo=fp==="all"?opps:opps.filter(o=>o.project===fp);
+  const NAV=[{id:"dashboard",label:"Home"},{id:"opportunities",label:"Opportunities"},{id:"log",label:"Log Hours"},{id:"history",label:"My Hours"}];
 
-  return (
-    <>
-      <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      <style>{"*{box-sizing:border-box;margin:0;padding:0}body{background:#F0FDF4}.card{transition:transform 0.15s,box-shadow 0.15s}.card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.1)}"}</style>
-      <div style={{ minHeight:"100vh", background:PALE, fontFamily:B }}>
-        <header style={{ background:DARK, height:60, display:"flex", alignItems:"center", padding:"0 14px", position:"sticky", top:0, zIndex:100, gap:12 }}>
-          <button onClick={()=>setView("dashboard")} style={{ background:"none", border:"none", cursor:"pointer", padding:0, flexShrink:0 }}>
-            <img src={LOGO} alt="Feed a Friend" style={{ height:42, display:"block" }} />
-          </button>
-          <nav style={{ display:"flex", gap:2, flex:1, justifyContent:"flex-end", alignItems:"center" }}>
-            {NAV.map(n=>(
-              <button key={n.id} onClick={()=>setView(n.id)} style={{ background:view===n.id?MID:"transparent", color:view===n.id?DARK:"#BBF7D0", border:"none", borderRadius:8, padding:"6px 9px", cursor:"pointer", fontSize:11, fontWeight:700, fontFamily:B, whiteSpace:"nowrap" }}>{n.label}</button>
-            ))}
-            <button onClick={onLogout} style={{ background:"#DC2626", color:"#fff", border:"none", borderRadius:8, padding:"6px 10px", cursor:"pointer", fontSize:11, fontWeight:700, fontFamily:B, marginLeft:4 }}>Sign Out</button>
-          </nav>
-        </header>
-        <Toast msg={toast} />
-        <main style={{ maxWidth:640, margin:"0 auto", padding:"16px 14px 40px" }}>
+  return html`<div style=${{minHeight:"100vh",background:PL}}>
+    <header style=${{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 14px",position:"sticky",top:0,zIndex:100,gap:12,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>
+      <button onClick=${()=>setView("dashboard")} style=${{background:"none",border:"none",cursor:"pointer",padding:0,flexShrink:0}}>
+        <img src=${LOGO} style=${{height:42,display:"block"}}/>
+      </button>
+      <nav style=${{display:"flex",gap:2,flex:1,justifyContent:"flex-end",alignItems:"center"}}>
+        ${NAV.map(n=>html`<button key=${n.id} onClick=${()=>setView(n.id)} style=${{background:view===n.id?MD:"transparent",color:view===n.id?DK:"#BBF7D0",border:"none",borderRadius:8,padding:"6px 9px",cursor:"pointer",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>${n.label}</button>`)}
+        <button onClick=${onLogout} style=${{background:"#DC2626",color:"#fff",border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:11,fontWeight:700,marginLeft:4}}>Sign Out</button>
+      </nav>
+    </header>
+    <${Toast} msg=${toast}/>
+    <main style=${{maxWidth:640,margin:"0 auto",padding:"16px 14px 40px"}}>
 
-          {view==="dashboard" && <div>
-            <div style={{ background:DARK, borderRadius:18, padding:"22px 18px", marginBottom:16, position:"relative", overflow:"hidden" }}>
-              <div style={{ position:"absolute", right:-10, top:-10, fontSize:100, opacity:0.05 }}>🥦</div>
-              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
-                <Avatar profile={profile} size={46} />
-                <p style={{ fontFamily:B, fontSize:11, letterSpacing:2, textTransform:"uppercase", color:"#86EFAC" }}>Welcome back, {profile.first_name}!</p>
-              </div>
-              <h1 style={{ fontFamily:H, fontSize:30, fontWeight:900, textTransform:"uppercase", color:"#fff", lineHeight:1.05, marginBottom:16 }}>Together<br/>for Good</h1>
-              <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-                <button onClick={()=>setView("opportunities")} style={{ background:MID, color:DARK, border:"none", borderRadius:10, padding:"10px 16px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:B }}>Find Opportunities →</button>
-                <button onClick={()=>setView("log")} style={{ background:"rgba(255,255,255,0.12)", color:"#fff", border:"1.5px solid rgba(255,255,255,0.25)", borderRadius:10, padding:"10px 16px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:B }}>Log Hours</button>
-              </div>
+      ${view==="dashboard"&&html`<div class="fade">
+        <div style=${{background:DK,borderRadius:18,padding:"22px 18px",marginBottom:16,position:"relative",overflow:"hidden"}}>
+          <div style=${{position:"absolute",right:-10,top:-10,fontSize:100,opacity:.05}}>🥦</div>
+          <div style=${{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+            <${Avtr} u=${profile} sz=${46}/>
+            <p style=${{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#86EFAC"}}>Welcome back, ${profile.first_name}!</p>
+          </div>
+          <h1 style=${{fontFamily:HF,fontSize:30,fontWeight:900,textTransform:"uppercase",color:"#fff",lineHeight:1.05,marginBottom:16}}>Together<br/>for Good</h1>
+          <div style=${{display:"flex",gap:10,flexWrap:"wrap"}}>
+            <button onClick=${()=>setView("opportunities")} style=${{background:MD,color:DK,border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}>Find Opportunities →</button>
+            <button onClick=${()=>setView("log")} style=${{background:"rgba(255,255,255,.12)",color:"#fff",border:"1.5px solid rgba(255,255,255,.25)",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}>Log Hours</button>
+          </div>
+        </div>
+        <div style=${{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
+          ${[{label:"Total Hours",value:th,sub:"hrs given",color:GN},{label:"Activities",value:logs.length,sub:"logged",color:"#7C3AED"},{label:"Signups",value:su.length,sub:"upcoming",color:"#E8732A"}].map(s=>html`<div key=${s.label} style=${{background:"#fff",borderRadius:14,padding:"12px 10px",border:"1px solid "+BR,borderTop:"4px solid "+s.color}}>
+            <div style=${{fontSize:26,fontWeight:900,color:s.color,fontFamily:HF,lineHeight:1}}>${s.value}</div>
+            <div style=${{fontSize:10,color:MT,textTransform:"uppercase",letterSpacing:.5,marginTop:2}}>${s.sub}</div>
+            <div style=${{fontSize:11,fontWeight:600,color:DK,marginTop:3}}>${s.label}</div>
+          </div>`)}
+        </div>
+        <h2 style=${{fontFamily:HF,fontSize:17,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>Our Projects</h2>
+        <div style=${{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+          ${PROJECTS.map(p=>html`<button key=${p.id} class="card" onClick=${()=>{setView("opportunities");setFp(p.id);}} style=${{background:p.bg,border:"none",borderRadius:14,padding:"14px 12px",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}}>
+            <span style=${{fontSize:26,flexShrink:0}}>${p.emoji}</span>
+            <div>
+              <div style=${{fontWeight:700,fontSize:13,color:"#fff",lineHeight:1.3}}>${p.label}</div>
+              <div style=${{fontSize:11,color:"rgba(255,255,255,.75)",marginTop:2}}>${opps.filter(o=>o.project===p.id).length} opportunities</div>
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:16 }}>
-              {[{label:"Total Hours",value:totalHours,sub:"hrs given",color:GREEN},{label:"Activities",value:logs.length,sub:"logged",color:"#7C3AED"},{label:"Signups",value:signedUp.length,sub:"upcoming",color:"#E8732A"}].map(s=>(
-                <div key={s.label} style={{ background:"#fff", borderRadius:14, padding:"12px 10px", border:`1px solid ${BORDER}`, borderTop:`4px solid ${s.color}` }}>
-                  <div style={{ fontSize:26, fontWeight:900, color:s.color, fontFamily:H, lineHeight:1 }}>{s.value}</div>
-                  <div style={{ fontSize:10, color:MUTED, textTransform:"uppercase", letterSpacing:.5, marginTop:2 }}>{s.sub}</div>
-                  <div style={{ fontSize:11, fontWeight:600, color:DARK, marginTop:3 }}>{s.label}</div>
-                </div>
-              ))}
+          </button>`)}
+        </div>
+        <h2 style=${{fontFamily:HF,fontSize:17,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>Recent Activity</h2>
+        <div style=${{background:"#fff",borderRadius:14,overflow:"hidden",border:"1px solid "+BR}}>
+          ${logs.length===0&&html`<p style=${{padding:24,color:MT,textAlign:"center"}}>No hours logged yet.</p>`}
+          ${logs.slice(0,5).map((l,i)=>{const p=gp(l.project);return html`<div key=${l.id} style=${{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderBottom:i<Math.min(logs.length,5)-1?"1px solid "+PL:"none"}}>
+            <div style=${{width:34,height:34,borderRadius:10,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>${p.emoji}</div>
+            <div style=${{flex:1,minWidth:0}}>
+              <div style=${{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>${l.activity}</div>
+              <div style=${{fontSize:11,color:MT}}>${l.date}</div>
             </div>
-            <h2 style={{ fontFamily:H, fontSize:17, fontWeight:900, textTransform:"uppercase", color:DARK, marginBottom:10 }}>Our Projects</h2>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
-              {PROJECTS.map(p=>(
-                <button key={p.id} className="card" onClick={()=>{setView("opportunities");setFilterP(p.id);}} style={{ background:p.bg, border:"none", borderRadius:14, padding:"14px 12px", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:10 }}>
-                  <span style={{ fontSize:26, flexShrink:0 }}>{p.emoji}</span>
-                  <div>
-                    <div style={{ fontFamily:B, fontWeight:700, fontSize:13, color:"#fff", lineHeight:1.3 }}>{p.label}</div>
-                    <div style={{ fontFamily:B, fontSize:11, color:"rgba(255,255,255,0.75)", marginTop:2 }}>{opps.filter(o=>o.project===p.id).length} opportunities</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-            <h2 style={{ fontFamily:H, fontSize:17, fontWeight:900, textTransform:"uppercase", color:DARK, marginBottom:10 }}>Recent Activity</h2>
-            <div style={{ background:"#fff", borderRadius:14, overflow:"hidden", border:`1px solid ${BORDER}` }}>
-              {logs.length===0 && <p style={{ padding:24, color:MUTED, textAlign:"center", fontFamily:B }}>No hours logged yet.</p>}
-              {logs.slice(0,5).map((l,i)=>{ const p=GP(l.project); return (
-                <div key={l.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", borderBottom:i<Math.min(logs.length,5)-1?`1px solid ${PALE}`:"none" }}>
-                  <div style={{ width:34, height:34, borderRadius:10, background:p.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}>{p.emoji}</div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:600, fontSize:13, fontFamily:B, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{l.activity}</div>
-                    <div style={{ fontSize:11, color:MUTED, fontFamily:B }}>{l.date}</div>
-                  </div>
-                  <div style={{ fontWeight:900, fontSize:17, color:p.bg, fontFamily:H, flexShrink:0 }}>{l.hours}h</div>
-                </div>
-              );})}
-            </div>
-          </div>}
+            <div style=${{fontWeight:900,fontSize:17,color:p.bg,fontFamily:HF,flexShrink:0}}>${l.hours}h</div>
+          </div>`;})}
+        </div>
+      </div>`}
 
-          {view==="opportunities" && <div>
-            <h1 style={{ fontFamily:H, fontSize:24, fontWeight:900, textTransform:"uppercase", color:DARK, marginBottom:4 }}>Volunteer Opportunities</h1>
-            <p style={{ fontFamily:B, color:MUTED, fontSize:13, marginBottom:14 }}>Find your next chance to make a difference.</p>
-            <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
-              <button onClick={()=>setFilterP("all")} style={{ padding:"5px 12px", borderRadius:20, border:`2px solid ${filterP==="all"?GREEN:BORDER}`, background:filterP==="all"?GREEN:"#fff", color:filterP==="all"?"#fff":DARK, fontSize:11, fontWeight:700, fontFamily:B, cursor:"pointer" }}>All</button>
-              {PROJECTS.map(p=>(
-                <button key={p.id} onClick={()=>setFilterP(p.id)} style={{ padding:"5px 10px", borderRadius:20, border:`2px solid ${filterP===p.id?p.bg:BORDER}`, background:filterP===p.id?p.bg:"#fff", color:filterP===p.id?"#fff":DARK, fontSize:11, fontWeight:700, fontFamily:B, cursor:"pointer" }}>{p.emoji} {p.label}</button>
-              ))}
+      ${view==="opportunities"&&html`<div class="fade">
+        <h1 style=${{fontFamily:HF,fontSize:24,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Volunteer Opportunities</h1>
+        <p style=${{color:MT,fontSize:13,marginBottom:14}}>Find your next chance to make a difference.</p>
+        <div style=${{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
+          <button onClick=${()=>setFp("all")} style=${{padding:"5px 12px",borderRadius:20,border:"2px solid "+(fp==="all"?GN:BR),background:fp==="all"?GN:"#fff",color:fp==="all"?"#fff":DK,fontSize:11,fontWeight:700,cursor:"pointer"}}>All</button>
+          ${PROJECTS.map(p=>html`<button key=${p.id} onClick=${()=>setFp(p.id)} style=${{padding:"5px 10px",borderRadius:20,border:"2px solid "+(fp===p.id?p.bg:BR),background:fp===p.id?p.bg:"#fff",color:fp===p.id?"#fff":DK,fontSize:11,fontWeight:700,cursor:"pointer"}}>${p.emoji} ${p.label}</button>`)}
+        </div>
+        <div style=${{display:"flex",flexDirection:"column",gap:12}}>
+          ${fo.map(o=>{const p=gp(o.project);const done=su.includes(o.id);return html`<div key=${o.id} class="card" style=${{background:"#fff",borderRadius:16,border:"1px solid "+BR,borderLeft:"5px solid "+p.bg,padding:"14px 14px 12px"}}>
+            <div style=${{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+              <${Tag} pid=${o.project}/><span style=${{fontFamily:HF,fontWeight:800,fontSize:13,color:p.bg}}>${o.hours}h</span>
             </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              {filteredOpps.map(o=>{ const p=GP(o.project); const done=signedUp.includes(o.id); return (
-                <div key={o.id} className="card" style={{ background:"#fff", borderRadius:16, border:`1px solid ${BORDER}`, borderLeft:`5px solid ${p.bg}`, padding:"14px 14px 12px" }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                    <Tag projectId={o.project} /><span style={{ fontFamily:H, fontWeight:800, fontSize:13, color:p.bg }}>{o.hours}h</span>
-                  </div>
-                  <div style={{ fontFamily:H, fontWeight:900, fontSize:15, textTransform:"uppercase", color:DARK, marginBottom:4 }}>{o.title}</div>
-                  <div style={{ fontFamily:B, fontSize:12, color:MUTED, lineHeight:1.5, marginBottom:8 }}>{o.description}</div>
-                  <div style={{ fontFamily:B, fontSize:11, color:MUTED, marginBottom:10 }}>📅 {o.date} · 📍 {o.location}</div>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <span style={{ fontFamily:B, fontSize:11, background:p.light, color:p.text, padding:"2px 8px", borderRadius:20, fontWeight:600 }}>{o.spots} spots</span>
-                    <button onClick={()=>signUp(o)} disabled={done} style={{ background:done?p.light:p.bg, color:done?p.text:"#fff", border:"none", borderRadius:8, padding:"8px 16px", cursor:done?"default":"pointer", fontSize:12, fontWeight:700, fontFamily:B }}>{done?"✓ Signed Up":"Sign Up →"}</button>
-                  </div>
-                </div>
-              );})}
+            <div style=${{fontFamily:HF,fontWeight:900,fontSize:15,textTransform:"uppercase",color:DK,marginBottom:4}}>${o.title}</div>
+            <div style=${{fontSize:12,color:MT,lineHeight:1.5,marginBottom:8}}>${o.description}</div>
+            <div style=${{fontSize:11,color:MT,marginBottom:10}}>📅 ${o.date} · 📍 ${o.location}</div>
+            <div style=${{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style=${{fontSize:11,background:p.light,color:p.text,padding:"2px 8px",borderRadius:20,fontWeight:600}}>${o.spots} spots</span>
+              <button onClick=${()=>signUp(o)} disabled=${done} style=${{background:done?p.light:p.bg,color:done?p.text:"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:done?"default":"pointer",fontSize:12,fontWeight:700}}>${done?"✓ Signed Up":"Sign Up →"}</button>
             </div>
-          </div>}
+          </div>`;})}
+        </div>
+      </div>`}
 
-          {view==="log" && <div>
-            <h1 style={{ fontFamily:H, fontSize:24, fontWeight:900, textTransform:"uppercase", color:DARK, marginBottom:4 }}>Log Your Hours</h1>
-            <p style={{ fontFamily:B, color:MUTED, fontSize:13, marginBottom:18 }}>Every hour counts — thank you!</p>
-            <div style={{ background:"#fff", borderRadius:18, padding:"20px 16px", border:`1px solid ${BORDER}` }}>
-              <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-                <Field label="Project"><select value={form.project} onChange={e=>setForm(p=>({...p,project:e.target.value}))} style={inp}>{PROJECTS.map(p=><option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}</select></Field>
-                <Field label="Event Name"><input type="text" placeholder="e.g. Pantry Stock & Sort" value={form.activity} onChange={e=>setForm(p=>({...p,activity:e.target.value}))} style={inp} /></Field>
-                <Field label="Date of Event"><input type="date" value={form.date} onChange={e=>setForm(p=>({...p,date:e.target.value}))} style={inp} /></Field>
-                <Field label="Hours Volunteered"><input type="number" placeholder="e.g. 3" value={form.hours} onChange={e=>setForm(p=>({...p,hours:e.target.value}))} style={inp} /></Field>
-                <Field label={<>Notes <span style={{ fontWeight:400, color:MUTED }}>(optional)</span></>}><textarea value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} rows={3} placeholder="Share anything about your experience..." style={{ ...inp, resize:"vertical" }} /></Field>
-                <button onClick={submitLog} style={{ background:DARK, color:"#fff", border:"none", borderRadius:12, padding:"14px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:B }}>Submit Hours 🌿</button>
-              </div>
-            </div>
-          </div>}
+      ${view==="log"&&html`<div class="fade">
+        <h1 style=${{fontFamily:HF,fontSize:24,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Log Your Hours</h1>
+        <p style=${{color:MT,fontSize:13,marginBottom:18}}>Every hour counts — thank you!</p>
+        <div style=${{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
+          <div style=${{display:"flex",flexDirection:"column",gap:14}}>
+            <${Fld} lbl="Project"><select value=${form.project} onChange=${sf("project")} style=${inp}>${PROJECTS.map(p=>html`<option key=${p.id} value=${p.id}>${p.emoji} ${p.label}</option>`)}</select></${Fld}>
+            <${Fld} lbl="Event Name"><input type="text" placeholder="e.g. Pantry Stock" value=${form.activity} onInput=${sf("activity")} style=${inp}/></${Fld}>
+            <${Fld} lbl="Date of Event"><input type="date" value=${form.date} onInput=${sf("date")} style=${inp}/></${Fld}>
+            <${Fld} lbl="Hours Volunteered"><input type="number" placeholder="e.g. 3" value=${form.hours} onInput=${sf("hours")} style=${inp}/></${Fld}>
+            <${Fld} lbl="Notes (optional)"><textarea value=${form.notes} onInput=${sf("notes")} rows=3 placeholder="Share anything about your experience..." style=${{...inp,resize:"vertical"}}/></${Fld}>
+            <button onClick=${submitLog} style=${{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Submit Hours 🌿</button>
+          </div>
+        </div>
+      </div>`}
 
-          {view==="history" && <div>
-            <div style={{ background:"#fff", borderRadius:16, padding:"16px", border:`1px solid ${BORDER}`, marginBottom:16, display:"flex", alignItems:"center", gap:14 }}>
-              <Avatar profile={profile} size={58} />
-              <div style={{ flex:1 }}>
-                <div style={{ fontFamily:H, fontWeight:900, fontSize:17, color:DARK }}>{profile.first_name} {profile.surname}</div>
-                <div style={{ fontFamily:B, fontSize:12, color:MUTED }}>{profile.email}</div>
-                <label style={{ display:"inline-block", marginTop:8, background:PALE, color:DARK, border:`1px solid ${BORDER}`, borderRadius:8, padding:"5px 10px", fontSize:11, fontWeight:700, fontFamily:B, cursor:"pointer" }}>
-                  📷 Change Photo
-                  <input type="file" accept="image/*" style={{ display:"none" }} onChange={e=>{ if(e.target.files[0]) uploadPhoto(e.target.files[0]); }} />
-                </label>
-              </div>
+      ${view==="history"&&html`<div class="fade">
+        <div style=${{background:"#fff",borderRadius:16,padding:16,border:"1px solid "+BR,marginBottom:16,display:"flex",alignItems:"center",gap:14}}>
+          <${Avtr} u=${profile} sz=${58}/>
+          <div style=${{flex:1}}>
+            <div style=${{fontFamily:HF,fontWeight:900,fontSize:17,color:DK}}>${profile.first_name} ${profile.surname}</div>
+            <div style=${{fontSize:12,color:MT}}>${profile.email}</div>
+            <label style=${{display:"inline-block",marginTop:8,background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+              📷 Change Photo
+              <input type="file" accept="image/*" style=${{display:"none"}} onChange=${e=>{if(e.target.files[0])uploadPhoto(e.target.files[0]);}}/>
+            </label>
+          </div>
+        </div>
+        <h1 style=${{fontFamily:HF,fontSize:24,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>My Hours</h1>
+        <p style=${{color:MT,fontSize:13,marginBottom:14}}><strong style=${{color:GN}}>${th} hours</strong> across <strong style=${{color:GN}}>${logs.length} activities</strong>.</p>
+        <div style=${{display:"flex",flexWrap:"wrap",gap:6,marginBottom:16}}>
+          ${PROJECTS.map(p=>{const h=logs.filter(l=>l.project===p.id).reduce((s,l)=>s+Number(l.hours),0);if(!h)return null;return html`<div key=${p.id} style=${{background:p.bg,color:"#fff",borderRadius:20,padding:"4px 10px",fontSize:11,fontWeight:700}}>${p.emoji} ${h}h ${p.label}</div>`;})}
+        </div>
+        <div style=${{display:"flex",flexDirection:"column",gap:10}}>
+          ${logs.map(l=>{const p=gp(l.project);return html`<div key=${l.id} style=${{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,borderLeft:"5px solid "+p.bg,display:"flex",alignItems:"center",gap:12}}>
+            <div style=${{width:36,height:36,borderRadius:10,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>${p.emoji}</div>
+            <div style=${{flex:1,minWidth:0}}>
+              <div style=${{fontWeight:700,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>${l.activity}</div>
+              <div style=${{fontSize:11,color:MT,marginTop:2}}>${l.date}</div>
+              <div style=${{marginTop:4}}><${Tag} pid=${l.project} sm=${true}/></div>
             </div>
-            <h1 style={{ fontFamily:H, fontSize:24, fontWeight:900, textTransform:"uppercase", color:DARK, marginBottom:4 }}>My Hours</h1>
-            <p style={{ fontFamily:B, color:MUTED, fontSize:13, marginBottom:14 }}><strong style={{ color:GREEN }}>{totalHours} hours</strong> across <strong style={{ color:GREEN }}>{logs.length} activities</strong>.</p>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 }}>
-              {PROJECTS.map(p=>{ const hrs=logs.filter(l=>l.project===p.id).reduce((s,l)=>s+Number(l.hours),0); if(!hrs) return null; return <div key={p.id} style={{ background:p.bg, color:"#fff", borderRadius:20, padding:"4px 10px", fontSize:11, fontWeight:700, fontFamily:B }}>{p.emoji} {hrs}h {p.label}</div>; })}
-            </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              {logs.map(l=>{ const p=GP(l.project); return (
-                <div key={l.id} style={{ background:"#fff", borderRadius:14, padding:"12px 14px", border:`1px solid ${BORDER}`, borderLeft:`5px solid ${p.bg}`, display:"flex", alignItems:"center", gap:12 }}>
-                  <div style={{ width:36, height:36, borderRadius:10, background:p.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>{p.emoji}</div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:700, fontSize:13, fontFamily:B, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{l.activity}</div>
-                    <div style={{ fontSize:11, color:MUTED, marginTop:2, fontFamily:B }}>{l.date}</div>
-                    <div style={{ marginTop:4 }}><Tag projectId={l.project} small /></div>
-                  </div>
-                  <div style={{ fontWeight:900, fontSize:22, color:p.bg, fontFamily:H, flexShrink:0 }}>{l.hours}h</div>
-                </div>
-              );})}
-              {logs.length===0 && <p style={{ padding:28, textAlign:"center", color:MUTED, fontFamily:B, background:"#fff", borderRadius:14 }}>No hours yet — go volunteer!</p>}
-            </div>
-          </div>}
-        </main>
-      </div>
-    </>
-  );
+            <div style=${{fontWeight:900,fontSize:22,color:p.bg,fontFamily:HF,flexShrink:0}}>${l.hours}h</div>
+          </div>`;})}
+          ${logs.length===0&&html`<p style=${{padding:28,textAlign:"center",color:MT,background:"#fff",borderRadius:14}}>No hours yet — go volunteer!</p>`}
+        </div>
+      </div>`}
+    </main>
+  </div>`;
 }
 
-// ── ROOT ──────────────────────────────────────────────────────
-function App() {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+function App(){
+  const[profile,setProfile]=useState(null);
+  const[loading,setLoading]=useState(true);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        const { data } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
-        setProfile(data);
-      }
+  useEffect(()=>{
+    sb.auth.getSession().then(async({data:{session}})=>{
+      if(session){const{data}=await sb.from("profiles").select("*").eq("id",session.user.id).single();setProfile(data);}
       setLoading(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT") { setProfile(null); }
+    const{data:{subscription}}=sb.auth.onAuthStateChange(event=>{
+      if(event==="SIGNED_OUT")setProfile(null);
     });
-    return () => subscription.unsubscribe();
-  }, []);
+    return()=>subscription.unsubscribe();
+  },[]);
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    setProfile(null);
-  }
+  const logout=async()=>{await sb.auth.signOut();setProfile(null);};
 
-  if (loading) return <Spinner />;
-  if (!profile) return <AuthScreen onAuth={p => setProfile(p)} />;
-  if (profile.role === "admin") return <AdminPanel profile={profile} onLogout={handleLogout} />;
-  return <VolunteerApp profile={profile} onLogout={handleLogout} onUpdateProfile={setProfile} />;
+  if(loading)return html`<${Spin}/>`;
+  if(!profile)return html`<${Auth} onAuth=${p=>setProfile(p)}/>`;
+  if(profile.role==="admin")return html`<${Admin} profile=${profile} onLogout=${logout}/>`;
+  return html`<${Volunteer} profile=${profile} onLogout=${logout} onUpdateProfile=${setProfile}/>`;
 }
 
-    const container = document.getElementById('root');
-    const root = ReactDOM.createRoot(container);
-    root.render(React.createElement(App));
-  </script>
+render(h(App,null),document.getElementById("app"));
+</script>
 </body>
 </html>
