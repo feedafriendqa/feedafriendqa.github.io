@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+  <title>Feed a Friend — Volunteer Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0A3D1F;font-family:Poppins,sans-serif;-webkit-font-smoothing:antialiased}
+    input,select,textarea,button{font-family:inherit}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    .fade{animation:fadein .25s ease}
+    .card{transition:transform .15s,box-shadow .15s}
+    .card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.1)}
+  </style>
+</head>
+<body>
+<div id="app">
+  <div style="min-height:100vh;background:#0A3D1F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px">
+    <div style="width:44px;height:44px;border:4px solid #22C55E;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></div>
+    <p style="color:#BBF7D0;font-family:Poppins,sans-serif;font-size:13px;letter-spacing:2px">LOADING...</p>
+  </div>
+</div>
+<script type="module">
+import{h,render}from"https://esm.sh/preact@10.19.2";
+import{useState,useEffect}from"https://esm.sh/preact@10.19.2/hooks";
+import htm from"https://esm.sh/htm@3.1.1";
+import{createClient}from"https://esm.sh/@supabase/supabase-js@2";
+const html=htm.bind(h);
+const sb=createClient("https://xbxagukdvgyaoqvbqoic.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4");
+const LOGO="https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/avatars/Faflogowhite.png";
+const PROJECTS=[
+  {id:"food-boxes",label:"Food Boxes",emoji:"📦",bg:"#F5A623",light:"#FEF3C7",text:"#7C4D00"},
+  {id:"welcome-baby",label:"Welcome Baby",emoji:"👶",bg:"#9B59B6",light:"#F3E8FF",text:"#5B21B6"},
+  {id:"community-fridges",label:"Community Fridges",emoji:"🧊",bg:"#E8732A",light:"#FFEDD5",text:"#9A3412"},
+  {id:"little-learners",label:"Little Learners",emoji:"📚",bg:"#1A9E8F",light:"#CCFBF1",text:"#134E4A"},
+  {id:"pay-it-forward",label:"Pay it Forward",emoji:"🎁",bg:"#E74C3C",light:"#FEE2E2",text:"#991B1B"},
+  {id:"giving-garden",label:"Giving Garden",emoji:"🌱",bg:"#8E44AD",light:"#EDE9FE",text:"#4C1D95"},
+];
+const DK="#0A3D1F",GN="#15803D",MD="#22C55E",PL="#F0FDF4",BR="#BBF7D0",MT="#4B7C5A";
+const HF="'League Spartan',sans-serif",BF="'Poppins',sans-serif";
+const inp={width:"100%",padding:"12px 14px",border:"1.5px solid #BBF7D0",borderRadius:10,fontSize:15,outline:"none",boxSizing:"border-box",background:"#fff",color:DK};
+const gp=id=>PROJECTS.find(p=>p.id===id)||PROJECTS[0];
+
+const Spin=()=>html`<div style=${{minHeight:"100vh",background:DK,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:20}}>
+  <img src=${LOGO} style=${{height:70}}/>
+  <div style=${{width:40,height:40,border:"4px solid "+MD,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite"}}/>
+</div>`;
+
+const Toast=({msg})=>!msg?null:html`<div style=${{position:"fixed",top:68,left:12,right:12,background:DK,color:"#fff",padding:"12px 16px",borderRadius:12,zIndex:999,fontSize:14,fontWeight:600,textAlign:"center",border:"1px solid "+MD,boxShadow:"0 4px 20px rgba(0,0,0,.3)"}}>${msg}</div>`;
+
+const Tag=({pid,sm})=>{const p=gp(pid);return html`<span style=${{background:p.light,color:p.text,padding:sm?"2px 8px":"3px 10px",borderRadius:20,fontSize:sm?10:11,fontWeight:700,display:"inline-flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>${p.emoji} ${p.label}</span>`;};
+
+const Avtr=({u,sz=40})=>{
+  if(u?.photo_url)return html`<img src=${u.photo_url} style=${{width:sz,height:sz,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:"2px solid "+MD}}/>`;
+  const i=(u?.first_name?.[0]||"")+(u?.surname?.[0]||"");
+  return html`<div style=${{width:sz,height:sz,borderRadius:"50%",background:MD,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:HF,fontWeight:900,fontSize:sz*.35,color:DK,flexShrink:0}}>${i}</div>`;
+};
+
+const Fld=({lbl,children})=>html`<div><label style=${{display:"block",fontWeight:700,fontSize:13,color:DK,marginBottom:6}}>${lbl}</label>${children}</div>`;
+
+function Auth({onAuth}){
+  const[mode,setMode]=useState("login");
+  const[loading,setLoading]=useState(false);
+  const[err,setErr]=useState(""), [msg,setMsg]=useState("");
+  const[showPw,setShowPw]=useState(false);
+  const[em,setEm]=useState(""), [pw,setPw]=useState("");
+  const[r,setR]=useState({fn:"",sn:"",dob:"",email:"",pw:"",pw2:"",student:false,working:false,prof:"",projs:[],photo:null});
+  const ur=k=>e=>setR(x=>({...x,[k]:e.target.value}));
+  const urb=k=>e=>setR(x=>({...x,[k]:e.target.checked}));
+  const tp=id=>setR(x=>({...x,projs:x.projs.includes(id)?x.projs.filter(p=>p!==id):[...x.projs,id]}));
+
+  async function login(){
+    setErr("");setLoading(true);
+    const{data,error}=await sb.auth.signInWithPassword({email:em,password:pw});
+    if(error){setErr(error.message);setLoading(false);return;}
+    const{data:p}=await sb.from("profiles").select("*").eq("id",data.user.id).single();
+    if(p&&!p.approved&&p.role!=="admin"){await sb.auth.signOut();setErr("Your registration is pending admin approval.");setLoading(false);return;}
+    onAuth(p);setLoading(false);
+  }
+  async function register(){
+    setErr("");
+    if(!r.fn||!r.sn||!r.dob||!r.email||!r.pw){setErr("Please fill in all required fields.");return;}
+    if(r.pw!==r.pw2){setErr("Passwords do not match.");return;}
+    if(r.pw.length<6){setErr("Password must be at least 6 characters.");return;}
+    setLoading(true);
+    const{data,error}=await sb.auth.signUp({email:r.email,password:r.pw});
+    if(error){setErr(error.message);setLoading(false);return;}
+    let photo_url=null;
+    if(r.photo&&data.user){
+      const res=await fetch(r.photo);const blob=await res.blob();
+      const ext=blob.type.split("/")[1]||"jpg";
+      const{data:up}=await sb.storage.from("avatars").upload(data.user.id+"/avatar."+ext,blob,{upsert:true});
+      if(up){const{data:u}=sb.storage.from("avatars").getPublicUrl(up.path);photo_url=u.publicUrl;}
+    }
+    await sb.from("profiles").insert({id:data.user.id,first_name:r.fn,surname:r.sn,email:r.email,dob:r.dob,is_student:r.student,is_working:r.working,profession:r.prof,projects:r.projs,photo_url,role:"volunteer",approved:false});
+    setMsg("Registration submitted! An admin will approve your account shortly.");
+    setMode("login");setLoading(false);
+  }
+  async function forgot(){
+    if(!em){setErr("Please enter your email.");return;}
+    await sb.auth.resetPasswordForEmail(em,{redirectTo:window.location.href});
+    setMsg("Reset email sent! Check your inbox.");setMode("login");
+  }
+
+  const bg={minHeight:"100vh",background:DK,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 16px"};
+  const card={background:"#fff",borderRadius:20,padding:"28px 22px",width:"100%",maxWidth:420};
+
+  return html`<div class="fade" style=${bg}>
+    <img src=${LOGO} style=${{height:70,marginBottom:6}}/>
+    <p style=${{fontSize:11,color:MD,letterSpacing:2,textTransform:"uppercase",marginBottom:20}}>Volunteer Portal</p>
+    ${msg&&html`<div style=${{background:"#DCFCE7",color:DK,borderRadius:12,padding:"12px 16px",marginBottom:16,fontSize:13,width:"100%",maxWidth:420,textAlign:"center",fontWeight:600}}>${msg}</div>`}
+
+    ${mode==="login"&&html`<div style=${card}>
+      <h2 style=${{fontFamily:HF,fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Sign In</h2>
+      <p style=${{color:MT,fontSize:13,marginBottom:20}}>Welcome back!</p>
+      <div style=${{display:"flex",flexDirection:"column",gap:14}}>
+        <${Fld} lbl="Email"><input type="email" placeholder="you@email.com" value=${em} onInput=${e=>setEm(e.target.value)} style=${inp}/></${Fld}>
+        <${Fld} lbl="Password">
+          <div style=${{position:"relative"}}>
+            <input type=${showPw?"text":"password"} placeholder="••••••••" value=${pw} onInput=${e=>setPw(e.target.value)} style=${{...inp,paddingRight:50}}/>
+            <button onClick=${()=>setShowPw(s=>!s)} style=${{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:12,color:MT}}>${showPw?"Hide":"Show"}</button>
+          </div>
+        </${Fld}>
+        ${err&&html`<p style=${{color:"#DC2626",fontSize:13,fontWeight:600}}>${err}</p>`}
+        <button onClick=${login} disabled=${loading} style=${{background:MD,color:DK,border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",opacity:loading?.7:1}}>${loading?"Signing in...":"Sign In →"}</button>
+        <button onClick=${()=>{setMode("forgot");setErr("");}} style=${{background:"none",border:"none",color:MT,fontSize:13,cursor:"pointer",textDecoration:"underline"}}>Forgot password?</button>
+      </div>
+      <div style=${{borderTop:"1px solid "+BR,marginTop:20,paddingTop:16,textAlign:"center"}}>
+        <p style=${{fontSize:13,color:MT}}>New volunteer? <span onClick=${()=>{setMode("register");setErr("");}} style=${{color:GN,fontWeight:700,cursor:"pointer"}}>Register here</span></p>
+      </div>
+    </div>`}
+
+    ${mode==="forgot"&&html`<div style=${card}>
+      <h2 style=${{fontFamily:HF,fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Reset Password</h2>
+      <p style=${{color:MT,fontSize:13,marginBottom:20}}>Enter your email for a reset link.</p>
+      <div style=${{display:"flex",flexDirection:"column",gap:14}}>
+        <${Fld} lbl="Email"><input type="email" placeholder="you@email.com" value=${em} onInput=${e=>setEm(e.target.value)} style=${inp}/></${Fld}>
+        ${err&&html`<p style=${{color:"#DC2626",fontSize:13,fontWeight:600}}>${err}</p>`}
+        <button onClick=${forgot} style=${{background:MD,color:DK,border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Send Reset Link</button>
+        <button onClick=${()=>setMode("login")} style=${{background:"none",border:"none",color:MT,fontSize:13,cursor:"pointer",textDecoration:"underline"}}>← Back to Sign In</button>
+      </div>
+    </div>`}
+
+    ${mode==="register"&&html`<div style=${{...card,maxHeight:"85vh",overflowY:"auto"}}>
+      <h2 style=${{fontFamily:HF,fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Register</h2>
+      <p style=${{color:MT,fontSize:13,marginBottom:20}}>Join our volunteer community.</p>
+      <div style=${{display:"flex",flexDirection:"column",gap:14}}>
+        <${Fld} lbl="Profile Photo">
+          <div style=${{display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
+            ${r.photo?html`<img src=${r.photo} style=${{width:80,height:80,borderRadius:"50%",objectFit:"cover",border:"3px solid "+MD}}/>`:html`<div style=${{width:80,height:80,borderRadius:"50%",background:PL,border:"2px dashed "+BR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>👤</div>`}
+            <label style=${{background:DK,color:"#fff",borderRadius:10,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+              ${r.photo?"Change Photo":"Upload Photo"}
+              <input type="file" accept="image/*" style=${{display:"none"}} onChange=${e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=ev=>setR(x=>({...x,photo:ev.target.result}));rd.readAsDataURL(f);}}/>
+            </label>
+            ${r.photo&&html`<button onClick=${()=>setR(x=>({...x,photo:null}))} style=${{background:"none",border:"none",color:MT,fontSize:12,cursor:"pointer",textDecoration:"underline"}}>Remove</button>`}
+          </div>
+        </${Fld}>
+        <div style=${{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <${Fld} lbl="First Name *"><input type="text" placeholder="Sara" value=${r.fn} onInput=${ur("fn")} style=${inp}/></${Fld}>
+          <${Fld} lbl="Surname *"><input type="text" placeholder="Ahmed" value=${r.sn} onInput=${ur("sn")} style=${inp}/></${Fld}>
+        </div>
+        <${Fld} lbl="Date of Birth *"><input type="date" value=${r.dob} onInput=${ur("dob")} style=${inp}/></${Fld}>
+        <${Fld} lbl="Email *"><input type="email" placeholder="you@email.com" value=${r.email} onInput=${ur("email")} style=${inp}/></${Fld}>
+        <${Fld} lbl="Password *"><input type="password" placeholder="Min. 6 characters" value=${r.pw} onInput=${ur("pw")} style=${inp}/></${Fld}>
+        <${Fld} lbl="Confirm Password *"><input type="password" placeholder="Repeat password" value=${r.pw2} onInput=${ur("pw2")} style=${inp}/></${Fld}>
+        <div style=${{background:PL,borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:12}}>
+          <label style=${{display:"flex",alignItems:"center",gap:10,cursor:"pointer",fontSize:14,fontWeight:600,color:DK}}>
+            <input type="checkbox" checked=${r.student} onChange=${urb("student")} style=${{width:18,height:18,accentColor:GN}}/>Are you a student?</label>
+          <label style=${{display:"flex",alignItems:"center",gap:10,cursor:"pointer",fontSize:14,fontWeight:600,color:DK}}>
+            <input type="checkbox" checked=${r.working} onChange=${urb("working")} style=${{width:18,height:18,accentColor:GN}}/>Are you currently working?</label>
+          ${r.working&&html`<${Fld} lbl="Profession"><input type="text" placeholder="e.g. Teacher, Nurse..." value=${r.prof} onInput=${ur("prof")} style=${inp}/></${Fld}>`}
+        </div>
+        <${Fld} lbl="Projects you're interested in">
+          <div style=${{display:"flex",flexDirection:"column",gap:8,marginTop:4}}>
+            ${PROJECTS.map(p=>html`<label key=${p.id} style=${{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 12px",borderRadius:10,background:r.projs.includes(p.id)?p.light:"#fff",border:"1.5px solid "+(r.projs.includes(p.id)?p.bg:BR),transition:"all .15s"}}>
+              <input type="checkbox" checked=${r.projs.includes(p.id)} onChange=${()=>tp(p.id)} style=${{width:18,height:18,accentColor:p.bg}}/>
+              <span style=${{fontSize:18}}>${p.emoji}</span>
+              <span style=${{fontSize:14,fontWeight:600,color:r.projs.includes(p.id)?p.text:DK}}>${p.label}</span>
+            </label>`)}
+          </div>
+        </${Fld}>
+        ${err&&html`<p style=${{color:"#DC2626",fontSize:13,fontWeight:600}}>${err}</p>`}
+        <button onClick=${register} disabled=${loading} style=${{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",opacity:loading?.7:1}}>${loading?"Submitting...":"Submit Registration"}</button>
+        <button onClick=${()=>{setMode("login");setErr("");}} style=${{background:"none",border:"none",color:MT,fontSize:13,cursor:"pointer",textDecoration:"underline"}}>← Back to Sign In</button>
+      </div>
+    </div>`}
+    <p style=${{fontSize:11,color:"rgba(255,255,255,0.3)",marginTop:20}}>feedafriend.org · Volunteer Portal</p>
+  </div>`;
+}
+
+function Admin({profile,onLogout}){
+  const[tab,setTab]=useState("pending");
+  const[pending,setPending]=useState([]);
+  const[vols,setVols]=useState([]);
+  const[opps,setOpps]=useState([]);
+  const[toast,setToast]=useState(null);
+  const[no,setNo]=useState({title:"",project:"food-boxes",date:"",spots:"",hours:"",location:"",description:""});
+  const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
+  const sn=k=>e=>setNo(n=>({...n,[k]:e.target.value}));
+
+  useEffect(()=>{load();},[]);
+  async function load(){
+    const[{data:p},{data:v},{data:o}]=await Promise.all([
+      sb.from("profiles").select("*").eq("approved",false).eq("role","volunteer"),
+      sb.from("profiles").select("*").eq("approved",true).eq("role","volunteer"),
+      sb.from("opportunities").select("*").order("date"),
+    ]);
+    setPending(p||[]);setVols(v||[]);setOpps(o||[]);
+  }
+  const approve=async id=>{await sb.from("profiles").update({approved:true}).eq("id",id);st("✓ Approved!");load();};
+  const decline=async id=>{await sb.from("profiles").delete().eq("id",id);st("Declined.");load();};
+  async function addOpp(){
+    if(!no.title||!no.date||!no.location){st("Fill title, date and location.");return;}
+    await sb.from("opportunities").insert({...no,spots:Number(no.spots)||10,hours:Number(no.hours)||2,created_by:profile.id});
+    setNo({title:"",project:"food-boxes",date:"",spots:"",hours:"",location:"",description:""});
+    st("✓ Published!");setTab("opps");load();
+  }
+  const delOpp=async id=>{await sb.from("opportunities").delete().eq("id",id);st("Removed.");load();};
+
+  const TABS=[{id:"pending",label:"Pending ("+pending.length+")"},{id:"vols",label:"Volunteers ("+vols.length+")"},{id:"opps",label:"Opps ("+opps.length+")"},{id:"add",label:"+ Add"}];
+
+  return html`<div style=${{minHeight:"100vh",background:PL}}>
+    <header style=${{background:DK,height:60,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",position:"sticky",top:0,zIndex:100}}>
+      <div style=${{display:"flex",alignItems:"center",gap:10}}>
+        <img src=${LOGO} style=${{height:40}}/>
+        <span style=${{fontFamily:HF,fontWeight:900,fontSize:13,color:MD,textTransform:"uppercase",letterSpacing:1}}>Admin</span>
+      </div>
+      <button onClick=${onLogout} style=${{background:"#DC2626",color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sign Out</button>
+    </header>
+    <${Toast} msg=${toast}/>
+    <main style=${{maxWidth:640,margin:"0 auto",padding:"16px 14px"}}>
+      <div style=${{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+        <${Avtr} u=${profile} sz=${48}/>
+        <div>
+          <h1 style=${{fontFamily:HF,fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK}}>Admin Panel</h1>
+          <p style=${{color:MT,fontSize:12}}>Welcome, ${profile.first_name}</p>
+        </div>
+      </div>
+      <div style=${{display:"flex",gap:6,flexWrap:"wrap",marginBottom:20}}>
+        ${TABS.map(t=>html`<button key=${t.id} onClick=${()=>setTab(t.id)} style=${{background:tab===t.id?DK:"#fff",color:tab===t.id?"#fff":DK,border:"1.5px solid "+(tab===t.id?DK:BR),borderRadius:20,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>${t.label}</button>`)}
+      </div>
+
+      ${tab==="pending"&&html`<div>
+        <h2 style=${{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Pending Registrations</h2>
+        ${pending.length===0&&html`<p style=${{color:MT,fontSize:14}}>No pending registrations 🎉</p>`}
+        ${pending.map(u=>html`<div key=${u.id} style=${{background:"#fff",borderRadius:14,padding:16,border:"1px solid "+BR,marginBottom:10}}>
+          <div style=${{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+            <${Avtr} u=${u} sz=${44}/>
+            <div>
+              <div style=${{fontWeight:700,fontSize:15}}>${u.first_name} ${u.surname}</div>
+              <div style=${{fontSize:12,color:MT}}>${u.email} · DOB: ${u.dob}</div>
+            </div>
+          </div>
+          <div style=${{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+            ${u.is_student&&html`<span style=${{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>🎓 Student</span>`}
+            ${u.is_working&&html`<span style=${{background:"#FFEDD5",color:"#9A3412",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>💼 ${u.profession||"Working"}</span>`}
+          </div>
+          ${u.projects?.length>0&&html`<div style=${{display:"flex",flexWrap:"wrap",gap:4,marginBottom:10}}>${u.projects.map(pid=>html`<${Tag} key=${pid} pid=${pid} sm=${true}/>`)}</div>`}
+          <div style=${{display:"flex",gap:8}}>
+            <button onClick=${()=>approve(u.id)} style=${{flex:1,background:MD,color:DK,border:"none",borderRadius:8,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ Approve</button>
+            <button onClick=${()=>decline(u.id)} style=${{flex:1,background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕ Decline</button>
+          </div>
+        </div>`)}
+      </div>`}
+
+      ${tab==="vols"&&html`<div>
+        <h2 style=${{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Active Volunteers (${vols.length})</h2>
+        ${vols.map(u=>html`<div key=${u.id} style=${{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
+          <${Avtr} u=${u} sz=${40}/>
+          <div style=${{flex:1}}>
+            <div style=${{fontWeight:700,fontSize:14}}>${u.first_name} ${u.surname}</div>
+            <div style=${{fontSize:12,color:MT}}>${u.email}</div>
+          </div>
+          <span style=${{fontSize:11,background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"3px 10px",fontWeight:700}}>Active</span>
+        </div>`)}
+      </div>`}
+
+      ${tab==="opps"&&html`<div>
+        <h2 style=${{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>All Opportunities</h2>
+        ${opps.map(o=>{const p=gp(o.project);return html`<div key=${o.id} style=${{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,marginBottom:8,borderLeft:"4px solid "+p.bg}}>
+          <div style=${{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+            <div style=${{flex:1}}>
+              <${Tag} pid=${o.project} sm=${true}/>
+              <div style=${{fontWeight:700,fontSize:14,marginTop:6}}>${o.title}</div>
+              <div style=${{fontSize:12,color:MT,marginTop:2}}>📅 ${o.date} · 📍 ${o.location} · ${o.hours}h · ${o.spots} spots</div>
+            </div>
+            <button onClick=${()=>delOpp(o.id)} style=${{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700,marginLeft:10}}>Remove</button>
+          </div>
+        </div>`;})}
+      </div>`}
+
+      ${tab==="add"&&html`<div>
+        <h2 style=${{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:16}}>Add New Opportunity</h2>
+        <div style=${{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
+          <div style=${{display:"flex",flexDirection:"column",gap:14}}>
+            <${Fld} lbl="Project"><select value=${no.project} onChange=${sn("project")} style=${inp}>${PROJECTS.map(p=>html`<option key=${p.id} value=${p.id}>${p.emoji} ${p.label}</option>`)}</select></${Fld}>
+            <${Fld} lbl="Title *"><input type="text" placeholder="e.g. Box Packing Day" value=${no.title} onInput=${sn("title")} style=${inp}/></${Fld}>
+            <${Fld} lbl="Description"><textarea value=${no.description} onInput=${sn("description")} rows=3 placeholder="What will volunteers do?" style=${{...inp,resize:"vertical"}}/></${Fld}>
+            <div style=${{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <${Fld} lbl="Date *"><input type="date" value=${no.date} onInput=${sn("date")} style=${inp}/></${Fld}>
+              <${Fld} lbl="Hours"><input type="number" placeholder="3" value=${no.hours} onInput=${sn("hours")} style=${inp}/></${Fld}>
+            </div>
+            <${Fld} lbl="Location *"><input type="text" placeholder="e.g. Feed a Friend HQ" value=${no.location} onInput=${sn("location")} style=${inp}/></${Fld}>
+            <${Fld} lbl="Spots"><input type="number" placeholder="10" value=${no.spots} onInput=${sn("spots")} style=${inp}/></${Fld}>
+            <button onClick=${addOpp} style=${{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Publish Opportunity</button>
+          </div>
+        </div>
+      </div>`}
+    </main>
+  </div>`;
+}
+
+function Volunteer({profile,onLogout,onUpdateProfile}){
+  const[view,setView]=useState("dashboard");
+  const[logs,setLogs]=useState([]);
+  const[opps,setOpps]=useState([]);
+  const[su,setSu]=useState([]);
+  const[fp,setFp]=useState("all");
+  const[form,setForm]=useState({activity:"",hours:"",date:"",project:"food-boxes",notes:""});
+  const[toast,setToast]=useState(null);
+  const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
+  const sf=k=>e=>setForm(f=>({...f,[k]:e.target.value}));
+
+  useEffect(()=>{load();},[]);
+  async function load(){
+    const[{data:o},{data:l},{data:s}]=await Promise.all([
+      sb.from("opportunities").select("*").order("date"),
+      sb.from("hour_logs").select("*").eq("volunteer_id",profile.id).order("created_at",{ascending:false}),
+      sb.from("signups").select("opportunity_id").eq("volunteer_id",profile.id),
+    ]);
+    setOpps(o||[]);setLogs(l||[]);setSu((s||[]).map(x=>x.opportunity_id));
+  }
+  async function submitLog(){
+    if(!form.activity||!form.hours||!form.date)return;
+    await sb.from("hour_logs").insert({...form,hours:Number(form.hours),volunteer_id:profile.id});
+    setForm({activity:"",hours:"",date:"",project:"food-boxes",notes:""});
+    st("✓ Hours logged — thank you!");load();
+  }
+  async function signUp(o){
+    if(su.includes(o.id))return;
+    await sb.from("signups").insert({volunteer_id:profile.id,opportunity_id:o.id});
+    st("✓ Signed up for "+o.title+"!");load();
+  }
+  async function uploadPhoto(file){
+    const ext=file.name.split(".").pop();
+    const{data}=await sb.storage.from("avatars").upload(profile.id+"/avatar."+ext,file,{upsert:true});
+    if(data){const{data:u}=sb.storage.from("avatars").getPublicUrl(data.path);
+      await sb.from("profiles").update({photo_url:u.publicUrl}).eq("id",profile.id);
+      onUpdateProfile({...profile,photo_url:u.publicUrl});st("✓ Photo updated!");}
+  }
+
+  const th=logs.reduce((s,l)=>s+Number(l.hours),0);
+  const fo=fp==="all"?opps:opps.filter(o=>o.project===fp);
+  const NAV=[{id:"dashboard",label:"Home"},{id:"opportunities",label:"Opportunities"},{id:"log",label:"Log Hours"},{id:"history",label:"My Hours"}];
+
+  return html`<div style=${{minHeight:"100vh",background:PL}}>
+    <header style=${{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 14px",position:"sticky",top:0,zIndex:100,gap:12,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>
+      <button onClick=${()=>setView("dashboard")} style=${{background:"none",border:"none",cursor:"pointer",padding:0,flexShrink:0}}>
+        <img src=${LOGO} style=${{height:42,display:"block"}}/>
+      </button>
+      <nav style=${{display:"flex",gap:2,flex:1,justifyContent:"flex-end",alignItems:"center"}}>
+        ${NAV.map(n=>html`<button key=${n.id} onClick=${()=>setView(n.id)} style=${{background:view===n.id?MD:"transparent",color:view===n.id?DK:"#BBF7D0",border:"none",borderRadius:8,padding:"6px 9px",cursor:"pointer",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>${n.label}</button>`)}
+        <button onClick=${onLogout} style=${{background:"#DC2626",color:"#fff",border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:11,fontWeight:700,marginLeft:4}}>Sign Out</button>
+      </nav>
+    </header>
+    <${Toast} msg=${toast}/>
+    <main style=${{maxWidth:640,margin:"0 auto",padding:"16px 14px 40px"}}>
+
+      ${view==="dashboard"&&html`<div class="fade">
+        <div style=${{background:DK,borderRadius:18,padding:"22px 18px",marginBottom:16,position:"relative",overflow:"hidden"}}>
+          <div style=${{position:"absolute",right:-10,top:-10,fontSize:100,opacity:.05}}>🥦</div>
+          <div style=${{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+            <${Avtr} u=${profile} sz=${46}/>
+            <p style=${{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#86EFAC"}}>Welcome back, ${profile.first_name}!</p>
+          </div>
+          <h1 style=${{fontFamily:HF,fontSize:30,fontWeight:900,textTransform:"uppercase",color:"#fff",lineHeight:1.05,marginBottom:16}}>Together<br/>for Good</h1>
+          <div style=${{display:"flex",gap:10,flexWrap:"wrap"}}>
+            <button onClick=${()=>setView("opportunities")} style=${{background:MD,color:DK,border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}>Find Opportunities →</button>
+            <button onClick=${()=>setView("log")} style=${{background:"rgba(255,255,255,.12)",color:"#fff",border:"1.5px solid rgba(255,255,255,.25)",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}>Log Hours</button>
+          </div>
+        </div>
+        <div style=${{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
+          ${[{label:"Total Hours",value:th,sub:"hrs given",color:GN},{label:"Activities",value:logs.length,sub:"logged",color:"#7C3AED"},{label:"Signups",value:su.length,sub:"upcoming",color:"#E8732A"}].map(s=>html`<div key=${s.label} style=${{background:"#fff",borderRadius:14,padding:"12px 10px",border:"1px solid "+BR,borderTop:"4px solid "+s.color}}>
+            <div style=${{fontSize:26,fontWeight:900,color:s.color,fontFamily:HF,lineHeight:1}}>${s.value}</div>
+            <div style=${{fontSize:10,color:MT,textTransform:"uppercase",letterSpacing:.5,marginTop:2}}>${s.sub}</div>
+            <div style=${{fontSize:11,fontWeight:600,color:DK,marginTop:3}}>${s.label}</div>
+          </div>`)}
+        </div>
+        <h2 style=${{fontFamily:HF,fontSize:17,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>Our Projects</h2>
+        <div style=${{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+          ${PROJECTS.map(p=>html`<button key=${p.id} class="card" onClick=${()=>{setView("opportunities");setFp(p.id);}} style=${{background:p.bg,border:"none",borderRadius:14,padding:"14px 12px",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}}>
+            <span style=${{fontSize:26,flexShrink:0}}>${p.emoji}</span>
+            <div>
+              <div style=${{fontWeight:700,fontSize:13,color:"#fff",lineHeight:1.3}}>${p.label}</div>
+              <div style=${{fontSize:11,color:"rgba(255,255,255,.75)",marginTop:2}}>${opps.filter(o=>o.project===p.id).length} opportunities</div>
+            </div>
+          </button>`)}
+        </div>
+        <h2 style=${{fontFamily:HF,fontSize:17,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>Recent Activity</h2>
+        <div style=${{background:"#fff",borderRadius:14,overflow:"hidden",border:"1px solid "+BR}}>
+          ${logs.length===0&&html`<p style=${{padding:24,color:MT,textAlign:"center"}}>No hours logged yet.</p>`}
+          ${logs.slice(0,5).map((l,i)=>{const p=gp(l.project);return html`<div key=${l.id} style=${{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderBottom:i<Math.min(logs.length,5)-1?"1px solid "+PL:"none"}}>
+            <div style=${{width:34,height:34,borderRadius:10,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>${p.emoji}</div>
+            <div style=${{flex:1,minWidth:0}}>
+              <div style=${{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>${l.activity}</div>
+              <div style=${{fontSize:11,color:MT}}>${l.date}</div>
+            </div>
+            <div style=${{fontWeight:900,fontSize:17,color:p.bg,fontFamily:HF,flexShrink:0}}>${l.hours}h</div>
+          </div>`;})}
+        </div>
+      </div>`}
+
+      ${view==="opportunities"&&html`<div class="fade">
+        <h1 style=${{fontFamily:HF,fontSize:24,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Volunteer Opportunities</h1>
+        <p style=${{color:MT,fontSize:13,marginBottom:14}}>Find your next chance to make a difference.</p>
+        <div style=${{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
+          <button onClick=${()=>setFp("all")} style=${{padding:"5px 12px",borderRadius:20,border:"2px solid "+(fp==="all"?GN:BR),background:fp==="all"?GN:"#fff",color:fp==="all"?"#fff":DK,fontSize:11,fontWeight:700,cursor:"pointer"}}>All</button>
+          ${PROJECTS.map(p=>html`<button key=${p.id} onClick=${()=>setFp(p.id)} style=${{padding:"5px 10px",borderRadius:20,border:"2px solid "+(fp===p.id?p.bg:BR),background:fp===p.id?p.bg:"#fff",color:fp===p.id?"#fff":DK,fontSize:11,fontWeight:700,cursor:"pointer"}}>${p.emoji} ${p.label}</button>`)}
+        </div>
+        <div style=${{display:"flex",flexDirection:"column",gap:12}}>
+          ${fo.map(o=>{const p=gp(o.project);const done=su.includes(o.id);return html`<div key=${o.id} class="card" style=${{background:"#fff",borderRadius:16,border:"1px solid "+BR,borderLeft:"5px solid "+p.bg,padding:"14px 14px 12px"}}>
+            <div style=${{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+              <${Tag} pid=${o.project}/><span style=${{fontFamily:HF,fontWeight:800,fontSize:13,color:p.bg}}>${o.hours}h</span>
+            </div>
+            <div style=${{fontFamily:HF,fontWeight:900,fontSize:15,textTransform:"uppercase",color:DK,marginBottom:4}}>${o.title}</div>
+            <div style=${{fontSize:12,color:MT,lineHeight:1.5,marginBottom:8}}>${o.description}</div>
+            <div style=${{fontSize:11,color:MT,marginBottom:10}}>📅 ${o.date} · 📍 ${o.location}</div>
+            <div style=${{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style=${{fontSize:11,background:p.light,color:p.text,padding:"2px 8px",borderRadius:20,fontWeight:600}}>${o.spots} spots</span>
+              <button onClick=${()=>signUp(o)} disabled=${done} style=${{background:done?p.light:p.bg,color:done?p.text:"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:done?"default":"pointer",fontSize:12,fontWeight:700}}>${done?"✓ Signed Up":"Sign Up →"}</button>
+            </div>
+          </div>`;})}
+        </div>
+      </div>`}
+
+      ${view==="log"&&html`<div class="fade">
+        <h1 style=${{fontFamily:HF,fontSize:24,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Log Your Hours</h1>
+        <p style=${{color:MT,fontSize:13,marginBottom:18}}>Every hour counts — thank you!</p>
+        <div style=${{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
+          <div style=${{display:"flex",flexDirection:"column",gap:14}}>
+            <${Fld} lbl="Project"><select value=${form.project} onChange=${sf("project")} style=${inp}>${PROJECTS.map(p=>html`<option key=${p.id} value=${p.id}>${p.emoji} ${p.label}</option>`)}</select></${Fld}>
+            <${Fld} lbl="Event Name"><input type="text" placeholder="e.g. Pantry Stock" value=${form.activity} onInput=${sf("activity")} style=${inp}/></${Fld}>
+            <${Fld} lbl="Date of Event"><input type="date" value=${form.date} onInput=${sf("date")} style=${inp}/></${Fld}>
+            <${Fld} lbl="Hours Volunteered"><input type="number" placeholder="e.g. 3" value=${form.hours} onInput=${sf("hours")} style=${inp}/></${Fld}>
+            <${Fld} lbl="Notes (optional)"><textarea value=${form.notes} onInput=${sf("notes")} rows=3 placeholder="Share anything about your experience..." style=${{...inp,resize:"vertical"}}/></${Fld}>
+            <button onClick=${submitLog} style=${{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Submit Hours 🌿</button>
+          </div>
+        </div>
+      </div>`}
+
+      ${view==="history"&&html`<div class="fade">
+        <div style=${{background:"#fff",borderRadius:16,padding:16,border:"1px solid "+BR,marginBottom:16,display:"flex",alignItems:"center",gap:14}}>
+          <${Avtr} u=${profile} sz=${58}/>
+          <div style=${{flex:1}}>
+            <div style=${{fontFamily:HF,fontWeight:900,fontSize:17,color:DK}}>${profile.first_name} ${profile.surname}</div>
+            <div style=${{fontSize:12,color:MT}}>${profile.email}</div>
+            <label style=${{display:"inline-block",marginTop:8,background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+              📷 Change Photo
+              <input type="file" accept="image/*" style=${{display:"none"}} onChange=${e=>{if(e.target.files[0])uploadPhoto(e.target.files[0]);}}/>
+            </label>
+          </div>
+        </div>
+        <h1 style=${{fontFamily:HF,fontSize:24,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>My Hours</h1>
+        <p style=${{color:MT,fontSize:13,marginBottom:14}}><strong style=${{color:GN}}>${th} hours</strong> across <strong style=${{color:GN}}>${logs.length} activities</strong>.</p>
+        <div style=${{display:"flex",flexWrap:"wrap",gap:6,marginBottom:16}}>
+          ${PROJECTS.map(p=>{const h=logs.filter(l=>l.project===p.id).reduce((s,l)=>s+Number(l.hours),0);if(!h)return null;return html`<div key=${p.id} style=${{background:p.bg,color:"#fff",borderRadius:20,padding:"4px 10px",fontSize:11,fontWeight:700}}>${p.emoji} ${h}h ${p.label}</div>`;})}
+        </div>
+        <div style=${{display:"flex",flexDirection:"column",gap:10}}>
+          ${logs.map(l=>{const p=gp(l.project);return html`<div key=${l.id} style=${{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,borderLeft:"5px solid "+p.bg,display:"flex",alignItems:"center",gap:12}}>
+            <div style=${{width:36,height:36,borderRadius:10,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>${p.emoji}</div>
+            <div style=${{flex:1,minWidth:0}}>
+              <div style=${{fontWeight:700,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>${l.activity}</div>
+              <div style=${{fontSize:11,color:MT,marginTop:2}}>${l.date}</div>
+              <div style=${{marginTop:4}}><${Tag} pid=${l.project} sm=${true}/></div>
+            </div>
+            <div style=${{fontWeight:900,fontSize:22,color:p.bg,fontFamily:HF,flexShrink:0}}>${l.hours}h</div>
+          </div>`;})}
+          ${logs.length===0&&html`<p style=${{padding:28,textAlign:"center",color:MT,background:"#fff",borderRadius:14}}>No hours yet — go volunteer!</p>`}
+        </div>
+      </div>`}
+    </main>
+  </div>`;
+}
+
+function App(){
+  const[profile,setProfile]=useState(null);
+  const[loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    sb.auth.getSession().then(async({data:{session}})=>{
+      if(session){const{data}=await sb.from("profiles").select("*").eq("id",session.user.id).single();setProfile(data);}
+      setLoading(false);
+    });
+    const{data:{subscription}}=sb.auth.onAuthStateChange(event=>{
+      if(event==="SIGNED_OUT")setProfile(null);
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  const logout=async()=>{await sb.auth.signOut();setProfile(null);};
+
+  if(loading)return html`<${Spin}/>`;
+  if(!profile)return html`<${Auth} onAuth=${p=>setProfile(p)}/>`;
+  if(profile.role==="admin")return html`<${Admin} profile=${profile} onLogout=${logout}/>`;
+  return html`<${Volunteer} profile=${profile} onLogout=${logout} onUpdateProfile=${setProfile}/>`;
+}
+
+render(h(App,null),document.getElementById("app"));
+</script>
+</body>
+</html>
