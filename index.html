@@ -35,6 +35,12 @@ const LOGO = "https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/
 const EDGE = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder";
 const DK="#0A3D1F",GN="#15803D",MD="#22C55E",PL="#F0FDF4",BR="#BBF7D0",MT="#4B7C5A";
 const HF="'League Spartan',sans-serif",BF="'Poppins',sans-serif";
+const getHatColor=(hours)=>{
+  if(!hours||hours<20)return null;
+  if(hours>=100)return{color:"#FFD700",label:"🎓 Gold",title:"100+ hours"};
+  if(hours>=50)return{color:"#C0C0C0",label:"🎓 Silver",title:"50+ hours"};
+  return{color:"#CD7F32",label:"🎓 Bronze",title:"20+ hours"};
+};
 const inp = {width:"100%",padding:"12px 14px",border:"1.5px solid #BBF7D0",borderRadius:10,fontSize:15,fontFamily:BF,outline:"none",boxSizing:"border-box",background:"#fff",color:DK};
 const PROJECTS = [
   {id:"food-boxes",label:"Food Boxes",emoji:"📦",bg:"#F5A623",light:"#FEF3C7",text:"#7C4D00"},
@@ -564,9 +570,7 @@ END:VCALENDAR`;
         <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{viewProf.projects.map(pid=><Tag key={pid} pid={pid}/>)}</div>
       </div>}
       {isSuperAdmin&&<div style={{display:"flex",gap:8}}>
-        <button onClick={()=>deleteVol(viewProf.id)} style={{flex:1,background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:10,padding:"12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>🗑️ Delete Volunteer</button>
-      </div>
-      <div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
+        <div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
         <div style={{fontFamily:HF,fontWeight:900,fontSize:14,textTransform:"uppercase",color:DK,marginBottom:12}}>📋 Volunteer History</div>
         {(()=>{
           const volSignups=(Object.values(oppSignups).flat()).filter(s=>s.volunteer_id===viewProf.id);
@@ -586,8 +590,9 @@ END:VCALENDAR`;
           });
         })()}
       </div>
-      <div style={{display:"flex",gap:10,padding:"0 20px 24px"
-      </div>}
+      <div style={{display:"flex",gap:10,padding:"0 20px 24px"}}>
+        <button onClick={()=>deleteVol(viewProf.id)} style={{flex:1,background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:10,padding:"12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>🗑️ Delete Volunteer</button>
+      </div>
     </main>
   </div>;
   if(editOpp) return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
