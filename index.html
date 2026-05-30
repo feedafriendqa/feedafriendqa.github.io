@@ -390,14 +390,16 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     await fetch(`https://xbxagukdvgyaoqvbqoic.supabase.co/auth/v1/admin/users/${id}`,{method:"DELETE",headers:{"Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4","apikey":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"}});
     st("Volunteer removed."); load();
   };
-  const approveSignup=async id=>{
-    const {error}=await sb.from("signups").update({status:"approved"}).eq("id",id);
+  const approveSignup=async(id,volunteerId)=>{
+    const {data,error}=await sb.from("signups").update({status:"approved"}).eq("volunteer_id",volunteerId).eq("opportunity_id",id).select();
     if(error){st("Error: "+error.message);return;}
+    if(!data||data.length===0){st("Error: no matching signup found");return;}
     st("✓ Signup approved!"); load();
   };
-  const declineSignup=async id=>{
-    const {error}=await sb.from("signups").update({status:"rejected"}).eq("id",id);
+  const declineSignup=async(id,volunteerId)=>{
+    const {data,error}=await sb.from("signups").update({status:"rejected"}).eq("volunteer_id",volunteerId).eq("opportunity_id",id).select();
     if(error){st("Error: "+error.message);return;}
+    if(!data||data.length===0){st("Error: no matching signup found");return;}
     st("Declined."); load();
   };
   const checkIn=async id=>{
@@ -625,8 +627,8 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
             </div>}
             {showActions&&<div style={{display:"flex",gap:6,flexShrink:0}}>
               {s.status==="pending"&&<div style={{display:"flex",gap:4}}>
-                <button onClick={()=>approveSignup(s.id)} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
-                <button onClick={()=>declineSignup(s.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
+                <button onClick={()=>approveSignup(s.opportunity_id,s.volunteer_id)} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
+                <button onClick={()=>declineSignup(s.opportunity_id,s.volunteer_id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
               </div>}
               {s.status==="approved"&&!s.checked_in&&<button onClick={()=>checkIn(s.id)} style={{background:"#DBEAFE",color:"#1D4ED8",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>📍 Check In</button>}
               {s.checked_in&&!s.checked_out&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>}
