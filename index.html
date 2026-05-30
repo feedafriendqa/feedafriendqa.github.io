@@ -242,6 +242,7 @@ function Admin({profile, onLogout, isSuperAdmin=true}) {
   const [oppSignups, setOppSignups] = useState({});
   const [toast, setToast] = useState(null);
   const [viewProf, setViewProf] = useState(null);
+  const [editOpp, setEditOpp] = useState(null);
   const [no, setNo] = useState({title:"",project:"food-boxes",date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,questions:[]});
   const st = m => { setToast(m); setTimeout(()=>setToast(null),3000); };
   const calcHours = (start, end) => {
@@ -277,7 +278,20 @@ function Admin({profile, onLogout, isSuperAdmin=true}) {
   const declineSignup = async id => { await sb.from("signups").delete().eq("id",id); st("Signup declined."); load(); };
   const checkIn = async id => { await sb.from("signups").update({checked_in:new Date().toISOString()}).eq("id",id); st("✓ Checked in!"); load(); };
   const checkOut = async (id,oppId,volId,title,proj,hours) => { await sb.from("signups").update({checked_out:new Date().toISOString()}).eq("id",id); await sb.from("hour_logs").insert({volunteer_id:volId,activity:title,project:proj,hours:Number(hours),date:new Date().toISOString().split("T")[0],notes:"Checked in via event attendance"}); st("✅ "+hours+"h logged!"); load(); };
-  const delOpp = async id => { await sb.from("opportunities").delete().eq("id",id); st("Removed."); load(); };
+  const delOpp = async id => { 
+    const {error} = await sb.from("opportunities").delete().eq("id",id); 
+    if(error) { st("Error: "+error.message); } else { st("Removed."); load(); }
+  };
+  const saveEditOpp = async () => {
+    if (!editOpp.title||!editOpp.date||!editOpp.location) { st("Fill title, date and location."); return; }
+    const {error} = await sb.from("opportunities").update({
+      title:editOpp.title, description:editOpp.description, date:editOpp.date,
+      location:editOpp.location, spots:Number(editOpp.spots)||10, hours:Number(editOpp.hours)||2,
+      start_time:editOpp.start_time, end_time:editOpp.end_time,
+      students_only:editOpp.students_only, project:editOpp.project
+    }).eq("id",editOpp.id);
+    if(error){ st("Error: "+error.message); } else { st("✓ Opportunity updated!"); setEditOpp(null); load(); }
+  };
   const addOpp = async () => { if(!no.title||!no.date||!no.location){st("Fill title, date and location.");return;} await sb.from("opportunities").insert({...no,spots:Number(no.spots)||10,hours:Number(no.hours)||2,created_by:profile.id,students_only:no.students_only}); setNo({title:"",project:"food-boxes",date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,questions:[]}); st("✓ Published!"); setTab("opps"); load(); };
 
   const TABS = [
@@ -314,6 +328,42 @@ function Admin({profile, onLogout, isSuperAdmin=true}) {
           <h3 style={{fontFamily:HF,fontSize:14,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Project Interests</h3>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{viewProf.projects.map(pid=><Tag key={pid} pid={pid}/>)}</div>
         </div>}
+      </main>
+    </div>
+  );
+
+  if (editOpp) return (
+    <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
+      <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 16px",gap:12,position:"sticky",top:0,zIndex:100}}>
+        <button onClick={()=>setEditOpp(null)} style={{background:"rgba(255,255,255,0.1)",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13,fontWeight:700}}>← Back</button>
+        <span style={{fontFamily:HF,fontWeight:900,fontSize:16,color:"#fff",textTransform:"uppercase"}}>Edit Opportunity</span>
+      </header>
+      <main style={{maxWidth:640,margin:"0 auto",padding:"20px 16px"}}>
+        <div style={{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <Field label="Project"><select value={editOpp.project} onChange={e=>setEditOpp(o=>({...o,project:e.target.value}))} style={inp}>{PROJECTS.map(p=><option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}</select></Field>
+            <Field label="Title *"><input type="text" value={editOpp.title} onChange={e=>setEditOpp(o=>({...o,title:e.target.value}))} style={inp}/></Field>
+            <Field label="Description"><textarea value={editOpp.description||""} onChange={e=>setEditOpp(o=>({...o,description:e.target.value}))} rows={4} style={{...inp,resize:"vertical"}}/></Field>
+            <Field label="Date *"><input type="date" value={editOpp.date} onChange={e=>setEditOpp(o=>({...o,date:e.target.value}))} style={inp}/></Field>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <Field label="Start Time"><input type="time" value={editOpp.start_time||""} onChange={e=>setEditOpp(o=>({...o,start_time:e.target.value}))} style={inp}/></Field>
+              <Field label="End Time"><input type="time" value={editOpp.end_time||""} onChange={e=>setEditOpp(o=>({...o,end_time:e.target.value}))} style={inp}/></Field>
+            </div>
+            <Field label="Location *"><input type="text" value={editOpp.location} onChange={e=>setEditOpp(o=>({...o,location:e.target.value}))} style={inp}/></Field>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <Field label="Hours"><input type="number" value={editOpp.hours} onChange={e=>setEditOpp(o=>({...o,hours:e.target.value}))} style={inp}/></Field>
+              <Field label="Spots"><input type="number" value={editOpp.spots} onChange={e=>setEditOpp(o=>({...o,spots:e.target.value}))} style={inp}/></Field>
+            </div>
+            <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:editOpp.students_only?"#EDE9FE":"#F9FAFB",border:"1.5px solid "+(editOpp.students_only?"#9B59B6":"#E5E7EB")}}>
+              <input type="checkbox" checked={editOpp.students_only||false} onChange={e=>setEditOpp(o=>({...o,students_only:e.target.checked}))} style={{width:18,height:18,accentColor:"#9B59B6"}}/>
+              <div>
+                <div style={{fontWeight:700,fontSize:14,color:editOpp.students_only?"#5B21B6":DK}}>🎓 Students Only</div>
+                <div style={{fontSize:12,color:MT}}>Only visible to registered students</div>
+              </div>
+            </label>
+            <button onClick={saveEditOpp} style={{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Save Changes</button>
+          </div>
+        </div>
       </main>
     </div>
   );
@@ -392,7 +442,10 @@ function Admin({profile, onLogout, isSuperAdmin=true}) {
                     {approvedSups.length>0 && <span style={{background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✓ {approvedSups.length} approved</span>}
                   </div>
                 </div>
-                <button onClick={()=>delOpp(o.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700,marginLeft:10}}>Remove</button>
+                <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:10}}>
+                <button onClick={()=>setEditOpp({...o})} style={{background:"#F0FDF4",color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Edit</button>
+                <button onClick={()=>delOpp(o.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Remove</button>
+              </div>
               </div>
               {sups.length>0 && <div style={{borderTop:"1px solid "+BR,paddingTop:10,marginTop:8}}>
                 {sups.map(s => <div key={s.volunteer_id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid #F0FDF4",flexWrap:"wrap"}}>
@@ -479,6 +532,8 @@ function Volunteer({profile, onLogout, onUpdateProfile}) {
   const [toast, setToast] = useState(null);
   const [signupModal, setSignupModal] = useState(null);
   const [answers, setAnswers] = useState({});
+  const [editProfile, setEditProfile] = useState(false);
+  const [ep, setEp] = useState({fn:profile.first_name||"",sn:profile.surname||"",dob:profile.dob||"",employment:profile.is_student?"student":profile.is_working?"working":"not_working",studentLevel:profile.student_level||"",studentSchool:profile.student_school||"",prof:profile.profession||"",projs:profile.projects||[]});
   const st = m => { setToast(m); setTimeout(()=>setToast(null),3000); };
   const calcHours = (start, end) => {
     if (!start || !end) return "";
@@ -521,6 +576,21 @@ function Volunteer({profile, onLogout, onUpdateProfile}) {
     st("✓ Request sent! Awaiting admin approval."); loadData();
   }
 
+  async function saveProfile() {
+    const {error} = await sb.from("profiles").update({
+      first_name:ep.fn, surname:ep.sn, dob:ep.dob,
+      is_student:ep.employment==="student",
+      is_working:ep.employment==="working",
+      student_level:ep.studentLevel,
+      student_school:ep.studentSchool,
+      profession:ep.prof,
+      projects:ep.projs
+    }).eq("id",profile.id);
+    if(error){ st("Error saving: "+error.message); return; }
+    onUpdateProfile({...profile,first_name:ep.fn,surname:ep.sn,dob:ep.dob,is_student:ep.employment==="student",is_working:ep.employment==="working",student_level:ep.studentLevel,student_school:ep.studentSchool,profession:ep.prof,projects:ep.projs});
+    setEditProfile(false); st("✓ Profile updated!");
+  }
+
   async function uploadPhoto(file) {
     const ext = file.name.split(".").pop();
     const {data} = await sb.storage.from("avatars").upload(profile.id+"/avatar."+ext, file, {upsert:true});
@@ -530,6 +600,70 @@ function Volunteer({profile, onLogout, onUpdateProfile}) {
   const th = logs.reduce((s,l)=>s+Number(l.hours),0);
   const visibleOpps = opps.filter(o => !o.students_only || profile.is_student); const fo = fp==="all" ? visibleOpps : visibleOpps.filter(o=>o.project===fp);
   const NAV = [{id:"dashboard",label:"Home"},{id:"opportunities",label:"Opportunities"},{id:"log",label:"Log Hours"},{id:"history",label:"My Hours"}];
+
+  if (editProfile) return (
+    <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
+      <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 16px",gap:12,position:"sticky",top:0,zIndex:100}}>
+        <button onClick={()=>setEditProfile(false)} style={{background:"rgba(255,255,255,0.1)",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13,fontWeight:700}}>← Back</button>
+        <span style={{fontFamily:HF,fontWeight:900,fontSize:16,color:"#fff",textTransform:"uppercase"}}>Edit Profile</span>
+      </header>
+      <main style={{maxWidth:640,margin:"0 auto",padding:"20px 16px 40px"}}>
+        <div style={{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,paddingBottom:14,borderBottom:"1px solid "+BR}}>
+              <div style={{position:"relative"}}>
+                <Avtr u={profile} sz={80}/>
+                <label style={{position:"absolute",bottom:0,right:0,background:DK,borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:14,border:"2px solid #fff"}}>
+                  📷
+                  <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files[0])uploadPhoto(e.target.files[0]);}}/>
+                </label>
+              </div>
+              <p style={{fontSize:12,color:MT,fontFamily:BF}}>Tap the camera icon to change your photo</p>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <Field label="First Name"><input type="text" value={ep.fn} onChange={e=>setEp(x=>({...x,fn:e.target.value}))} style={inp}/></Field>
+              <Field label="Surname"><input type="text" value={ep.sn} onChange={e=>setEp(x=>({...x,sn:e.target.value}))} style={inp}/></Field>
+            </div>
+            <Field label="Date of Birth"><input type="date" value={ep.dob} onChange={e=>setEp(x=>({...x,dob:e.target.value}))} style={inp}/></Field>
+            <Field label="Employment Status">
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {[{val:"student",label:"🎓 Student"},{val:"working",label:"💼 Working"},{val:"not_working",label:"🏠 Not currently working"}].map(opt=><label key={opt.val} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 12px",borderRadius:10,background:ep.employment===opt.val?"#F0FDF4":"#fff",border:"1.5px solid "+(ep.employment===opt.val?GN:BR)}}>
+                  <input type="radio" name="ep_employment" value={opt.val} checked={ep.employment===opt.val} onChange={e=>setEp(x=>({...x,employment:e.target.value}))} style={{width:18,height:18,accentColor:GN}}/>
+                  <span style={{fontSize:14,fontWeight:600,color:ep.employment===opt.val?GN:DK}}>{opt.label}</span>
+                </label>)}
+              </div>
+            </Field>
+            {ep.employment==="student" && <div style={{display:"flex",flexDirection:"column",gap:10,padding:14,background:PL,borderRadius:12,border:"1px solid "+BR}}>
+              <Field label="Level of study">
+                <select value={ep.studentLevel} onChange={e=>setEp(x=>({...x,studentLevel:e.target.value}))} style={inp}>
+                  <option value="">Select level...</option>
+                  <option>Secondary School (GCSE)</option>
+                  <option>Sixth Form / A-Levels</option>
+                  <option>Undergraduate</option>
+                  <option>Postgraduate</option>
+                  <option>Other</option>
+                </select>
+              </Field>
+              <Field label="School / University"><input type="text" placeholder="e.g. University of Manchester" value={ep.studentSchool} onChange={e=>setEp(x=>({...x,studentSchool:e.target.value}))} style={inp}/></Field>
+            </div>}
+            {ep.employment==="working" && <div style={{padding:14,background:PL,borderRadius:12,border:"1px solid "+BR}}>
+              <Field label="Profession"><input type="text" placeholder="e.g. Teacher, Nurse..." value={ep.prof} onChange={e=>setEp(x=>({...x,prof:e.target.value}))} style={inp}/></Field>
+            </div>}
+            <Field label="Project Interests">
+              <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:4}}>
+                {PROJECTS.map(p=><label key={p.id} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 12px",borderRadius:10,background:ep.projs.includes(p.id)?p.light:"#fff",border:"1.5px solid "+(ep.projs.includes(p.id)?p.bg:BR)}}>
+                  <input type="checkbox" checked={ep.projs.includes(p.id)} onChange={()=>setEp(x=>({...x,projs:x.projs.includes(p.id)?x.projs.filter(i=>i!==p.id):[...x.projs,p.id]}))} style={{width:18,height:18,accentColor:p.bg}}/>
+                  <span style={{fontSize:18}}>{p.emoji}</span>
+                  <span style={{fontSize:14,fontWeight:600,color:ep.projs.includes(p.id)?p.text:DK}}>{p.label}</span>
+                </label>)}
+              </div>
+            </Field>
+            <button onClick={saveProfile} style={{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:BF}}>Save Changes</button>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
 
   return (
     <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
@@ -645,15 +779,25 @@ function Volunteer({profile, onLogout, onUpdateProfile}) {
         </div>}
 
         {view==="history" && <div className="fade">
-          <div style={{background:"#fff",borderRadius:16,padding:16,border:"1px solid "+BR,marginBottom:16,display:"flex",alignItems:"center",gap:14}}>
-            <Avtr u={profile} sz={58}/>
-            <div style={{flex:1}}>
-              <div style={{fontFamily:HF,fontWeight:900,fontSize:17,color:DK}}>{profile.first_name} {profile.surname}</div>
-              <div style={{fontSize:12,color:MT,fontFamily:BF}}>{profile.email}</div>
-              <label style={{display:"inline-block",marginTop:8,background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:BF}}>
-                📷 Change Photo
-                <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files[0])uploadPhoto(e.target.files[0]);}}/>
-              </label>
+          <div style={{background:"#fff",borderRadius:16,padding:16,border:"1px solid "+BR,marginBottom:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:12}}>
+              <div style={{position:"relative"}}>
+                <Avtr u={profile} sz={64}/>
+                <label style={{position:"absolute",bottom:0,right:0,background:DK,borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:12,border:"2px solid #fff"}}>
+                  📷
+                  <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files[0])uploadPhoto(e.target.files[0]);}}/>
+                </label>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:HF,fontWeight:900,fontSize:17,color:DK}}>{profile.first_name} {profile.surname}</div>
+                <div style={{fontSize:12,color:MT,fontFamily:BF}}>{profile.email}</div>
+              </div>
+              <button onClick={()=>setEditProfile(true)} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:BF}}>Edit</button>
+            </div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {profile.is_student && <span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>🎓 {profile.student_level||"Student"}{profile.student_school?" · "+profile.student_school:""}</span>}
+              {profile.is_working && <span style={{background:"#FFEDD5",color:"#9A3412",borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>💼 {profile.profession||"Working"}</span>}
+              {!profile.is_student&&!profile.is_working && <span style={{background:"#F3F4F6",color:MT,borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:600}}>🏠 Not currently working</span>}
             </div>
           </div>
           <h1 style={{fontFamily:HF,fontSize:24,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>My Hours</h1>
