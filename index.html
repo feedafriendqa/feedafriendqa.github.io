@@ -244,17 +244,28 @@ function Admin({profile, onLogout, isSuperAdmin=true}) {
   const [viewProf, setViewProf] = useState(null);
   const [editOpp, setEditOpp] = useState(null);
   const [editMyProfile, setEditMyProfile] = useState(false);
-  const [myP, setMyP] = useState({fn:profile.first_name||'',sn:profile.surname||''});
+  const [myP, setMyP] = useState({fn:profile.first_name||'',sn:profile.surname||'',photoPreview:null,photoFile:null});
   const [no, setNo] = useState({title:"",project:"food-boxes",date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,questions:[]});
   const st = m => { setToast(m); setTimeout(()=>setToast(null),3000); };
   const uploadAdminPhoto = async file => {
+    const reader = new FileReader();
+    reader.onload = ev => setMyP(x=>({...x,photoPreview:ev.target.result,photoFile:file}));
+    reader.readAsDataURL(file);
+  };
+  const saveAdminPhoto = async file => {
     const ext = file.name.split(".").pop();
     const {data} = await sb.storage.from("avatars").upload(profile.id+"/avatar."+ext, file, {upsert:true});
-    if (data) { const {data:u} = sb.storage.from("avatars").getPublicUrl(data.path); await sb.from("profiles").update({photo_url:u.publicUrl}).eq("id",profile.id); st("✓ Photo updated! Refresh to see it."); }
+    if (data) { const {data:u} = sb.storage.from("avatars").getPublicUrl(data.path); await sb.from("profiles").update({photo_url:u.publicUrl}).eq("id",profile.id); return u.publicUrl; }
+    return null;
   };
   const saveAdminProfile = async () => {
-    await sb.from("profiles").update({first_name:myP.fn,surname:myP.sn}).eq("id",profile.id);
-    st("✓ Profile updated! Sign out and back in to see changes.");
+    let photo_url = profile.photo_url;
+    if (myP.photoFile) { photo_url = await saveAdminPhoto(myP.photoFile) || photo_url; }
+    await sb.from("profiles").update({first_name:myP.fn,surname:myP.sn,photo_url}).eq("id",profile.id);
+    profile.photo_url = photo_url;
+    profile.first_name = myP.fn;
+    profile.surname = myP.sn;
+    st("✓ Profile updated!");
     setEditMyProfile(false);
   };
   const calcHours = (start, end) => {
@@ -323,7 +334,11 @@ function Admin({profile, onLogout, isSuperAdmin=true}) {
         <div style={{background:"#fff",borderRadius:16,padding:24,border:"1px solid "+BR,marginBottom:16,display:"flex",alignItems:"center",gap:16}}>
           <Avtr u={viewProf} sz={70}/>
           <div>
-            <div style={{fontFamily:HF,fontWeight:900,fontSize:20,color:DK}}>{viewProf.first_name} {viewProf.surname}</div>
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <div style={{fontFamily:HF,fontWeight:900,fontSize:20,color:DK}}>{viewProf.first_name} {viewProf.surname}</div>
+              {viewProf.role==="superadmin" && <span style={{background:"#7C3AED",color:"#fff",borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>⭐ Super Admin</span>}
+              {viewProf.role==="admin" && <span style={{background:DK,color:MD,borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>🛡️ Admin</span>}
+            </div>
             <div style={{fontSize:13,color:MT}}>{viewProf.email}</div>
             <div style={{fontSize:12,color:MT,marginTop:2}}>DOB: {viewProf.dob||"Not provided"}</div>
           </div>
@@ -355,13 +370,22 @@ function Admin({profile, onLogout, isSuperAdmin=true}) {
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,paddingBottom:14,borderBottom:"1px solid "+BR}}>
               <div style={{position:"relative"}}>
-                <Avtr u={profile} sz={80}/>
+                {myP.photoPreview
+                  ? <img src={myP.photoPreview} style={{width:80,height:80,borderRadius:"50%",objectFit:"cover",objectPosition:myP.photoPos||"center",border:"3px solid "+MD}}/>
+                  : <Avtr u={profile} sz={80}/>
+                }
                 <label style={{position:"absolute",bottom:0,right:0,background:DK,borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:14,border:"2px solid #fff"}}>
                   📷
                   <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files[0])uploadAdminPhoto(e.target.files[0]);}}/>
                 </label>
               </div>
-              <p style={{fontSize:12,color:MT,fontFamily:BF}}>Tap camera to change photo</p>
+              {myP.photoPreview && <div style={{width:"100%"}}>
+                <p style={{fontSize:12,color:MT,fontFamily:BF,marginBottom:6,textAlign:"center"}}>Drag to adjust position</p>
+                <div style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
+                  {["top","center","bottom"].map(pos=><button key={pos} onClick={()=>setMyP(x=>({...x,photoPos:pos}))} style={{background:myP.photoPos===pos||(!myP.photoPos&&pos==="center")?DK:"#fff",color:myP.photoPos===pos||(!myP.photoPos&&pos==="center")?"#fff":DK,border:"1px solid "+BR,borderRadius:6,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer",textTransform:"capitalize"}}>{pos}</button>)}
+                </div>
+              </div>}
+              {!myP.photoPreview && <p style={{fontSize:12,color:MT,fontFamily:BF}}>Tap camera to change photo</p>}
             </div>
             <Field label="First Name"><input type="text" value={myP.fn} onChange={e=>setMyP(x=>({...x,fn:e.target.value}))} style={inp}/></Field>
             <Field label="Surname"><input type="text" value={myP.sn} onChange={e=>setMyP(x=>({...x,sn:e.target.value}))} style={inp}/></Field>
@@ -423,9 +447,10 @@ function Admin({profile, onLogout, isSuperAdmin=true}) {
       <Toast msg={toast}/>
       <main style={{maxWidth:640,margin:"0 auto",padding:"16px 14px"}}>
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
-          <button onClick={()=>setEditMyProfile(true)} style={{background:"none",border:"none",padding:0,cursor:"pointer",flexShrink:0}}>
+          <div style={{position:"relative",flexShrink:0,cursor:"pointer"}} onClick={()=>setEditMyProfile(true)}>
             <Avtr u={profile} sz={48}/>
-          </button>
+            <div style={{position:"absolute",bottom:0,right:0,background:DK,borderRadius:"50%",width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,border:"2px solid "+PL}}>📷</div>
+          </div>
           <div style={{flex:1}}>
             <h1 style={{fontFamily:HF,fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK}}>Admin Panel</h1>
             <p style={{color:MT,fontSize:12}}>Welcome, {profile.first_name}</p>
@@ -466,7 +491,11 @@ function Admin({profile, onLogout, isSuperAdmin=true}) {
           {vols.map(u => <div key={u.id} style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
             <Avtr u={u} sz={40}/>
             <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:14,fontFamily:BF}}>{u.first_name} {u.surname}</div>
+              <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                <div style={{fontWeight:700,fontSize:14,fontFamily:BF}}>{u.first_name} {u.surname}</div>
+                {u.role==="superadmin" && <span style={{background:"#7C3AED",color:"#fff",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>⭐ Super Admin</span>}
+                {u.role==="admin" && <span style={{background:DK,color:MD,borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>🛡️ Admin</span>}
+              </div>
               <div style={{fontSize:12,color:MT}}>{u.email}</div>
             </div>
             <button onClick={()=>setViewProf(u)} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>View</button>
@@ -582,16 +611,27 @@ function Volunteer({profile, onLogout, onUpdateProfile}) {
   const [signupModal, setSignupModal] = useState(null);
   const [answers, setAnswers] = useState({});
   const [editProfile, setEditProfile] = useState(false);
-  const [ep, setEp] = useState({fn:profile.first_name||"",sn:profile.surname||"",dob:profile.dob||"",employment:profile.is_student?"student":profile.is_working?"working":"not_working",studentLevel:profile.student_level||"",studentSchool:profile.student_school||"",prof:profile.profession||"",projs:profile.projects||[]});
+  const [ep, setEp] = useState({fn:profile.first_name||"",sn:profile.surname||"",dob:profile.dob||"",employment:profile.is_student?"student":profile.is_working?"working":"not_working",studentLevel:profile.student_level||"",studentSchool:profile.student_school||"",prof:profile.profession||"",projs:profile.projects||[],photoPreview:null,photoFile:null,photoPos:"center"});
   const st = m => { setToast(m); setTimeout(()=>setToast(null),3000); };
   const uploadAdminPhoto = async file => {
+    const reader = new FileReader();
+    reader.onload = ev => setMyP(x=>({...x,photoPreview:ev.target.result,photoFile:file}));
+    reader.readAsDataURL(file);
+  };
+  const saveAdminPhoto = async file => {
     const ext = file.name.split(".").pop();
     const {data} = await sb.storage.from("avatars").upload(profile.id+"/avatar."+ext, file, {upsert:true});
-    if (data) { const {data:u} = sb.storage.from("avatars").getPublicUrl(data.path); await sb.from("profiles").update({photo_url:u.publicUrl}).eq("id",profile.id); st("✓ Photo updated! Refresh to see it."); }
+    if (data) { const {data:u} = sb.storage.from("avatars").getPublicUrl(data.path); await sb.from("profiles").update({photo_url:u.publicUrl}).eq("id",profile.id); return u.publicUrl; }
+    return null;
   };
   const saveAdminProfile = async () => {
-    await sb.from("profiles").update({first_name:myP.fn,surname:myP.sn}).eq("id",profile.id);
-    st("✓ Profile updated! Sign out and back in to see changes.");
+    let photo_url = profile.photo_url;
+    if (myP.photoFile) { photo_url = await saveAdminPhoto(myP.photoFile) || photo_url; }
+    await sb.from("profiles").update({first_name:myP.fn,surname:myP.sn,photo_url}).eq("id",profile.id);
+    profile.photo_url = photo_url;
+    profile.first_name = myP.fn;
+    profile.surname = myP.sn;
+    st("✓ Profile updated!");
     setEditMyProfile(false);
   };
   const calcHours = (start, end) => {
@@ -636,6 +676,12 @@ function Volunteer({profile, onLogout, onUpdateProfile}) {
   }
 
   async function saveProfile() {
+    let photo_url = profile.photo_url;
+    if (ep.photoFile) {
+      const ext = ep.photoFile.name.split(".").pop();
+      const {data} = await sb.storage.from("avatars").upload(profile.id+"/avatar."+ext, ep.photoFile, {upsert:true});
+      if (data) { const {data:u} = sb.storage.from("avatars").getPublicUrl(data.path); photo_url = u.publicUrl; }
+    }
     const {error} = await sb.from("profiles").update({
       first_name:ep.fn, surname:ep.sn, dob:ep.dob,
       is_student:ep.employment==="student",
@@ -643,10 +689,11 @@ function Volunteer({profile, onLogout, onUpdateProfile}) {
       student_level:ep.studentLevel,
       student_school:ep.studentSchool,
       profession:ep.prof,
-      projects:ep.projs
+      projects:ep.projs,
+      photo_url
     }).eq("id",profile.id);
     if(error){ st("Error saving: "+error.message); return; }
-    onUpdateProfile({...profile,first_name:ep.fn,surname:ep.sn,dob:ep.dob,is_student:ep.employment==="student",is_working:ep.employment==="working",student_level:ep.studentLevel,student_school:ep.studentSchool,profession:ep.prof,projects:ep.projs});
+    onUpdateProfile({...profile,first_name:ep.fn,surname:ep.sn,dob:ep.dob,is_student:ep.employment==="student",is_working:ep.employment==="working",student_level:ep.studentLevel,student_school:ep.studentSchool,profession:ep.prof,projects:ep.projs,photo_url});
     setEditProfile(false); st("✓ Profile updated!");
   }
 
@@ -671,13 +718,22 @@ function Volunteer({profile, onLogout, onUpdateProfile}) {
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,paddingBottom:14,borderBottom:"1px solid "+BR}}>
               <div style={{position:"relative"}}>
-                <Avtr u={profile} sz={80}/>
+                {ep.photoPreview
+                  ? <img src={ep.photoPreview} style={{width:80,height:80,borderRadius:"50%",objectFit:"cover",objectPosition:ep.photoPos||"center",border:"3px solid "+MD}}/>
+                  : <Avtr u={profile} sz={80}/>
+                }
                 <label style={{position:"absolute",bottom:0,right:0,background:DK,borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:14,border:"2px solid #fff"}}>
                   📷
-                  <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files[0])uploadPhoto(e.target.files[0]);}}/>
+                  <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files[0])uploadVolPhoto(e.target.files[0]);}}/>
                 </label>
               </div>
-              <p style={{fontSize:12,color:MT,fontFamily:BF}}>Tap the camera icon to change your photo</p>
+              {ep.photoPreview && <div style={{width:"100%"}}>
+                <p style={{fontSize:12,color:MT,fontFamily:BF,marginBottom:6,textAlign:"center"}}>Adjust position</p>
+                <div style={{display:"flex",gap:6,justifyContent:"center"}}>
+                  {["top","center","bottom"].map(pos=><button key={pos} onClick={()=>setEp(x=>({...x,photoPos:pos}))} style={{background:ep.photoPos===pos||(!ep.photoPos&&pos==="center")?DK:"#fff",color:ep.photoPos===pos||(!ep.photoPos&&pos==="center")?"#fff":DK,border:"1px solid "+BR,borderRadius:6,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer",textTransform:"capitalize"}}>{pos}</button>)}
+                </div>
+              </div>}
+              {!ep.photoPreview && <p style={{fontSize:12,color:MT,fontFamily:BF}}>Tap camera icon to change photo</p>}
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <Field label="First Name"><input type="text" value={ep.fn} onChange={e=>setEp(x=>({...x,fn:e.target.value}))} style={inp}/></Field>
