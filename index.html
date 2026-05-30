@@ -258,7 +258,7 @@ function Admin({profile, onLogout, isSuperAdmin=true}) {
   async function load() {
     const oppQuery = isSuperAdmin 
       ? sb.from("opportunities").select("*").order("date")
-      : sb.from("opportunities").select("*").eq("created_by",profile.id).order("date");
+      : sb.from("opportunities").select("*").in("project", profile.admin_projects||[]).order("date");
     const [{data:p},{data:v},{data:o},{data:s}] = await Promise.all([
       sb.from("profiles").select("*").eq("approved",false).eq("role","volunteer"),
       sb.from("profiles").select("*").eq("approved",true).eq("role","volunteer"),
