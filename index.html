@@ -396,7 +396,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     st("✓ Signup approved!"); load();
   };
   const declineSignup=async id=>{
-    const {error}=await sb.from("signups").delete().eq("id",id);
+    const {error}=await sb.from("signups").update({status:"rejected"}).eq("id",id);
     if(error){st("Error: "+error.message);return;}
     st("Declined."); load();
   };
@@ -611,6 +611,28 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
           const sups=oppSignups[o.id]||[];
           const pendingSups=sups.filter(s=>s.status==="pending");
           const approvedSups=sups.filter(s=>s.status==="approved");
+          const rejectedSups=sups.filter(s=>s.status==="rejected");
+          const renderVolRow=(s,showActions)=><div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #F0FDF4",flexWrap:"wrap"}}>
+            <button onClick={()=>setViewProf(s.profiles)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,flex:1,textAlign:"left",padding:0}}>
+              <Avtr u={s.profiles} sz={30}/>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:DK,fontFamily:BF}}>{s.profiles?.first_name} {s.profiles?.surname}</div>
+                <div style={{fontSize:11,color:MT}}>{s.profiles?.email}</div>
+              </div>
+            </button>
+            {s.answers?.length>0&&<div style={{width:"100%",marginTop:4,marginLeft:38,background:PL,borderRadius:8,padding:"6px 10px"}}>
+              {s.answers.map((a,i)=><div key={i} style={{fontSize:11,color:DK,marginBottom:2}}>{a.question}: <strong>{a.answer||"—"}</strong></div>)}
+            </div>}
+            {showActions&&<div style={{display:"flex",gap:6,flexShrink:0}}>
+              {s.status==="pending"&&<div style={{display:"flex",gap:4}}>
+                <button onClick={()=>approveSignup(s.id)} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
+                <button onClick={()=>declineSignup(s.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
+              </div>}
+              {s.status==="approved"&&!s.checked_in&&<button onClick={()=>checkIn(s.id)} style={{background:"#DBEAFE",color:"#1D4ED8",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>📍 Check In</button>}
+              {s.checked_in&&!s.checked_out&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>}
+              {s.checked_out&&<span style={{fontSize:11,color:"#7C3AED",fontWeight:700,background:"#F3E8FF",padding:"3px 8px",borderRadius:20}}>✅ {o.hours}h</span>}
+            </div>}
+          </div>;
           return <div key={o.id} style={{background:"#fff",borderRadius:14,padding:"14px 16px",border:"1px solid "+BR,marginBottom:12,borderLeft:"4px solid "+p.bg}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
               <div style={{flex:1}}>
@@ -621,6 +643,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                 <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
                   {pendingSups.length>0&&<span style={{background:"#FEF3C7",color:"#D97706",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>⏳ {pendingSups.length} pending</span>}
                   {approvedSups.length>0&&<span style={{background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✓ {approvedSups.length} approved</span>}
+                  {rejectedSups.length>0&&<span style={{background:"#FEE2E2",color:"#DC2626",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✕ {rejectedSups.length} rejected</span>}
                 </div>
               </div>
               <div style={{display:"flex",gap:6,marginLeft:10,flexShrink:0}}>
@@ -628,28 +651,19 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                 <button onClick={()=>delOpp(o.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Remove</button>
               </div>
             </div>
-            {sups.length>0&&<div style={{borderTop:"1px solid "+BR,paddingTop:10,marginTop:8}}>
-              {sups.map(s=><div key={s.volunteer_id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid #F0FDF4",flexWrap:"wrap"}}>
-                <button onClick={()=>setViewProf(s.profiles)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,flex:1,textAlign:"left",padding:0}}>
-                  <Avtr u={s.profiles} sz={32}/>
-                  <div>
-                    <div style={{fontSize:13,fontWeight:700,color:DK,fontFamily:BF}}>{s.profiles?.first_name} {s.profiles?.surname}</div>
-                    <div style={{fontSize:11,color:MT}}>{s.profiles?.email}</div>
-                  </div>
-                </button>
-                {s.answers?.length>0&&<div style={{width:"100%",marginTop:4,marginLeft:40,background:PL,borderRadius:8,padding:"6px 10px"}}>
-                  {s.answers.map((a,i)=><div key={i} style={{fontSize:11,color:DK,marginBottom:2}}>{a.question}: <strong>{a.answer||"—"}</strong></div>)}
-                </div>}
-                <div style={{display:"flex",gap:6,flexShrink:0}}>
-                  {s.status==="pending"&&<div style={{display:"flex",gap:4}}>
-                    <button onClick={()=>approveSignup(s.id)} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
-                    <button onClick={()=>declineSignup(s.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
-                  </div>}
-                  {s.status==="approved"&&!s.checked_in&&<button onClick={()=>checkIn(s.id)} style={{background:"#DBEAFE",color:"#1D4ED8",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>📍 Check In</button>}
-                  {s.checked_in&&!s.checked_out&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>}
-                  {s.checked_out&&<span style={{fontSize:11,color:"#7C3AED",fontWeight:700,background:"#F3E8FF",padding:"3px 8px",borderRadius:20}}>✅ {o.hours}h</span>}
-                </div>
-              </div>)}
+            {sups.length>0&&<div style={{borderTop:"1px solid "+BR,paddingTop:10,marginTop:8,display:"flex",flexDirection:"column",gap:10}}>
+              {pendingSups.length>0&&<div>
+                <div style={{fontSize:11,fontWeight:700,color:"#D97706",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>⏳ Pending ({pendingSups.length})</div>
+                {pendingSups.map(s=>renderVolRow(s,true))}
+              </div>}
+              {approvedSups.length>0&&<div>
+                <div style={{fontSize:11,fontWeight:700,color:"#166534",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>✓ Approved ({approvedSups.length})</div>
+                {approvedSups.map(s=>renderVolRow(s,true))}
+              </div>}
+              {rejectedSups.length>0&&<div>
+                <div style={{fontSize:11,fontWeight:700,color:"#DC2626",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>✕ Rejected ({rejectedSups.length})</div>
+                {rejectedSups.map(s=>renderVolRow(s,false))}
+              </div>}
             </div>}
           </div>;
         })}
@@ -846,7 +860,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
             <div style={{fontSize:11,color:MT,marginBottom:10,fontFamily:BF}}>📅 {o.date}{o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):""} · 📍 {o.location}</div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{fontSize:11,background:p.light,color:p.text,padding:"2px 8px",borderRadius:20,fontWeight:600,fontFamily:BF}}>{o.spots} spots</span>
-              <button onClick={()=>signUp(o)} disabled={done} style={{background:done?(signup?.status==="pending"?"#FEF3C7":p.light):p.bg,color:done?(signup?.status==="pending"?"#D97706":p.text):"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:done?"default":"pointer",fontSize:12,fontWeight:700,fontFamily:BF}}>{done?(signup?.status==="pending"?"⏳ Pending":"✓ Approved"):"Sign Up →"}</button>
+              <button onClick={()=>signUp(o)} disabled={done&&signup?.status!=="rejected"} style={{background:done?(signup?.status==="pending"?"#FEF3C7":signup?.status==="rejected"?"#FEE2E2":p.light):p.bg,color:done?(signup?.status==="pending"?"#D97706":signup?.status==="rejected"?"#DC2626":p.text):"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:(done&&signup?.status!=="rejected")?"default":"pointer",fontSize:12,fontWeight:700,fontFamily:BF}}>{done?(signup?.status==="pending"?"⏳ Pending":signup?.status==="rejected"?"✕ Rejected":"✓ Approved"):"Sign Up →"}</button>
             </div>
           </div>;})}
         </div>
