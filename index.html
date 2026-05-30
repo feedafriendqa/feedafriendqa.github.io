@@ -569,8 +569,7 @@ END:VCALENDAR`;
         <h3 style={{fontFamily:HF,fontSize:14,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Project Interests</h3>
         <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{viewProf.projects.map(pid=><Tag key={pid} pid={pid}/>)}</div>
       </div>}
-      {isSuperAdmin&&<div style={{display:"flex",gap:8}}>
-        <div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
+      {isSuperAdmin&&<div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
         <div style={{fontFamily:HF,fontWeight:900,fontSize:14,textTransform:"uppercase",color:DK,marginBottom:12}}>📋 Volunteer History</div>
         {(()=>{
           const volSignups=(Object.values(oppSignups).flat()).filter(s=>s.volunteer_id===viewProf.id);
@@ -589,7 +588,7 @@ END:VCALENDAR`;
             </div>;
           });
         })()}
-      </div>
+      </div>}
       <div style={{display:"flex",gap:10,padding:"0 20px 24px"}}>
         <button onClick={()=>deleteVol(viewProf.id)} style={{flex:1,background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:10,padding:"12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>🗑️ Delete Volunteer</button>
       </div>
