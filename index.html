@@ -243,8 +243,20 @@ function Admin({profile, onLogout, isSuperAdmin=true}) {
   const [toast, setToast] = useState(null);
   const [viewProf, setViewProf] = useState(null);
   const [editOpp, setEditOpp] = useState(null);
+  const [editMyProfile, setEditMyProfile] = useState(false);
+  const [myP, setMyP] = useState({fn:profile.first_name||'',sn:profile.surname||''});
   const [no, setNo] = useState({title:"",project:"food-boxes",date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,questions:[]});
   const st = m => { setToast(m); setTimeout(()=>setToast(null),3000); };
+  const uploadAdminPhoto = async file => {
+    const ext = file.name.split(".").pop();
+    const {data} = await sb.storage.from("avatars").upload(profile.id+"/avatar."+ext, file, {upsert:true});
+    if (data) { const {data:u} = sb.storage.from("avatars").getPublicUrl(data.path); await sb.from("profiles").update({photo_url:u.publicUrl}).eq("id",profile.id); st("✓ Photo updated! Refresh to see it."); }
+  };
+  const saveAdminProfile = async () => {
+    await sb.from("profiles").update({first_name:myP.fn,surname:myP.sn}).eq("id",profile.id);
+    st("✓ Profile updated! Sign out and back in to see changes.");
+    setEditMyProfile(false);
+  };
   const calcHours = (start, end) => {
     if (!start || !end) return "";
     const [sh,sm] = start.split(":").map(Number);
@@ -332,6 +344,37 @@ function Admin({profile, onLogout, isSuperAdmin=true}) {
     </div>
   );
 
+  if (editMyProfile) return (
+    <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
+      <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 16px",gap:12,position:"sticky",top:0,zIndex:100}}>
+        <button onClick={()=>setEditMyProfile(false)} style={{background:"rgba(255,255,255,0.1)",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13,fontWeight:700}}>← Back</button>
+        <span style={{fontFamily:HF,fontWeight:900,fontSize:16,color:"#fff",textTransform:"uppercase"}}>My Profile</span>
+      </header>
+      <main style={{maxWidth:640,margin:"0 auto",padding:"20px 16px"}}>
+        <div style={{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,paddingBottom:14,borderBottom:"1px solid "+BR}}>
+              <div style={{position:"relative"}}>
+                <Avtr u={profile} sz={80}/>
+                <label style={{position:"absolute",bottom:0,right:0,background:DK,borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:14,border:"2px solid #fff"}}>
+                  📷
+                  <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files[0])uploadAdminPhoto(e.target.files[0]);}}/>
+                </label>
+              </div>
+              <p style={{fontSize:12,color:MT,fontFamily:BF}}>Tap camera to change photo</p>
+            </div>
+            <Field label="First Name"><input type="text" value={myP.fn} onChange={e=>setMyP(x=>({...x,fn:e.target.value}))} style={inp}/></Field>
+            <Field label="Surname"><input type="text" value={myP.sn} onChange={e=>setMyP(x=>({...x,sn:e.target.value}))} style={inp}/></Field>
+            <div style={{background:PL,borderRadius:10,padding:"12px 14px"}}>
+              <p style={{fontSize:12,color:MT,fontFamily:BF}}>Email: <strong style={{color:DK}}>{profile.email}</strong></p>
+            </div>
+            <button onClick={saveAdminProfile} style={{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:BF}}>Save Changes</button>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+
   if (editOpp) return (
     <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
       <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 16px",gap:12,position:"sticky",top:0,zIndex:100}}>
@@ -380,8 +423,14 @@ function Admin({profile, onLogout, isSuperAdmin=true}) {
       <Toast msg={toast}/>
       <main style={{maxWidth:640,margin:"0 auto",padding:"16px 14px"}}>
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
-          <Avtr u={profile} sz={48}/>
-          <div><h1 style={{fontFamily:HF,fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK}}>Admin Panel</h1><p style={{color:MT,fontSize:12}}>Welcome, {profile.first_name}</p></div>
+          <button onClick={()=>setEditMyProfile(true)} style={{background:"none",border:"none",padding:0,cursor:"pointer",flexShrink:0}}>
+            <Avtr u={profile} sz={48}/>
+          </button>
+          <div style={{flex:1}}>
+            <h1 style={{fontFamily:HF,fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK}}>Admin Panel</h1>
+            <p style={{color:MT,fontSize:12}}>Welcome, {profile.first_name}</p>
+          </div>
+          <button onClick={()=>setEditMyProfile(true)} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:BF}}>My Profile</button>
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:20}}>
           {TABS.map(t => <button key={t.id} onClick={()=>setTab(t.id)} style={{background:tab===t.id?DK:"#fff",color:tab===t.id?"#fff":DK,border:"1.5px solid "+(tab===t.id?DK:BR),borderRadius:20,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
@@ -535,6 +584,16 @@ function Volunteer({profile, onLogout, onUpdateProfile}) {
   const [editProfile, setEditProfile] = useState(false);
   const [ep, setEp] = useState({fn:profile.first_name||"",sn:profile.surname||"",dob:profile.dob||"",employment:profile.is_student?"student":profile.is_working?"working":"not_working",studentLevel:profile.student_level||"",studentSchool:profile.student_school||"",prof:profile.profession||"",projs:profile.projects||[]});
   const st = m => { setToast(m); setTimeout(()=>setToast(null),3000); };
+  const uploadAdminPhoto = async file => {
+    const ext = file.name.split(".").pop();
+    const {data} = await sb.storage.from("avatars").upload(profile.id+"/avatar."+ext, file, {upsert:true});
+    if (data) { const {data:u} = sb.storage.from("avatars").getPublicUrl(data.path); await sb.from("profiles").update({photo_url:u.publicUrl}).eq("id",profile.id); st("✓ Photo updated! Refresh to see it."); }
+  };
+  const saveAdminProfile = async () => {
+    await sb.from("profiles").update({first_name:myP.fn,surname:myP.sn}).eq("id",profile.id);
+    st("✓ Profile updated! Sign out and back in to see changes.");
+    setEditMyProfile(false);
+  };
   const calcHours = (start, end) => {
     if (!start || !end) return "";
     const [sh,sm] = start.split(":").map(Number);
