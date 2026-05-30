@@ -361,11 +361,15 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
       sb.from("profiles").select("*").eq("approved",true).eq("role","volunteer"),
       isSuperAdmin ? sb.from("profiles").select("*").in("role",["admin","superadmin"]) : Promise.resolve({data:[]}),
       oppQuery,
-      sb.from("signups").select("*,profiles(id,first_name,surname,email,photo_url,is_student,student_level,student_school,is_working,profession,projects,approved,dob,role,admin_projects)"),
+      sb.from("signups").select("id,volunteer_id,opportunity_id,status,answers,checked_in,checked_out,profiles(id,first_name,surname,email,photo_url,is_student,student_level,student_school,is_working,profession,projects,approved,dob,role,admin_projects)").order("created_at"),
     ]);
     setPending(p||[]); setVols(v||[]); setAdmins(a||[]); setOpps(o||[]);
     const g={};
-    (s||[]).forEach(su=>{if(!g[su.opportunity_id])g[su.opportunity_id]=[];g[su.opportunity_id].push(su);});
+    (s||[]).forEach(su=>{
+      if(!g[su.opportunity_id])g[su.opportunity_id]=[];
+      // store signup_id separately so profiles.id join can't overwrite it
+      g[su.opportunity_id].push({...su, signup_id: su.id});
+    });
     setOppSignups(g);
   }
 
@@ -390,17 +394,91 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     await fetch(`https://xbxagukdvgyaoqvbqoic.supabase.co/auth/v1/admin/users/${id}`,{method:"DELETE",headers:{"Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4","apikey":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"}});
     st("Volunteer removed."); load();
   };
-  const approveSignup=async(id,volunteerId)=>{
-    const {data,error}=await sb.from("signups").update({status:"approved"}).eq("volunteer_id",volunteerId).eq("opportunity_id",id).select();
-    if(error){st("Error: "+error.message);return;}
-    if(!data||data.length===0){st("Error: no matching signup found");return;}
-    st("✓ Signup approved!"); load();
+  const sendApprovalEmail=async(volunteer,opp)=>{
+    try{
+      // Build ICS calendar invite
+      const dateStr=opp.date?opp.date.replace(/-/g,""):"";
+      const startTime=opp.start_time?opp.start_time.replace(":","")+"00":"090000";
+      const endTime=opp.end_time?opp.end_time.replace(":","")+"00":"170000";
+      const dtStart=dateStr+"T"+startTime;
+      const dtEnd=dateStr+"T"+endTime;
+      const ics=`BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Feed a Friend//EN
+BEGIN:VEVENT
+UID:${opp.id}@feedafriend.org
+DTSTAMP:${new Date().toISOString().replace(/[-:.]/g,"").slice(0,15)}Z
+DTSTART;TZID=Africa/Johannesburg:${dtStart}
+DTEND;TZID=Africa/Johannesburg:${dtEnd}
+SUMMARY:${opp.title}
+DESCRIPTION:Volunteer opportunity with Feed a Friend
+LOCATION:${opp.location||""}
+END:VEVENT
+END:VCALENDAR`;
+      const icsB64=btoa(unescape(encodeURIComponent(ics)));
+      const html=`
+<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+  <div style="background:#1a3c2e;padding:24px;text-align:center;border-radius:12px 12px 0 0;">
+    <h1 style="color:#fff;margin:0;font-size:22px;">🎉 You've been approved!</h1>
+  </div>
+  <div style="background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;">
+    <p style="font-size:16px;color:#111;">Hi <strong>${volunteer.first_name}</strong>,</p>
+    <p style="color:#374151;">Great news — you've been approved to volunteer for:</p>
+    <div style="background:#fff;border-left:4px solid #16a34a;border-radius:8px;padding:16px;margin:16px 0;">
+      <h2 style="margin:0 0 8px;color:#111;font-size:18px;">${opp.title}</h2>
+      <p style="margin:4px 0;color:#374151;">📅 <strong>Date:</strong> ${opp.date||"TBC"}</p>
+      ${opp.start_time?`<p style="margin:4px 0;color:#374151;">⏰ <strong>Time:</strong> ${opp.start_time}${opp.end_time?" – "+opp.end_time:""}</p>`:""}
+      <p style="margin:4px 0;color:#374151;">📍 <strong>Location:</strong> ${opp.location||"TBC"}</p>
+      <p style="margin:4px 0;color:#374151;">⏱ <strong>Duration:</strong> ${opp.hours} hour${opp.hours!=1?"s":""}</p>
+    </div>
+    <p style="color:#374151;">The calendar invite is attached — tap it to add the event to Google Calendar, Outlook, or Apple Calendar.</p>
+    <p style="color:#374151;">See you there! 💚</p>
+    <p style="color:#6b7280;font-size:13px;margin-top:24px;">— The Feed a Friend Team</p>
+  </div>
+</div>`;
+      await fetch("https://api.brevo.com/v3/smtp/email",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","api-key":"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"},
+        body:JSON.stringify({
+          sender:{name:"Feed a Friend",email:"salaam@feedafriend.org"},
+          to:[{email:volunteer.email,name:volunteer.first_name+" "+volunteer.surname}],
+          subject:"✅ You're approved: "+opp.title,
+          htmlContent:html,
+          attachment:[{name:"event.ics",content:icsB64}]
+        })
+      });
+    }catch(e){console.error("Email error:",e);}
   };
-  const declineSignup=async(id,volunteerId)=>{
-    const {data,error}=await sb.from("signups").update({status:"rejected"}).eq("volunteer_id",volunteerId).eq("opportunity_id",id).select();
+  const approveSignup=async(signupId)=>{
+    const {error}=await sb.from("signups").update({status:"approved"}).eq("id",signupId);
     if(error){st("Error: "+error.message);return;}
-    if(!data||data.length===0){st("Error: no matching signup found");return;}
-    st("Declined."); load();
+    setOppSignups(prev=>{
+      const next={...prev};
+      for(const k in next){next[k]=next[k].map(s=>s.signup_id===signupId?{...s,status:"approved"}:s);}
+      return next;
+    });
+    // find the signup to get volunteer + opp details for email
+    let volunteer=null,opp=null;
+    for(const oppId in oppSignups){
+      const found=oppSignups[oppId].find(s=>s.signup_id===signupId);
+      if(found){
+        volunteer=found.profiles;
+        opp=opps.find(o=>o.id===oppId);
+        break;
+      }
+    }
+    if(volunteer&&opp)sendApprovalEmail(volunteer,opp);
+    st("✓ Approved! Email sent 📧"); load();
+  };
+  const declineSignup=async(signupId)=>{
+    const {error}=await sb.from("signups").update({status:"rejected"}).eq("id",signupId);
+    if(error){st("Error: "+error.message);return;}
+    setOppSignups(prev=>{
+      const next={...prev};
+      for(const k in next){next[k]=next[k].map(s=>s.signup_id===signupId?{...s,status:"rejected"}:s);}
+      return next;
+    });
+    st("✓ Declined!"); load();
   };
   const checkIn=async id=>{
     const {error}=await sb.from("signups").update({checked_in:new Date().toISOString()}).eq("id",id);
@@ -627,8 +705,8 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
             </div>}
             {showActions&&<div style={{display:"flex",gap:6,flexShrink:0}}>
               {s.status==="pending"&&<div style={{display:"flex",gap:4}}>
-                <button onClick={()=>approveSignup(s.opportunity_id,s.volunteer_id)} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
-                <button onClick={()=>declineSignup(s.opportunity_id,s.volunteer_id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
+                <button onClick={()=>approveSignup(s.signup_id)} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
+                <button onClick={()=>declineSignup(s.signup_id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
               </div>}
               {s.status==="approved"&&!s.checked_in&&<button onClick={()=>checkIn(s.id)} style={{background:"#DBEAFE",color:"#1D4ED8",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>📍 Check In</button>}
               {s.checked_in&&!s.checked_out&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>}
