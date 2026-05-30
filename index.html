@@ -730,13 +730,17 @@ END:VCALENDAR`;
 
       {!localStorage.getItem("brevo_key")&&<div style={{background:"#FEF3C7",border:"1px solid #FCD34D",borderRadius:10,padding:"12px 16px",marginBottom:12}}><div style={{fontSize:13,color:"#92400E",marginBottom:8,fontWeight:700}}>Enter your Brevo API key to enable emails</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><input id="brevo_input" placeholder="Paste your Brevo API key here" style={{fontSize:12,padding:"6px 10px",borderRadius:6,border:"1px solid #FCD34D",flex:1,minWidth:200}}/><button onClick={()=>{const v=document.getElementById("brevo_input").value.trim();if(v){localStorage.setItem("brevo_key",v);window.location.reload();}}} style={{background:"#D97706",color:"#fff",border:"none",borderRadius:6,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Save</button></div></div>}
       {tab==="opps"&&<div>
-        <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Opportunities & Sign-ups</h2>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,margin:0}}>Opportunities & Sign-ups</h2>
+          <button onClick={()=>{const rows=[["Event","Date","Location","Hours","Volunteer Name","Email","Phone","Status","Checked In","Checked Out"]];opps.forEach(o=>{(oppSignups[o.id]||[]).forEach(s=>{rows.push([o.title,o.date,o.location,o.hours,(s.profiles?.first_name||"")+" "+(s.profiles?.surname||""),s.profiles?.email||"",s.profiles?.phone||"",s.status,s.checked_in?new Date(s.checked_in).toLocaleString():"",s.checked_out?new Date(s.checked_out).toLocaleString():""]);});});const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");const blob=new Blob([csv],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="event_registrations.csv";a.click();}} style={{background:"#16a34a",color:"#fff",border:"none",borderRadius:8,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>📊 Export CSV</button>
+        </div>
         {opps.map(o=>{
           const p=gp(o.project);
           const sups=oppSignups[o.id]||[];
           const pendingSups=sups.filter(s=>s.status==="pending");
           const approvedSups=sups.filter(s=>s.status==="approved");
           const rejectedSups=sups.filter(s=>s.status==="rejected");
+          const waitlistSups=sups.filter(s=>s.status==="waitlist");
           const renderVolRow=(s,showActions)=><div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #F0FDF4",flexWrap:"wrap"}}>
             <button onClick={()=>setViewProf(s.profiles)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,flex:1,textAlign:"left",padding:0}}>
               <Avtr u={s.profiles} sz={30}/>
@@ -768,7 +772,7 @@ END:VCALENDAR`;
                 <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
                   {pendingSups.length>0&&<span style={{background:"#FEF3C7",color:"#D97706",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>⏳ {pendingSups.length} pending</span>}
                   {approvedSups.length>0&&<span style={{background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✓ {approvedSups.length} approved</span>}
-                  {rejectedSups.length>0&&<span style={{background:"#FEE2E2",color:"#DC2626",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✕ {rejectedSups.length} rejected</span>}
+                  {rejectedSups.length>0&&<span style={{background:"#FEE2E2",color:"#DC2626",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✕ {rejectedSups.length} rejected</span>}{waitlistSups.length>0&&<span style={{background:"#EFF6FF",color:"#1D4ED8",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>📋 {waitlistSups.length} waitlist</span>}
                 </div>
               </div>
               <div style={{display:"flex",gap:6,marginLeft:10,flexShrink:0}}>
@@ -788,6 +792,19 @@ END:VCALENDAR`;
               {rejectedSups.length>0&&<div>
                 <div style={{fontSize:11,fontWeight:700,color:"#DC2626",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>✕ Rejected ({rejectedSups.length})</div>
                 {rejectedSups.map(s=>renderVolRow(s,false))}
+              </div>}
+              {waitlistSups.length>0&&<div>
+                <div style={{fontSize:11,fontWeight:700,color:"#1D4ED8",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>📋 Waitlist ({waitlistSups.length})</div>
+                {waitlistSups.map(s=><div key={s.signup_id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #EFF6FF",flexWrap:"wrap"}}>
+                  <button onClick={()=>setViewProf(s.profiles)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,flex:1,textAlign:"left",padding:0}}>
+                    <Avtr u={s.profiles} sz={30}/>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:700,color:DK,fontFamily:BF}}>{s.profiles?.first_name} {s.profiles?.surname}</div>
+                      <div style={{fontSize:11,color:MT}}>{s.profiles?.email}</div>
+                    </div>
+                  </button>
+                  <button onClick={async()=>{const{error}=await sb.from("signups").update({status:"pending"}).eq("id",s.signup_id);if(error){st("Error: "+error.message);return;}st("✓ Moved to pending!");load();}} style={{background:"#EFF6FF",color:"#1D4ED8",border:"1px solid #BFDBFE",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>⬆️ Promote</button>
+                </div>)}
               </div>}
             </div>}
           </div>;
@@ -877,15 +894,18 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   }
 
   async function signUp(o){
-    if(su.find(x=>x.opportunity_id===o.id)) return;
+    if(su.find(x=>x.opportunity_id===o.id&&x.status!=="rejected")) return;
     if(o.questions&&o.questions.length>0){setSignupModal(o);setAnswers({});}
     else await submitSignup(o,[]);
   }
 
   async function submitSignup(o,answersArr){
-    await sb.from("signups").insert({volunteer_id:profile.id,opportunity_id:o.id,status:"pending",answers:answersArr});
+    const {data:approvedList}=await sb.from("signups").select("id").eq("opportunity_id",o.id).eq("status","approved");
+    const isFull=(approvedList||[]).length>=(o.spots||999);
+    const status=isFull?"waitlist":"pending";
+    await sb.from("signups").insert({volunteer_id:profile.id,opportunity_id:o.id,status,answers:answersArr});
     setSignupModal(null); setAnswers({});
-    st("✓ Request sent! Awaiting admin approval."); loadData();
+    st(isFull?"📋 Added to waitlist!":"✓ Request sent! Awaiting admin approval."); loadData();
   }
 
   const th=logs.reduce((s,l)=>s+Number(l.hours),0);
@@ -993,7 +1013,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
             <div style={{fontSize:11,color:MT,marginBottom:10,fontFamily:BF}}>📅 {o.date}{o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):""} · 📍 {o.location}</div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{fontSize:11,background:p.light,color:p.text,padding:"2px 8px",borderRadius:20,fontWeight:600,fontFamily:BF}}>{o.spots} spots</span>
-              <button onClick={()=>signUp(o)} disabled={done&&signup?.status!=="rejected"} style={{background:done?(signup?.status==="pending"?"#FEF3C7":signup?.status==="rejected"?"#FEE2E2":p.light):p.bg,color:done?(signup?.status==="pending"?"#D97706":signup?.status==="rejected"?"#DC2626":p.text):"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:(done&&signup?.status!=="rejected")?"default":"pointer",fontSize:12,fontWeight:700,fontFamily:BF}}>{done?(signup?.status==="pending"?"⏳ Pending":signup?.status==="rejected"?"✕ Rejected":"✓ Approved"):"Sign Up →"}</button>
+              <button onClick={()=>signUp(o)} disabled={done&&signup?.status!=="rejected"&&signup?.status!=="waitlist"} style={{background:done?(signup?.status==="pending"?"#FEF3C7":signup?.status==="waitlist"?"#EFF6FF":signup?.status==="rejected"?"#FEE2E2":p.light):p.bg,color:done?(signup?.status==="pending"?"#D97706":signup?.status==="waitlist"?"#1D4ED8":signup?.status==="rejected"?"#DC2626":p.text):"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:(done&&signup?.status!=="rejected"&&signup?.status!=="waitlist")?"default":"pointer",fontSize:12,fontWeight:700,fontFamily:BF}}>{done?(signup?.status==="pending"?"⏳ Pending":signup?.status==="waitlist"?"📋 Waitlisted":signup?.status==="rejected"?"✕ Rejected":"✓ Approved"):(isFull?"📋 Join Waitlist":"Sign Up →")}</button>
             </div>
           </div>;})}
         </div>
