@@ -8,7 +8,6 @@
 <meta name="theme-color" content="#0A3D1F"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="Feed a Friend"/>
-<link rel="manifest" href="/manifest.json"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0A3D1F;font-family:Poppins,sans-serif;-webkit-font-smoothing:antialiased}
@@ -36,12 +35,6 @@ const LOGO = "https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/
 const EDGE = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder";
 const DK="#0A3D1F",GN="#15803D",MD="#22C55E",PL="#F0FDF4",BR="#BBF7D0",MT="#4B7C5A";
 const HF="'League Spartan',sans-serif",BF="'Poppins',sans-serif";
-const getHatColor=(hours)=>{
-  if(!hours||hours<20)return null;
-  if(hours>=100)return{color:"#FFD700",label:"🎓 Gold",title:"100+ hours"};
-  if(hours>=50)return{color:"#C0C0C0",label:"🎓 Silver",title:"50+ hours"};
-  return{color:"#CD7F32",label:"🎓 Bronze",title:"20+ hours"};
-};
 const inp = {width:"100%",padding:"12px 14px",border:"1.5px solid #BBF7D0",borderRadius:10,fontSize:15,fontFamily:BF,outline:"none",boxSizing:"border-box",background:"#fff",color:DK};
 const PROJECTS = [
   {id:"food-boxes",label:"Food Boxes",emoji:"📦",bg:"#F5A623",light:"#FEF3C7",text:"#7C4D00"},
@@ -135,7 +128,7 @@ function Auth({onAuth}){
 
   async function register(){
     setErr("");
-    if(!r.fn||!r.sn||!r.dob||!r.email||!r.pw||!r.phone){setErr("Please fill in all required fields.");return;}
+    if(!r.fn||!r.sn||!r.dob||!r.email||!r.pw){setErr("Please fill in all required fields.");return;}
     if(r.pw!==r.pw2){setErr("Passwords do not match.");return;}
     if(r.pw.length<6){setErr("Password must be at least 6 characters.");return;}
     setLoading(true);
@@ -143,7 +136,7 @@ function Auth({onAuth}){
     if(error){setErr(error.message);setLoading(false);return;}
     let photo_url=null;
     if(r.photoFile&&data.user) photo_url=await uploadPhoto(data.user.id,r.photoFile);
-    await sb.from("profiles").insert({id:data.user.id,first_name:r.fn,surname:r.sn,email:r.email,dob:r.dob,phone:r.phone,is_student:r.employment==="student",student_level:r.studentLevel,student_school:r.studentSchool,is_working:r.employment==="working",profession:r.prof,projects:r.projs,photo_url,role:"volunteer",approved:false});
+    await sb.from("profiles").insert({id:data.user.id,first_name:r.fn,surname:r.sn,email:r.email,dob:r.dob,is_student:r.employment==="student",student_level:r.studentLevel,student_school:r.studentSchool,is_working:r.employment==="working",profession:r.prof,projects:r.projs,photo_url,role:"volunteer",approved:false});
     await sendEmail("volunteer_pending",r.fn,r.email);
     await sendEmail("new_volunteer",r.fn+" "+r.sn,r.email,"salaam@feedafriend.org");
     setMsg("Registration submitted! An admin will review and approve your account shortly.");
@@ -208,7 +201,6 @@ function Auth({onAuth}){
           <Field label="Surname *"><input type="text" placeholder="Ahmed" value={r.sn} onChange={e=>setR(x=>{return{...x,sn:e.target.value};} )} style={inp}/></Field>
         </div>
         <Field label="Date of Birth *"><input type="date" value={r.dob} onChange={e=>setR(x=>{return{...x,dob:e.target.value};} )} style={inp}/></Field>
-        <Field label="Phone Number *"><input type="tel" placeholder="+974 XXXX XXXX" value={r.phone} onChange={e=>setR(x=>{return{...x,phone:e.target.value};} )} style={inp}/></Field>
         <Field label="Email *"><input type="email" placeholder="you@email.com" value={r.email} onChange={e=>setR(x=>{return{...x,email:e.target.value};} )} style={inp}/></Field>
         <Field label="Password *"><input type="password" placeholder="Min. 6 characters" value={r.pw} onChange={e=>setR(x=>{return{...x,pw:e.target.value};} )} style={inp}/></Field>
         <Field label="Confirm Password *"><input type="password" placeholder="Repeat password" value={r.pw2} onChange={e=>setR(x=>{return{...x,pw2:e.target.value};} )} style={inp}/></Field>
@@ -347,7 +339,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   const [viewProf,setViewProf]=useState(null);
   const [editOpp,setEditOpp]=useState(null);
   const [editingProfile,setEditingProfile]=useState(false);
-  const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
+  const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,questions:[]});
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
   const calcHours=(s,e)=>{
@@ -404,57 +396,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   };
   const sendApprovalEmail=async(volunteer,opp)=>{
     try{
-      // Build ICS calendar invite
-      const dateStr=opp.date?opp.date.replace(/-/g,""):"";
-      const startTime=opp.start_time?opp.start_time.replace(":","")+"00":"090000";
-      const endTime=opp.end_time?opp.end_time.replace(":","")+"00":"170000";
-      const dtStart=dateStr+"T"+startTime;
-      const dtEnd=dateStr+"T"+endTime;
-      const ics=`BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Feed a Friend//EN
-BEGIN:VEVENT
-UID:${opp.id}@feedafriend.org
-DTSTAMP:${new Date().toISOString().replace(/[-:.]/g,"").slice(0,15)}Z
-DTSTART;TZID=Africa/Johannesburg:${dtStart}
-DTEND;TZID=Africa/Johannesburg:${dtEnd}
-SUMMARY:${opp.title}
-DESCRIPTION:Volunteer opportunity with Feed a Friend
-LOCATION:${opp.location||""}
-END:VEVENT
-END:VCALENDAR`;
-      const icsB64=btoa(unescape(encodeURIComponent(ics)));
-      const html=`
-<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-  <div style="background:#1a3c2e;padding:24px;text-align:center;border-radius:12px 12px 0 0;">
-    <h1 style="color:#fff;margin:0;font-size:22px;">🎉 You've been approved!</h1>
-  </div>
-  <div style="background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;">
-    <p style="font-size:16px;color:#111;">Hi <strong>${volunteer.first_name}</strong>,</p>
-    <p style="color:#374151;">Great news — you've been approved to volunteer for:</p>
-    <div style="background:#fff;border-left:4px solid #16a34a;border-radius:8px;padding:16px;margin:16px 0;">
-      <h2 style="margin:0 0 8px;color:#111;font-size:18px;">${opp.title}</h2>
-      <p style="margin:4px 0;color:#374151;">📅 <strong>Date:</strong> ${opp.date||"TBC"}</p>
-      ${opp.start_time?`<p style="margin:4px 0;color:#374151;">⏰ <strong>Time:</strong> ${opp.start_time}${opp.end_time?" – "+opp.end_time:""}</p>`:""}
-      <p style="margin:4px 0;color:#374151;">📍 <strong>Location:</strong> ${opp.location||"TBC"}</p>
-      <p style="margin:4px 0;color:#374151;">⏱ <strong>Duration:</strong> ${opp.hours} hour${opp.hours!=1?"s":""}</p>
-    </div>
-    <p style="color:#374151;">The calendar invite is attached — tap it to add the event to Google Calendar, Outlook, or Apple Calendar.</p>
-    <p style="color:#374151;">See you there! 💚</p>
-    <p style="color:#6b7280;font-size:13px;margin-top:24px;">— The Feed a Friend Team</p>
-  </div>
-</div>`;
-      await fetch("https://api.brevo.com/v3/smtp/email",{
-        method:"POST",
-        headers:{"Content-Type":"application/json","api-key":localStorage.getItem("brevo_key")||""},
-        body:JSON.stringify({
-          sender:{name:"Feed a Friend",email:"salaam@feedafriend.org"},
-          to:[{email:volunteer.email,name:volunteer.first_name+" "+volunteer.surname}],
-          subject:"✅ You're approved: "+opp.title,
-          htmlContent:html,
-          attachment:[{name:"event.ics",content:icsB64}]
-        })
-      });
+      await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"},body:JSON.stringify({type:"opportunity_approved",name:volunteer.first_name,email:volunteer.email,opp})});
     }catch(e){console.error("Email error:",e);}
   };
   const approveSignup=async(signupId)=>{
@@ -508,20 +450,12 @@ END:VCALENDAR`;
     if(!no.title||!no.date||!no.location){st("Fill title, date and location.");return;}
     const {error}=await sb.from("opportunities").insert({...no,spots:Number(no.spots)||10,hours:Number(no.hours)||2,created_by:profile.id});
     if(error){st("Error: "+error.message);return;}
-    if(no.student_friendly||no.kid_friendly){
-      const label=no.student_friendly?"Student Friendly (14+)":"Kid Friendly (6+)";
-      const {data:allVols}=await sb.from("profiles").select("first_name,email").eq("approved",true).eq("role","volunteer");
-      if(allVols){allVols.forEach(async(v)=>{try{
-        const html="<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto'><div style='background:#0A3D1F;padding:24px;text-align:center'><img src='https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/avatars/Faflogowhite.png' style='height:60px'/></div><div style='padding:32px 24px'><h1 style='color:#0A3D1F'>New "+label+" Opportunity! 🌟</h1><p>Hi "+v.first_name+", a new volunteer opportunity is available:</p><div style='background:#F0FDF4;border-left:4px solid #22C55E;padding:16px;border-radius:4px;margin:16px 0'><h2 style='margin:0 0 8px;color:#0A3D1F'>"+no.title+"</h2><p>📅 "+no.date+"</p><p>📍 "+no.location+"</p><p>⏱ "+no.hours+" hours</p></div><a href='https://feedafriendqa.github.io' style='display:inline-block;background:#0A3D1F;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700'>Sign Up Now</a></div></div>";
-        await fetch("https://api.brevo.com/v3/smtp/email",{method:"POST",headers:{"Content-Type":"application/json","api-key":"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"},body:JSON.stringify({sender:{name:"Feed a Friend",email:"salaam@feedafriend.org"},to:[{email:v.email,name:v.first_name}],subject:"🌟 New "+label+": "+no.title,htmlContent:html})});
-      }catch(e){console.log("Alert email error",e);}});}
-    }
-    setNo({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
-    st(no.student_friendly||no.kid_friendly?"✓ Published! Email alerts sent 📧":"✓ Published!"); setTab("opps"); load();
+    setNo({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,questions:[]});
+    st("✓ Published!"); setTab("opps"); load();
   };
   const saveEditOpp=async()=>{
     if(!editOpp.title||!editOpp.date||!editOpp.location){st("Fill title, date and location.");return;}
-    const {error}=await sb.from("opportunities").update({title:editOpp.title,description:editOpp.description,date:editOpp.date,location:editOpp.location,spots:Number(editOpp.spots)||10,hours:Number(editOpp.hours)||2,start_time:editOpp.start_time,end_time:editOpp.end_time,students_only:editOpp.students_only,student_friendly:editOpp.student_friendly,kid_friendly:editOpp.kid_friendly,project:editOpp.project,questions:editOpp.questions||[]}).eq("id",editOpp.id);
+    const {error}=await sb.from("opportunities").update({title:editOpp.title,description:editOpp.description,date:editOpp.date,location:editOpp.location,spots:Number(editOpp.spots)||10,hours:Number(editOpp.hours)||2,start_time:editOpp.start_time,end_time:editOpp.end_time,students_only:editOpp.students_only,project:editOpp.project,questions:editOpp.questions||[]}).eq("id",editOpp.id);
     if(error){st("Error: "+error.message);return;}
     st("✓ Updated!"); setEditOpp(null); load();
   };
@@ -555,13 +489,12 @@ END:VCALENDAR`;
           </div>
           <div style={{fontSize:13,color:MT}}>{viewProf.email}</div>
           <div style={{fontSize:12,color:MT,marginTop:2}}>DOB: {viewProf.dob||"Not provided"}</div>
-          <div style={{fontSize:12,color:MT,marginTop:2}}>📞 {viewProf.phone||"No phone provided"}</div>
         </div>
       </div>
       <div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
         <h3 style={{fontFamily:HF,fontSize:14,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Background</h3>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          {viewProf.is_student&&<div style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:10,padding:"8px 14px",fontSize:13,fontWeight:600}}>🎓 {viewProf.student_level||"Student"}{viewProf.student_school?" · "+viewProf.student_school:""}</div>}{(()=>{const hat=getHatColor(viewProf.total_hours);return hat?<div style={{background:"#FFF8DC",borderRadius:10,padding:"8px 14px",fontSize:13,fontWeight:600,border:"2px solid "+hat.color,color:hat.color}}>{hat.label} — {viewProf.total_hours}h total service</div>:null;})()}
+          {viewProf.is_student&&<div style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:10,padding:"8px 14px",fontSize:13,fontWeight:600}}>🎓 {viewProf.student_level||"Student"}{viewProf.student_school?" · "+viewProf.student_school:""}</div>}
           {viewProf.is_working&&<div style={{background:"#FFEDD5",color:"#9A3412",borderRadius:10,padding:"8px 14px",fontSize:13,fontWeight:600}}>💼 {viewProf.profession||"Working"}</div>}
           {!viewProf.is_student&&!viewProf.is_working&&<p style={{color:MT,fontSize:13}}>No background info provided.</p>}
         </div>
@@ -570,29 +503,9 @@ END:VCALENDAR`;
         <h3 style={{fontFamily:HF,fontSize:14,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Project Interests</h3>
         <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{viewProf.projects.map(pid=><Tag key={pid} pid={pid}/>)}</div>
       </div>}
-      {isSuperAdmin&&<div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
-        <div style={{fontFamily:HF,fontWeight:900,fontSize:14,textTransform:"uppercase",color:DK,marginBottom:12}}>📋 Volunteer History</div>
-        {(()=>{
-          const volSignups=(Object.values(oppSignups).flat()).filter(s=>s.volunteer_id===viewProf.id);
-          if(volSignups.length===0)return<p style={{color:MT,fontSize:13}}>No signups yet.</p>;
-          return volSignups.map(s=>{
-            const opp=opps.find(o=>o.id===s.opportunity_id);
-            if(!opp)return null;
-            return<div key={s.signup_id} style={{padding:"10px 0",borderBottom:"1px solid "+BR,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6}}>
-              <div>
-                <div style={{fontWeight:700,fontSize:13,color:DK}}>{opp.title}</div>
-                <div style={{fontSize:11,color:MT}}>📅 {opp.date} · {opp.hours}h · <Tag pid={opp.project} sm/></div>
-              </div>
-              <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,background:s.status==="approved"?"#DCFCE7":s.status==="rejected"?"#FEE2E2":"#FEF3C7",color:s.status==="approved"?"#166534":s.status==="rejected"?"#DC2626":"#D97706"}}>
-                {s.checked_out?"✅ Completed":s.status==="approved"?"✓ Approved":s.status==="rejected"?"✕ Rejected":"⏳ Pending"}
-              </span>
-            </div>;
-          });
-        })()}
-      </div>}
-      <div style={{display:"flex",gap:10,padding:"0 20px 24px"}}>
+      {isSuperAdmin&&<div style={{display:"flex",gap:8}}>
         <button onClick={()=>deleteVol(viewProf.id)} style={{flex:1,background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:10,padding:"12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>🗑️ Delete Volunteer</button>
-      </div>
+      </div>}
     </main>
   </div>;
   if(editOpp) return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
@@ -620,14 +533,6 @@ END:VCALENDAR`;
           <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:editOpp.students_only?"#EDE9FE":"#F9FAFB",border:"1.5px solid "+(editOpp.students_only?"#9B59B6":"#E5E7EB")}}>
             <input type="checkbox" checked={editOpp.students_only||false} onChange={e=>setEditOpp(o=>{return{...o,students_only:e.target.checked};} )} style={{width:18,height:18,accentColor:"#9B59B6"}}/>
             <div><div style={{fontWeight:700,fontSize:14,color:editOpp.students_only?"#5B21B6":DK}}>🎓 Students Only</div></div>
-          </label>
-          <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:editOpp.student_friendly?"#EFF6FF":"#F9FAFB",border:"1.5px solid "+(editOpp.student_friendly?"#3B82F6":"#E5E7EB")}}>
-            <input type="checkbox" checked={editOpp.student_friendly||false} onChange={e=>setEditOpp(o=>{return{...o,student_friendly:e.target.checked};} )} style={{width:18,height:18,accentColor:"#3B82F6"}}/>
-            <div><div style={{fontWeight:700,fontSize:14,color:editOpp.student_friendly?"#1D4ED8":DK}}>🎓 Student Friendly (14+)</div></div>
-          </label>
-          <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:editOpp.kid_friendly?"#FFF7ED":"#F9FAFB",border:"1.5px solid "+(editOpp.kid_friendly?"#F97316":"#E5E7EB")}}>
-            <input type="checkbox" checked={editOpp.kid_friendly||false} onChange={e=>setEditOpp(o=>{return{...o,kid_friendly:e.target.checked};} )} style={{width:18,height:18,accentColor:"#F97316"}}/>
-            <div><div style={{fontWeight:700,fontSize:14,color:editOpp.kid_friendly?"#EA580C":DK}}>🧒 Kid Friendly (6+)</div></div>
           </label>
           <button onClick={saveEditOpp} style={{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Save Changes</button>
         </div>
@@ -673,11 +578,11 @@ END:VCALENDAR`;
             <Avtr u={u} sz={44}/>
             <div>
               <div style={{fontWeight:700,fontSize:15,fontFamily:BF}}>{u.first_name} {u.surname}</div>
-              <div style={{fontSize:12,color:MT}}>{u.email}{u.phone&&<span style={{marginLeft:8,color:MT}}>· 📞 {u.phone}</span>} · DOB: {u.dob}</div>
+              <div style={{fontSize:12,color:MT}}>{u.email} · DOB: {u.dob}</div>
             </div>
           </div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
-            {u.is_student&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>🎓 {u.student_level||"Student"}{u.student_school?" · "+u.student_school:""}</span>}{(()=>{const hat=getHatColor(u.total_hours);return hat?<span style={{background:"#FFF8DC",color:hat.color,borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700,border:"1px solid "+hat.color}} title={hat.title}>{hat.label}</span>:null;})()}
+            {u.is_student&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>🎓 {u.student_level||"Student"}{u.student_school?" · "+u.student_school:""}</span>}
             {u.is_working&&<span style={{background:"#FFEDD5",color:"#9A3412",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>💼 {u.profession||"Working"}</span>}
           </div>
           {u.projects?.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:10}}>{u.projects.map(pid=><Tag key={pid} pid={pid} sm/>)}</div>}
@@ -729,19 +634,15 @@ END:VCALENDAR`;
         </div>)}
       </div>}
 
-      {isSuperAdmin&&!localStorage.getItem("brevo_key")&&<div style={{background:"#FEF3C7",border:"1px solid #FCD34D",borderRadius:10,padding:"12px 16px",marginBottom:12}}><div style={{fontSize:13,color:"#92400E",marginBottom:8,fontWeight:700}}>Enter your Brevo API key to enable emails</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><input id="brevo_input" placeholder="Paste your Brevo API key here" style={{fontSize:12,padding:"6px 10px",borderRadius:6,border:"1px solid #FCD34D",flex:1,minWidth:200}}/><button onClick={()=>{const v=document.getElementById("brevo_input").value.trim();if(v){localStorage.setItem("brevo_key",v);window.location.reload();}}} style={{background:"#D97706",color:"#fff",border:"none",borderRadius:6,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Save</button></div></div>}
+      
       {tab==="opps"&&<div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-          <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,margin:0}}>Opportunities & Sign-ups</h2>
-          <button onClick={()=>{const rows=[["Event","Date","Location","Hours","Volunteer Name","Email","Phone","Status","Checked In","Checked Out"]];opps.forEach(o=>{(oppSignups[o.id]||[]).forEach(s=>{rows.push([o.title,o.date,o.location,o.hours,(s.profiles?.first_name||"")+" "+(s.profiles?.surname||""),s.profiles?.email||"",s.profiles?.phone||"",s.status,s.checked_in?new Date(s.checked_in).toLocaleString():"",s.checked_out?new Date(s.checked_out).toLocaleString():""]);});});const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");const blob=new Blob([csv],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="event_registrations.csv";a.click();}} style={{background:"#16a34a",color:"#fff",border:"none",borderRadius:8,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>📊 Export CSV</button>
-        </div>
+        <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Opportunities & Sign-ups</h2>
         {opps.map(o=>{
           const p=gp(o.project);
           const sups=oppSignups[o.id]||[];
           const pendingSups=sups.filter(s=>s.status==="pending");
           const approvedSups=sups.filter(s=>s.status==="approved");
           const rejectedSups=sups.filter(s=>s.status==="rejected");
-          const waitlistSups=sups.filter(s=>s.status==="waitlist");
           const renderVolRow=(s,showActions)=><div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #F0FDF4",flexWrap:"wrap"}}>
             <button onClick={()=>setViewProf(s.profiles)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,flex:1,textAlign:"left",padding:0}}>
               <Avtr u={s.profiles} sz={30}/>
@@ -767,14 +668,13 @@ END:VCALENDAR`;
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
               <div style={{flex:1}}>
                 <Tag pid={o.project} sm/>
-                {o.students_only&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700,marginLeft:6}}>🎓 Students Only</span>}{o.student_friendly&&<span style={{background:"#EFF6FF",color:"#1D4ED8",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700,marginLeft:6}}>🎓 14+ Friendly</span>}{o.kid_friendly&&<span style={{background:"#FFF7ED",color:"#EA580C",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700,marginLeft:6}}>🧒 6+ Friendly</span>}
+                {o.students_only&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700,marginLeft:6}}>🎓 Students Only</span>}
                 <div style={{fontWeight:700,fontSize:15,marginTop:6,color:DK,fontFamily:BF}}>{o.title}</div>
                 <div style={{fontSize:12,color:MT,marginTop:2}}>📅 {o.date}{o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):""} · 📍 {o.location} · {o.hours}h</div>
                 <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
-                  {approvedSups.length>=(o.spots||999)&&<span style={{background:"#FEE2E2",color:"#DC2626",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>🔴 Full</span>}
                   {pendingSups.length>0&&<span style={{background:"#FEF3C7",color:"#D97706",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>⏳ {pendingSups.length} pending</span>}
                   {approvedSups.length>0&&<span style={{background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✓ {approvedSups.length} approved</span>}
-                  {rejectedSups.length>0&&<span style={{background:"#FEE2E2",color:"#DC2626",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✕ {rejectedSups.length} rejected</span>}{waitlistSups.length>0&&<span style={{background:"#EFF6FF",color:"#1D4ED8",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>📋 {waitlistSups.length} waitlist</span>}
+                  {rejectedSups.length>0&&<span style={{background:"#FEE2E2",color:"#DC2626",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✕ {rejectedSups.length} rejected</span>}
                 </div>
               </div>
               <div style={{display:"flex",gap:6,marginLeft:10,flexShrink:0}}>
@@ -794,19 +694,6 @@ END:VCALENDAR`;
               {rejectedSups.length>0&&<div>
                 <div style={{fontSize:11,fontWeight:700,color:"#DC2626",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>✕ Rejected ({rejectedSups.length})</div>
                 {rejectedSups.map(s=>renderVolRow(s,false))}
-              </div>}
-              {waitlistSups.length>0&&<div>
-                <div style={{fontSize:11,fontWeight:700,color:"#1D4ED8",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>📋 Waitlist ({waitlistSups.length})</div>
-                {waitlistSups.map(s=><div key={s.signup_id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #EFF6FF",flexWrap:"wrap"}}>
-                  <button onClick={()=>setViewProf(s.profiles)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,flex:1,textAlign:"left",padding:0}}>
-                    <Avtr u={s.profiles} sz={30}/>
-                    <div>
-                      <div style={{fontSize:13,fontWeight:700,color:DK,fontFamily:BF}}>{s.profiles?.first_name} {s.profiles?.surname}</div>
-                      <div style={{fontSize:11,color:MT}}>{s.profiles?.email}</div>
-                    </div>
-                  </button>
-                  <button onClick={async()=>{const{error}=await sb.from("signups").update({status:"pending"}).eq("id",s.signup_id);if(error){st("Error: "+error.message);return;}st("✓ Moved to pending!");load();}} style={{background:"#EFF6FF",color:"#1D4ED8",border:"1px solid #BFDBFE",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>⬆️ Promote</button>
-                </div>)}
               </div>}
             </div>}
           </div>;
@@ -831,14 +718,6 @@ END:VCALENDAR`;
             <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:no.students_only?"#EDE9FE":"#F9FAFB",border:"1.5px solid "+(no.students_only?"#9B59B6":"#E5E7EB")}}>
               <input type="checkbox" checked={no.students_only} onChange={e=>setNo(n=>{return{...n,students_only:e.target.checked};} )} style={{width:18,height:18,accentColor:"#9B59B6"}}/>
               <div><div style={{fontWeight:700,fontSize:14,color:no.students_only?"#5B21B6":DK}}>🎓 Students Only</div></div>
-            </label>
-            <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:no.student_friendly?"#EFF6FF":"#F9FAFB",border:"1.5px solid "+(no.student_friendly?"#3B82F6":"#E5E7EB")}}>
-              <input type="checkbox" checked={no.student_friendly} onChange={e=>setNo(n=>{return{...n,student_friendly:e.target.checked};} )} style={{width:18,height:18,accentColor:"#3B82F6"}}/>
-              <div><div style={{fontWeight:700,fontSize:14,color:no.student_friendly?"#1D4ED8":DK}}>🎓 Student Friendly (14+)</div></div>
-            </label>
-            <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:no.kid_friendly?"#FFF7ED":"#F9FAFB",border:"1.5px solid "+(no.kid_friendly?"#F97316":"#E5E7EB")}}>
-              <input type="checkbox" checked={no.kid_friendly} onChange={e=>setNo(n=>{return{...n,kid_friendly:e.target.checked};} )} style={{width:18,height:18,accentColor:"#F97316"}}/>
-              <div><div style={{fontWeight:700,fontSize:14,color:no.kid_friendly?"#EA580C":DK}}>🧒 Kid Friendly (6+)</div></div>
             </label>
             <div style={{borderTop:"1px solid "+BR,paddingTop:14}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
@@ -896,18 +775,15 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   }
 
   async function signUp(o){
-    if(su.find(x=>x.opportunity_id===o.id&&x.status!=="rejected")) return;
+    if(su.find(x=>x.opportunity_id===o.id)) return;
     if(o.questions&&o.questions.length>0){setSignupModal(o);setAnswers({});}
     else await submitSignup(o,[]);
   }
 
   async function submitSignup(o,answersArr){
-    const {data:approvedList}=await sb.from("signups").select("id").eq("opportunity_id",o.id).eq("status","approved");
-    const isFull=(approvedList||[]).length>=(o.spots||999);
-    const status=isFull?"waitlist":"pending";
-    await sb.from("signups").insert({volunteer_id:profile.id,opportunity_id:o.id,status,answers:answersArr});
+    await sb.from("signups").insert({volunteer_id:profile.id,opportunity_id:o.id,status:"pending",answers:answersArr});
     setSignupModal(null); setAnswers({});
-    st(isFull?"📋 Added to waitlist!":"✓ Request sent! Awaiting admin approval."); loadData();
+    st("✓ Request sent! Awaiting admin approval."); loadData();
   }
 
   const th=logs.reduce((s,l)=>s+Number(l.hours),0);
@@ -1002,11 +878,11 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
           {PROJECTS.map(p=><button key={p.id} onClick={()=>setFp(p.id)} style={{padding:"5px 10px",borderRadius:20,border:"2px solid "+(fp===p.id?p.bg:BR),background:fp===p.id?p.bg:"#fff",color:fp===p.id?"#fff":DK,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:BF}}>{p.emoji} {p.label}</button>)}
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          {fo.map(o=>{const p=gp(o.project);const signup=su.find(x=>x.opportunity_id===o.id);const done=!!signup;const approvedCount=su.filter(s=>s.opportunity_id===o.id&&s.status==="approved").length;const isFull=approvedCount>=(o.spots||999);return <div key={o.id} className="card" style={{background:"#fff",borderRadius:16,border:"1px solid "+BR,borderLeft:"5px solid "+p.bg,padding:"14px 14px 12px"}}>
+          {fo.map(o=>{const p=gp(o.project);const signup=su.find(x=>x.opportunity_id===o.id);const done=!!signup;return <div key={o.id} className="card" style={{background:"#fff",borderRadius:16,border:"1px solid "+BR,borderLeft:"5px solid "+p.bg,padding:"14px 14px 12px"}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
               <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
                 <Tag pid={o.project}/>
-                {o.students_only&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>🎓 Students Only</span>}{o.student_friendly&&<span style={{background:"#EFF6FF",color:"#1D4ED8",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>🎓 14+ Friendly</span>}{o.kid_friendly&&<span style={{background:"#FFF7ED",color:"#EA580C",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>🧒 6+ Friendly</span>}
+                {o.students_only&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>🎓 Students Only</span>}
               </div>
               <span style={{fontFamily:HF,fontWeight:800,fontSize:13,color:p.bg}}>{o.hours}h</span>
             </div>
@@ -1015,7 +891,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
             <div style={{fontSize:11,color:MT,marginBottom:10,fontFamily:BF}}>📅 {o.date}{o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):""} · 📍 {o.location}</div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{fontSize:11,background:p.light,color:p.text,padding:"2px 8px",borderRadius:20,fontWeight:600,fontFamily:BF}}>{o.spots} spots</span>
-              <button onClick={()=>signUp(o)} disabled={done&&signup?.status!=="rejected"&&signup?.status!=="waitlist"} style={{background:done?(signup?.status==="pending"?"#FEF3C7":signup?.status==="waitlist"?"#EFF6FF":signup?.status==="rejected"?"#FEE2E2":p.light):p.bg,color:done?(signup?.status==="pending"?"#D97706":signup?.status==="waitlist"?"#1D4ED8":signup?.status==="rejected"?"#DC2626":p.text):"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:(done&&signup?.status!=="rejected"&&signup?.status!=="waitlist")?"default":"pointer",fontSize:12,fontWeight:700,fontFamily:BF}}>{done?(signup?.status==="pending"?"⏳ Pending":signup?.status==="waitlist"?"📋 Waitlisted":signup?.status==="rejected"?"✕ Rejected":"✓ Approved"):(isFull?"📋 Join Waitlist":"Sign Up →")}</button>
+              <button onClick={()=>signUp(o)} disabled={done&&signup?.status!=="rejected"} style={{background:done?(signup?.status==="pending"?"#FEF3C7":signup?.status==="rejected"?"#FEE2E2":p.light):p.bg,color:done?(signup?.status==="pending"?"#D97706":signup?.status==="rejected"?"#DC2626":p.text):"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:(done&&signup?.status!=="rejected")?"default":"pointer",fontSize:12,fontWeight:700,fontFamily:BF}}>{done?(signup?.status==="pending"?"⏳ Pending":signup?.status==="rejected"?"✕ Rejected":"✓ Approved"):"Sign Up →"}</button>
             </div>
           </div>;})}
         </div>
@@ -1149,11 +1025,6 @@ window.addEventListener("beforeinstallprompt",e=>{
   b.innerHTML=`<div style="display:flex;align-items:center;gap:10px"><img src="https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/avatars/Faflogowhite.png" style="height:36px"/><div><div style="font-weight:700;font-size:14px;color:#fff;font-family:Poppins,sans-serif">Feed a Friend</div><div style="font-size:11px;color:#BBF7D0;font-family:Poppins,sans-serif">Add to your home screen</div></div></div><div style="display:flex;gap:8px"><button onclick="deferredPrompt.prompt();this.closest('div').remove()" style="background:#22C55E;color:#0A3D1F;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:Poppins,sans-serif">Install</button><button onclick="this.closest('div').remove()" style="background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer">✕</button></div>`;
   document.body.appendChild(b);
 });
-</script>
-<script>
-if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("/sw.js").catch(e=>console.log("SW error:",e));
-}
 </script>
 </body>
 </html>
