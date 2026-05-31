@@ -357,7 +357,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
 
   async function load(){
     const oppQuery = isSuperAdmin
-      ? sb.from("opportunities").select("*").eq("archived",false).order("date")
+      ? sb.from("opportunities").select("*").or("archived.eq.false,archived.is.null").order("date")
       : sb.from("opportunities").select("*").in("project",profile.admin_projects||[]).order("date");
     const [{data:p},{data:v},{data:a},{data:o},{data:s}] = await Promise.all([
       sb.from("profiles").select("*").eq("approved",false).eq("role","volunteer"),
@@ -801,7 +801,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
 
   async function loadData(){
     const [{data:o},{data:l},{data:s}]=await Promise.all([
-      sb.from("opportunities").select("*").eq("archived",false).order("date"),
+      sb.from("opportunities").select("*").or("archived.eq.false,archived.is.null").order("date"),
       sb.from("hour_logs").select("*").eq("volunteer_id",profile.id).order("created_at",{ascending:false}),
       sb.from("signups").select("opportunity_id,status,checked_in,checked_out").eq("volunteer_id",profile.id),
     ]);
