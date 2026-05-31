@@ -340,6 +340,8 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   const [viewProf,setViewProf]=useState(null);
   const [editOpp,setEditOpp]=useState(null);
   const [editingProfile,setEditingProfile]=useState(false);
+  const [showArchived,setShowArchived]=useState(false);
+  const [archivedOpps,setArchivedOpps]=useState([]);
   const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,questions:[]});
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
@@ -355,7 +357,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
 
   async function load(){
     const oppQuery = isSuperAdmin
-      ? sb.from("opportunities").select("*").order("date")
+      ? sb.from("opportunities").select("*").eq("archived",false).order("date")
       : sb.from("opportunities").select("*").in("project",profile.admin_projects||[]).order("date");
     const [{data:p},{data:v},{data:a},{data:o},{data:s}] = await Promise.all([
       sb.from("profiles").select("*").eq("approved",false).eq("role","volunteer"),
@@ -372,6 +374,9 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
       g[su.opportunity_id].push({...su, signup_id: su.id});
     });
     setOppSignups(g);
+    const archQuery=isSuperAdmin?sb.from("opportunities").select("*").eq("archived",true).order("date"):sb.from("opportunities").select("*").in("project",profile.admin_projects||[]).eq("archived",true).order("date");
+    const {data:arch}=await archQuery;
+    setArchivedOpps(arch||[]);
   }
 
   const approve=async id=>{
@@ -455,6 +460,11 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     const {error}=await sb.from("opportunities").delete().eq("id",id);
     if(error){st("Error removing: "+error.message);return;}
     st("Removed."); load();
+  };
+  const archiveOpp=async id=>{
+    const {error}=await sb.from("opportunities").update({archived:true}).eq("id",id);
+    if(error){st("Error: "+error.message);return;}
+    st("✓ Archived!"); load();
   };
   const addOpp=async()=>{
     if(!no.title||!no.date||!no.location){st("Fill title, date and location.");return;}
@@ -646,7 +656,27 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
 
       
       {tab==="opps"&&<div>
-        <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Opportunities & Sign-ups</h2>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,margin:0}}>Opportunities & Sign-ups</h2>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={()=>{const rows=[["Event","Date","Location","Hours","Volunteer Name","Email","Phone","Status","Checked In","Checked Out"]];opps.forEach(o=>{(oppSignups[o.id]||[]).forEach(s=>{rows.push([o.title,o.date,o.location,o.hours,(s.profiles?.first_name||"")+" "+(s.profiles?.surname||""),s.profiles?.email||"",s.profiles?.phone||"",s.status,s.checked_in?new Date(s.checked_in).toLocaleString():"",s.checked_out?new Date(s.checked_out).toLocaleString():""]);});});const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");const blob=new Blob([csv],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="event_registrations.csv";a.click();}} style={{background:"#16a34a",color:"#fff",border:"none",borderRadius:8,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>📊 Export CSV</button>
+            <button onClick={()=>setShowArchived(s=>!s)} style={{background:showArchived?"#6B7280":"#fff",color:showArchived?"#fff":"#6B7280",border:"1px solid #D1D5DB",borderRadius:8,padding:"8px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>📦 {showArchived?"Hide":"Archived"}</button>
+          </div>
+        </div>
+        {showArchived&&<div style={{marginBottom:16}}>
+          <h3 style={{fontFamily:HF,fontSize:13,fontWeight:900,textTransform:"uppercase",color:"#6B7280",marginBottom:8}}>Archived ({archivedOpps.length})</h3>
+          {archivedOpps.length===0&&<p style={{color:MT,fontSize:13}}>No archived opportunities.</p>}
+          {archivedOpps.map(o=>{const p=gp(o.project);return<div key={o.id} style={{background:"#F9FAFB",borderRadius:12,padding:"12px 14px",border:"1px solid #E5E7EB",marginBottom:8,borderLeft:"4px solid #9CA3AF",opacity:.8}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <Tag pid={o.project} sm/>
+                <div style={{fontWeight:700,fontSize:14,color:"#6B7280",marginTop:4}}>{o.title}</div>
+                <div style={{fontSize:11,color:MT}}>📅 {o.date} · 📍 {o.location} · {o.hours}h</div>
+              </div>
+              <button onClick={async()=>{await sb.from("opportunities").update({archived:false}).eq("id",o.id);st("✓ Restored!");load();}} style={{background:"#DCFCE7",color:"#166534",border:"none",borderRadius:8,padding:"6px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>Restore</button>
+            </div>
+          </div>;})}
+        </div>}
         {opps.map(o=>{
           const p=gp(o.project);
           const sups=oppSignups[o.id]||[];
@@ -689,7 +719,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
               </div>
               <div style={{display:"flex",gap:6,marginLeft:10,flexShrink:0}}>
                 <button onClick={()=>setEditOpp({...o})} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Edit</button>
-                <button onClick={()=>delOpp(o.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Remove</button>
+                <button onClick={()=>archiveOpp(o.id)} style={{background:"#FEF3C7",color:"#D97706",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Archive</button>
               </div>
             </div>
             {sups.length>0&&<div style={{borderTop:"1px solid "+BR,paddingTop:10,marginTop:8,display:"flex",flexDirection:"column",gap:10}}>
@@ -771,7 +801,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
 
   async function loadData(){
     const [{data:o},{data:l},{data:s}]=await Promise.all([
-      sb.from("opportunities").select("*").order("date"),
+      sb.from("opportunities").select("*").eq("archived",false).order("date"),
       sb.from("hour_logs").select("*").eq("volunteer_id",profile.id).order("created_at",{ascending:false}),
       sb.from("signups").select("opportunity_id,status,checked_in,checked_out").eq("volunteer_id",profile.id),
     ]);
