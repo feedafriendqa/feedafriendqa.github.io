@@ -33,6 +33,7 @@ const {useState, useEffect} = React;
 const sb = supabase.createClient("https://xbxagukdvgyaoqvbqoic.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4");
 const LOGO = "https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/avatars/Faflogowhite.png";
 const EDGE = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder";
+const qatarNow=()=>new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Qatar"})).toISOString();
 const DK="#0A3D1F",GN="#15803D",MD="#22C55E",PL="#F0FDF4",BR="#BBF7D0",MT="#4B7C5A";
 const HF="'League Spartan',sans-serif",BF="'Poppins',sans-serif";
 const inp = {width:"100%",padding:"12px 14px",border:"1.5px solid #BBF7D0",borderRadius:10,fontSize:15,fontFamily:BF,outline:"none",boxSizing:"border-box",background:"#fff",color:DK};
@@ -431,15 +432,24 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     st("✓ Declined!"); load();
   };
   const checkIn=async id=>{
-    const {error}=await sb.from("signups").update({checked_in:new Date().toISOString()}).eq("id",id);
+    const {error}=await sb.from("signups").update({checked_in:qatarNow()}).eq("id",id);
     if(error){st("Error: "+error.message);return;}
     st("✓ Checked in!"); load();
   };
   const checkOut=async(id,oppId,volId,title,proj,hours)=>{
-    const {error}=await sb.from("signups").update({checked_out:new Date().toISOString()}).eq("id",id);
+    const checkOutTime=qatarNow();
+    const {error}=await sb.from("signups").update({checked_out:checkOutTime}).eq("id",id);
     if(error){st("Error: "+error.message);return;}
-    await sb.from("hour_logs").insert({volunteer_id:volId,activity:title,project:proj,hours:Number(hours),date:new Date().toISOString().split("T")[0],notes:"Checked in via event attendance"});
-    st("✅ "+hours+"h logged!"); load();
+    // Get check-in time to calculate real hours
+    const {data:sig}=await sb.from("signups").select("checked_in").eq("id",id).single();
+    let realHours=Number(hours);
+    if(sig?.checked_in){
+      const diff=(new Date(checkOutTime)-new Date(sig.checked_in))/(1000*60*60);
+      realHours=Math.round(diff*10)/10; // round to 1 decimal
+      if(realHours<=0)realHours=Number(hours); // fallback if something went wrong
+    }
+    await sb.from("hour_logs").insert({volunteer_id:volId,activity:title,project:proj,hours:realHours,date:checkOutTime.split("T")[0],notes:"Checked in via event attendance"});
+    st("✅ "+realHours+"h logged!"); load();
   };
   const delOpp=async id=>{
     const {error}=await sb.from("opportunities").delete().eq("id",id);
@@ -661,7 +671,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
               </div>}
               {s.status==="approved"&&!s.checked_in&&<button onClick={()=>checkIn(s.id)} style={{background:"#DBEAFE",color:"#1D4ED8",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>📍 Check In</button>}
               {s.checked_in&&!s.checked_out&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>}
-              {s.checked_out&&<span style={{fontSize:11,color:"#7C3AED",fontWeight:700,background:"#F3E8FF",padding:"3px 8px",borderRadius:20}}>✅ {o.hours}h</span>}
+              {s.checked_out&&<span style={{fontSize:11,color:"#7C3AED",fontWeight:700,background:"#F3E8FF",padding:"3px 8px",borderRadius:20}}>✅ {s.checked_in&&s.checked_out?(Math.round((new Date(s.checked_out)-new Date(s.checked_in))/360000)/10)+"h":o.hours+"h"}</span>}
             </div>}
           </div>;
           return <div key={o.id} style={{background:"#fff",borderRadius:14,padding:"14px 16px",border:"1px solid "+BR,marginBottom:12,borderLeft:"4px solid "+p.bg}}>
