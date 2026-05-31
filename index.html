@@ -344,6 +344,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   const [archivedOpps,setArchivedOpps]=useState([]);
   const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,questions:[]});
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
+  const [editAttendance,setEditAttendance]=useState(null); // {signupId, volName, oppTitle, oppId, volId, proj, hours, checked_in, checked_out}
 
   const calcHours=(s,e)=>{
     if(!s||!e) return "";
@@ -493,6 +494,62 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     {id:"add",label:"+ Add",count:null,alert:false},
   ];
 
+  const saveAttendance=async()=>{
+    if(!editAttendance) return;
+    const {signupId,oppId,volId,oppTitle,proj,checked_in,checked_out}=editAttendance;
+    const updates={checked_in:checked_in||null,checked_out:checked_out||null};
+    await sb.from("signups").update(updates).eq("id",signupId);
+    if(checked_out&&checked_in){
+      // Recalculate hours
+      const diff=(new Date(checked_out)-new Date(checked_in))/(1000*60*60);
+      const realHours=Math.max(0.1,Math.round(diff*10)/10);
+      // Update or insert hour log
+      const {data:existing}=await sb.from("hour_logs").select("id").eq("volunteer_id",volId).eq("activity",oppTitle).single();
+      if(existing){
+        await sb.from("hour_logs").update({hours:realHours,checked_in:checked_in,checked_out:checked_out}).eq("id",existing.id);
+      } else {
+        await sb.from("hour_logs").insert({volunteer_id:volId,activity:oppTitle,project:proj,hours:realHours,date:checked_out.split("T")[0],notes:"Checked in via event attendance"});
+      }
+      st("✓ Updated! "+realHours+"h logged.");
+    } else if(!checked_in&&!checked_out){
+      // Undo both — delete hour log
+      await sb.from("hour_logs").delete().eq("volunteer_id",volId).eq("activity",oppTitle);
+      st("✓ Check-in cleared.");
+    } else {
+      st("✓ Updated!");
+    }
+    setEditAttendance(null); load();
+  };
+  if(editAttendance) return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
+    <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 16px",gap:12,position:"sticky",top:0,zIndex:100}}>
+      <button onClick={()=>setEditAttendance(null)} style={{background:"rgba(255,255,255,0.1)",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13,fontWeight:700}}>← Back</button>
+      <span style={{fontFamily:HF,fontWeight:900,fontSize:16,color:"#fff",textTransform:"uppercase"}}>Edit Attendance</span>
+    </header>
+    <main style={{maxWidth:640,margin:"0 auto",padding:"20px 16px"}}>
+      <div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
+        <div style={{fontWeight:700,fontSize:15,color:DK,marginBottom:4}}>{editAttendance.volName}</div>
+        <div style={{fontSize:13,color:MT,marginBottom:16}}>{editAttendance.oppTitle}</div>
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <Field label="Check-in Time">
+            <div style={{display:"flex",gap:8}}>
+              <input type="datetime-local" value={editAttendance.checked_in?editAttendance.checked_in.slice(0,16):""} onChange={e=>setEditAttendance(a=>({...a,checked_in:e.target.value?e.target.value+":00":null}))} style={{...inp,flex:1}}/>
+              <button onClick={()=>setEditAttendance(a=>({...a,checked_in:null,checked_out:null}))} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Clear</button>
+            </div>
+          </Field>
+          <Field label="Check-out Time">
+            <div style={{display:"flex",gap:8}}>
+              <input type="datetime-local" value={editAttendance.checked_out?editAttendance.checked_out.slice(0,16):""} onChange={e=>setEditAttendance(a=>({...a,checked_out:e.target.value?e.target.value+":00":null}))} style={{...inp,flex:1}}/>
+              <button onClick={()=>setEditAttendance(a=>({...a,checked_out:null}))} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Clear</button>
+            </div>
+          </Field>
+          {editAttendance.checked_in&&editAttendance.checked_out&&<div style={{background:"#DCFCE7",borderRadius:10,padding:"10px 14px",fontSize:13,color:DK,fontWeight:600}}>
+            ⏱ Real hours: <strong>{Math.max(0.1,Math.round((new Date(editAttendance.checked_out)-new Date(editAttendance.checked_in))/360000)/10)}h</strong>
+          </div>}
+          <button onClick={saveAttendance} style={{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Save Changes</button>
+        </div>
+      </div>
+    </main>
+  </div>;
   if(editingProfile) return <ProfileEdit profile={profile} onSave={p=>{setProfile(p);setEditingProfile(false);st("✓ Profile saved!")}} onBack={()=>setEditingProfile(false)}/>;
   if(viewProf) return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
     <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 16px",gap:12,position:"sticky",top:0,zIndex:100}}>
@@ -683,6 +740,15 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
           const pendingSups=sups.filter(s=>s.status==="pending");
           const approvedSups=sups.filter(s=>s.status==="approved");
           const rejectedSups=sups.filter(s=>s.status==="rejected");
+          const isEventLive=(opp)=>{
+            if(!opp.date||!opp.start_time) return true; // no time set, always show
+            const now=new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Qatar"}));
+            const [h,m]=opp.start_time.split(":").map(Number);
+            const eventStart=new Date(opp.date+"T"+opp.start_time+":00");
+            // Allow check-in from 30 mins before start
+            const checkInOpen=new Date(eventStart.getTime()-30*60*1000);
+            return now>=checkInOpen;
+          };
           const renderVolRow=(s,showActions)=><div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #F0FDF4",flexWrap:"wrap"}}>
             <button onClick={()=>setViewProf(s.profiles)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,flex:1,textAlign:"left",padding:0}}>
               <Avtr u={s.profiles} sz={30}/>
@@ -699,9 +765,17 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                 <button onClick={()=>approveSignup(s.signup_id)} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
                 <button onClick={()=>declineSignup(s.signup_id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
               </div>}
-              {s.status==="approved"&&!s.checked_in&&<button onClick={()=>checkIn(s.id)} style={{background:"#DBEAFE",color:"#1D4ED8",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>📍 Check In</button>}
-              {s.checked_in&&!s.checked_out&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>}
-              {s.checked_out&&<span style={{fontSize:11,color:"#7C3AED",fontWeight:700,background:"#F3E8FF",padding:"3px 8px",borderRadius:20}}>✅ {s.checked_in&&s.checked_out?(Math.round((new Date(s.checked_out)-new Date(s.checked_in))/360000)/10)+"h":o.hours+"h"}</span>}
+              {s.status==="approved"&&!s.checked_in&&<div style={{display:"flex",gap:4}}>
+                {isEventLive(o)?<button onClick={()=>checkIn(s.id)} style={{background:"#DBEAFE",color:"#1D4ED8",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>📍 Check In</button>:<span style={{fontSize:10,color:MT,fontStyle:"italic"}}>⏳ Not started</span>}
+              </div>}
+              {s.checked_in&&!s.checked_out&&<div style={{display:"flex",gap:4}}>
+                <button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>
+                <button onClick={()=>setEditAttendance({signupId:s.id,volName:(s.profiles?.first_name||"")+" "+(s.profiles?.surname||""),oppTitle:o.title,oppId:o.id,volId:s.volunteer_id,proj:o.project,hours:o.hours,checked_in:s.checked_in,checked_out:null})} style={{background:"#FEF3C7",color:"#D97706",border:"none",borderRadius:6,padding:"5px 8px",fontSize:11,fontWeight:700,cursor:"pointer"}}>✏️</button>
+              </div>}
+              {s.checked_out&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
+                <span style={{fontSize:11,color:"#7C3AED",fontWeight:700,background:"#F3E8FF",padding:"3px 8px",borderRadius:20}}>✅ {s.checked_in&&s.checked_out?(Math.round((new Date(s.checked_out)-new Date(s.checked_in))/360000)/10)+"h":o.hours+"h"}</span>
+                <button onClick={()=>setEditAttendance({signupId:s.id,volName:(s.profiles?.first_name||"")+" "+(s.profiles?.surname||""),oppTitle:o.title,oppId:o.id,volId:s.volunteer_id,proj:o.project,hours:o.hours,checked_in:s.checked_in,checked_out:s.checked_out})} style={{background:"#F3E8FF",color:"#7C3AED",border:"none",borderRadius:6,padding:"5px 8px",fontSize:11,fontWeight:700,cursor:"pointer"}}>✏️</button>
+              </div>}
             </div>}
           </div>;
           return <div key={o.id} style={{background:"#fff",borderRadius:14,padding:"14px 16px",border:"1px solid "+BR,marginBottom:12,borderLeft:"4px solid "+p.bg}}>
