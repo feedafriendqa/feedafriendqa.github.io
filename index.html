@@ -33,7 +33,6 @@ const {useState, useEffect} = React;
 const sb = supabase.createClient("https://xbxagukdvgyaoqvbqoic.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4");
 const LOGO = "https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/avatars/Faflogowhite.png";
 const EDGE = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder";
-const qatarNow=()=>new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Qatar"})).toISOString();
 const DK="#0A3D1F",GN="#15803D",MD="#22C55E",PL="#F0FDF4",BR="#BBF7D0",MT="#4B7C5A";
 const HF="'League Spartan',sans-serif",BF="'Poppins',sans-serif";
 const inp = {width:"100%",padding:"12px 14px",border:"1.5px solid #BBF7D0",borderRadius:10,fontSize:15,fontFamily:BF,outline:"none",boxSizing:"border-box",background:"#fff",color:DK};
@@ -336,15 +335,14 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   const [admins,setAdmins]=useState([]);
   const [opps,setOpps]=useState([]);
   const [oppSignups,setOppSignups]=useState({});
+  const [hoursPending,setHoursPending]=useState([]);
+  const [hourLogs,setHourLogs]=useState([]);
   const [toast,setToast]=useState(null);
   const [viewProf,setViewProf]=useState(null);
   const [editOpp,setEditOpp]=useState(null);
   const [editingProfile,setEditingProfile]=useState(false);
-  const [showArchived,setShowArchived]=useState(false);
-  const [archivedOpps,setArchivedOpps]=useState([]);
-  const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
+  const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,questions:[]});
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
-  const [editAttendance,setEditAttendance]=useState(null); // {signupId, volName, oppTitle, oppId, volId, proj, hours, checked_in, checked_out}
 
   const calcHours=(s,e)=>{
     if(!s||!e) return "";
@@ -358,26 +356,21 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
 
   async function load(){
     const oppQuery = isSuperAdmin
-      ? sb.from("opportunities").select("*").or("archived.eq.false,archived.is.null").order("date")
+      ? sb.from("opportunities").select("*").order("date")
       : sb.from("opportunities").select("*").in("project",profile.admin_projects||[]).order("date");
-    const [{data:p},{data:v},{data:a},{data:o},{data:s}] = await Promise.all([
+    const [{data:p},{data:v},{data:a},{data:o},{data:s},{data:h}] = await Promise.all([
       sb.from("profiles").select("*").eq("approved",false).eq("role","volunteer"),
       sb.from("profiles").select("*").eq("approved",true).eq("role","volunteer"),
       isSuperAdmin ? sb.from("profiles").select("*").in("role",["admin","superadmin"]) : Promise.resolve({data:[]}),
       oppQuery,
-      sb.from("signups").select("id,volunteer_id,opportunity_id,status,answers,checked_in,checked_out,profiles(id,first_name,surname,email,photo_url,is_student,student_level,student_school,is_working,profession,projects,approved,dob,role,admin_projects)").order("created_at"),
+      sb.from("signups").select("*,profiles(id,first_name,surname,email,photo_url,is_student,student_level,student_school,is_working,profession,projects,approved,dob,role,admin_projects)"),
+      sb.from("hour_logs").select("*,profiles(first_name,surname,email)").eq("approved",false).order("created_at",{ascending:false}),
     ]);
     setPending(p||[]); setVols(v||[]); setAdmins(a||[]); setOpps(o||[]);
     const g={};
-    (s||[]).forEach(su=>{
-      if(!g[su.opportunity_id])g[su.opportunity_id]=[];
-      // store signup_id separately so profiles.id join can't overwrite it
-      g[su.opportunity_id].push({...su, signup_id: su.id});
-    });
+    (s||[]).forEach(su=>{if(!g[su.opportunity_id])g[su.opportunity_id]=[];g[su.opportunity_id].push(su);});
     setOppSignups(g);
-    const archQuery=isSuperAdmin?sb.from("opportunities").select("*").eq("archived",true).order("date"):sb.from("opportunities").select("*").in("project",profile.admin_projects||[]).eq("archived",true).order("date");
-    const {data:arch}=await archQuery;
-    setArchivedOpps(arch||[]);
+    setHourLogs(h||[]);
   }
 
   const approve=async id=>{
@@ -401,71 +394,31 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     await fetch(`https://xbxagukdvgyaoqvbqoic.supabase.co/auth/v1/admin/users/${id}`,{method:"DELETE",headers:{"Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4","apikey":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"}});
     st("Volunteer removed."); load();
   };
-  const sendApprovalEmail=async(volunteer,opp)=>{
-    try{
-      await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"},body:JSON.stringify({type:"opportunity_approved",name:volunteer.first_name,email:volunteer.email,opp})});
-    }catch(e){console.error("Email error:",e);}
-  };
-  const approveSignup=async(signupId)=>{
-    const {error}=await sb.from("signups").update({status:"approved"}).eq("id",signupId);
+  const approveSignup=async id=>{
+    const {error}=await sb.from("signups").update({status:"approved"}).eq("id",id);
     if(error){st("Error: "+error.message);return;}
-    setOppSignups(prev=>{
-      const next={...prev};
-      for(const k in next){next[k]=next[k].map(s=>s.signup_id===signupId?{...s,status:"approved"}:s);}
-      return next;
-    });
-    // find the signup to get volunteer + opp details for email
-    let volunteer=null,opp=null;
-    for(const oppId in oppSignups){
-      const found=oppSignups[oppId].find(s=>s.signup_id===signupId);
-      if(found){
-        volunteer=found.profiles;
-        opp=opps.find(o=>o.id===oppId);
-        break;
-      }
-    }
-    if(volunteer&&opp)sendApprovalEmail(volunteer,opp);
-    st("✓ Approved! Email sent 📧"); load();
+    st("✓ Signup approved!"); load();
   };
-  const declineSignup=async(signupId)=>{
-    const {error}=await sb.from("signups").update({status:"rejected"}).eq("id",signupId);
+  const declineSignup=async id=>{
+    const {error}=await sb.from("signups").delete().eq("id",id);
     if(error){st("Error: "+error.message);return;}
-    setOppSignups(prev=>{
-      const next={...prev};
-      for(const k in next){next[k]=next[k].map(s=>s.signup_id===signupId?{...s,status:"rejected"}:s);}
-      return next;
-    });
-    st("✓ Declined!"); load();
+    st("Declined."); load();
   };
   const checkIn=async id=>{
-    const {error}=await sb.from("signups").update({checked_in:qatarNow()}).eq("id",id);
+    const {error}=await sb.from("signups").update({checked_in:new Date().toISOString()}).eq("id",id);
     if(error){st("Error: "+error.message);return;}
     st("✓ Checked in!"); load();
   };
   const checkOut=async(id,oppId,volId,title,proj,hours)=>{
-    const checkOutTime=qatarNow();
-    const {error}=await sb.from("signups").update({checked_out:checkOutTime}).eq("id",id);
+    const {error}=await sb.from("signups").update({checked_out:new Date().toISOString()}).eq("id",id);
     if(error){st("Error: "+error.message);return;}
-    // Get check-in time to calculate real hours
-    const {data:sig}=await sb.from("signups").select("checked_in").eq("id",id).single();
-    let realHours=Number(hours);
-    if(sig?.checked_in){
-      const diff=(new Date(checkOutTime)-new Date(sig.checked_in))/(1000*60*60);
-      realHours=Math.round(diff*10)/10; // round to 1 decimal
-      if(realHours<=0)realHours=Number(hours); // fallback if something went wrong
-    }
-    await sb.from("hour_logs").insert({volunteer_id:volId,activity:title,project:proj,hours:realHours,date:checkOutTime.split("T")[0],notes:"Checked in via event attendance"});
-    st("✅ "+realHours+"h logged!"); load();
+    await sb.from("hour_logs").insert({volunteer_id:volId,activity:title,project:proj,hours:Number(hours),date:new Date().toISOString().split("T")[0],notes:"Checked in via event attendance"});
+    st("✅ "+hours+"h logged!"); load();
   };
   const delOpp=async id=>{
     const {error}=await sb.from("opportunities").delete().eq("id",id);
     if(error){st("Error removing: "+error.message);return;}
     st("Removed."); load();
-  };
-  const archiveOpp=async id=>{
-    const {error}=await sb.from("opportunities").update({archived:true}).eq("id",id);
-    if(error){st("Error: "+error.message);return;}
-    st("✓ Archived!"); load();
   };
   const addOpp=async()=>{
     if(!no.title||!no.date||!no.location){st("Fill title, date and location.");return;}
@@ -491,65 +444,10 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     ...(isSuperAdmin?[{id:"vols",label:"Volunteers",count:vols.length,alert:false}]:[]),
     ...(isSuperAdmin?[{id:"admins",label:"Admins",count:admins.length,alert:false}]:[]),
     {id:"opps",label:"Opportunities",count:opps.length,alert:false},
+    {id:"hours",label:"Hours",count:null,alert:false},
     {id:"add",label:"+ Add",count:null,alert:false},
   ];
 
-  const saveAttendance=async()=>{
-    if(!editAttendance) return;
-    const {signupId,oppId,volId,oppTitle,proj,checked_in,checked_out}=editAttendance;
-    const updates={checked_in:checked_in||null,checked_out:checked_out||null};
-    await sb.from("signups").update(updates).eq("id",signupId);
-    if(checked_out&&checked_in){
-      // Recalculate hours
-      const diff=(new Date(checked_out)-new Date(checked_in))/(1000*60*60);
-      const realHours=Math.max(0.1,Math.round(diff*10)/10);
-      // Update or insert hour log
-      const {data:existing}=await sb.from("hour_logs").select("id").eq("volunteer_id",volId).eq("activity",oppTitle).single();
-      if(existing){
-        await sb.from("hour_logs").update({hours:realHours,checked_in:checked_in,checked_out:checked_out}).eq("id",existing.id);
-      } else {
-        await sb.from("hour_logs").insert({volunteer_id:volId,activity:oppTitle,project:proj,hours:realHours,date:checked_out.split("T")[0],notes:"Checked in via event attendance"});
-      }
-      st("✓ Updated! "+realHours+"h logged.");
-    } else if(!checked_in&&!checked_out){
-      // Undo both — delete hour log
-      await sb.from("hour_logs").delete().eq("volunteer_id",volId).eq("activity",oppTitle);
-      st("✓ Check-in cleared.");
-    } else {
-      st("✓ Updated!");
-    }
-    setEditAttendance(null); load();
-  };
-  if(editAttendance) return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
-    <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 16px",gap:12,position:"sticky",top:0,zIndex:100}}>
-      <button onClick={()=>setEditAttendance(null)} style={{background:"rgba(255,255,255,0.1)",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13,fontWeight:700}}>← Back</button>
-      <span style={{fontFamily:HF,fontWeight:900,fontSize:16,color:"#fff",textTransform:"uppercase"}}>Edit Attendance</span>
-    </header>
-    <main style={{maxWidth:640,margin:"0 auto",padding:"20px 16px"}}>
-      <div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
-        <div style={{fontWeight:700,fontSize:15,color:DK,marginBottom:4}}>{editAttendance.volName}</div>
-        <div style={{fontSize:13,color:MT,marginBottom:16}}>{editAttendance.oppTitle}</div>
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          <Field label="Check-in Time">
-            <div style={{display:"flex",gap:8}}>
-              <input type="datetime-local" value={editAttendance.checked_in?editAttendance.checked_in.slice(0,16):""} onChange={e=>setEditAttendance(a=>({...a,checked_in:e.target.value?e.target.value+":00":null}))} style={{...inp,flex:1}}/>
-              <button onClick={()=>setEditAttendance(a=>({...a,checked_in:null,checked_out:null}))} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Clear</button>
-            </div>
-          </Field>
-          <Field label="Check-out Time">
-            <div style={{display:"flex",gap:8}}>
-              <input type="datetime-local" value={editAttendance.checked_out?editAttendance.checked_out.slice(0,16):""} onChange={e=>setEditAttendance(a=>({...a,checked_out:e.target.value?e.target.value+":00":null}))} style={{...inp,flex:1}}/>
-              <button onClick={()=>setEditAttendance(a=>({...a,checked_out:null}))} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Clear</button>
-            </div>
-          </Field>
-          {editAttendance.checked_in&&editAttendance.checked_out&&<div style={{background:"#DCFCE7",borderRadius:10,padding:"10px 14px",fontSize:13,color:DK,fontWeight:600}}>
-            ⏱ Real hours: <strong>{Math.max(0.1,Math.round((new Date(editAttendance.checked_out)-new Date(editAttendance.checked_in))/360000)/10)}h</strong>
-          </div>}
-          <button onClick={saveAttendance} style={{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Save Changes</button>
-        </div>
-      </div>
-    </main>
-  </div>;
   if(editingProfile) return <ProfileEdit profile={profile} onSave={p=>{setProfile(p);setEditingProfile(false);st("✓ Profile saved!")}} onBack={()=>setEditingProfile(false)}/>;
   if(viewProf) return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
     <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 16px",gap:12,position:"sticky",top:0,zIndex:100}}>
@@ -711,73 +609,32 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
         </div>)}
       </div>}
 
-      
-      {tab==="opps"&&<div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-          <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,margin:0}}>Opportunities & Sign-ups</h2>
-          <div style={{display:"flex",gap:6}}>
-            <button onClick={()=>{const rows=[["Event","Date","Location","Hours","Volunteer Name","Email","Phone","Status","Checked In","Checked Out"]];opps.forEach(o=>{(oppSignups[o.id]||[]).forEach(s=>{rows.push([o.title,o.date,o.location,o.hours,(s.profiles?.first_name||"")+" "+(s.profiles?.surname||""),s.profiles?.email||"",s.profiles?.phone||"",s.status,s.checked_in?new Date(s.checked_in).toLocaleString():"",s.checked_out?new Date(s.checked_out).toLocaleString():""]);});});const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");const blob=new Blob([csv],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="event_registrations.csv";a.click();}} style={{background:"#16a34a",color:"#fff",border:"none",borderRadius:8,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>📊 Export CSV</button>
-            <button onClick={()=>setShowArchived(s=>!s)} style={{background:showArchived?"#6B7280":"#fff",color:showArchived?"#fff":"#6B7280",border:"1px solid #D1D5DB",borderRadius:8,padding:"8px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>📦 {showArchived?"Hide":"Archived"}</button>
-          </div>
-        </div>
-        {showArchived&&<div style={{marginBottom:16}}>
-          <h3 style={{fontFamily:HF,fontSize:13,fontWeight:900,textTransform:"uppercase",color:"#6B7280",marginBottom:8}}>Archived ({archivedOpps.length})</h3>
-          {archivedOpps.length===0&&<p style={{color:MT,fontSize:13}}>No archived opportunities.</p>}
-          {archivedOpps.map(o=>{const p=gp(o.project);return<div key={o.id} style={{background:"#F9FAFB",borderRadius:12,padding:"12px 14px",border:"1px solid #E5E7EB",marginBottom:8,borderLeft:"4px solid #9CA3AF",opacity:.8}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div>
-                <Tag pid={o.project} sm/>
-                <div style={{fontWeight:700,fontSize:14,color:"#6B7280",marginTop:4}}>{o.title}</div>
-                <div style={{fontSize:11,color:MT}}>📅 {o.date} · 📍 {o.location} · {o.hours}h</div>
-              </div>
-              <button onClick={async()=>{await sb.from("opportunities").update({archived:false}).eq("id",o.id);st("✓ Restored!");load();}} style={{background:"#DCFCE7",color:"#166534",border:"none",borderRadius:8,padding:"6px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>Restore</button>
+      {tab==="hours"&&<div>
+        <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Pending Hour Logs</h2>
+        {hoursPending.length===0&&<p style={{color:MT,fontSize:14}}>No pending hour logs 🎉</p>}
+        {hoursPending.map(l=><div key={l.id} style={{background:"#fff",borderRadius:14,padding:"14px 16px",border:"1px solid "+BR,marginBottom:10,borderLeft:"4px solid "+gp(l.project).bg}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+            <div>
+              <Tag pid={l.project} sm/>
+              <div style={{fontWeight:700,fontSize:14,marginTop:6,fontFamily:BF}}>{l.activity}</div>
+              <div style={{fontSize:12,color:MT,marginTop:2}}>{l.profiles?.first_name} {l.profiles?.surname} · {l.date} · {l.hours}h</div>
+              {l.notes&&<div style={{fontSize:12,color:MT,marginTop:2,fontStyle:"italic"}}>"{l.notes}"</div>}
             </div>
-          </div>;})}
-        </div>}
+            <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:10}}>
+              <button onClick={async()=>{await sb.from("hour_logs").update({status:"approved"}).eq("id",l.id);st("✓ Hours approved!");load();}} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
+              <button onClick={async()=>{await sb.from("hour_logs").delete().eq("id",l.id);st("Hours declined.");load();}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
+            </div>
+          </div>
+        </div>)}
+      </div>}
+
+      {tab==="opps"&&<div>
+        <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Opportunities & Sign-ups</h2>
         {opps.map(o=>{
           const p=gp(o.project);
           const sups=oppSignups[o.id]||[];
           const pendingSups=sups.filter(s=>s.status==="pending");
           const approvedSups=sups.filter(s=>s.status==="approved");
-          const rejectedSups=sups.filter(s=>s.status==="rejected");
-          const isEventLive=(opp)=>{
-            if(!opp.date||!opp.start_time) return true; // no time set, always show
-            const now=new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Qatar"}));
-            const [h,m]=opp.start_time.split(":").map(Number);
-            const eventStart=new Date(opp.date+"T"+opp.start_time+":00");
-            // Allow check-in from 30 mins before start
-            const checkInOpen=new Date(eventStart.getTime()-30*60*1000);
-            return now>=checkInOpen;
-          };
-          const renderVolRow=(s,showActions)=><div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #F0FDF4",flexWrap:"wrap"}}>
-            <button onClick={()=>setViewProf(s.profiles)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,flex:1,textAlign:"left",padding:0}}>
-              <Avtr u={s.profiles} sz={30}/>
-              <div>
-                <div style={{fontSize:13,fontWeight:700,color:DK,fontFamily:BF}}>{s.profiles?.first_name} {s.profiles?.surname}</div>
-                <div style={{fontSize:11,color:MT}}>{s.profiles?.email}</div>
-              </div>
-            </button>
-            {s.answers?.length>0&&<div style={{width:"100%",marginTop:4,marginLeft:38,background:PL,borderRadius:8,padding:"6px 10px"}}>
-              {s.answers.map((a,i)=><div key={i} style={{fontSize:11,color:DK,marginBottom:2}}>{a.question}: <strong>{a.answer||"—"}</strong></div>)}
-            </div>}
-            {showActions&&<div style={{display:"flex",gap:6,flexShrink:0}}>
-              {s.status==="pending"&&<div style={{display:"flex",gap:4}}>
-                <button onClick={()=>approveSignup(s.signup_id)} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
-                <button onClick={()=>declineSignup(s.signup_id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
-              </div>}
-              {s.status==="approved"&&!s.checked_in&&<div style={{display:"flex",gap:4}}>
-                {isEventLive(o)?<button onClick={()=>checkIn(s.id)} style={{background:"#DBEAFE",color:"#1D4ED8",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>📍 Check In</button>:<span style={{fontSize:10,color:MT,fontStyle:"italic"}}>⏳ Not started</span>}
-              </div>}
-              {s.checked_in&&!s.checked_out&&<div style={{display:"flex",gap:4}}>
-                <button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>
-                <button onClick={()=>setEditAttendance({signupId:s.id,volName:(s.profiles?.first_name||"")+" "+(s.profiles?.surname||""),oppTitle:o.title,oppId:o.id,volId:s.volunteer_id,proj:o.project,hours:o.hours,checked_in:s.checked_in,checked_out:null})} style={{background:"#FEF3C7",color:"#D97706",border:"none",borderRadius:6,padding:"5px 8px",fontSize:11,fontWeight:700,cursor:"pointer"}}>✏️</button>
-              </div>}
-              {s.checked_out&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
-                <span style={{fontSize:11,color:"#7C3AED",fontWeight:700,background:"#F3E8FF",padding:"3px 8px",borderRadius:20}}>✅ {s.checked_in&&s.checked_out?(Math.round((new Date(s.checked_out)-new Date(s.checked_in))/360000)/10)+"h":o.hours+"h"}</span>
-                <button onClick={()=>setEditAttendance({signupId:s.id,volName:(s.profiles?.first_name||"")+" "+(s.profiles?.surname||""),oppTitle:o.title,oppId:o.id,volId:s.volunteer_id,proj:o.project,hours:o.hours,checked_in:s.checked_in,checked_out:s.checked_out})} style={{background:"#F3E8FF",color:"#7C3AED",border:"none",borderRadius:6,padding:"5px 8px",fontSize:11,fontWeight:700,cursor:"pointer"}}>✏️</button>
-              </div>}
-            </div>}
-          </div>;
           return <div key={o.id} style={{background:"#fff",borderRadius:14,padding:"14px 16px",border:"1px solid "+BR,marginBottom:12,borderLeft:"4px solid "+p.bg}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
               <div style={{flex:1}}>
@@ -788,27 +645,38 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                 <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
                   {pendingSups.length>0&&<span style={{background:"#FEF3C7",color:"#D97706",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>⏳ {pendingSups.length} pending</span>}
                   {approvedSups.length>0&&<span style={{background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✓ {approvedSups.length} approved</span>}
-                  {rejectedSups.length>0&&<span style={{background:"#FEE2E2",color:"#DC2626",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✕ {rejectedSups.length} rejected</span>}
                 </div>
               </div>
               <div style={{display:"flex",gap:6,marginLeft:10,flexShrink:0}}>
                 <button onClick={()=>setEditOpp({...o})} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Edit</button>
-                <button onClick={()=>archiveOpp(o.id)} style={{background:"#FEF3C7",color:"#D97706",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Archive</button>
+                <button onClick={()=>delOpp(o.id,o.title,o.project)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Cancel Event</button>
               </div>
             </div>
-            {sups.length>0&&<div style={{borderTop:"1px solid "+BR,paddingTop:10,marginTop:8,display:"flex",flexDirection:"column",gap:10}}>
-              {pendingSups.length>0&&<div>
-                <div style={{fontSize:11,fontWeight:700,color:"#D97706",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>⏳ Pending ({pendingSups.length})</div>
-                {pendingSups.map(s=>renderVolRow(s,true))}
-              </div>}
-              {approvedSups.length>0&&<div>
-                <div style={{fontSize:11,fontWeight:700,color:"#166534",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>✓ Approved ({approvedSups.length})</div>
-                {approvedSups.map(s=>renderVolRow(s,true))}
-              </div>}
-              {rejectedSups.length>0&&<div>
-                <div style={{fontSize:11,fontWeight:700,color:"#DC2626",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>✕ Rejected ({rejectedSups.length})</div>
-                {rejectedSups.map(s=>renderVolRow(s,false))}
-              </div>}
+            {sups.length>0&&<div style={{borderTop:"1px solid "+BR,paddingTop:10,marginTop:8}}>
+              {sups.map(s=><div key={s.volunteer_id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid #F0FDF4",flexWrap:"wrap"}}>
+                <button onClick={()=>setViewProf(s.profiles)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,flex:1,textAlign:"left",padding:0}}>
+                  <Avtr u={s.profiles} sz={32}/>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700,color:DK,fontFamily:BF}}>{s.profiles?.first_name} {s.profiles?.surname}</div>
+                    <div style={{fontSize:11,color:MT}}>{s.profiles?.email}</div>
+                  </div>
+                </button>
+                {s.answers?.length>0&&<div style={{width:"100%",marginTop:4,marginLeft:40,background:PL,borderRadius:8,padding:"6px 10px"}}>
+                  {s.answers.map((a,i)=><div key={i} style={{fontSize:11,color:DK,marginBottom:2}}>{a.question}: <strong>{a.answer||"—"}</strong></div>)}
+                </div>}
+                <div style={{display:"flex",gap:6,flexShrink:0}}>
+                  {s.status==="pending"&&<div style={{display:"flex",gap:4}}>
+                    <button onClick={()=>approveSignup(s.id)} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
+                    <button onClick={()=>declineSignup(s.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
+                  </div>}
+                  {s.status==="approved"&&!s.checked_in&&<div style={{display:"flex",gap:4}}>
+                    <button onClick={()=>checkIn(s.id)} style={{background:"#DBEAFE",color:"#1D4ED8",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>📍 Check In</button>
+                    <button onClick={()=>declineSignup(s.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>Remove</button>
+                  </div>}
+                  {s.checked_in&&!s.checked_out&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>}
+                  {s.checked_out&&<span style={{fontSize:11,color:"#7C3AED",fontWeight:700,background:"#F3E8FF",padding:"3px 8px",borderRadius:20}}>✅ {o.hours}h</span>}
+                </div>
+              </div>)}
             </div>}
           </div>;
         })}
@@ -832,14 +700,6 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
             <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:no.students_only?"#EDE9FE":"#F9FAFB",border:"1.5px solid "+(no.students_only?"#9B59B6":"#E5E7EB")}}>
               <input type="checkbox" checked={no.students_only} onChange={e=>setNo(n=>{return{...n,students_only:e.target.checked};} )} style={{width:18,height:18,accentColor:"#9B59B6"}}/>
               <div><div style={{fontWeight:700,fontSize:14,color:no.students_only?"#5B21B6":DK}}>🎓 Students Only</div></div>
-            </label>
-            <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:no.student_friendly?"#EFF6FF":"#F9FAFB",border:"1.5px solid "+(no.student_friendly?"#3B82F6":"#E5E7EB")}}>
-              <input type="checkbox" checked={no.student_friendly||false} onChange={e=>setNo(n=>{return{...n,student_friendly:e.target.checked};} )} style={{width:18,height:18,accentColor:"#3B82F6"}}/>
-              <div><div style={{fontWeight:700,fontSize:14,color:no.student_friendly?"#1D4ED8":DK}}>🎓 Student Friendly (14+)</div></div>
-            </label>
-            <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:no.kid_friendly?"#FFF7ED":"#F9FAFB",border:"1.5px solid "+(no.kid_friendly?"#F97316":"#E5E7EB")}}>
-              <input type="checkbox" checked={no.kid_friendly||false} onChange={e=>setNo(n=>{return{...n,kid_friendly:e.target.checked};} )} style={{width:18,height:18,accentColor:"#F97316"}}/>
-              <div><div style={{fontWeight:700,fontSize:14,color:no.kid_friendly?"#EA580C":DK}}>🧒 Kid Friendly (6+)</div></div>
             </label>
             <div style={{borderTop:"1px solid "+BR,paddingTop:14}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
@@ -883,7 +743,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
 
   async function loadData(){
     const [{data:o},{data:l},{data:s}]=await Promise.all([
-      sb.from("opportunities").select("*").or("archived.eq.false,archived.is.null").order("date"),
+      sb.from("opportunities").select("*").order("date"),
       sb.from("hour_logs").select("*").eq("volunteer_id",profile.id).order("created_at",{ascending:false}),
       sb.from("signups").select("opportunity_id,status,checked_in,checked_out").eq("volunteer_id",profile.id),
     ]);
@@ -892,8 +752,8 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
 
   async function submitLog(){
     if(!form.activity||!form.hours||!form.date) return;
-    await sb.from("hour_logs").insert({...form,hours:Number(form.hours),volunteer_id:profile.id});
-    setForm({activity:"",hours:"",date:"",project:"food-boxes",notes:""}); st("✓ Hours logged!"); loadData();
+    await sb.from("hour_logs").insert({...form,hours:Number(form.hours),volunteer_id:profile.id,approved:false});
+    setForm({activity:"",hours:"",date:"",project:"food-boxes",notes:""}); st("✓ Hours submitted for admin approval!"); loadData();
   }
 
   async function signUp(o){
@@ -902,13 +762,18 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
     else await submitSignup(o,[]);
   }
 
+  async function cancelSignup(opportunityId){
+    await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",opportunityId);
+    st("Signup cancelled."); loadData();
+  }
+
   async function submitSignup(o,answersArr){
     await sb.from("signups").insert({volunteer_id:profile.id,opportunity_id:o.id,status:"pending",answers:answersArr});
     setSignupModal(null); setAnswers({});
     st("✓ Request sent! Awaiting admin approval."); loadData();
   }
 
-  const th=logs.reduce((s,l)=>s+Number(l.hours),0);
+  const approvedLogs=logs.filter(l=>l.approved!==false); const th=approvedLogs.reduce((s,l)=>s+Number(l.hours),0);
   const visibleOpps=opps.filter(o=>!o.students_only||profile.is_student);
   const fo=fp==="all"?visibleOpps:visibleOpps.filter(o=>o.project===fp);
   const NAV=[{id:"dashboard",label:"Home"},{id:"opportunities",label:"Opportunities"},{id:"log",label:"Log Hours"},{id:"history",label:"My Hours"}];
@@ -1013,7 +878,21 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
             <div style={{fontSize:11,color:MT,marginBottom:10,fontFamily:BF}}>📅 {o.date}{o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):""} · 📍 {o.location}</div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{fontSize:11,background:p.light,color:p.text,padding:"2px 8px",borderRadius:20,fontWeight:600,fontFamily:BF}}>{o.spots} spots</span>
-              <button onClick={()=>signUp(o)} disabled={done&&signup?.status!=="rejected"} style={{background:done?(signup?.status==="pending"?"#FEF3C7":signup?.status==="rejected"?"#FEE2E2":p.light):p.bg,color:done?(signup?.status==="pending"?"#D97706":signup?.status==="rejected"?"#DC2626":p.text):"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:(done&&signup?.status!=="rejected")?"default":"pointer",fontSize:12,fontWeight:700,fontFamily:BF}}>{done?(signup?.status==="pending"?"⏳ Pending":signup?.status==="rejected"?"✕ Rejected":"✓ Approved"):"Sign Up →"}</button>
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              {!done&&<button onClick={()=>signUp(o)} style={{background:p.bg,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:BF}}>Sign Up →</button>}
+              {done&&signup?.status==="pending"&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
+                <span style={{background:"#FEF3C7",color:"#D97706",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>⏳ Pending</span>
+                <button onClick={async()=>{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Signup cancelled.");loadData();}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>
+              </div>}
+              {done&&signup?.status==="approved"&&!signup?.checked_in&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
+                <span style={{background:p.light,color:p.text,borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>✓ Approved</span>
+                <button onClick={async()=>{if(window.confirm("Cancel your attendance?")){{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Attendance cancelled.");loadData();}}}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>
+              </div>}
+              {done&&signup?.checked_in&&<span style={{background:p.light,color:p.text,borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>📍 Checked In</span>}
+            </div>
+              {done&&!signup?.checked_in&&<button onClick={()=>cancelSignup(o.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"8px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:BF}}>Cancel</button>}
+            </div>
             </div>
           </div>;})}
         </div>
@@ -1066,7 +945,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontWeight:700,fontSize:13,fontFamily:BF,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.activity}</div>
               <div style={{fontSize:11,color:MT,marginTop:2,fontFamily:BF}}>{l.date}</div>
-              <div style={{marginTop:4}}><Tag pid={l.project} sm/></div>
+              <div style={{marginTop:4,display:"flex",gap:4,flexWrap:"wrap"}}><Tag pid={l.project} sm/>{l.approved===false&&<span style={{background:"#FEF3C7",color:"#D97706",borderRadius:20,padding:"2px 6px",fontSize:10,fontWeight:700}}>⏳ Pending</span>}</div>
             </div>
             <div style={{fontWeight:900,fontSize:22,color:p.bg,fontFamily:HF,flexShrink:0}}>{l.hours}h</div>
           </div>;})}
