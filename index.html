@@ -765,7 +765,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
 
   async function submitLog(){
     if(!form.activity||!form.hours||!form.date) return;
-    await sb.from("hour_logs").insert({...form,hours:Number(form.hours),volunteer_id:profile.id,approved:false});
+    await sb.from("hour_logs").insert({...form,hours:Number(form.hours),volunteer_id:profile.id,status:"pending"});
     setForm({activity:"",hours:"",date:"",project:"food-boxes",notes:""}); st("✓ Hours submitted for admin approval!"); loadData();
   }
 
