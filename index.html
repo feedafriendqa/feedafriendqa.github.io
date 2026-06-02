@@ -669,10 +669,16 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                     <button onClick={()=>approveSignup(s.id)} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
                     <button onClick={()=>declineSignup(s.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
                   </div>}
-                  {s.status==="approved"&&!s.checked_in&&<div style={{display:"flex",gap:4}}>
+                  {s.status==="approved"&&!s.checked_in&&(()=>{
+                    const now=new Date();
+                    const eventDate=new Date(o.date+"T"+(o.start_time||"00:00")+":00");
+                    const minsUntil=(eventDate-now)/60000;
+                    const canCheckin=minsUntil<=30&&minsUntil>-((o.hours||2)*60+60);
+                    return canCheckin?<div style={{display:"flex",gap:4}}>
                     <button onClick={()=>checkIn(s.id)} style={{background:"#DBEAFE",color:"#1D4ED8",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>📍 Check In</button>
                     <button onClick={()=>declineSignup(s.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>Remove</button>
-                  </div>}
+                  </div>:<span style={{fontSize:11,color:MT,fontFamily:BF}}>📅 {o.start_time||o.date}</span>;
+                  })()}
                   {s.checked_in&&!s.checked_out&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>}
                   {s.checked_out&&<span style={{fontSize:11,color:"#7C3AED",fontWeight:700,background:"#F3E8FF",padding:"3px 8px",borderRadius:20}}>✅ {o.hours}h</span>}
                 </div>
