@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>Little Learners — Apply</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+
 <style>
 :root{--forest:#0A3D1F;--forest-mid:#145C30;--lime:#5CB85C;--lime-soft:#EAF5EA;--gold:#F5A623;--coral:#E05252;--muted:#5A7A65;--border:#C8DFC8;--cream:#F4F9F4;--shadow:0 4px 20px rgba(10,61,31,.09);--r:14px;--rs:10px;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -144,11 +144,11 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div class="upload-pair">
       <div class="upload-side">
         <div class="upload-side-title">📷 Front</div>
-        <label class="upload-box" id="ub-father-front" for="fi-father-front"><div class="uico" id="uico-father-front">📋</div><p id="ubt-father-front">Tap to upload</p></label><input type="file" accept="image/*" id="fi-father-front" style="position:absolute;left:-9999px;" onchange="handleQID(event,'father','front')">
+        <input type="file" accept="image/*" capture="environment" class="file-input-styled" id="fi-father-front">
       </div>
       <div class="upload-side">
         <div class="upload-side-title">📷 Back</div>
-        <label class="upload-box" id="ub-father-back" for="fi-father-back"><div class="uico" id="uico-father-back">📋</div><p id="ubt-father-back">Tap to upload</p></label><input type="file" accept="image/*" id="fi-father-back" style="position:absolute;left:-9999px;" onchange="handleQID(event,'father','back')">
+        <input type="file" accept="image/*" capture="environment" class="file-input-styled" id="fi-father-back">
       </div>
     </div>
     <button class="scan-btn" id="scan-father" onclick="scanQID('father')" disabled>🤖 Scan &amp; Auto-fill</button>
@@ -199,11 +199,11 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div class="upload-pair">
       <div class="upload-side">
         <div class="upload-side-title">📷 Front</div>
-        <label class="upload-box" id="ub-mother-front" for="fi-mother-front"><div class="uico" id="uico-mother-front">📋</div><p id="ubt-mother-front">Tap to upload</p></label><input type="file" accept="image/*" id="fi-mother-front" style="position:absolute;left:-9999px;" onchange="handleQID(event,'mother','front')">
+        <input type="file" accept="image/*" capture="environment" class="file-input-styled" id="fi-mother-front">
       </div>
       <div class="upload-side">
         <div class="upload-side-title">📷 Back</div>
-        <label class="upload-box" id="ub-mother-back" for="fi-mother-back"><div class="uico" id="uico-mother-back">📋</div><p id="ubt-mother-back">Tap to upload</p></label><input type="file" accept="image/*" id="fi-mother-back" style="position:absolute;left:-9999px;" onchange="handleQID(event,'mother','back')">
+        <input type="file" accept="image/*" capture="environment" class="file-input-styled" id="fi-mother-back">
       </div>
     </div>
     <button class="scan-btn" id="scan-mother" onclick="scanQID('mother')" disabled>🤖 Scan &amp; Auto-fill</button>
@@ -338,13 +338,23 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 <script>
-
 const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
 const ANTHROPIC_KEY = "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";
-const { createClient } = window.supabase;
-const db = createClient(SUPA_URL, SUPA_KEY);
+// Safe init - wait for supabase to be ready
+let db;
+function initDB() {
+  if(window.supabase && window.supabase.createClient) {
+    db = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+    return true;
+  }
+  return false;
+}
+if(!initDB()) {
+  document.addEventListener('DOMContentLoaded', initDB);
+}
 
 const ZONES = {"1":"Rawdat Al Khail","2":"Al Rumaila","3":"Al Dafna","4":"Al Qassar","5":"Fereej Al Nasr","6":"Al Sadd","7":"Al Mansoura","8":"Bin Mahmoud","9":"Doha Al Jadeed","10":"Old Airport","11":"Al Muntazah","12":"Al Hilal","13":"Al Matar Al Qadim","14":"Fereej Kulaib","15":"Al Thumama","16":"Al Aziziyah","17":"Al Wajba","18":"Al Rayyan","19":"Muaither","20":"Al Gharrafa","21":"Ain Khalid","22":"Al Wakra","23":"Mesaieed","24":"Al Khor","25":"Al Hilal","26":"Um Ghuwailina","27":"Al Nasr","28":"Al Duhail","29":"Bu Hamour","30":"Lusail"};
 
@@ -527,13 +537,13 @@ function addChild() {
     <div class="child-block-body">
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px;font-weight:600;">Upload child's QID, passport or birth certificate.</p>
       <div style="margin-bottom:12px;">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📷 Front of ID</div>
-        <input type="file" accept="image/*" class="file-input-styled" id="fi-child_${idx}-front">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📸 Take photo — Front of ID</div>
+        <input type="file" accept="image/*" capture="environment" class="file-input-styled" id="fi-child_${idx}-front">
         <div id="prev-child_${idx}-front" style="margin-top:6px;display:none;"><img id="img-child_${idx}-front" style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid var(--lime);"></div>
       </div>
       <div style="margin-bottom:12px;">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📷 Back of ID</div>
-        <input type="file" accept="image/*" class="file-input-styled" id="fi-child_${idx}-back">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📸 Take photo — Back of ID</div>
+        <input type="file" accept="image/*" capture="environment" class="file-input-styled" id="fi-child_${idx}-back">
         <div id="prev-child_${idx}-back" style="margin-top:6px;display:none;"><img id="img-child_${idx}-back" style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid var(--lime);"></div>
       </div>
       <button class="scan-btn" id="scan-child_${idx}" onclick="scanQID('child_${idx}')" disabled>🤖 Scan &amp; Auto-fill</button>
