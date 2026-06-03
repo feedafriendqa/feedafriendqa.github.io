@@ -260,28 +260,21 @@ async function doLogin() {
     return;
   }
 
-  btn.disabled = true; btn.innerHTML = '<div class="spinner"></div>';
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div>';
   err.style.display = 'none';
 
-  try {
-    // Sign in first
-    const {data: authData, error: authError} = await db.auth.signInWithPassword({email, password: pass});
-    if(authError) throw authError;
+  const {data, error} = await db.auth.signInWithPassword({email, password: pass});
 
-    // Then check if on LL allowed list
-    const {data: allowed} = await db.from('ll_admins').select('email').eq('email', email.toLowerCase()).single();
-    if(!allowed) {
-      await db.auth.signOut();
-      throw new Error('You do not have access to this portal.');
-    }
-
-    showApp();
-  } catch(e) {
-    err.textContent = e.message || 'Login failed. Please try again.';
+  if(error) {
+    err.textContent = error.message;
     err.style.display = 'block';
     btn.disabled = false;
     btn.innerHTML = 'Sign In';
+    return;
   }
+
+  showApp();
 }
 async function doLogout() {
   await db.auth.signOut();
@@ -294,14 +287,8 @@ async function showApp() {
   await loadData();
 }
 db.auth.onAuthStateChange(async (event, session) => {
-  if(session) {
-    // Check if this user is allowed in LL admin
-    const {data: allowed} = await db.from('ll_admins').select('email').eq('email', session.user.email.toLowerCase()).single();
-    if(allowed) {
-      showApp();
-    } else {
-      await db.auth.signOut();
-    }
+  if(event === 'SIGNED_IN' && session) {
+    showApp();
   }
 });
 
@@ -509,18 +496,50 @@ async function saveOverride(childId) {
 
 async function renderDocuments(f) {
   const {data:docs} = await db.from('ll_documents').select('*').eq('family_id',f.id);
+
+  // Group docs by person
+  const byPerson = {};
+  if(docs) docs.forEach(d => {
+    const person = d.doc_type?.replace(/_front|_back/,'') || 'other';
+    if(!byPerson[person]) byPerson[person] = [];
+    byPerson[person].push(d);
+  });
+
   let html = '';
-  if(docs&&docs.length) {
-    for(const d of docs) {
-      html += `<div class="doc-item" onclick="viewDoc('${d.file_path}')">📄 ${d.file_name} <span style="margin-left:auto;font-size:11px;color:var(--muted);">tap to view</span></div>`;
-    }
-  }
-  // Also show QIDs from the form
-  if(f.father_qid) html = `<div class="doc-item">🪪 Father QID — ${f.father_qid}</div>` + html;
-  if(f.mother_qid) html = `<div class="doc-item">🪪 Mother QID — ${f.mother_qid}</div>` + html;
-  currentChildren.forEach(c => { if(c.qid) html += `<div class="doc-item">🪪 ${c.full_name||'Child'} — ${c.qid}</div>`; });
+
+  // Father
+  html += docPersonCard('Father', f.father_name, f.father_qid, null, null, byPerson['father']||[]);
+  // Mother
+  if(f.mother_name) html += docPersonCard('Mother', f.mother_name, f.mother_qid, null, null, byPerson['mother']||[]);
+  // Children
+  currentChildren.forEach((c,i) => {
+    html += docPersonCard(c.full_name||'Child '+(i+1), null, c.qid, null, null, byPerson['child_'+(i+1)]||[]);
+  });
+
   if(!html) html = '<p style="color:var(--muted);font-size:13.5px;font-weight:600;">No documents uploaded yet.</p>';
   document.getElementById('tp-documents').innerHTML = html;
+}
+
+function docPersonCard(label, name, qid, sponsor, expiry, docs) {
+  const front = docs.find(d=>d.doc_type?.endsWith('_front')||d.doc_type===label.toLowerCase());
+  const back = docs.find(d=>d.doc_type?.endsWith('_back'));
+  return `<div style="background:var(--cream);border-radius:var(--rs);padding:13px;margin-bottom:12px;border-left:4px solid var(--lime);">
+    <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:var(--forest);margin-bottom:10px;">🪪 ${label}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      ${qid?`<div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">QID Number</div><div style="font-weight:700;">${qid}</div></div>`:''}
+      ${name?`<div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">Name</div><div style="font-weight:700;">${name}</div></div>`:''}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      ${front?`<div style="flex:1;min-width:120px;">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Front</div>
+        <div class="doc-item" onclick="viewDoc('${front.file_path}')">📄 View front <span style="margin-left:auto;font-size:11px;color:var(--muted);">tap</span></div>
+      </div>`:'<div style="flex:1;min-width:120px;"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Front</div><div style="font-size:13px;color:var(--muted);font-weight:600;">Not uploaded</div></div>'}
+      ${back?`<div style="flex:1;min-width:120px;">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Back</div>
+        <div class="doc-item" onclick="viewDoc('${back.file_path}')">📄 View back <span style="margin-left:auto;font-size:11px;color:var(--muted);">tap</span></div>
+      </div>`:'<div style="flex:1;min-width:120px;"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Back</div><div style="font-size:13px;color:var(--muted);font-weight:600;">Not uploaded</div></div>'}
+    </div>
+  </div>`;
 }
 
 async function viewDoc(path) {
