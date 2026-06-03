@@ -264,7 +264,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 </div>
 <div class="card">
   <div class="card-title">🪪 Upload ID Documents</div>
-  <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">Upload a clear photo or scan for each person. Birth certificates accepted for children.</p>
+  <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">Upload a photo of the <strong>front and back</strong> of each QID. Our AI will read it and fill in the details automatically.</p>
   <div id="upload-zones"></div>
 </div>
 <div class="warn">⚠️ Applications without documents within 3 days may be archived.</div>
@@ -290,6 +290,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 <script>
 const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
+const ANTHROPIC_KEY = "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";
 const { createClient } = supabase;
 const db = createClient(SUPA_URL, SUPA_KEY);
 
@@ -406,36 +407,202 @@ function toggleSNDetail(sel, idx) {
   document.getElementById('snd-'+idx).style.display = sel.value.startsWith('Yes') ? 'block' : 'none';
 }
 
+// QID scanning state
+let qidScans = {}; // key -> {front: file, back: file, scanned: bool, data: {}}
+
 function buildUploadZones() {
   const zones = document.getElementById('upload-zones');
   zones.innerHTML = '';
   const people = [
-    {key:'father', label:"Father's QID or Passport"},
-    {key:'mother', label:"Mother's QID or Passport"},
+    {key:'father', label:"Father", who:"Father's"},
+    {key:'mother', label:"Mother", who:"Mother's"},
   ];
   document.querySelectorAll('.child-block').forEach((b,i) => {
     const name = b.querySelector('.cname').value.trim() || 'Child '+(i+1);
-    people.push({key:'child_'+(i+1), label: name + "'s QID, Passport or Birth Certificate"});
+    people.push({key:'child_'+(i+1), label:name, who:name+"'s"});
   });
+
   people.forEach(p => {
-    if(uploadedFiles[p.key]) {
-      zones.innerHTML += `<div class="uploaded-file">✅ ${p.label} — uploaded</div>`;
-    } else {
-      zones.innerHTML += `
-        <div class="upload-zone" id="uz-${p.key}">
-          <input type="file" accept="image/*,.pdf" onchange="handleFile(event,'${p.key}','${p.label}')">
-          <div class="uicon">📎</div>
-          <p>${p.label}</p><small>JPG, PNG or PDF</small>
-        </div>`;
-    }
+    const scan = qidScans[p.key] || {};
+    const scanned = scan.scanned;
+    const hasFront = !!scan.front;
+    const hasBack = !!scan.back;
+
+    zones.innerHTML += `
+      <div style="background:var(--cream);border-radius:var(--rs);border:2px solid ${scanned?'var(--lime)':'var(--border)'};padding:14px;margin-bottom:14px;">
+        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:var(--forest);margin-bottom:12px;">
+          ${scanned?'✅':'🪪'} ${p.who} QID ${scanned?'— Scanned':''}
+        </div>
+        ${scanned && scan.data ? `
+          <div style="background:white;border-radius:var(--rs);padding:10px 14px;margin-bottom:10px;font-size:13px;border:2px solid var(--lime);">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              ${scan.data.name?`<div><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">Name</span><br><strong>${scan.data.name}</strong></div>`:''}
+              ${scan.data.qid_number?`<div><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">QID No.</span><br><strong>${scan.data.qid_number}</strong></div>`:''}
+              ${scan.data.nationality?`<div><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">Nationality</span><br><strong>${scan.data.nationality}</strong></div>`:''}
+              ${scan.data.dob?`<div><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">Date of Birth</span><br><strong>${scan.data.dob}</strong></div>`:''}
+              ${scan.data.expiry?`<div><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">Expiry</span><br><strong>${scan.data.expiry}</strong></div>`:''}
+              ${scan.data.sponsor?`<div><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">Sponsor</span><br><strong>${scan.data.sponsor}</strong></div>`:''}
+            </div>
+            ${scan.photo?`<img src="${scan.photo}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;margin-top:8px;border:2px solid var(--lime);">`:''}
+          </div>
+          <button style="background:transparent;border:2px solid var(--border);color:var(--muted);border-radius:50px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:Quicksand,sans-serif;" onclick="resetScan('${p.key}')">🔄 Re-scan</button>
+        ` : `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div>
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Front of QID</div>
+              <label style="display:block;border:2.5px dashed ${hasFront?'var(--lime)':'var(--border)'};border-radius:var(--rs);padding:14px 8px;text-align:center;cursor:pointer;background:${hasFront?'var(--lime-soft)':'white'};transition:all .2s;">
+                <input type="file" accept="image/*" style="display:none;" onchange="handleQIDFile(event,'${p.key}','front')">
+                <div style="font-size:22px;">${hasFront?'✅':'📷'}</div>
+                <div style="font-size:12px;font-weight:700;color:var(--muted);margin-top:3px;">${hasFront?'Uploaded':'Tap to upload'}</div>
+              </label>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Back of QID</div>
+              <label style="display:block;border:2.5px dashed ${hasBack?'var(--lime)':'var(--border)'};border-radius:var(--rs);padding:14px 8px;text-align:center;cursor:pointer;background:${hasBack?'var(--lime-soft)':'white'};transition:all .2s;">
+                <input type="file" accept="image/*" style="display:none;" onchange="handleQIDFile(event,'${p.key}','back')">
+                <div style="font-size:22px;">${hasBack?'✅':'📷'}</div>
+                <div style="font-size:12px;font-weight:700;color:var(--muted);margin-top:3px;">${hasBack?'Uploaded':'Tap to upload'}</div>
+              </label>
+            </div>
+          </div>
+          ${hasFront||hasBack ? `
+            <button id="scan-btn-${p.key}" style="width:100%;background:var(--forest);color:white;border:none;border-radius:50px;padding:11px;font-family:Quicksand,sans-serif;font-weight:700;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="scanQID('${p.key}','${p.label}')">
+              🤖 Scan QID — Auto-fill details
+            </button>` : ''}
+        `}
+      </div>`;
   });
 }
 
-function handleFile(e, key, label) {
+function handleQIDFile(e, key, side) {
   const file = e.target.files[0];
   if(!file) return;
-  uploadedFiles[key] = {file, label};
+  if(!qidScans[key]) qidScans[key] = {};
+  qidScans[key][side] = file;
+  // also track for upload
+  uploadedFiles[key+'_'+side] = {file, label: key+' '+side};
   buildUploadZones();
+}
+
+function resetScan(key) {
+  delete qidScans[key];
+  buildUploadZones();
+}
+
+async function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+async function scanQID(key, personLabel) {
+  const scan = qidScans[key];
+  if(!scan) return;
+  const btn = document.getElementById('scan-btn-'+key);
+  if(btn) { btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Scanning…'; }
+
+  try {
+    const content = [];
+
+    if(scan.front) {
+      const b64 = await fileToBase64(scan.front);
+      const mt = scan.front.type || 'image/jpeg';
+      content.push({type:'image', source:{type:'base64', media_type:mt, data:b64}});
+      content.push({type:'text', text:'This is the FRONT of the QID card.'});
+    }
+    if(scan.back) {
+      const b64 = await fileToBase64(scan.back);
+      const mt = scan.back.type || 'image/jpeg';
+      content.push({type:'image', source:{type:'base64', media_type:mt, data:b64}});
+      content.push({type:'text', text:'This is the BACK of the QID card.'});
+    }
+
+    content.push({type:'text', text:`Extract all information from this Qatar QID card. Return ONLY a JSON object with these fields (use null if not found):
+{
+  "name": "full name in English",
+  "qid_number": "11-digit QID number",
+  "nationality": "nationality",
+  "dob": "date of birth as DD/MM/YYYY",
+  "expiry": "expiry date as DD/MM/YYYY",
+  "sponsor": "sponsor name from back of card",
+  "gender": "Male or Female"
+}
+Return only the JSON, no other text.`});
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-client-side-api-key-access':'true'
+      },
+      body: JSON.stringify({
+        model:'claude-opus-4-6',
+        max_tokens:500,
+        messages:[{role:'user', content}]
+      })
+    });
+
+    const result = await resp.json();
+    const text = result.content?.[0]?.text || '{}';
+    const clean = text.replace(/```json|```/g,'').trim();
+    const data = JSON.parse(clean);
+
+    qidScans[key].scanned = true;
+    qidScans[key].data = data;
+
+    // Auto-fill form fields based on who this is
+    autofillFromQID(key, data);
+    buildUploadZones();
+
+  } catch(err) {
+    console.error('QID scan error:', err);
+    if(btn) { btn.disabled=false; btn.innerHTML='🤖 Scan QID — Auto-fill details'; }
+    showScanError(key, 'Could not read QID. Please fill in manually.');
+  }
+}
+
+function showScanError(key, msg) {
+  const zones = document.getElementById('upload-zones');
+  // just rebuild — error will show naturally
+  buildUploadZones();
+}
+
+function autofillFromQID(key, data) {
+  if(key === 'father') {
+    if(data.name) document.getElementById('f_name').value = data.name;
+    if(data.qid_number) document.getElementById('f_qid').value = data.qid_number;
+    if(data.nationality) document.getElementById('f_nat').value = data.nationality;
+  } else if(key === 'mother') {
+    if(data.name) document.getElementById('m_name').value = data.name;
+    if(data.qid_number) document.getElementById('m_qid').value = data.qid_number;
+    if(data.nationality) document.getElementById('m_nat').value = data.nationality;
+  } else if(key.startsWith('child_')) {
+    const idx = parseInt(key.split('_')[1]);
+    const block = document.querySelectorAll('.child-block')[idx-1];
+    if(block) {
+      if(data.name) block.querySelector('.cname').value = data.name;
+      if(data.qid_number) block.querySelector('.cqid').value = data.qid_number;
+      if(data.nationality) block.querySelector('.cnat').value = data.nationality;
+      if(data.dob) block.querySelector('.cdob').value = convertDate(data.dob);
+      if(data.gender) {
+        const gsel = block.querySelector('.cgender');
+        if(gsel) gsel.value = data.gender==='Male'?'Boy':'Girl';
+      }
+    }
+  }
+}
+
+function convertDate(dob) {
+  // Convert DD/MM/YYYY to YYYY-MM-DD for input[type=date]
+  if(!dob) return '';
+  const parts = dob.split('/');
+  if(parts.length===3) return parts[2]+'-'+parts[1].padStart(2,'0')+'-'+parts[0].padStart(2,'0');
+  return '';
 }
 
 function getChildrenData() {
