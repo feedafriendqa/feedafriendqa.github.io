@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upload Test 2</title>
+<style>
+body { font-family: sans-serif; padding: 20px; background: #f4f9f4; }
+h2 { color: #0A3D1F; margin-bottom: 20px; }
+.result { margin-top: 16px; padding: 14px; background: #EAF5EA; border-radius: 10px; border: 2px solid #5CB85C; display: none; font-weight: 700; color: #0A3D1F; }
+img { display: block; max-width: 150px; margin-top: 10px; border-radius: 8px; }
+p { color: #5A7A65; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<h2>Upload Test 2</h2>
+<p>Select a photo using the button below:</p>
+
+<input type="file" accept="image/*" id="testInput" capture="environment">
+
+<div class="result" id="result">
+  <div id="msg"></div>
+  <img id="preview">
+</div>
+
+<script>
+var inp = document.getElementById('testInput');
+var result = document.getElementById('result');
+var msg = document.getElementById('msg');
+var preview = document.getElementById('preview');
+
+inp.onchange = function() {
+  alert('onchange fired! Files: ' + this.files.length);
+  if(this.files && this.files[0]) {
+    var file = this.files[0];
+    msg.textContent = '✅ Got file: ' + file.name + ' (' + Math.round(file.size/1024) + 'KB)';
+    result.style.display = 'block';
+    var reader = new FileReader();
+    reader.onload = function(e) { preview.src = e.target.result; };
+    reader.readAsDataURL(file);
+  }
+};
+
+inp.addEventListener('change', function() {
+  console.log('addEventListener change fired');
+});
+</script>
+</body>
+</html>
