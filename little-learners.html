@@ -58,6 +58,8 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 .upload-box .uico{font-size:24px;margin-bottom:4px;}
 .upload-box p{font-size:11.5px;font-weight:700;color:var(--muted);}
 .upload-box.has-file p{color:var(--forest);}
+.file-input-styled{width:100%;padding:14px 8px;border-radius:var(--rs);border:2.5px dashed var(--border);background:var(--cream);font-family:'Quicksand',sans-serif;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;text-align:center;transition:all .2s;}
+.file-input-styled::-webkit-file-upload-button{background:var(--forest);color:white;border:none;padding:6px 14px;border-radius:50px;font-family:'Quicksand',sans-serif;font-weight:700;font-size:12px;cursor:pointer;margin-right:8px;}
 .scan-btn{width:100%;background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:12px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;margin-bottom:12px;}
 .scan-btn:hover{background:#e09510;}
 .scan-btn:disabled{background:#ccc;color:#888;cursor:not-allowed;}
@@ -359,35 +361,31 @@ function handleQID(e, key, side) {
   qidFiles[key+'_'+side] = file;
   uploadedFiles[key+'_'+side] = {file, label: key+' '+side};
 
-  // Visual feedback on the upload box
-  const box = document.getElementById('ub-'+key+'-'+side);
-  if(box) {
-    box.classList.add('has-file');
-    box.style.borderColor = 'var(--lime)';
-    box.style.background = 'var(--lime-soft)';
-  }
-
-  // Update text
-  const txt = document.getElementById('ubt-'+key+'-'+side);
-  if(txt) {
-    const name = file.name.length > 18 ? file.name.substring(0,18)+'…' : file.name;
-    txt.innerHTML = '<span style="color:var(--forest);font-weight:700;">✅ ' + name + '</span>';
-  }
-
-  // Show preview thumbnail if image
+  // Show image preview
   const safeKey = key.replace('_','-');
-  const iconEl = document.getElementById('uico-'+safeKey+'-'+side) || (box ? box.querySelector('.uico') : null);
-  if(iconEl && file.type.startsWith('image/')) {
+  const prevDiv = document.getElementById('prev-'+safeKey+'-'+side);
+  const prevImg = document.getElementById('img-'+safeKey+'-'+side);
+  if(prevDiv && prevImg && file.type.startsWith('image/')) {
     const reader = new FileReader();
     reader.onload = (ev) => {
-      iconEl.innerHTML = '<img src="'+ev.target.result+'" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:2px solid var(--lime);">';
+      prevImg.src = ev.target.result;
+      prevDiv.style.display = 'block';
     };
     reader.readAsDataURL(file);
-  } else if(iconEl) {
-    iconEl.textContent = '📄';
+  } else if(prevDiv) {
+    prevDiv.style.display = 'block';
+    if(prevImg) prevImg.style.display = 'none';
   }
 
-  // Enable scan button if at least one side uploaded
+  // Style the file input green
+  const input = document.getElementById('fi-'+safeKey+'-'+side);
+  if(input) {
+    input.style.borderColor = 'var(--lime)';
+    input.style.background = 'var(--lime-soft)';
+    input.style.color = 'var(--forest)';
+  }
+
+  // Enable scan button
   const scanBtn = document.getElementById('scan-'+key);
   if(scanBtn && (qidFiles[key+'_front'] || qidFiles[key+'_back'])) {
     scanBtn.disabled = false;
@@ -529,23 +527,15 @@ function addChild() {
     </div>
     <div class="child-block-body">
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px;font-weight:600;">Upload child's QID, passport or birth certificate.</p>
-      <div class="upload-pair">
-        <div class="upload-side">
-          <div class="upload-side-title">📷 Front</div>
-          <label class="upload-box" id="ub-child_${idx}-front" for="fi-child_${idx}-front">
-            <div class="uico" id="uico-child_${idx}-front">📋</div>
-            <p id="ubt-child_${idx}-front">Tap to upload</p>
-          </label>
-          <input type="file" accept="image/*" id="fi-child_${idx}-front" style="position:absolute;left:-9999px;" onchange="handleQID(event,'child_${idx}','front')">
-        </div>
-        <div class="upload-side">
-          <div class="upload-side-title">📷 Back</div>
-          <label class="upload-box" id="ub-child_${idx}-back" for="fi-child_${idx}-back">
-            <div class="uico" id="uico-child_${idx}-back">📋</div>
-            <p id="ubt-child_${idx}-back">Tap to upload</p>
-          </label>
-          <input type="file" accept="image/*" id="fi-child_${idx}-back" style="position:absolute;left:-9999px;" onchange="handleQID(event,'child_${idx}','back')">
-        </div>
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📷 Front of ID</div>
+        <input type="file" accept="image/*" class="file-input-styled" id="fi-child_${idx}-front" onchange="handleQID(event,'child_${idx}','front')">
+        <div id="prev-child_${idx}-front" style="margin-top:6px;display:none;"><img id="img-child_${idx}-front" style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid var(--lime);"></div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📷 Back of ID</div>
+        <input type="file" accept="image/*" class="file-input-styled" id="fi-child_${idx}-back" onchange="handleQID(event,'child_${idx}','back')">
+        <div id="prev-child_${idx}-back" style="margin-top:6px;display:none;"><img id="img-child_${idx}-back" style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid var(--lime);"></div>
       </div>
       <button class="scan-btn" id="scan-child_${idx}" onclick="scanQID('child_${idx}')" disabled>🤖 Scan &amp; Auto-fill</button>
       <div id="scan-result-child_${idx}" style="display:none;"></div>
