@@ -434,7 +434,8 @@ async function scanQID(key) {
       body: JSON.stringify({ images })
     });
 
-    const data = await resp.json();
+    const text = await resp.text();
+    const data = JSON.parse(text);
     if(data.error) throw new Error(data.error);
 
     qidData[key] = data;
