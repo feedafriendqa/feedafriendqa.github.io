@@ -144,11 +144,11 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div class="upload-pair">
       <div class="upload-side">
         <div class="upload-side-title">📷 Front</div>
-        <input type="file" accept="image/*" capture="environment" class="file-input-styled" id="fi-father-front">
+        <input type="file" accept="image/*" class="file-input-styled" id="fi-father-front">
       </div>
       <div class="upload-side">
         <div class="upload-side-title">📷 Back</div>
-        <input type="file" accept="image/*" capture="environment" class="file-input-styled" id="fi-father-back">
+        <input type="file" accept="image/*" class="file-input-styled" id="fi-father-back">
       </div>
     </div>
     <button class="scan-btn" id="scan-father" onclick="scanQID('father')" disabled>🤖 Scan &amp; Auto-fill</button>
@@ -199,11 +199,11 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div class="upload-pair">
       <div class="upload-side">
         <div class="upload-side-title">📷 Front</div>
-        <input type="file" accept="image/*" capture="environment" class="file-input-styled" id="fi-mother-front">
+        <input type="file" accept="image/*" class="file-input-styled" id="fi-mother-front">
       </div>
       <div class="upload-side">
         <div class="upload-side-title">📷 Back</div>
-        <input type="file" accept="image/*" capture="environment" class="file-input-styled" id="fi-mother-back">
+        <input type="file" accept="image/*" class="file-input-styled" id="fi-mother-back">
       </div>
     </div>
     <button class="scan-btn" id="scan-mother" onclick="scanQID('mother')" disabled>🤖 Scan &amp; Auto-fill</button>
@@ -342,7 +342,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 <script>
 const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
-const ANTHROPIC_KEY = "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";
+// QID scanning handled via Supabase Edge Function
 // Safe init - wait for supabase to be ready
 let db;
 function initDB() {
@@ -411,46 +411,35 @@ async function scanQID(key) {
   btn.innerHTML = '<div class="spinner"></div> Reading QID…';
 
   try {
-    const msgContent = [];
+    const images = {};
     if(qidFiles[key+'_front']) {
-      const b64 = await fileToBase64(qidFiles[key+'_front']);
-      msgContent.push({type:'image', source:{type:'base64', media_type: qidFiles[key+'_front'].type||'image/jpeg', data:b64}});
-      msgContent.push({type:'text', text:'This is the FRONT of the QID card.'});
+      images.front = {
+        data: await fileToBase64(qidFiles[key+'_front']),
+        type: qidFiles[key+'_front'].type || 'image/jpeg'
+      };
     }
     if(qidFiles[key+'_back']) {
-      const b64 = await fileToBase64(qidFiles[key+'_back']);
-      msgContent.push({type:'image', source:{type:'base64', media_type: qidFiles[key+'_back'].type||'image/jpeg', data:b64}});
-      msgContent.push({type:'text', text:'This is the BACK of the QID card.'});
+      images.back = {
+        data: await fileToBase64(qidFiles[key+'_back']),
+        type: qidFiles[key+'_back'].type || 'image/jpeg'
+      };
     }
-    msgContent.push({type:'text', text:`Extract all visible information from this Qatar QID card. Return ONLY valid JSON with these exact fields (use null if not visible):
-{"name":"full English name","qid_number":"11-digit number","nationality":"country","dob":"DD/MM/YYYY","expiry":"DD/MM/YYYY","sponsor":"sponsor name from back","gender":"Male or Female"}
-Return only the JSON object, no markdown, no explanation.`});
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key': ANTHROPIC_KEY,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-client-side-api-key-access':'true'
+    const resp = await fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/scan-qid', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4'
       },
-      body: JSON.stringify({
-        model:'claude-opus-4-6',
-        max_tokens:400,
-        messages:[{role:'user', content:msgContent}]
-      })
+      body: JSON.stringify({ images })
     });
 
-    const result = await resp.json();
-    const raw = result.content?.[0]?.text || '{}';
-    const clean = raw.replace(/```json|```/g,'').trim();
-    const data = JSON.parse(clean);
-    qidData[key] = data;
+    const data = await resp.json();
+    if(data.error) throw new Error(data.error);
 
-    // Auto-fill fields
+    qidData[key] = data;
     autoFill(key, data);
 
-    // Show scan result summary
     resultDiv.style.display = 'block';
     resultDiv.innerHTML = `<div class="scan-result">
       <div class="scan-result-title">✅ QID Read Successfully</div>
@@ -465,14 +454,13 @@ Return only the JSON object, no markdown, no explanation.`});
       </div>
     </div>`;
 
-    // Update badge
     const badge = document.getElementById('badge-'+key);
     if(badge) { badge.textContent = '✅ Scanned'; badge.style.background = 'var(--lime)'; badge.style.color = 'white'; }
-
     btn.innerHTML = '🔄 Re-scan';
     btn.disabled = false;
 
   } catch(err) {
+    console.error('Scan error:', err);
     resultDiv.style.display = 'block';
     resultDiv.innerHTML = `<div class="warn">⚠️ Could not read QID automatically. Please fill in the details below manually.</div>`;
     btn.innerHTML = '🔄 Try Again';
@@ -537,13 +525,13 @@ function addChild() {
     <div class="child-block-body">
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px;font-weight:600;">Upload child's QID, passport or birth certificate.</p>
       <div style="margin-bottom:12px;">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📸 Take photo — Front of ID</div>
-        <input type="file" accept="image/*" capture="environment" class="file-input-styled" id="fi-child_${idx}-front">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📷 Photo or upload — Front of ID</div>
+        <input type="file" accept="image/*" class="file-input-styled" id="fi-child_${idx}-front">
         <div id="prev-child_${idx}-front" style="margin-top:6px;display:none;"><img id="img-child_${idx}-front" style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid var(--lime);"></div>
       </div>
       <div style="margin-bottom:12px;">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📸 Take photo — Back of ID</div>
-        <input type="file" accept="image/*" capture="environment" class="file-input-styled" id="fi-child_${idx}-back">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📷 Photo or upload — Back of ID</div>
+        <input type="file" accept="image/*" class="file-input-styled" id="fi-child_${idx}-back">
         <div id="prev-child_${idx}-back" style="margin-top:6px;display:none;"><img id="img-child_${idx}-back" style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid var(--lime);"></div>
       </div>
       <button class="scan-btn" id="scan-child_${idx}" onclick="scanQID('child_${idx}')" disabled>🤖 Scan &amp; Auto-fill</button>
