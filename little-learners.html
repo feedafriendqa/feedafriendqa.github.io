@@ -142,17 +142,11 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div class="upload-pair">
       <div class="upload-side">
         <div class="upload-side-title">📷 Front</div>
-        <input type="file" accept="image/*" id="fi-father-front" style="display:none;" onchange="handleQID(event,'father','front')">
-        <div class="upload-box" id="ub-father-front" onclick="document.getElementById('fi-father-front').click()">
-          <div class="uico" id="uico-father-front">📋</div><p id="ubt-father-front">Tap to upload</p>
-        </div>
+        <label class="upload-box" id="ub-father-front" for="fi-father-front"><div class="uico" id="uico-father-front">📋</div><p id="ubt-father-front">Tap to upload</p></label><input type="file" accept="image/*" id="fi-father-front" style="position:absolute;left:-9999px;" onchange="handleQID(event,'father','front')">
       </div>
       <div class="upload-side">
         <div class="upload-side-title">📷 Back</div>
-        <input type="file" accept="image/*" id="fi-father-back" style="display:none;" onchange="handleQID(event,'father','back')">
-        <div class="upload-box" id="ub-father-back" onclick="document.getElementById('fi-father-back').click()">
-          <div class="uico" id="uico-father-back">📋</div><p id="ubt-father-back">Tap to upload</p>
-        </div>
+        <label class="upload-box" id="ub-father-back" for="fi-father-back"><div class="uico" id="uico-father-back">📋</div><p id="ubt-father-back">Tap to upload</p></label><input type="file" accept="image/*" id="fi-father-back" style="position:absolute;left:-9999px;" onchange="handleQID(event,'father','back')">
       </div>
     </div>
     <button class="scan-btn" id="scan-father" onclick="scanQID('father')" disabled>🤖 Scan &amp; Auto-fill</button>
@@ -203,17 +197,11 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div class="upload-pair">
       <div class="upload-side">
         <div class="upload-side-title">📷 Front</div>
-        <input type="file" accept="image/*" id="fi-mother-front" style="display:none;" onchange="handleQID(event,'mother','front')">
-        <div class="upload-box" id="ub-mother-front" onclick="document.getElementById('fi-mother-front').click()">
-          <div class="uico" id="uico-mother-front">📋</div><p id="ubt-mother-front">Tap to upload</p>
-        </div>
+        <label class="upload-box" id="ub-mother-front" for="fi-mother-front"><div class="uico" id="uico-mother-front">📋</div><p id="ubt-mother-front">Tap to upload</p></label><input type="file" accept="image/*" id="fi-mother-front" style="position:absolute;left:-9999px;" onchange="handleQID(event,'mother','front')">
       </div>
       <div class="upload-side">
         <div class="upload-side-title">📷 Back</div>
-        <input type="file" accept="image/*" id="fi-mother-back" style="display:none;" onchange="handleQID(event,'mother','back')">
-        <div class="upload-box" id="ub-mother-back" onclick="document.getElementById('fi-mother-back').click()">
-          <div class="uico" id="uico-mother-back">📋</div><p id="ubt-mother-back">Tap to upload</p>
-        </div>
+        <label class="upload-box" id="ub-mother-back" for="fi-mother-back"><div class="uico" id="uico-mother-back">📋</div><p id="ubt-mother-back">Tap to upload</p></label><input type="file" accept="image/*" id="fi-mother-back" style="position:absolute;left:-9999px;" onchange="handleQID(event,'mother','back')">
       </div>
     </div>
     <button class="scan-btn" id="scan-mother" onclick="scanQID('mother')" disabled>🤖 Scan &amp; Auto-fill</button>
@@ -544,17 +532,19 @@ function addChild() {
       <div class="upload-pair">
         <div class="upload-side">
           <div class="upload-side-title">📷 Front</div>
-          <input type="file" accept="image/*" id="fi-child_${idx}-front" style="display:none;" onchange="handleQID(event,'child_${idx}','front')">
-          <div class="upload-box" id="ub-child_${idx}-front" onclick="document.getElementById('fi-child_${idx}-front').click()">
-            <div class="uico" id="uico-child_${idx}-front">📋</div><p id="ubt-child_${idx}-front">Tap to upload</p>
-          </div>
+          <label class="upload-box" id="ub-child_${idx}-front" for="fi-child_${idx}-front">
+            <div class="uico" id="uico-child_${idx}-front">📋</div>
+            <p id="ubt-child_${idx}-front">Tap to upload</p>
+          </label>
+          <input type="file" accept="image/*" id="fi-child_${idx}-front" style="position:absolute;left:-9999px;" onchange="handleQID(event,'child_${idx}','front')">
         </div>
         <div class="upload-side">
           <div class="upload-side-title">📷 Back</div>
-          <input type="file" accept="image/*" id="fi-child_${idx}-back" style="display:none;" onchange="handleQID(event,'child_${idx}','back')">
-          <div class="upload-box" id="ub-child_${idx}-back" onclick="document.getElementById('fi-child_${idx}-back').click()">
-            <div class="uico" id="uico-child_${idx}-back">📋</div><p id="ubt-child_${idx}-back">Tap to upload</p>
-          </div>
+          <label class="upload-box" id="ub-child_${idx}-back" for="fi-child_${idx}-back">
+            <div class="uico" id="uico-child_${idx}-back">📋</div>
+            <p id="ubt-child_${idx}-back">Tap to upload</p>
+          </label>
+          <input type="file" accept="image/*" id="fi-child_${idx}-back" style="position:absolute;left:-9999px;" onchange="handleQID(event,'child_${idx}','back')">
         </div>
       </div>
       <button class="scan-btn" id="scan-child_${idx}" onclick="scanQID('child_${idx}')" disabled>🤖 Scan &amp; Auto-fill</button>
