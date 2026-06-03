@@ -11,6 +11,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Quicksand',sans-serif;background:var(--cream);color:var(--forest);min-height:100vh;}
 header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14px;display:flex;align-items:center;height:56px;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 14px rgba(10,61,31,.25);}
+.logo{display:flex;align-items:center;gap:9px;}
 .logo img{height:36px;width:auto;}
 .logo-text{font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:white;white-space:nowrap;}
 .pg{display:none;padding:16px 14px;max-width:600px;margin:0 auto;}.pg.active{display:block;}
@@ -25,7 +26,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 .step-line.done{background:var(--lime);}
 .hero{background:var(--forest);border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:center;color:white;}
 .hero h1{font-family:'Nunito',sans-serif;font-weight:900;font-size:21px;}
-.hero p{font-size:13px;opacity:.8;margin-top:5px;line-height:1.5;}
+.hero p{font-size:13px;opacity:.8;margin-top:6px;line-height:1.5;}
 .card{background:white;border-radius:var(--r);padding:18px;box-shadow:var(--shadow);margin-bottom:14px;}
 .card-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:14.5px;color:var(--forest);margin-bottom:14px;display:flex;align-items:center;gap:7px;}
 .fg{display:flex;flex-direction:column;gap:3px;margin-bottom:11px;}
@@ -43,23 +44,46 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 .dev{padding:10px;border-radius:var(--rs);border:2px solid var(--border);cursor:pointer;font-size:12.5px;font-weight:700;text-align:center;transition:all .2s;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;}
 .dev.sel{border-color:var(--lime);background:var(--lime-soft);color:var(--forest);}
 .dev .dicon{font-size:20px;}
-.child-block{background:var(--cream);border-radius:var(--rs);border:2px solid var(--border);padding:14px;margin-bottom:10px;}
-.child-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.child-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:13.5px;color:var(--forest);}
-.rm-btn{background:transparent;border:2px solid var(--border);color:var(--muted);border-radius:50px;padding:4px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:'Quicksand',sans-serif;}
-.rm-btn:hover{border-color:var(--coral);color:var(--coral);}
-.add-child{width:100%;padding:11px;border-radius:var(--rs);border:2.5px dashed var(--border);background:transparent;color:var(--muted);font-family:'Quicksand',sans-serif;font-weight:700;font-size:13.5px;cursor:pointer;transition:all .2s;margin-top:4px;}
+/* QID SCAN CARD */
+.qid-scan-card{border-radius:var(--r);border:2px solid var(--border);overflow:hidden;margin-bottom:14px;}
+.qid-scan-header{background:var(--forest);padding:12px 16px;display:flex;align-items:center;gap:10px;}
+.qid-scan-header-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:white;flex:1;}
+.qid-scan-header .badge{background:var(--gold);color:var(--forest);font-size:10px;font-weight:900;padding:2px 9px;border-radius:50px;white-space:nowrap;}
+.qid-scan-body{padding:14px;background:white;}
+.upload-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.upload-side label{display:block;cursor:pointer;}
+.upload-side-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:flex;align-items:center;gap:5px;}
+.upload-box{border:2.5px dashed var(--border);border-radius:var(--rs);padding:16px 8px;text-align:center;background:var(--cream);transition:all .2s;position:relative;overflow:hidden;}
+.upload-box.has-file{border-color:var(--lime);background:var(--lime-soft);}
+.upload-box input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-box .uico{font-size:24px;margin-bottom:4px;}
+.upload-box p{font-size:11.5px;font-weight:700;color:var(--muted);}
+.upload-box.has-file p{color:var(--forest);}
+.scan-btn{width:100%;background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:12px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;margin-bottom:12px;}
+.scan-btn:hover{background:#e09510;}
+.scan-btn:disabled{background:#ccc;color:#888;cursor:not-allowed;}
+.scan-result{background:var(--lime-soft);border-radius:var(--rs);border:2px solid var(--lime);padding:12px 14px;margin-bottom:12px;}
+.scan-result-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.scan-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.scan-field{display:flex;flex-direction:column;gap:2px;}
+.scan-field-key{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.scan-field-val{font-size:13px;font-weight:700;color:var(--forest);}
+.scan-photo{width:56px;height:56px;border-radius:8px;object-fit:cover;border:2px solid var(--lime);margin-top:6px;}
+.review-section{border-top:2px solid var(--border);padding-top:12px;margin-top:4px;}
+.review-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+/* CHILD BLOCK */
+.child-block{background:var(--cream);border-radius:var(--rs);border:2px solid var(--border);overflow:hidden;margin-bottom:12px;}
+.child-block-hdr{background:var(--forest-mid);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;}
+.child-block-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:13.5px;color:white;}
+.rm-btn{background:rgba(255,255,255,.15);border:none;color:white;border-radius:50px;padding:4px 12px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:'Quicksand',sans-serif;}
+.child-block-body{padding:14px;}
+.add-child{width:100%;padding:12px;border-radius:var(--rs);border:2.5px dashed var(--border);background:transparent;color:var(--muted);font-family:'Quicksand',sans-serif;font-weight:700;font-size:13.5px;cursor:pointer;transition:all .2s;margin-top:4px;}
 .add-child:hover{border-color:var(--lime);color:var(--forest);background:var(--lime-soft);}
-.upload-zone{border:2.5px dashed var(--border);border-radius:var(--rs);padding:18px;text-align:center;cursor:pointer;transition:all .2s;background:var(--cream);margin-bottom:10px;position:relative;}
-.upload-zone:hover{border-color:var(--lime);background:var(--lime-soft);}
-.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-.upload-zone .uicon{font-size:26px;margin-bottom:4px;}
-.upload-zone p{font-size:12.5px;color:var(--muted);font-weight:600;}
-.upload-zone small{font-size:11px;color:var(--muted);}
-.uploaded-file{display:flex;align-items:center;gap:8px;background:white;border:2px solid var(--lime);border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--forest);margin-bottom:6px;}
+/* INCOME */
 .income-box{background:var(--lime-soft);border-radius:var(--rs);padding:12px;border:2px solid var(--border);margin-top:8px;}
 .income-result{font-family:'Nunito',sans-serif;font-weight:900;font-size:20px;color:var(--forest);margin-top:5px;}
 .income-result.fail{color:var(--coral);}
+/* BUTTONS */
 .btn-gold{background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:13px 24px;width:100%;font-family:'Quicksand',sans-serif;font-weight:800;font-size:14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
 .btn-gold:hover{background:#e09510;}
 .btn-gold:disabled{background:#ccc;cursor:not-allowed;}
@@ -68,19 +92,23 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 .btn-row{display:flex;gap:10px;}
 .note{background:var(--lime-soft);border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:600;color:var(--forest);margin-bottom:12px;border-left:4px solid var(--lime);}
 .warn{background:#FEF3D6;border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:600;color:#7A5000;margin-bottom:12px;border-left:4px solid var(--gold);}
+.err-msg{background:#FDEAEA;border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:600;color:#8B2020;margin-top:10px;border-left:4px solid var(--coral);display:none;}
+.spinner{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;}
+.spinner-dark{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(10,61,31,.2);border-top-color:var(--forest);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* SUCCESS */
 .success-pg{text-align:center;padding:40px 20px;}
 .success-pg .sicon{font-size:64px;margin-bottom:14px;}
 .success-pg h2{font-family:'Nunito',sans-serif;font-weight:900;font-size:24px;color:var(--forest);}
 .success-pg p{font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.6;}
 .urn-box{background:var(--forest);color:var(--gold);font-family:'Nunito',sans-serif;font-weight:900;font-size:26px;padding:12px 28px;border-radius:12px;display:inline-block;margin:14px 0;letter-spacing:1px;}
-.spinner{display:inline-block;width:18px;height:18px;border:3px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg)}}
-.error-msg{background:#FDEAEA;border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:600;color:#8B2020;margin-top:10px;border-left:4px solid var(--coral);display:none;}
+/* ZONES */
+.zones-map{font-size:11px;color:var(--muted);margin-top:4px;font-weight:600;}
 </style>
 </head>
 <body>
 <header>
-  <div class="logo" style="display:flex;align-items:center;gap:9px;">
+  <div class="logo">
     <img src="data:image/png;base64,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" alt="Feed a Friend">
     <div class="logo-text">Feed a Friend</div>
   </div>
@@ -88,7 +116,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 
 <!-- STEP 1: PARENTS -->
 <div class="pg active" id="s1">
-<div style="padding:14px 0 4px;">
+<div style="padding:14px 0 2px;">
   <div class="step-bar">
     <div class="step"><div class="step-dot active">1</div><div class="step-label">Parents</div></div>
     <div class="step-line"></div>
@@ -96,86 +124,146 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div class="step-line"></div>
     <div class="step"><div class="step-dot todo">3</div><div class="step-label">Household</div></div>
     <div class="step-line"></div>
-    <div class="step"><div class="step-dot todo">4</div><div class="step-label">Docs</div></div>
+    <div class="step"><div class="step-dot todo">4</div><div class="step-label">Submit</div></div>
   </div>
 </div>
-<div class="hero"><h1>📚 Little Learners</h1><p>Apply for free educational support for your child.<br>Takes about 5 minutes.</p></div>
-
-<div class="card">
-  <div class="card-title">👨 Father / Guardian 1</div>
-  <div class="fg"><label>Full Name *</label><input id="f_name" placeholder="As on QID"></div>
-  <div class="fg"><label>QID Number *</label><input id="f_qid" placeholder="e.g. 28740400336"></div>
-  <div class="fg-row">
-    <div class="fg"><label>Nationality *</label><input id="f_nat" placeholder="e.g. Kenyan"></div>
-    <div class="fg"><label>Contact Number *</label><input id="f_phone" placeholder="77112704"></div>
-  </div>
-  <div class="fg"><label>Native Language / Mother Tongue</label><input id="f_lang" placeholder="e.g. Swahili, Amharic…"></div>
-  <div class="fg"><label>English Fluency</label>
-    <div class="fluency-row" id="f_eng">
-      <div class="fl" onclick="flSel(this,'f_eng')">None</div>
-      <div class="fl" onclick="flSel(this,'f_eng')">Basic</div>
-      <div class="fl" onclick="flSel(this,'f_eng')">Good</div>
-      <div class="fl" onclick="flSel(this,'f_eng')">Fluent</div>
-    </div>
-  </div>
-  <div class="fg"><label>Arabic Fluency</label>
-    <div class="fluency-row" id="f_ara">
-      <div class="fl" onclick="flSel(this,'f_ara')">None</div>
-      <div class="fl" onclick="flSel(this,'f_ara')">Basic</div>
-      <div class="fl" onclick="flSel(this,'f_ara')">Good</div>
-      <div class="fl" onclick="flSel(this,'f_ara')">Fluent</div>
-    </div>
-  </div>
-  <div class="fg-row">
-    <div class="fg"><label>Employment</label>
-      <select id="f_emp"><option value="">Select…</option><option>Employed</option><option>Self-employed</option><option>Unemployed</option></select>
-    </div>
-    <div class="fg"><label>Monthly Salary (QAR)</label><input id="f_salary" type="number" placeholder="0" min="0"></div>
-  </div>
+<div class="hero">
+  <h1>📚 Little Learners</h1>
+  <p>Apply for free educational resources while your child is waiting for a school place. Takes about 5 minutes.</p>
 </div>
 
-<div class="card">
-  <div class="card-title">👩 Mother / Guardian 2</div>
-  <div class="fg"><label>Full Name</label><input id="m_name" placeholder="As on QID"></div>
-  <div class="fg"><label>QID Number</label><input id="m_qid" placeholder="e.g. 29040403157"></div>
-  <div class="fg-row">
-    <div class="fg"><label>Nationality</label><input id="m_nat" placeholder="e.g. Kenyan"></div>
-    <div class="fg"><label>Contact Number</label><input id="m_phone" placeholder="71991048"></div>
+<!-- FATHER QID SCAN -->
+<div class="qid-scan-card" id="qsc-father">
+  <div class="qid-scan-header">
+    <div class="qid-scan-header-title">👨 Father / Guardian 1</div>
+    <span class="badge" id="badge-father">Scan QID</span>
   </div>
-  <div class="fg"><label>Native Language / Mother Tongue</label><input id="m_lang" placeholder="e.g. Swahili…"></div>
-  <div class="fg"><label>English Fluency</label>
-    <div class="fluency-row" id="m_eng">
-      <div class="fl" onclick="flSel(this,'m_eng')">None</div>
-      <div class="fl" onclick="flSel(this,'m_eng')">Basic</div>
-      <div class="fl" onclick="flSel(this,'m_eng')">Good</div>
-      <div class="fl" onclick="flSel(this,'m_eng')">Fluent</div>
+  <div class="qid-scan-body">
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;font-weight:600;">Upload a photo of the QID card — front and back. We will read it automatically.</p>
+    <div class="upload-pair">
+      <div class="upload-side">
+        <div class="upload-side-title">📷 Front</div>
+        <label class="upload-box" id="ub-father-front">
+          <input type="file" accept="image/*" onchange="handleQID(event,'father','front')">
+          <div class="uico">📋</div><p id="ubt-father-front">Tap to upload</p>
+        </label>
+      </div>
+      <div class="upload-side">
+        <div class="upload-side-title">📷 Back</div>
+        <label class="upload-box" id="ub-father-back">
+          <input type="file" accept="image/*" onchange="handleQID(event,'father','back')">
+          <div class="uico">📋</div><p id="ubt-father-back">Tap to upload</p>
+        </label>
+      </div>
     </div>
-  </div>
-  <div class="fg"><label>Arabic Fluency</label>
-    <div class="fluency-row" id="m_ara">
-      <div class="fl" onclick="flSel(this,'m_ara')">None</div>
-      <div class="fl" onclick="flSel(this,'m_ara')">Basic</div>
-      <div class="fl" onclick="flSel(this,'m_ara')">Good</div>
-      <div class="fl" onclick="flSel(this,'m_ara')">Fluent</div>
+    <button class="scan-btn" id="scan-father" onclick="scanQID('father')" disabled>🤖 Scan &amp; Auto-fill</button>
+    <div id="scan-result-father" style="display:none;"></div>
+    <div class="review-section" id="review-father">
+      <div class="review-title">✏️ Review &amp; complete</div>
+      <div class="fg"><label>Full Name *</label><input id="f_name" placeholder="As on QID"></div>
+      <div class="fg"><label>QID Number</label><input id="f_qid" placeholder="e.g. 28740400336"></div>
+      <div class="fg-row">
+        <div class="fg"><label>Nationality</label><input id="f_nat" placeholder="e.g. Kenyan"></div>
+        <div class="fg"><label>Contact Number *</label><input id="f_phone" placeholder="77112704"></div>
+      </div>
+      <div class="fg"><label>Native Language</label><input id="f_lang" placeholder="e.g. Swahili, Amharic…"></div>
+      <div class="fg"><label>English Fluency</label>
+        <div class="fluency-row" id="f_eng">
+          <div class="fl" onclick="flSel(this,'f_eng')">None</div>
+          <div class="fl" onclick="flSel(this,'f_eng')">Basic</div>
+          <div class="fl" onclick="flSel(this,'f_eng')">Good</div>
+          <div class="fl" onclick="flSel(this,'f_eng')">Fluent</div>
+        </div>
+      </div>
+      <div class="fg"><label>Arabic Fluency</label>
+        <div class="fluency-row" id="f_ara">
+          <div class="fl" onclick="flSel(this,'f_ara')">None</div>
+          <div class="fl" onclick="flSel(this,'f_ara')">Basic</div>
+          <div class="fl" onclick="flSel(this,'f_ara')">Good</div>
+          <div class="fl" onclick="flSel(this,'f_ara')">Fluent</div>
+        </div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>Employment</label>
+          <select id="f_emp"><option value="">Select…</option><option>Employed</option><option>Self-employed</option><option>Unemployed</option></select>
+        </div>
+        <div class="fg"><label>Monthly Salary (QAR)</label><input id="f_salary" type="number" placeholder="0" min="0"></div>
+      </div>
     </div>
-  </div>
-  <div class="fg-row">
-    <div class="fg"><label>Employment</label>
-      <select id="m_emp"><option value="">Select…</option><option>Employed</option><option>Self-employed</option><option>Unemployed</option></select>
-    </div>
-    <div class="fg"><label>Monthly Salary (QAR)</label><input id="m_salary" type="number" placeholder="0" min="0"></div>
-  </div>
-  <div class="fg"><label>Pregnant?</label>
-    <select id="m_preg"><option value="">Select…</option><option>No</option><option>Yes</option></select>
   </div>
 </div>
-<div id="err1" class="error-msg"></div>
+
+<!-- MOTHER QID SCAN -->
+<div class="qid-scan-card" id="qsc-mother">
+  <div class="qid-scan-header">
+    <div class="qid-scan-header-title">👩 Mother / Guardian 2</div>
+    <span class="badge" id="badge-mother">Scan QID</span>
+  </div>
+  <div class="qid-scan-body">
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;font-weight:600;">Upload mother's QID — or skip if not applicable.</p>
+    <div class="upload-pair">
+      <div class="upload-side">
+        <div class="upload-side-title">📷 Front</div>
+        <label class="upload-box" id="ub-mother-front">
+          <input type="file" accept="image/*" onchange="handleQID(event,'mother','front')">
+          <div class="uico">📋</div><p id="ubt-mother-front">Tap to upload</p>
+        </label>
+      </div>
+      <div class="upload-side">
+        <div class="upload-side-title">📷 Back</div>
+        <label class="upload-box" id="ub-mother-back">
+          <input type="file" accept="image/*" onchange="handleQID(event,'mother','back')">
+          <div class="uico">📋</div><p id="ubt-mother-back">Tap to upload</p>
+        </label>
+      </div>
+    </div>
+    <button class="scan-btn" id="scan-mother" onclick="scanQID('mother')" disabled>🤖 Scan &amp; Auto-fill</button>
+    <div id="scan-result-mother" style="display:none;"></div>
+    <div class="review-section" id="review-mother">
+      <div class="review-title">✏️ Review &amp; complete</div>
+      <div class="fg"><label>Full Name</label><input id="m_name" placeholder="As on QID"></div>
+      <div class="fg"><label>QID Number</label><input id="m_qid" placeholder="e.g. 29040403157"></div>
+      <div class="fg-row">
+        <div class="fg"><label>Nationality</label><input id="m_nat" placeholder="e.g. Kenyan"></div>
+        <div class="fg"><label>Contact Number</label><input id="m_phone" placeholder="71991048"></div>
+      </div>
+      <div class="fg"><label>Native Language</label><input id="m_lang" placeholder="e.g. Swahili…"></div>
+      <div class="fg"><label>English Fluency</label>
+        <div class="fluency-row" id="m_eng">
+          <div class="fl" onclick="flSel(this,'m_eng')">None</div>
+          <div class="fl" onclick="flSel(this,'m_eng')">Basic</div>
+          <div class="fl" onclick="flSel(this,'m_eng')">Good</div>
+          <div class="fl" onclick="flSel(this,'m_eng')">Fluent</div>
+        </div>
+      </div>
+      <div class="fg"><label>Arabic Fluency</label>
+        <div class="fluency-row" id="m_ara">
+          <div class="fl" onclick="flSel(this,'m_ara')">None</div>
+          <div class="fl" onclick="flSel(this,'m_ara')">Basic</div>
+          <div class="fl" onclick="flSel(this,'m_ara')">Good</div>
+          <div class="fl" onclick="flSel(this,'m_ara')">Fluent</div>
+        </div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>Employment</label>
+          <select id="m_emp"><option value="">Select…</option><option>Employed</option><option>Self-employed</option><option>Unemployed</option></select>
+        </div>
+        <div class="fg"><label>Monthly Salary (QAR)</label><input id="m_salary" type="number" placeholder="0" min="0"></div>
+      </div>
+      <div class="fg"><label>Pregnant?</label>
+        <select id="m_preg"><option value="">Select…</option><option>No</option><option>Yes</option></select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="err1" class="err-msg"></div>
 <button class="btn-gold" onclick="goStep(2)">Next: Children →</button>
 </div>
 
 <!-- STEP 2: CHILDREN -->
 <div class="pg" id="s2">
-<div style="padding:14px 0 4px;">
+<div style="padding:14px 0 2px;">
   <div class="step-bar">
     <div class="step"><div class="step-dot done">✓</div><div class="step-label">Parents</div></div>
     <div class="step-line done"></div>
@@ -183,7 +271,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div class="step-line"></div>
     <div class="step"><div class="step-dot todo">3</div><div class="step-label">Household</div></div>
     <div class="step-line"></div>
-    <div class="step"><div class="step-dot todo">4</div><div class="step-label">Docs</div></div>
+    <div class="step"><div class="step-dot todo">4</div><div class="step-label">Submit</div></div>
   </div>
 </div>
 <div class="card">
@@ -191,7 +279,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
   <div id="children-container"></div>
   <button class="add-child" onclick="addChild()">➕ Add another child</button>
 </div>
-<div id="err2" class="error-msg"></div>
+<div id="err2" class="err-msg"></div>
 <div class="btn-row">
   <button class="btn-outline" onclick="goStep(1)">← Back</button>
   <button class="btn-gold" style="flex:2;" onclick="goStep(3)">Next: Household →</button>
@@ -200,7 +288,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 
 <!-- STEP 3: HOUSEHOLD -->
 <div class="pg" id="s3">
-<div style="padding:14px 0 4px;">
+<div style="padding:14px 0 2px;">
   <div class="step-bar">
     <div class="step"><div class="step-dot done">✓</div><div class="step-label">Parents</div></div>
     <div class="step-line done"></div>
@@ -208,11 +296,11 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div class="step-line done"></div>
     <div class="step"><div class="step-dot active">3</div><div class="step-label">Household</div></div>
     <div class="step-line"></div>
-    <div class="step"><div class="step-dot todo">4</div><div class="step-label">Docs</div></div>
+    <div class="step"><div class="step-dot todo">4</div><div class="step-label">Submit</div></div>
   </div>
 </div>
 <div class="card">
-  <div class="card-title">🏠 Location & Finances</div>
+  <div class="card-title">🏠 Location &amp; Finances</div>
   <div class="fg-row">
     <div class="fg"><label>Zone Number</label><input id="zone" placeholder="e.g. 25" oninput="fillZone(this.value)"></div>
     <div class="fg"><label>Area</label><input id="zone_area" placeholder="Auto-filled" readonly style="background:#f8f8f8;"></div>
@@ -228,7 +316,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 </div>
 <div class="card">
   <div class="card-title">💻 Devices at Home</div>
-  <p style="font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.5;">Select all devices the family has access to:</p>
+  <p style="font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.5;">Select all devices your family has access to:</p>
   <div class="device-grid" id="devices">
     <div class="dev" onclick="this.classList.toggle('sel')"><div class="dicon">📱</div>Smartphone</div>
     <div class="dev" onclick="this.classList.toggle('sel')"><div class="dicon">💻</div>Laptop</div>
@@ -242,36 +330,10 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <select id="desk"><option value="">Select…</option><option>Yes</option><option>No</option></select>
   </div>
 </div>
-<div id="err3" class="error-msg"></div>
+<div id="err3" class="err-msg"></div>
 <div class="btn-row">
   <button class="btn-outline" onclick="goStep(2)">← Back</button>
-  <button class="btn-gold" style="flex:2;" onclick="goStep(4)">Next: Documents →</button>
-</div>
-</div>
-
-<!-- STEP 4: DOCUMENTS -->
-<div class="pg" id="s4">
-<div style="padding:14px 0 4px;">
-  <div class="step-bar">
-    <div class="step"><div class="step-dot done">✓</div><div class="step-label">Parents</div></div>
-    <div class="step-line done"></div>
-    <div class="step"><div class="step-dot done">✓</div><div class="step-label">Children</div></div>
-    <div class="step-line done"></div>
-    <div class="step"><div class="step-dot done">✓</div><div class="step-label">Household</div></div>
-    <div class="step-line done"></div>
-    <div class="step"><div class="step-dot active">4</div><div class="step-label">Docs</div></div>
-  </div>
-</div>
-<div class="card">
-  <div class="card-title">🪪 Upload ID Documents</div>
-  <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">Upload a photo of the <strong>front and back</strong> of each QID. Our AI will read it and fill in the details automatically.</p>
-  <div id="upload-zones"></div>
-</div>
-<div class="warn">⚠️ Applications without documents within 3 days may be archived.</div>
-<div id="err4" class="error-msg"></div>
-<div class="btn-row">
-  <button class="btn-outline" onclick="goStep(3)">← Back</button>
-  <button class="btn-gold" id="submit-btn" style="flex:2;" onclick="submitForm()">✅ Submit Application</button>
+  <button class="btn-gold" style="flex:2;" id="submit-btn" onclick="submitForm()">✅ Submit Application</button>
 </div>
 </div>
 
@@ -283,254 +345,65 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
   <p>Thank you for applying to Little Learners.<br>Your reference number is:</p>
   <div class="urn-box" id="success-urn">LL---</div>
   <p>A case handler will contact you within a few days to arrange a short video call.</p>
-  <div class="note" style="margin-top:18px;text-align:left;">📚 While you wait — your case handler will send you our free resource library link on Padlet.</div>
+  <div class="note" style="margin-top:18px;text-align:left;">📚 While you wait — your case handler will send you our free resource library link.</div>
 </div>
 </div>
 
 <script>
+window.addEventListener('DOMContentLoaded', function() {
+
 const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
 const ANTHROPIC_KEY = "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";
-const { createClient } = supabase;
+const { createClient } = window.supabase;
 const db = createClient(SUPA_URL, SUPA_KEY);
 
 const ZONES = {"1":"Rawdat Al Khail","2":"Al Rumaila","3":"Al Dafna","4":"Al Qassar","5":"Fereej Al Nasr","6":"Al Sadd","7":"Al Mansoura","8":"Bin Mahmoud","9":"Doha Al Jadeed","10":"Old Airport","11":"Al Muntazah","12":"Al Hilal","13":"Al Matar Al Qadim","14":"Fereej Kulaib","15":"Al Thumama","16":"Al Aziziyah","17":"Al Wajba","18":"Al Rayyan","19":"Muaither","20":"Al Gharrafa","21":"Ain Khalid","22":"Al Wakra","23":"Mesaieed","24":"Al Khor","25":"Al Hilal","26":"Um Ghuwailina","27":"Al Nasr","28":"Al Duhail","29":"Bu Hamour","30":"Lusail"};
 
-let childCount = 0;
+let qidFiles = {};   // key_front / key_back
+let qidData  = {};   // key -> extracted data
 let uploadedFiles = {};
+let childCount = 0;
 
-function flSel(el, group) {
-  document.getElementById(group).querySelectorAll('.fl').forEach(f => f.classList.remove('sel'));
-  el.classList.add('sel');
-}
-function flGet(group) {
-  const sel = document.getElementById(group)?.querySelector('.fl.sel');
-  return sel ? sel.textContent : '';
-}
-
-function fillZone(v) {
-  document.getElementById('zone_area').value = ZONES[v.trim()] || '';
-}
-function calcInc() {
-  const inc = parseFloat(document.getElementById('income').value)||0;
-  const rent = parseFloat(document.getElementById('rent').value)||0;
-  if(!inc) return;
-  const after = inc - rent;
-  const el = document.getElementById('inc_result');
-  el.textContent = 'QAR ' + after.toLocaleString() + ' ' + (after<=5000 ? '✅ Eligible' : '❌ Over QAR 5,000 limit');
-  el.className = 'income-result' + (after>5000 ? ' fail' : '');
-}
-
-function goStep(n) {
-  // basic validation
-  if(n===2) {
-    const name = document.getElementById('f_name').value.trim();
-    const phone = document.getElementById('f_phone').value.trim();
-    if(!name || !phone) { showErr('err1','Please enter the father/guardian name and contact number.'); return; }
-  }
-  if(n===3) {
-    const blocks = document.querySelectorAll('.child-block');
-    if(blocks.length===0) { showErr('err2','Please add at least one child.'); return; }
-    let ok = true;
-    blocks.forEach(b => { if(!b.querySelector('.cname').value.trim()) ok = false; });
-    if(!ok) { showErr('err2','Please enter a name for each child.'); return; }
-  }
-  hideErr('err1'); hideErr('err2'); hideErr('err3');
-  document.querySelectorAll('.pg').forEach(p => p.classList.remove('active'));
-  document.getElementById('s'+n).classList.add('active');
-  // build upload zones for step 4
-  if(n===4) buildUploadZones();
-  window.scrollTo(0,0);
-}
-
-function showErr(id, msg) {
-  const el = document.getElementById(id);
-  el.textContent = msg; el.style.display = 'block';
-}
-function hideErr(id) { document.getElementById(id).style.display='none'; }
-
-function addChild() {
-  childCount++;
-  const idx = childCount;
-  const div = document.createElement('div');
-  div.className = 'child-block'; div.id = 'cb-'+idx;
-  div.innerHTML = `
-    <div class="child-hdr">
-      <div class="child-title">👦 Child ${idx}</div>
-      ${idx>1 ? '<button class="rm-btn" onclick="removeChild('+idx+')">✕ Remove</button>' : ''}
-    </div>
-    <div class="fg"><label>Full Name *</label><input class="cname" placeholder="As on ID"></div>
-    <div class="fg-row">
-      <div class="fg"><label>Date of Birth</label><input class="cdob" type="date"></div>
-      <div class="fg"><label>Gender</label><select class="cgender"><option value="">Select…</option><option>Girl</option><option>Boy</option></select></div>
-    </div>
-    <div class="fg-row">
-      <div class="fg"><label>QID / Passport No.</label><input class="cqid" placeholder="e.g. C053961"></div>
-      <div class="fg"><label>Nationality</label><input class="cnat" placeholder="e.g. Kenyan"></div>
-    </div>
-    <div class="fg"><label>Language(s) spoken at home</label><input class="clang" placeholder="e.g. Swahili, English"></div>
-    <div class="fg"><label>English Fluency</label>
-      <div class="fluency-row" id="cef${idx}">
-        <div class="fl" onclick="flSel(this,'cef${idx}')">None</div>
-        <div class="fl" onclick="flSel(this,'cef${idx}')">Basic</div>
-        <div class="fl" onclick="flSel(this,'cef${idx}')">Good</div>
-        <div class="fl" onclick="flSel(this,'cef${idx}')">Fluent</div>
-      </div>
-    </div>
-    <div class="fg"><label>Arabic Fluency</label>
-      <div class="fluency-row" id="caf${idx}">
-        <div class="fl" onclick="flSel(this,'caf${idx}')">None</div>
-        <div class="fl" onclick="flSel(this,'caf${idx}')">Basic</div>
-        <div class="fl" onclick="flSel(this,'caf${idx}')">Good</div>
-        <div class="fl" onclick="flSel(this,'caf${idx}')">Fluent</div>
-      </div>
-    </div>
-    <div class="fg"><label>Current School Status</label>
-      <select class="cschool"><option value="">Select…</option><option>Never attended school</option><option>Previously attended — left</option><option>On waiting list</option><option>Online school only</option><option>Part-time (≤2.5 days/week)</option><option>Enrolled full-time</option></select>
-    </div>
-    <div class="fg"><label>If previously attended — how many years ago did they leave?</label>
-      <select class="cyears"><option value="">Select…</option><option>Never attended</option><option>Less than 1 year ago</option><option>1–2 years ago</option><option>2–3 years ago</option><option>3–4 years ago</option><option>4+ years ago</option></select>
-    </div>
-    <div class="fg"><label>Any known special needs or learning difficulties?</label>
-      <select class="csn" onchange="toggleSNDetail(this,${idx})"><option value="">Select…</option><option>No</option><option>Yes — please describe below</option></select>
-    </div>
-    <div class="fg" id="snd-${idx}" style="display:none;"><label>Special needs details</label>
-      <textarea class="csnd" placeholder="e.g. Dyslexia suspected, speech delay, ADHD…"></textarea>
-    </div>`;
-  document.getElementById('children-container').appendChild(div);
-}
-
-function removeChild(idx) {
-  document.getElementById('cb-'+idx)?.remove();
-}
-function toggleSNDetail(sel, idx) {
-  document.getElementById('snd-'+idx).style.display = sel.value.startsWith('Yes') ? 'block' : 'none';
-}
-
-// QID scanning state
-let qidScans = {}; // key -> {front: file, back: file, scanned: bool, data: {}}
-
-function buildUploadZones() {
-  const zones = document.getElementById('upload-zones');
-  zones.innerHTML = '';
-  const people = [
-    {key:'father', label:"Father", who:"Father's"},
-    {key:'mother', label:"Mother", who:"Mother's"},
-  ];
-  document.querySelectorAll('.child-block').forEach((b,i) => {
-    const name = b.querySelector('.cname').value.trim() || 'Child '+(i+1);
-    people.push({key:'child_'+(i+1), label:name, who:name+"'s"});
-  });
-
-  people.forEach(p => {
-    const scan = qidScans[p.key] || {};
-    const scanned = scan.scanned;
-    const hasFront = !!scan.front;
-    const hasBack = !!scan.back;
-
-    zones.innerHTML += `
-      <div style="background:var(--cream);border-radius:var(--rs);border:2px solid ${scanned?'var(--lime)':'var(--border)'};padding:14px;margin-bottom:14px;">
-        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:var(--forest);margin-bottom:12px;">
-          ${scanned?'✅':'🪪'} ${p.who} QID ${scanned?'— Scanned':''}
-        </div>
-        ${scanned && scan.data ? `
-          <div style="background:white;border-radius:var(--rs);padding:10px 14px;margin-bottom:10px;font-size:13px;border:2px solid var(--lime);">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-              ${scan.data.name?`<div><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">Name</span><br><strong>${scan.data.name}</strong></div>`:''}
-              ${scan.data.qid_number?`<div><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">QID No.</span><br><strong>${scan.data.qid_number}</strong></div>`:''}
-              ${scan.data.nationality?`<div><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">Nationality</span><br><strong>${scan.data.nationality}</strong></div>`:''}
-              ${scan.data.dob?`<div><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">Date of Birth</span><br><strong>${scan.data.dob}</strong></div>`:''}
-              ${scan.data.expiry?`<div><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">Expiry</span><br><strong>${scan.data.expiry}</strong></div>`:''}
-              ${scan.data.sponsor?`<div><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">Sponsor</span><br><strong>${scan.data.sponsor}</strong></div>`:''}
-            </div>
-            ${scan.photo?`<img src="${scan.photo}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;margin-top:8px;border:2px solid var(--lime);">`:''}
-          </div>
-          <button style="background:transparent;border:2px solid var(--border);color:var(--muted);border-radius:50px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:Quicksand,sans-serif;" onclick="resetScan('${p.key}')">🔄 Re-scan</button>
-        ` : `
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-            <div>
-              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Front of QID</div>
-              <label style="display:block;border:2.5px dashed ${hasFront?'var(--lime)':'var(--border)'};border-radius:var(--rs);padding:14px 8px;text-align:center;cursor:pointer;background:${hasFront?'var(--lime-soft)':'white'};transition:all .2s;">
-                <input type="file" accept="image/*" style="display:none;" onchange="handleQIDFile(event,'${p.key}','front')">
-                <div style="font-size:22px;">${hasFront?'✅':'📷'}</div>
-                <div style="font-size:12px;font-weight:700;color:var(--muted);margin-top:3px;">${hasFront?'Uploaded':'Tap to upload'}</div>
-              </label>
-            </div>
-            <div>
-              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Back of QID</div>
-              <label style="display:block;border:2.5px dashed ${hasBack?'var(--lime)':'var(--border)'};border-radius:var(--rs);padding:14px 8px;text-align:center;cursor:pointer;background:${hasBack?'var(--lime-soft)':'white'};transition:all .2s;">
-                <input type="file" accept="image/*" style="display:none;" onchange="handleQIDFile(event,'${p.key}','back')">
-                <div style="font-size:22px;">${hasBack?'✅':'📷'}</div>
-                <div style="font-size:12px;font-weight:700;color:var(--muted);margin-top:3px;">${hasBack?'Uploaded':'Tap to upload'}</div>
-              </label>
-            </div>
-          </div>
-          ${hasFront||hasBack ? `
-            <button id="scan-btn-${p.key}" style="width:100%;background:var(--forest);color:white;border:none;border-radius:50px;padding:11px;font-family:Quicksand,sans-serif;font-weight:700;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="scanQID('${p.key}','${p.label}')">
-              🤖 Scan QID — Auto-fill details
-            </button>` : ''}
-        `}
-      </div>`;
-  });
-}
-
-function handleQIDFile(e, key, side) {
+// ── QID UPLOAD ──
+function handleQID(e, key, side) {
   const file = e.target.files[0];
   if(!file) return;
-  if(!qidScans[key]) qidScans[key] = {};
-  qidScans[key][side] = file;
-  // also track for upload
+  qidFiles[key+'_'+side] = file;
   uploadedFiles[key+'_'+side] = {file, label: key+' '+side};
-  buildUploadZones();
+  const box = document.getElementById('ub-'+key+'-'+side);
+  if(box) box.classList.add('has-file');
+  const txt = document.getElementById('ubt-'+key+'-'+side);
+  if(txt) txt.textContent = '✅ ' + file.name.substring(0,20);
+  // Enable scan button if at least front uploaded
+  const scanBtn = document.getElementById('scan-'+key);
+  if(scanBtn && (qidFiles[key+'_front'] || qidFiles[key+'_back'])) {
+    scanBtn.disabled = false;
+  }
 }
 
-function resetScan(key) {
-  delete qidScans[key];
-  buildUploadZones();
-}
-
-async function fileToBase64(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(',')[1]);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-}
-
-async function scanQID(key, personLabel) {
-  const scan = qidScans[key];
-  if(!scan) return;
-  const btn = document.getElementById('scan-btn-'+key);
-  if(btn) { btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Scanning…'; }
+// ── SCAN QID ──
+async function scanQID(key) {
+  const btn = document.getElementById('scan-'+key);
+  const resultDiv = document.getElementById('scan-result-'+key);
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Reading QID…';
 
   try {
-    const content = [];
-
-    if(scan.front) {
-      const b64 = await fileToBase64(scan.front);
-      const mt = scan.front.type || 'image/jpeg';
-      content.push({type:'image', source:{type:'base64', media_type:mt, data:b64}});
-      content.push({type:'text', text:'This is the FRONT of the QID card.'});
+    const msgContent = [];
+    if(qidFiles[key+'_front']) {
+      const b64 = await fileToBase64(qidFiles[key+'_front']);
+      msgContent.push({type:'image', source:{type:'base64', media_type: qidFiles[key+'_front'].type||'image/jpeg', data:b64}});
+      msgContent.push({type:'text', text:'This is the FRONT of the QID card.'});
     }
-    if(scan.back) {
-      const b64 = await fileToBase64(scan.back);
-      const mt = scan.back.type || 'image/jpeg';
-      content.push({type:'image', source:{type:'base64', media_type:mt, data:b64}});
-      content.push({type:'text', text:'This is the BACK of the QID card.'});
+    if(qidFiles[key+'_back']) {
+      const b64 = await fileToBase64(qidFiles[key+'_back']);
+      msgContent.push({type:'image', source:{type:'base64', media_type: qidFiles[key+'_back'].type||'image/jpeg', data:b64}});
+      msgContent.push({type:'text', text:'This is the BACK of the QID card.'});
     }
-
-    content.push({type:'text', text:`Extract all information from this Qatar QID card. Return ONLY a JSON object with these fields (use null if not found):
-{
-  "name": "full name in English",
-  "qid_number": "11-digit QID number",
-  "nationality": "nationality",
-  "dob": "date of birth as DD/MM/YYYY",
-  "expiry": "expiry date as DD/MM/YYYY",
-  "sponsor": "sponsor name from back of card",
-  "gender": "Male or Female"
-}
-Return only the JSON, no other text.`});
+    msgContent.push({type:'text', text:`Extract all visible information from this Qatar QID card. Return ONLY valid JSON with these exact fields (use null if not visible):
+{"name":"full English name","qid_number":"11-digit number","nationality":"country","dob":"DD/MM/YYYY","expiry":"DD/MM/YYYY","sponsor":"sponsor name from back","gender":"Male or Female"}
+Return only the JSON object, no markdown, no explanation.`});
 
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
@@ -542,37 +415,51 @@ Return only the JSON, no other text.`});
       },
       body: JSON.stringify({
         model:'claude-opus-4-6',
-        max_tokens:500,
-        messages:[{role:'user', content}]
+        max_tokens:400,
+        messages:[{role:'user', content:msgContent}]
       })
     });
 
     const result = await resp.json();
-    const text = result.content?.[0]?.text || '{}';
-    const clean = text.replace(/```json|```/g,'').trim();
+    const raw = result.content?.[0]?.text || '{}';
+    const clean = raw.replace(/```json|```/g,'').trim();
     const data = JSON.parse(clean);
+    qidData[key] = data;
 
-    qidScans[key].scanned = true;
-    qidScans[key].data = data;
+    // Auto-fill fields
+    autoFill(key, data);
 
-    // Auto-fill form fields based on who this is
-    autofillFromQID(key, data);
-    buildUploadZones();
+    // Show scan result summary
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `<div class="scan-result">
+      <div class="scan-result-title">✅ QID Read Successfully</div>
+      <div class="scan-fields">
+        ${data.name ? `<div class="scan-field"><div class="scan-field-key">Name</div><div class="scan-field-val">${data.name}</div></div>` : ''}
+        ${data.qid_number ? `<div class="scan-field"><div class="scan-field-key">QID No.</div><div class="scan-field-val">${data.qid_number}</div></div>` : ''}
+        ${data.nationality ? `<div class="scan-field"><div class="scan-field-key">Nationality</div><div class="scan-field-val">${data.nationality}</div></div>` : ''}
+        ${data.dob ? `<div class="scan-field"><div class="scan-field-key">Date of Birth</div><div class="scan-field-val">${data.dob}</div></div>` : ''}
+        ${data.expiry ? `<div class="scan-field"><div class="scan-field-key">Expiry</div><div class="scan-field-val">${data.expiry}</div></div>` : ''}
+        ${data.sponsor ? `<div class="scan-field"><div class="scan-field-key">Sponsor</div><div class="scan-field-val">${data.sponsor}</div></div>` : ''}
+        ${data.gender ? `<div class="scan-field"><div class="scan-field-key">Gender</div><div class="scan-field-val">${data.gender}</div></div>` : ''}
+      </div>
+    </div>`;
+
+    // Update badge
+    const badge = document.getElementById('badge-'+key);
+    if(badge) { badge.textContent = '✅ Scanned'; badge.style.background = 'var(--lime)'; badge.style.color = 'white'; }
+
+    btn.innerHTML = '🔄 Re-scan';
+    btn.disabled = false;
 
   } catch(err) {
-    console.error('QID scan error:', err);
-    if(btn) { btn.disabled=false; btn.innerHTML='🤖 Scan QID — Auto-fill details'; }
-    showScanError(key, 'Could not read QID. Please fill in manually.');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `<div class="warn">⚠️ Could not read QID automatically. Please fill in the details below manually.</div>`;
+    btn.innerHTML = '🔄 Try Again';
+    btn.disabled = false;
   }
 }
 
-function showScanError(key, msg) {
-  const zones = document.getElementById('upload-zones');
-  // just rebuild — error will show naturally
-  buildUploadZones();
-}
-
-function autofillFromQID(key, data) {
+function autoFill(key, data) {
   if(key === 'father') {
     if(data.name) document.getElementById('f_name').value = data.name;
     if(data.qid_number) document.getElementById('f_qid').value = data.qid_number;
@@ -582,50 +469,169 @@ function autofillFromQID(key, data) {
     if(data.qid_number) document.getElementById('m_qid').value = data.qid_number;
     if(data.nationality) document.getElementById('m_nat').value = data.nationality;
   } else if(key.startsWith('child_')) {
-    const idx = parseInt(key.split('_')[1]);
-    const block = document.querySelectorAll('.child-block')[idx-1];
+    const idx = parseInt(key.split('_')[1]) - 1;
+    const blocks = document.querySelectorAll('.child-block');
+    const block = blocks[idx];
     if(block) {
       if(data.name) block.querySelector('.cname').value = data.name;
       if(data.qid_number) block.querySelector('.cqid').value = data.qid_number;
       if(data.nationality) block.querySelector('.cnat').value = data.nationality;
       if(data.dob) block.querySelector('.cdob').value = convertDate(data.dob);
       if(data.gender) {
-        const gsel = block.querySelector('.cgender');
-        if(gsel) gsel.value = data.gender==='Male'?'Boy':'Girl';
+        const gs = block.querySelector('.cgender');
+        if(gs) gs.value = data.gender === 'Male' ? 'Boy' : 'Girl';
       }
     }
   }
 }
 
-function convertDate(dob) {
-  // Convert DD/MM/YYYY to YYYY-MM-DD for input[type=date]
-  if(!dob) return '';
-  const parts = dob.split('/');
-  if(parts.length===3) return parts[2]+'-'+parts[1].padStart(2,'0')+'-'+parts[0].padStart(2,'0');
+function convertDate(d) {
+  if(!d) return '';
+  const p = d.split('/');
+  if(p.length === 3) return p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
   return '';
 }
 
-function getChildrenData() {
-  const children = [];
-  document.querySelectorAll('.child-block').forEach((b,i) => {
-    children.push({
-      full_name: b.querySelector('.cname').value.trim(),
-      dob: b.querySelector('.cdob').value,
-      gender: b.querySelector('.cgender').value,
-      qid: b.querySelector('.cqid').value.trim(),
-      nationality: b.querySelector('.cnat').value.trim(),
-      lang_home: b.querySelector('.clang').value.trim(),
-      english_fluency: flGet('cef'+(i+1)),
-      arabic_fluency: flGet('caf'+(i+1)),
-      school_status: b.querySelector('.cschool').value,
-      years_since_school: b.querySelector('.cyears').value,
-      special_needs: b.querySelector('.csn').value,
-      special_needs_detail: b.querySelector('.csnd')?.value || '',
-    });
+async function fileToBase64(file) {
+  return new Promise((res,rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
   });
-  return children;
 }
 
+// ── CHILDREN ──
+function addChild() {
+  childCount++;
+  const idx = childCount;
+  const div = document.createElement('div');
+  div.className = 'child-block'; div.id = 'cb-'+idx;
+
+  div.innerHTML = `
+    <div class="child-block-hdr">
+      <div class="child-block-title">👦 Child ${idx}</div>
+      ${idx > 1 ? '<button class="rm-btn" onclick="removeChild('+idx+')">✕ Remove</button>' : ''}
+    </div>
+    <div class="child-block-body">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;font-weight:600;">Upload child's QID, passport or birth certificate.</p>
+      <div class="upload-pair">
+        <div class="upload-side">
+          <div class="upload-side-title">📷 Front</div>
+          <label class="upload-box" id="ub-child_${idx}-front">
+            <input type="file" accept="image/*" onchange="handleQID(event,'child_${idx}','front')">
+            <div class="uico">📋</div><p id="ubt-child_${idx}-front">Tap to upload</p>
+          </label>
+        </div>
+        <div class="upload-side">
+          <div class="upload-side-title">📷 Back</div>
+          <label class="upload-box" id="ub-child_${idx}-back">
+            <input type="file" accept="image/*" onchange="handleQID(event,'child_${idx}','back')">
+            <div class="uico">📋</div><p id="ubt-child_${idx}-back">Tap to upload</p>
+          </label>
+        </div>
+      </div>
+      <button class="scan-btn" id="scan-child_${idx}" onclick="scanQID('child_${idx}')" disabled>🤖 Scan &amp; Auto-fill</button>
+      <div id="scan-result-child_${idx}" style="display:none;"></div>
+      <div class="review-section">
+        <div class="review-title">✏️ Review &amp; complete</div>
+        <div class="fg"><label>Full Name *</label><input class="cname" placeholder="As on ID"></div>
+        <div class="fg-row">
+          <div class="fg"><label>Date of Birth</label><input class="cdob" type="date"></div>
+          <div class="fg"><label>Gender</label><select class="cgender"><option value="">Select…</option><option>Girl</option><option>Boy</option></select></div>
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label>QID / Passport No.</label><input class="cqid" placeholder="e.g. C053961"></div>
+          <div class="fg"><label>Nationality</label><input class="cnat" placeholder="e.g. Kenyan"></div>
+        </div>
+        <div class="fg"><label>Language(s) spoken at home</label><input class="clang" placeholder="e.g. Swahili, English"></div>
+        <div class="fg"><label>English Fluency</label>
+          <div class="fluency-row" id="cef${idx}">
+            <div class="fl" onclick="flSel(this,'cef${idx}')">None</div>
+            <div class="fl" onclick="flSel(this,'cef${idx}')">Basic</div>
+            <div class="fl" onclick="flSel(this,'cef${idx}')">Good</div>
+            <div class="fl" onclick="flSel(this,'cef${idx}')">Fluent</div>
+          </div>
+        </div>
+        <div class="fg"><label>Arabic Fluency</label>
+          <div class="fluency-row" id="caf${idx}">
+            <div class="fl" onclick="flSel(this,'caf${idx}')">None</div>
+            <div class="fl" onclick="flSel(this,'caf${idx}')">Basic</div>
+            <div class="fl" onclick="flSel(this,'caf${idx}')">Good</div>
+            <div class="fl" onclick="flSel(this,'caf${idx}')">Fluent</div>
+          </div>
+        </div>
+        <div class="fg"><label>Current School Status</label>
+          <select class="cschool"><option value="">Select…</option><option>Never attended school</option><option>Previously attended — left</option><option>On waiting list</option><option>Online school only</option><option>Part-time (≤2.5 days/week)</option><option>Enrolled full-time</option></select>
+        </div>
+        <div class="fg"><label>If previously attended — how many years ago did they leave?</label>
+          <select class="cyears"><option value="">Select…</option><option>Never attended</option><option>Less than 1 year ago</option><option>1–2 years ago</option><option>2–3 years ago</option><option>3–4 years ago</option><option>4+ years ago</option></select>
+        </div>
+        <div class="fg"><label>Any known special needs?</label>
+          <select class="csn" onchange="toggleSND(this,${idx})"><option value="">Select…</option><option>No</option><option>Yes — please describe below</option></select>
+        </div>
+        <div class="fg" id="snd-${idx}" style="display:none;"><label>Special needs details</label>
+          <textarea class="csnd" placeholder="e.g. Dyslexia suspected, speech delay, ADHD…"></textarea>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('children-container').appendChild(div);
+}
+
+function removeChild(idx) { document.getElementById('cb-'+idx)?.remove(); }
+function toggleSND(sel, idx) {
+  document.getElementById('snd-'+idx).style.display = sel.value.startsWith('Yes') ? 'block' : 'none';
+}
+
+// ── FLUENCY ──
+function flSel(el, group) {
+  document.getElementById(group).querySelectorAll('.fl').forEach(f => f.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function flGet(group) {
+  const s = document.getElementById(group)?.querySelector('.fl.sel');
+  return s ? s.textContent : '';
+}
+
+// ── ZONE ──
+function fillZone(v) {
+  document.getElementById('zone_area').value = ZONES[v.trim()] || '';
+}
+
+// ── INCOME ──
+function calcInc() {
+  const inc = parseFloat(document.getElementById('income').value)||0;
+  const rent = parseFloat(document.getElementById('rent').value)||0;
+  if(!inc) return;
+  const after = inc - rent;
+  const el = document.getElementById('inc_result');
+  el.textContent = 'QAR ' + after.toLocaleString() + ' ' + (after<=5000 ? '✅ Eligible' : '❌ Over QAR 5,000 limit');
+  el.className = 'income-result' + (after>5000?' fail':'');
+}
+
+// ── STEP NAV ──
+function goStep(n) {
+  if(n===2) {
+    if(!document.getElementById('f_name').value.trim() || !document.getElementById('f_phone').value.trim()) {
+      showErr('err1','Please enter the father/guardian name and contact number.'); return;
+    }
+  }
+  if(n===3) {
+    const blocks = document.querySelectorAll('.child-block');
+    if(!blocks.length) { showErr('err2','Please add at least one child.'); return; }
+    let ok = true;
+    blocks.forEach(b => { if(!b.querySelector('.cname').value.trim()) ok = false; });
+    if(!ok) { showErr('err2','Please enter a name for each child.'); return; }
+  }
+  hideErr('err1'); hideErr('err2'); hideErr('err3');
+  document.querySelectorAll('.pg').forEach(p => p.classList.remove('active'));
+  document.getElementById('s'+n).classList.add('active');
+  window.scrollTo(0,0);
+}
+function showErr(id,msg){const e=document.getElementById(id);e.textContent=msg;e.style.display='block';}
+function hideErr(id){document.getElementById(id).style.display='none';}
+
+// ── SUBMIT ──
 async function submitForm() {
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
@@ -634,10 +640,9 @@ async function submitForm() {
   try {
     const income = parseFloat(document.getElementById('income').value)||0;
     const rent = parseFloat(document.getElementById('rent').value)||0;
-    const devices = [...document.querySelectorAll('#devices .dev.sel')].map(d => d.querySelector('.dicon').nextSibling.textContent.trim());
+    const devices = [...document.querySelectorAll('#devices .dev.sel')].map(d => d.childNodes[1].textContent.trim());
 
-    // Count existing families to generate URN
-    const {count} = await db.from('ll_families').select('*', {count:'exact', head:true});
+    const {count} = await db.from('ll_families').select('*',{count:'exact',head:true});
     const urn = 'LL' + String((count||0)+1).padStart(3,'0');
 
     const familyData = {
@@ -651,6 +656,8 @@ async function submitForm() {
       father_arabic: flGet('f_ara'),
       father_employment: document.getElementById('f_emp').value,
       father_salary: parseFloat(document.getElementById('f_salary').value)||0,
+      father_sponsor: qidData['father']?.sponsor || null,
+      father_qid_expiry: qidData['father']?.expiry || null,
       mother_name: document.getElementById('m_name').value.trim(),
       mother_qid: document.getElementById('m_qid').value.trim(),
       mother_nationality: document.getElementById('m_nat').value.trim(),
@@ -661,6 +668,8 @@ async function submitForm() {
       mother_employment: document.getElementById('m_emp').value,
       mother_salary: parseFloat(document.getElementById('m_salary').value)||0,
       mother_pregnant: document.getElementById('m_preg').value,
+      mother_sponsor: qidData['mother']?.sponsor || null,
+      mother_qid_expiry: qidData['mother']?.expiry || null,
       zone: document.getElementById('zone').value.trim(),
       area: document.getElementById('zone_area').value.trim(),
       monthly_rent: rent,
@@ -676,25 +685,43 @@ async function submitForm() {
     if(fErr) throw fErr;
 
     // Insert children
-    const children = getChildrenData();
-    for(let i=0; i<children.length; i++) {
-      children[i].family_id = family.id;
-      children[i].urn = urn + '.' + (i+1);
-      const {error: cErr} = await db.from('ll_children').insert(children[i]);
-      if(cErr) throw cErr;
+    const blocks = document.querySelectorAll('.child-block');
+    for(let i=0; i<blocks.length; i++) {
+      const b = blocks[i];
+      const cidx = i+1;
+      const child = {
+        family_id: family.id,
+        urn: urn + '.' + cidx,
+        full_name: b.querySelector('.cname').value.trim(),
+        dob: b.querySelector('.cdob').value,
+        gender: b.querySelector('.cgender').value,
+        qid: b.querySelector('.cqid').value.trim(),
+        nationality: b.querySelector('.cnat').value.trim(),
+        lang_home: b.querySelector('.clang').value.trim(),
+        english_fluency: flGet('cef'+cidx),
+        arabic_fluency: flGet('caf'+cidx),
+        school_status: b.querySelector('.cschool').value,
+        years_since_school: b.querySelector('.cyears').value,
+        special_needs: b.querySelector('.csn').value,
+        special_needs_detail: b.querySelector('.csnd')?.value || '',
+        qid_sponsor: qidData['child_'+cidx]?.sponsor || null,
+        qid_expiry: qidData['child_'+cidx]?.expiry || null,
+      };
+      const {error: cErr} = await db.from('ll_children').insert(child);
+      if(cErr) console.warn('Child insert error:', cErr);
     }
 
-    // Upload documents
-    for(const [key, {file, label}] of Object.entries(uploadedFiles)) {
+    // Upload QID files to Supabase Storage
+    for(const [fileKey, {file, label}] of Object.entries(uploadedFiles)) {
       const ext = file.name.split('.').pop();
-      const path = family.id + '/' + key + '.' + ext;
+      const path = family.id + '/' + fileKey + '.' + ext;
       const {error: uErr} = await db.storage.from('ll-documents').upload(path, file);
       if(!uErr) {
         await db.from('ll_documents').insert({
           family_id: family.id,
           file_name: label,
           file_path: path,
-          doc_type: key,
+          doc_type: fileKey,
         });
       }
     }
@@ -705,15 +732,16 @@ async function submitForm() {
     window.scrollTo(0,0);
 
   } catch(err) {
-    console.error(err);
-    showErr('err4', 'Something went wrong: ' + (err.message||'Please try again.'));
+    showErr('err3', 'Something went wrong: ' + (err.message||'Please try again.'));
     btn.disabled = false;
     btn.innerHTML = '✅ Submit Application';
   }
 }
 
-// Init first child
+// Init
 addChild();
+
+}); // DOMContentLoaded
 </script>
 </body>
 </html>
