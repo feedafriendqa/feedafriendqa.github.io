@@ -342,6 +342,8 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   const [editOpp,setEditOpp]=useState(null);
   const [editingProfile,setEditingProfile]=useState(false);
   const [volSearch,setVolSearch]=useState("");
+  const [volHistory,setVolHistory]=useState([]);
+  const [csvResult,setCsvResult]=useState(null);
   const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,questions:[]});
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
@@ -366,7 +368,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
       oppQuery,
       sb.from("signups").select("*,profiles(id,first_name,surname,email,photo_url,is_student,student_level,student_school,is_working,profession,projects,approved,dob,role,admin_projects)"),
       sb.from("hour_logs").select("*,profiles(first_name,surname,email)").eq("status","pending").order("created_at",{ascending:false}),
-      sb.from("hour_logs").select("volunteer_id,hours").eq("status","approved"),
+      sb.from("hour_logs").select("*").eq("status","approved").order("date",{ascending:false}),
     ]);
     setPending(p||[]); setVols(v||[]); setAdmins(a||[]); setOpps(o||[]);
     const g={};
@@ -374,6 +376,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     setOppSignups(g);
     setHoursPending(h||[]);
     setHourLogs(al||[]);
+    setVolHistory(al||[]);
   }
 
   const approve=async id=>{
@@ -417,10 +420,10 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     if(error){st("Error: "+error.message);return;}
     st("✓ Checked in!"); load();
   };
-  const checkOut=async(id,oppId,volId,title,proj,hours)=>{
+  const checkOut=async(id,oppId,volId,volName,title,proj,hours)=>{
     const {error}=await sb.from("signups").update({checked_out:new Date().toISOString()}).eq("id",id);
     if(error){st("Error: "+error.message);return;}
-    await sb.from("hour_logs").insert({volunteer_id:volId,activity:title,project:proj,hours:Number(hours),date:new Date().toISOString().split("T")[0],notes:"Checked in via event attendance"});
+    await sb.from("hour_logs").insert({volunteer_id:volId,name:volName,activity:title,project:proj,hours:Number(hours),date:new Date().toISOString().split("T")[0],notes:"Logged via check-in/out",status:"approved"});
     st("✅ "+hours+"h logged!"); load();
   };
   const delOpp=async id=>{
@@ -488,6 +491,20 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
         <h3 style={{fontFamily:HF,fontSize:14,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Project Interests</h3>
         <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{viewProf.projects.map(pid=><Tag key={pid} pid={pid}/>)}</div>
       </div>}
+      {(()=>{const vhl=volHistory.filter(l=>l.volunteer_id===viewProf.id);const vth=vhl.reduce((s,l)=>s+Number(l.hours),0);return <div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
+        <h3 style={{fontFamily:HF,fontSize:14,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Hour History</h3>
+        <p style={{fontSize:12,color:MT,marginBottom:12,fontFamily:BF}}>{vth}h across {vhl.length} activities</p>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>{PROJECTS.map(p=>{const ph=vhl.filter(l=>l.project===p.id).reduce((s,l)=>s+Number(l.hours),0);if(!ph)return null;return <span key={p.id} style={{background:p.bg,color:"#fff",borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>{p.emoji} {ph}h {p.label}</span>;})}</div>
+        {vhl.length===0&&<p style={{color:MT,fontSize:13}}>No approved hours yet.</p>}
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>{vhl.map(l=>{const p=gp(l.project);return <div key={l.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,background:PL,border:"1px solid "+BR}}>
+          <div style={{width:32,height:32,borderRadius:8,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{p.emoji}</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:700,fontSize:12,fontFamily:BF,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.activity}</div>
+            <div style={{fontSize:11,color:MT}}>{l.date}</div>
+          </div>
+          <div style={{fontWeight:900,fontSize:18,color:p.bg,fontFamily:HF,flexShrink:0}}>{l.hours}h</div>
+        </div>;})}</div>
+      </div>;})()}
       {isSuperAdmin&&<div style={{display:"flex",gap:8}}>
         <button onClick={()=>deleteVol(viewProf.id)} style={{flex:1,background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:10,padding:"12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>🗑️ Delete Volunteer</button>
       </div>}
@@ -647,6 +664,57 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
       </div>}
 
       {tab==="hours"&&<div>
+        {/* CSV Upload */}
+        <div style={{background:"#fff",borderRadius:14,padding:"16px",border:"1px solid "+BR,marginBottom:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <h3 style={{fontFamily:HF,fontSize:13,fontWeight:900,textTransform:"uppercase",color:DK,margin:0}}>📂 Upload Hours from CSV</h3>
+            <button onClick={()=>{
+              const csv="name,project,activity,date,hours\nMohanad Ahmed,food-boxes,Pantry Session,2026-05-01,3\n";
+              const b=new Blob([csv],{type:"text/csv"});
+              const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="hours_template.csv";a.click();
+            }} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>⬇ Template</button>
+          </div>
+          <p style={{fontSize:12,color:MT,marginBottom:10,fontFamily:BF}}>Columns: <b>name, project, activity, date, hours</b>. For project, you can use names like: Little Learners, Giving Garden, Food Boxes, Packing/Sorting, Funlabs, Events, Arabic Support. Unregistered volunteers will be downloaded as a .txt file.</p>
+          <input type="file" accept=".csv" onChange={async e=>{
+            const file=e.target.files[0]; if(!file) return;
+            const text=await file.text();
+            const lines=text.trim().split("\n").slice(1);
+            const matched=[]; const unmatched=[];
+            const allVols=[...vols,...pending];
+            for(const line of lines){
+              const parts=line.split(",").map(s=>s.trim().replace(/^"|"$/g,""));
+              if(parts.length<5||!parts[0]) continue;
+              const [name,project,activity,date,hours]=parts;
+              const nameLower=name.toLowerCase();
+              // Map spreadsheet project names to app project IDs
+              const projMap={"little learners":"little-learners","giving garden":"giving-garden","food boxes":"food-boxes","food-boxes":"food-boxes","packing/sorting":"food-boxes","packing sorting":"food-boxes","welcome baby":"welcome-baby","pay it forward":"pay-it-forward","community fridges":"community-fridges","funlabs":"little-learners","events":"food-boxes","arabic support":"little-learners","arabic-support":"little-learners"};
+              const mappedProject=projMap[project.toLowerCase()]||project;
+              const vol=allVols.find(v=>{
+                const full=(v.first_name+" "+v.surname).toLowerCase();
+                const rev=(v.surname+" "+v.first_name).toLowerCase();
+                return full===nameLower||rev===nameLower||full.includes(nameLower)||nameLower.includes(v.first_name.toLowerCase());
+              });
+              if(vol) matched.push({volunteer_id:vol.id,name:vol.first_name+" "+vol.surname,activity,project:mappedProject,hours:parseFloat(hours)||0,date,status:"approved",notes:"Imported from spreadsheet"});
+              else unmatched.push(name);
+            }
+            if(matched.length>0){
+              const {error}=await sb.from("hour_logs").insert(matched);
+              if(error){st("Error: "+error.message);return;}
+            }
+            setCsvResult({matched:matched.length,unmatched});
+            if(unmatched.length>0){
+              const b=new Blob([unmatched.join("\n")],{type:"text/plain"});
+              const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="unmatched_volunteers.txt";a.click();
+            }
+            st("✓ Imported "+matched.length+" records!"); load();
+            e.target.value="";
+          }} style={{width:"100%",padding:"10px",borderRadius:8,border:"1.5px dashed "+BR,background:PL,fontSize:13,cursor:"pointer"}}/>
+          {csvResult&&<div style={{marginTop:10,padding:"10px 12px",borderRadius:8,background:"#F0FDF4",border:"1px solid #BBF7D0"}}>
+            <div style={{fontSize:13,fontWeight:700,color:"#166534"}}>✓ {csvResult.matched} records imported</div>
+            {csvResult.unmatched.length>0&&<div style={{fontSize:12,color:"#DC2626",marginTop:4}}>⚠ {csvResult.unmatched.length} unmatched (downloaded as .txt)</div>}
+          </div>}
+        </div>
+        {/* Pending manual logs */}
         <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Pending Hour Logs</h2>
         {hoursPending.length===0&&<p style={{color:MT,fontSize:14}}>No pending hour logs 🎉</p>}
         {hoursPending.map(l=><div key={l.id} style={{background:"#fff",borderRadius:14,padding:"14px 16px",border:"1px solid "+BR,marginBottom:10,borderLeft:"4px solid "+gp(l.project).bg}}>
@@ -718,7 +786,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                     <button onClick={()=>declineSignup(s.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>Unsub</button>
                   </div>;
                   })()}
-                  {s.checked_in&&!s.checked_out&&!s.did_not_attend&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>}
+                  {s.checked_in&&!s.checked_out&&!s.did_not_attend&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,(s.profiles?.first_name+" "+s.profiles?.surname).trim(),o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>}
                   {s.did_not_attend&&<span style={{fontSize:11,color:"#D97706",fontWeight:700,background:"#FEF3C7",padding:"3px 8px",borderRadius:20}}>❌ DNA</span>}
                   {s.checked_out&&<span style={{fontSize:11,color:"#7C3AED",fontWeight:700,background:"#F3E8FF",padding:"3px 8px",borderRadius:20}}>✅ {o.hours}h</span>}
                 </div>
@@ -784,6 +852,8 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   const [answers,setAnswers]=useState({});
   const [editingProfile,setEditingProfile]=useState(false);
   const [volSearch,setVolSearch]=useState("");
+  const [volHistory,setVolHistory]=useState([]);
+  const [csvResult,setCsvResult]=useState(null);
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
   useEffect(()=>{loadData();}, []);
@@ -799,7 +869,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
 
   async function submitLog(){
     if(!form.activity||!form.hours||!form.date) return;
-    await sb.from("hour_logs").insert({...form,hours:Number(form.hours),volunteer_id:profile.id,status:"pending"});
+    await sb.from("hour_logs").insert({...form,hours:Number(form.hours),volunteer_id:profile.id,name:(profile.first_name+" "+profile.surname).trim(),status:"pending"});
     setForm({activity:"",hours:"",date:"",project:"food-boxes",notes:""}); st("✓ Hours submitted for admin approval!"); loadData();
   }
 
