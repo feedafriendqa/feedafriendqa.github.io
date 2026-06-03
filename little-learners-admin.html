@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Little Learners — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--forest:#0A3D1F;--forest-mid:#145C30;--lime:#5CB85C;--lime-soft:#EAF5EA;--gold:#F5A623;--coral:#E05252;--sky:#3B8DC8;--lav:#8B6FD4;--muted:#5A7A65;--border:#C8DFC8;--cream:#F4F9F4;--shadow:0 4px 20px rgba(10,61,31,.09);--shadow-lg:0 8px 40px rgba(10,61,31,.15);--r:14px;--rs:10px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Quicksand',sans-serif;background:var(--cream);color:var(--forest);min-height:100vh;}
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-card{background:white;border-radius:20px;padding:32px 28px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(10,61,31,.15);text-align:center;}
+.login-logo{margin-bottom:16px;}
+.login-logo img{height:52px;width:auto;}
+.login-card h2{font-family:'Nunito',sans-serif;font-weight:900;font-size:20px;color:var(--forest);margin-bottom:6px;}
+.login-card p{font-size:13px;color:var(--muted);margin-bottom:22px;}
+.lf{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;text-align:left;}
+.lf label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.lf input{padding:11px 14px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;outline:none;transition:border-color .2s;}
+.lf input:focus{border-color:var(--lime);}
+.btn-forest{background:var(--forest);color:white;border:none;border-radius:50px;padding:13px;width:100%;font-family:'Quicksand',sans-serif;font-weight:800;font-size:14px;cursor:pointer;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-forest:hover{background:var(--forest-mid);}
+.btn-forest:disabled{background:#aaa;cursor:not-allowed;}
+.login-err{background:#FDEAEA;border-radius:var(--rs);padding:9px 12px;font-size:13px;font-weight:600;color:#8B2020;margin-top:10px;display:none;border-left:3px solid var(--coral);}
+/* HEADER */
+header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14px;display:flex;align-items:center;justify-content:space-between;height:56px;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 14px rgba(10,61,31,.25);}
+.logo{display:flex;align-items:center;gap:9px;}
+.logo img{height:36px;width:auto;}
+.logo-text{font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:white;white-space:nowrap;}
+.nav{display:flex;gap:5px;}
+.nb{padding:6px 12px;border-radius:50px;border:none;cursor:pointer;font-family:'Quicksand',sans-serif;font-weight:700;font-size:11.5px;white-space:nowrap;transition:all .2s;}
+.nb.on{background:var(--gold);color:var(--forest);}
+.nb.off{background:rgba(255,255,255,.13);color:rgba(255,255,255,.85);}
+.logout{background:rgba(255,255,255,.13);color:rgba(255,255,255,.7);border:none;border-radius:50px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:'Quicksand',sans-serif;}
+.logout:hover{background:var(--coral);color:white;}
+/* PAGES */
+.pg{display:none;padding:16px 14px;max-width:700px;margin:0 auto;}.pg.active{display:block;}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+.stat{background:white;border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow);border-top:4px solid var(--lime);}
+.stat.gold{border-top-color:var(--gold);}
+.stat.coral{border-top-color:var(--coral);}
+.stat.dark{border-top-color:var(--forest);}
+.stat-num{font-family:'Nunito',sans-serif;font-size:40px;font-weight:900;color:var(--forest);line-height:1;}
+.stat-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:4px;}
+.sec-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:19px;color:var(--forest);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.pill{background:var(--forest);color:white;font-size:11px;font-weight:700;padding:2px 10px;border-radius:50px;}
+.fam-card{background:white;border-radius:var(--rs);padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .2s;border-left:5px solid var(--gold);margin-bottom:9px;}
+.fam-card.accepted{border-left-color:var(--lime);}
+.fam-card.rejected{border-left-color:var(--coral);}
+.fam-card.archived{border-left-color:var(--muted);opacity:.75;}
+.fam-card:hover{transform:translateX(3px);box-shadow:var(--shadow-lg);}
+.urn-badge{background:var(--forest);color:var(--gold);font-family:'Nunito',sans-serif;font-weight:900;font-size:11px;padding:4px 9px;border-radius:6px;white-space:nowrap;flex-shrink:0;}
+.fam-info{flex:1;min-width:0;}
+.fam-name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fam-meta{font-size:11.5px;color:var(--muted);margin-top:3px;}
+.tag{font-size:11px;font-weight:700;padding:4px 11px;border-radius:50px;white-space:nowrap;flex-shrink:0;}
+.tag.pending{background:#FEF3D6;color:#7A5000;}
+.tag.accepted{background:var(--lime-soft);color:var(--forest);}
+.tag.rejected{background:#FDEAEA;color:#8B2020;}
+.tag.archived{background:#e9edea;color:#4A5E50;}
+.dup-flag{font-size:10.5px;font-weight:700;background:#FEF3D6;color:#7A5000;padding:2px 8px;border-radius:50px;border:1.5px solid var(--gold);white-space:nowrap;flex-shrink:0;}
+.search{width:100%;padding:11px 16px;border-radius:50px;border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;outline:none;margin-bottom:10px;}
+.search:focus{border-color:var(--lime);}
+.filter-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.fsel{padding:8px 12px;border-radius:50px;border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:12.5px;font-weight:600;background:white;cursor:pointer;outline:none;}
+.empty{text-align:center;padding:40px 20px;color:var(--muted);}
+.empty .eicon{font-size:48px;margin-bottom:12px;}
+.empty p{font-size:14px;font-weight:600;}
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(10,61,31,.5);z-index:300;padding:12px;overflow-y:auto;}
+.overlay.open{display:flex;align-items:flex-start;justify-content:center;}
+.modal{background:white;border-radius:20px;width:100%;max-width:640px;box-shadow:var(--shadow-lg);animation:up .22s ease;margin:auto;}
+@keyframes up{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+.modal-hdr{background:var(--forest);border-radius:20px 20px 0 0;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;}
+.modal-hdr-title{color:white;font-family:'Nunito',sans-serif;font-weight:900;font-size:16px;}
+.modal-hdr-sub{color:rgba(255,255,255,.65);font-size:12px;margin-top:2px;}
+.close-btn{background:rgba(255,255,255,.15);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.close-btn:hover{background:var(--coral);}
+.modal-body{padding:18px;max-height:80vh;overflow-y:auto;}
+.tab-bar{display:flex;border-bottom:2px solid var(--border);margin-bottom:18px;overflow-x:auto;}
+.tab{padding:9px 12px;border:none;background:transparent;cursor:pointer;font-family:'Quicksand',sans-serif;font-weight:700;font-size:12.5px;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;}
+.tab.on{color:var(--forest);border-bottom-color:var(--forest);}
+.tpanel{display:none;}.tpanel.on{display:block;}
+.info-sec h3{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;margin-top:16px;padding-bottom:5px;border-bottom:2px solid var(--border);}
+.info-sec h3:first-child{margin-top:0;}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.irow{display:flex;flex-direction:column;gap:2px;}
+.ikey{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.ival{font-size:13.5px;font-weight:600;}
+.qid-pill{display:inline-flex;align-items:center;gap:6px;background:var(--forest);color:var(--gold);padding:4px 12px;border-radius:8px;font-family:'Nunito',sans-serif;font-weight:900;font-size:12px;margin-top:4px;}
+.income-badge{display:inline-block;padding:4px 12px;border-radius:50px;font-weight:700;font-size:13px;}
+.income-badge.ok{background:var(--lime-soft);color:var(--forest);}
+.income-badge.over{background:#FDEAEA;color:#8B2020;}
+.dev-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+.dev-chip{background:var(--lime-soft);border:2px solid var(--lime);border-radius:50px;padding:3px 12px;font-size:12.5px;font-weight:700;}
+.child-row{background:var(--cream);border-radius:var(--rs);padding:13px;margin-bottom:10px;border-left:4px solid var(--lime);}
+.child-row-name{font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.gc{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:50px;}
+.gc.boy{background:#e8f2fd;color:var(--sky);border:1.5px solid var(--sky);}
+.gc.girl{background:#f2f0fb;color:var(--lav);border:1.5px solid var(--lav);}
+.yg-box{background:white;border-radius:var(--rs);border:2px solid var(--border);padding:10px 14px;margin-bottom:8px;}
+.yg-box-inner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.yg-val{font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;color:var(--forest);}
+.yg-sub{font-size:12px;color:var(--muted);flex:1;}
+.override-btn{background:transparent;border:2px solid var(--border);color:var(--muted);border-radius:50px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Quicksand',sans-serif;white-space:nowrap;}
+.override-btn:hover{border-color:var(--gold);color:#8B6000;}
+.yg-edit{background:var(--lime-soft);border-radius:var(--rs);padding:12px;border:2px solid var(--lime);margin-bottom:8px;display:none;}
+.yg-edit.open{display:block;}
+.yg-edit label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;}
+.yg-edit select,.yg-edit textarea{width:100%;padding:9px 12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:13.5px;outline:none;margin-bottom:8px;background:white;}
+.yg-edit textarea{resize:vertical;min-height:60px;}
+.af{display:flex;flex-direction:column;gap:11px;}
+.af label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;}
+.af select,.af input,.af textarea{width:100%;padding:10px 13px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:13.5px;outline:none;background:white;}
+.af select:focus,.af input:focus,.af textarea:focus{border-color:var(--lime);}
+.af textarea{resize:vertical;min-height:80px;}
+.criteria-list{display:flex;flex-direction:column;gap:7px;margin-bottom:14px;}
+.crit{display:flex;align-items:flex-start;gap:9px;padding:9px 13px;border-radius:var(--rs);background:white;border:2px solid var(--border);font-size:13px;font-weight:600;}
+.cdot{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;}
+.cdot.pass{background:var(--lime);color:white;}
+.cdot.fail{background:var(--coral);color:white;}
+.cdot.warn{background:var(--gold);color:white;}
+.decision-btns{display:flex;gap:9px;margin-top:14px;flex-wrap:wrap;}
+.btn-accept{background:var(--forest);color:white;padding:10px 20px;border-radius:50px;border:none;cursor:pointer;font-family:'Quicksand',sans-serif;font-weight:700;font-size:13px;}
+.btn-reject{background:var(--coral);color:white;padding:10px 20px;border-radius:50px;border:none;cursor:pointer;font-family:'Quicksand',sans-serif;font-weight:700;font-size:13px;}
+.btn-archive{background:var(--muted);color:white;padding:10px 20px;border-radius:50px;border:none;cursor:pointer;font-family:'Quicksand',sans-serif;font-weight:700;font-size:13px;}
+.save-btn{background:var(--lime);color:white;padding:10px 22px;border-radius:50px;border:none;cursor:pointer;font-family:'Quicksand',sans-serif;font-weight:700;font-size:13px;}
+.checklist{display:flex;flex-direction:column;gap:7px;}
+.chk{display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:var(--rs);background:white;border:2px solid var(--border);font-size:13px;font-weight:600;cursor:pointer;}
+.chk.done{background:var(--lime-soft);border-color:var(--lime);}
+.chk input{width:16px;height:16px;accent-color:var(--lime);cursor:pointer;flex-shrink:0;}
+.doc-item{display:flex;align-items:center;gap:8px;background:white;border:2px solid var(--lime);border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--forest);margin-bottom:6px;cursor:pointer;}
+.doc-item:hover{background:var(--lime-soft);}
+.note{background:var(--lime-soft);border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:600;color:var(--forest);margin-bottom:12px;border-left:4px solid var(--lime);}
+.toast{position:fixed;bottom:20px;right:16px;z-index:999;background:var(--forest);color:white;padding:12px 20px;border-radius:12px;font-weight:700;font-size:13.5px;box-shadow:var(--shadow-lg);transform:translateY(80px);opacity:0;transition:all .3s;border-left:4px solid var(--gold);}
+.toast.show{transform:translateY(0);opacity:1;}
+.spinner{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-state{text-align:center;padding:40px 20px;color:var(--muted);}
+.loading-state .licon{font-size:36px;margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-wrap" class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo"><img src="data:image/png;base64,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" alt="Feed a Friend"></div>
+    <h2>Little Learners</h2>
+    <p>Case Handler Portal — sign in to continue</p>
+    <div class="lf"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com"></div>
+    <div class="lf"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••"></div>
+    <button class="btn-forest" id="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- MAIN APP (hidden until logged in) -->
+<div id="app" style="display:none;">
+<header>
+  <div class="logo">
+    <img src="data:image/png;base64,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" alt="Feed a Friend">
+    <div class="logo-text">Feed a Friend</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <div class="nav">
+      <button class="nb on" onclick="showPg('dash',this)">Dashboard</button>
+      <button class="nb off" onclick="showPg('fams',this)">Families</button>
+    </div>
+    <button class="logout" onclick="doLogout()">Sign out</button>
+  </div>
+</header>
+
+<!-- DASHBOARD -->
+<div class="pg active" id="pg-dash">
+  <div style="height:14px;"></div>
+  <div class="stats" id="dash-stats">
+    <div class="stat"><div class="stat-num" id="s-total">—</div><div class="stat-lbl">Total Families</div></div>
+    <div class="stat gold"><div class="stat-num" id="s-children">—</div><div class="stat-lbl">Children</div></div>
+    <div class="stat"><div class="stat-num" id="s-pending">—</div><div class="stat-lbl">Pending</div></div>
+    <div class="stat dark"><div class="stat-num" id="s-accepted">—</div><div class="stat-lbl">Accepted</div></div>
+    <div class="stat coral"><div class="stat-num" id="s-rejected">—</div><div class="stat-lbl">Rejected</div></div>
+    <div class="stat gold"><div class="stat-num" id="s-dups">—</div><div class="stat-lbl">⚠️ Duplicates</div></div>
+  </div>
+  <div class="sec-title">Recent Registrations <span class="pill" id="recent-pill">0</span></div>
+  <div id="recent-list"><div class="loading-state"><div class="licon">⏳</div><p>Loading…</p></div></div>
+</div>
+
+<!-- FAMILIES -->
+<div class="pg" id="pg-fams">
+  <div style="height:14px;"></div>
+  <input class="search" id="search-input" placeholder="🔍  Search by name, URN, phone…" oninput="filterFamilies()">
+  <div class="filter-row">
+    <select class="fsel" id="filter-status" onchange="filterFamilies()">
+      <option value="">All Statuses</option>
+      <option>pending</option><option>accepted</option><option>rejected</option><option>archived</option>
+    </select>
+    <select class="fsel" id="filter-dup" onchange="filterFamilies()">
+      <option value="">All Families</option>
+      <option value="dup">Duplicates Only</option>
+    </select>
+  </div>
+  <div id="fams-list"><div class="loading-state"><div class="licon">⏳</div><p>Loading…</p></div></div>
+</div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div class="overlay" id="modal" onclick="closeBg(event)">
+<div class="modal">
+  <div class="modal-hdr">
+    <div>
+      <div class="modal-hdr-title" id="m-title">Family</div>
+      <div class="modal-hdr-sub" id="m-sub"></div>
+    </div>
+    <button class="close-btn" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="tab-bar">
+      <button class="tab on" onclick="switchTab('overview',this)">Overview</button>
+      <button class="tab" onclick="switchTab('children',this)">Children</button>
+      <button class="tab" onclick="switchTab('documents',this)">Documents</button>
+      <button class="tab" onclick="switchTab('assess',this)">Assessment</button>
+      <button class="tab" onclick="switchTab('checklist',this)">Checklist</button>
+    </div>
+    <div class="tpanel on" id="tp-overview"></div>
+    <div class="tpanel" id="tp-children"></div>
+    <div class="tpanel" id="tp-documents"></div>
+    <div class="tpanel" id="tp-assess"></div>
+    <div class="tpanel" id="tp-checklist"></div>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
+const SUPA_KEY = "sb_publishable_9RHEsJ3M0bDNwK3cEFFnUw_YxmT5C0N";
+const { createClient } = supabase;
+const db = createClient(SUPA_URL, SUPA_KEY);
+
+let allFamilies = [];
+let allChildren = [];
+let currentFamily = null;
+let currentChildren = [];
+
+// ── AUTH ──
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  btn.disabled = true; btn.innerHTML = '<div class="spinner"></div>';
+  err.style.display = 'none';
+
+  // First check if email is on the LL allowed list
+  const {data: allowed} = await db.from('ll_admins').select('email').eq('email', email.toLowerCase()).single();
+  if(!allowed) {
+    err.textContent = 'You do not have access to this portal.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.innerHTML = 'Sign In';
+    return;
+  }
+
+  const {error} = await db.auth.signInWithPassword({email, password: pass});
+  if(error) {
+    err.textContent = error.message; err.style.display = 'block';
+    btn.disabled = false; btn.innerHTML = 'Sign In';
+  } else {
+    showApp();
+  }
+}
+async function doLogout() {
+  await db.auth.signOut();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-wrap').style.display = 'flex';
+}
+async function showApp() {
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  await loadData();
+}
+db.auth.onAuthStateChange(async (event, session) => {
+  if(session) {
+    // Check if this user is allowed in LL admin
+    const {data: allowed} = await db.from('ll_admins').select('email').eq('email', session.user.email.toLowerCase()).single();
+    if(allowed) {
+      showApp();
+    } else {
+      await db.auth.signOut();
+    }
+  }
+});
+
+// ── DATA ──
+async function loadData() {
+  const {data: fams} = await db.from('ll_families').select('*').order('created_at', {ascending:false});
+  const {data: kids} = await db.from('ll_children').select('*');
+  allFamilies = fams || [];
+  allChildren = kids || [];
+  renderDash();
+  renderFams(allFamilies);
+}
+
+function detectDups() {
+  const dupIds = new Set();
+  for(let i=0;i<allFamilies.length;i++) {
+    for(let j=i+1;j<allFamilies.length;j++) {
+      const a=allFamilies[i], b=allFamilies[j];
+      const phoneMatch = (a.father_phone&&a.father_phone===b.father_phone)||(a.mother_phone&&a.mother_phone===b.mother_phone)||(a.father_phone&&a.father_phone===b.mother_phone)||(a.mother_phone&&a.mother_phone===b.father_phone);
+      const qidMatch = (a.father_qid&&a.father_qid===b.father_qid)||(a.mother_qid&&a.mother_qid===b.mother_qid);
+      if(phoneMatch||qidMatch){dupIds.add(a.id);dupIds.add(b.id);}
+    }
+  }
+  return dupIds;
+}
+
+function renderDash() {
+  const dups = detectDups();
+  document.getElementById('s-total').textContent = allFamilies.length;
+  document.getElementById('s-children').textContent = allChildren.length;
+  document.getElementById('s-pending').textContent = allFamilies.filter(f=>f.status==='pending').length;
+  document.getElementById('s-accepted').textContent = allFamilies.filter(f=>f.status==='accepted').length;
+  document.getElementById('s-rejected').textContent = allFamilies.filter(f=>f.status==='rejected').length;
+  document.getElementById('s-dups').textContent = dups.size;
+  const recent = allFamilies.slice(0,8);
+  document.getElementById('recent-pill').textContent = recent.length;
+  document.getElementById('recent-list').innerHTML = recent.length ? recent.map(f=>famCard(f,dups.has(f.id))).join('') : '<div class="empty"><div class="eicon">👨‍👩‍👧</div><p>No families yet</p></div>';
+}
+
+function renderFams(list) {
+  const dups = detectDups();
+  document.getElementById('fams-list').innerHTML = list.length ? list.map(f=>famCard(f,dups.has(f.id))).join('') : '<div class="empty"><div class="eicon">🔍</div><p>No families found</p></div>';
+}
+
+function famCard(f, isDup) {
+  const kids = allChildren.filter(c=>c.family_id===f.id);
+  const tagMap = {pending:'pending',accepted:'accepted',rejected:'rejected',archived:'archived'};
+  const labelMap = {pending:'Pending',accepted:'Accepted',rejected:'Rejected',archived:'Archived'};
+  return `<div class="fam-card ${f.status}" onclick="openProfile('${f.id}')">
+    <div class="urn-badge">${f.urn||'—'}</div>
+    <div class="fam-info">
+      <div class="fam-name">${f.father_name||'—'}${f.mother_name?' & '+f.mother_name:''} Family</div>
+      <div class="fam-meta">📞 ${f.father_phone||f.mother_phone||'—'} · 📍 ${f.area||f.zone||'—'} · 👨‍👩‍👧 ${kids.length} child${kids.length!==1?'ren':''}</div>
+    </div>
+    ${isDup?'<span class="dup-flag">⚠️ Dup</span>':''}
+    <span class="tag ${tagMap[f.status]||'pending'}">${labelMap[f.status]||'Pending'}</span>
+  </div>`;
+}
+
+function filterFamilies() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const st = document.getElementById('filter-status').value;
+  const dupOnly = document.getElementById('filter-dup').value==='dup';
+  const dups = detectDups();
+  const list = allFamilies.filter(f => {
+    const text = (f.father_name+' '+f.mother_name+' '+(f.urn||'')+' '+(f.father_phone||'')+' '+(f.mother_phone||'')).toLowerCase();
+    return (!q||text.includes(q)) && (!st||f.status===st) && (!dupOnly||dups.has(f.id));
+  });
+  renderFams(list);
+}
+
+// ── PROFILE ──
+async function openProfile(id) {
+  currentFamily = allFamilies.find(f=>f.id===id);
+  if(!currentFamily) return;
+  currentChildren = allChildren.filter(c=>c.family_id===id);
+  const f = currentFamily;
+  document.getElementById('m-title').innerHTML = `${f.father_name||'Family'}${f.mother_name?' & '+f.mother_name:''} <span style="background:var(--gold);color:var(--forest);font-size:11px;padding:2px 8px;border-radius:50px;margin-left:6px;">${f.urn}</span>`;
+  document.getElementById('m-sub').textContent = new Date(f.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) + ' · ' + (f.status||'pending');
+  renderOverview(f);
+  renderChildrenTab(currentChildren, f);
+  await renderDocuments(f);
+  renderAssessment(f, currentChildren);
+  renderChecklist(f);
+  switchTab('overview', document.querySelector('.tab'));
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function renderOverview(f) {
+  document.getElementById('tp-overview').innerHTML = `
+    <div class="info-sec">
+      <h3>Father / Guardian 1</h3>
+      <div class="info-grid">
+        <div class="irow"><div class="ikey">Name</div><div class="ival">${f.father_name||'—'}</div></div>
+        <div class="irow"><div class="ikey">Phone</div><div class="ival">${f.father_phone||'—'}</div></div>
+        <div class="irow"><div class="ikey">Nationality</div><div class="ival">${f.father_nationality||'—'}</div></div>
+        <div class="irow"><div class="ikey">Native Tongue</div><div class="ival">${f.father_native_lang||'—'}</div></div>
+        <div class="irow"><div class="ikey">English</div><div class="ival">${f.father_english||'—'}</div></div>
+        <div class="irow"><div class="ikey">Arabic</div><div class="ival">${f.father_arabic||'—'}</div></div>
+        <div class="irow"><div class="ikey">Employment</div><div class="ival">${f.father_employment||'—'}</div></div>
+        <div class="irow"><div class="ikey">Salary</div><div class="ival">QAR ${(f.father_salary||0).toLocaleString()}</div></div>
+      </div>
+      ${f.father_qid?`<div class="qid-pill">🪪 ${f.father_qid}</div>`:''}
+
+      ${f.mother_name?`
+      <h3>Mother / Guardian 2</h3>
+      <div class="info-grid">
+        <div class="irow"><div class="ikey">Name</div><div class="ival">${f.mother_name}</div></div>
+        <div class="irow"><div class="ikey">Phone</div><div class="ival">${f.mother_phone||'—'}</div></div>
+        <div class="irow"><div class="ikey">Nationality</div><div class="ival">${f.mother_nationality||'—'}</div></div>
+        <div class="irow"><div class="ikey">Native Tongue</div><div class="ival">${f.mother_native_lang||'—'}</div></div>
+        <div class="irow"><div class="ikey">English</div><div class="ival">${f.mother_english||'—'}</div></div>
+        <div class="irow"><div class="ikey">Arabic</div><div class="ival">${f.mother_arabic||'—'}</div></div>
+        <div class="irow"><div class="ikey">Employment</div><div class="ival">${f.mother_employment||'—'}</div></div>
+        <div class="irow"><div class="ikey">Salary</div><div class="ival">QAR ${(f.mother_salary||0).toLocaleString()}</div></div>
+      </div>
+      ${f.mother_qid?`<div class="qid-pill">🪪 ${f.mother_qid}</div>`:''}
+      `:''}
+
+      <h3>Household</h3>
+      <div class="info-grid">
+        <div class="irow"><div class="ikey">Zone / Area</div><div class="ival">${f.zone?'Zone '+f.zone+' — ':''} ${f.area||'—'}</div></div>
+        <div class="irow"><div class="ikey">Monthly Rent</div><div class="ival">QAR ${(f.monthly_rent||0).toLocaleString()}</div></div>
+        <div class="irow"><div class="ikey">Total Income</div><div class="ival">QAR ${(f.total_income||0).toLocaleString()}</div></div>
+        <div class="irow"><div class="ikey">After Rent</div><div class="ival"><span class="income-badge ${(f.income_after_rent||0)<=5000?'ok':'over'}">QAR ${(f.income_after_rent||0).toLocaleString()} ${(f.income_after_rent||0)<=5000?'✅':'❌'}</span></div></div>
+        <div class="irow"><div class="ikey">Internet</div><div class="ival">${f.internet||'—'}</div></div>
+        <div class="irow"><div class="ikey">Study Desk</div><div class="ival">${f.study_desk||'—'}</div></div>
+      </div>
+      ${f.devices&&f.devices.length?`<div class="dev-chips">${f.devices.map(d=>`<span class="dev-chip">${d}</span>`).join('')}</div>`:''}
+    </div>`;
+}
+
+function suggestYearGroup(child) {
+  if(!child.dob) return {yg:'Unknown', reason:'No DOB provided'};
+  const today = new Date();
+  const dob = new Date(child.dob);
+  let age = today.getFullYear() - dob.getFullYear();
+  if(today < new Date(today.getFullYear(), dob.getMonth(), dob.getDate())) age--;
+  const map = {3:'Nursery',4:'Reception',5:'Year 1',6:'Year 2',7:'Year 3',8:'Year 4',9:'Year 5',10:'Year 6',11:'Year 6',12:'Year 6',13:'Year 6'};
+  const yg = map[age] || (age<3?'Too young':'Too old');
+  return {yg, reason:`Age ${age} based on DOB`};
+}
+
+function renderChildrenTab(children, f) {
+  if(!children.length) { document.getElementById('tp-children').innerHTML = '<div class="empty"><div class="eicon">👧</div><p>No children added</p></div>'; return; }
+  document.getElementById('tp-children').innerHTML = children.map((c,i) => {
+    const {yg, reason} = suggestYearGroup(c);
+    const finalYG = c.year_group_override || yg;
+    const gcClass = (c.gender||'').toLowerCase()==='girl'?'girl':(c.gender||'').toLowerCase()==='boy'?'boy':'';
+    return `<div class="child-row">
+      <div class="child-row-name">${c.full_name||'Child '+(i+1)} ${c.gender?`<span class="gc ${gcClass}">${c.gender}</span>`:''}</div>
+      <div class="yg-box">
+        <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Year Group</div>
+        <div class="yg-box-inner">
+          <span class="yg-val">${finalYG}</span>
+          <span class="yg-sub">${c.year_group_override?'Overridden by case handler':reason}</span>
+          <button class="override-btn" onclick="toggleOverride('yge-${c.id}',this)">✏️ Override</button>
+        </div>
+      </div>
+      <div class="yg-edit" id="yge-${c.id}">
+        <label>Override Year Group</label>
+        <select id="ygs-${c.id}">
+          <option>Nursery</option><option>Reception</option><option>Year 1</option><option>Year 2</option><option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option>
+        </select>
+        <label>Justification (required)</label>
+        <textarea id="ygj-${c.id}" placeholder="e.g. Child appears to be working at Year 3 level based on assessment call…">${c.year_group_justification||''}</textarea>
+        <button class="save-btn" onclick="saveOverride('${c.id}')">Save Override</button>
+      </div>
+      <div class="info-grid" style="margin-top:8px;">
+        <div class="irow"><div class="ikey">URN</div><div class="ival">${c.urn||f.urn+'.'+(i+1)}</div></div>
+        <div class="irow"><div class="ikey">Date of Birth</div><div class="ival">${c.dob||'—'}</div></div>
+        <div class="irow"><div class="ikey">Nationality</div><div class="ival">${c.nationality||'—'}</div></div>
+        <div class="irow"><div class="ikey">Language at Home</div><div class="ival">${c.lang_home||'—'}</div></div>
+        <div class="irow"><div class="ikey">English</div><div class="ival">${c.english_fluency||'—'}</div></div>
+        <div class="irow"><div class="ikey">Arabic</div><div class="ival">${c.arabic_fluency||'—'}</div></div>
+        <div class="irow"><div class="ikey">School Status</div><div class="ival">${c.school_status||'—'}</div></div>
+        <div class="irow"><div class="ikey">Years Since School</div><div class="ival">${c.years_since_school||'—'}</div></div>
+        <div class="irow"><div class="ikey">Special Needs</div><div class="ival">${c.special_needs||'—'}</div></div>
+        ${c.special_needs_detail?`<div class="irow" style="grid-column:span 2"><div class="ikey">SN Detail</div><div class="ival">${c.special_needs_detail}</div></div>`:''}
+      </div>
+      ${c.qid?`<div class="qid-pill" style="margin-top:8px;">🪪 ${c.qid}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function toggleOverride(id, btn) {
+  const panel = document.getElementById(id);
+  panel.classList.toggle('open');
+  btn.textContent = panel.classList.contains('open') ? '✕ Cancel' : '✏️ Override';
+}
+
+async function saveOverride(childId) {
+  const yg = document.getElementById('ygs-'+childId).value;
+  const just = document.getElementById('ygj-'+childId).value.trim();
+  if(!just) { showToast('Please add a justification'); return; }
+  const {error} = await db.from('ll_children').update({year_group_override:yg, year_group_justification:just, final_year_group:yg}).eq('id',childId);
+  if(error) { showToast('Error saving: '+error.message); return; }
+  const idx = allChildren.findIndex(c=>c.id===childId);
+  if(idx>=0) { allChildren[idx].year_group_override=yg; allChildren[idx].year_group_justification=just; }
+  currentChildren = allChildren.filter(c=>c.family_id===currentFamily.id);
+  renderChildrenTab(currentChildren, currentFamily);
+  showToast('✅ Year group updated to '+yg);
+}
+
+async function renderDocuments(f) {
+  const {data:docs} = await db.from('ll_documents').select('*').eq('family_id',f.id);
+  let html = '';
+  if(docs&&docs.length) {
+    for(const d of docs) {
+      html += `<div class="doc-item" onclick="viewDoc('${d.file_path}')">📄 ${d.file_name} <span style="margin-left:auto;font-size:11px;color:var(--muted);">tap to view</span></div>`;
+    }
+  }
+  // Also show QIDs from the form
+  if(f.father_qid) html = `<div class="doc-item">🪪 Father QID — ${f.father_qid}</div>` + html;
+  if(f.mother_qid) html = `<div class="doc-item">🪪 Mother QID — ${f.mother_qid}</div>` + html;
+  currentChildren.forEach(c => { if(c.qid) html += `<div class="doc-item">🪪 ${c.full_name||'Child'} — ${c.qid}</div>`; });
+  if(!html) html = '<p style="color:var(--muted);font-size:13.5px;font-weight:600;">No documents uploaded yet.</p>';
+  document.getElementById('tp-documents').innerHTML = html;
+}
+
+async function viewDoc(path) {
+  const {data} = await db.storage.from('ll-documents').createSignedUrl(path, 60);
+  if(data?.signedUrl) window.open(data.signedUrl, '_blank');
+}
+
+function renderAssessment(f, children) {
+  const iar = f.income_after_rent||0;
+  const hasKids = children.length>0;
+  const notFullTime = children.some(c=>c.school_status&&c.school_status!=='Enrolled full-time');
+  const assessed = !!f.assessor;
+  document.getElementById('tp-assess').innerHTML = `
+    <div class="note">✏️ Fill this in after the video call with the family.</div>
+    <div class="criteria-list">
+      <div class="crit"><div class="cdot ${hasKids?'pass':'fail'}">${hasKids?'✓':'✗'}</div>Child registered in Qatar</div>
+      <div class="crit"><div class="cdot ${iar<=5000&&iar>=0?'pass':'fail'}">${iar<=5000&&iar>=0?'✓':'✗'}</div>Income after rent: QAR ${iar.toLocaleString()} (limit QAR 5,000)</div>
+      <div class="crit"><div class="cdot ${notFullTime?'pass':'warn'}">${notFullTime?'✓':'!'}</div>Child not in full-time school</div>
+      <div class="crit"><div class="cdot ${assessed?'pass':'fail'}">${assessed?'✓':'✗'}</div>Assessment ${assessed?'completed by '+f.assessor:'not yet completed'}</div>
+    </div>
+    <div class="af">
+      <div><label>Method</label><select id="a-method"><option value="">Select…</option><option ${f.assess_method==='Video Call'?'selected':''}>Video Call</option><option ${f.assess_method==='Phone Call'?'selected':''}>Phone Call</option><option ${f.assess_method==='In-person'?'selected':''}>In-person</option></select></div>
+      <div><label>Date</label><input type="date" id="a-date" value="${f.assess_date||''}"></div>
+      <div><label>Your Name</label><input id="a-assessor" placeholder="Case handler name" value="${f.assessor||''}"></div>
+      <div><label>English Confirmed</label><select id="a-english"><option value="">Select…</option><option ${f.english_confirmed==='Fluent'?'selected':''}>Fluent</option><option ${f.english_confirmed==='Good'?'selected':''}>Good</option><option ${f.english_confirmed==='Basic'?'selected':''}>Basic</option><option ${f.english_confirmed==='None'?'selected':''}>None</option></select></div>
+      <div><label>Learning Difficulties</label><select id="a-ld"><option value="">Select…</option><option ${f.learning_difficulties==='No'?'selected':''}>No</option><option ${f.learning_difficulties==='Yes – manageable'?'selected':''}>Yes – manageable</option><option ${f.learning_difficulties==='Yes – severe'?'selected':''}>Yes – severe</option></select></div>
+      <div><label>Assessment Notes</label><textarea id="a-notes" placeholder="Observations about the family, child's level, home environment…">${f.assess_notes||''}</textarea></div>
+      <button class="save-btn" onclick="saveAssessment()">💾 Save Assessment</button>
+    </div>
+    <div class="decision-btns">
+      <button class="btn-accept" onclick="setStatus('accepted')">✅ Accept</button>
+      <button class="btn-reject" onclick="setStatus('rejected')">❌ Reject</button>
+      <button class="btn-archive" onclick="setStatus('archived')">🗄 Archive</button>
+    </div>`;
+}
+
+async function saveAssessment() {
+  const updates = {
+    assess_method: document.getElementById('a-method').value,
+    assess_date: document.getElementById('a-date').value,
+    assessor: document.getElementById('a-assessor').value.trim(),
+    english_confirmed: document.getElementById('a-english').value,
+    learning_difficulties: document.getElementById('a-ld').value,
+    assess_notes: document.getElementById('a-notes').value.trim(),
+  };
+  const {error} = await db.from('ll_families').update(updates).eq('id', currentFamily.id);
+  if(error) { showToast('Error: '+error.message); return; }
+  Object.assign(currentFamily, updates);
+  const idx = allFamilies.findIndex(f=>f.id===currentFamily.id);
+  if(idx>=0) Object.assign(allFamilies[idx], updates);
+  showToast('✅ Assessment saved');
+}
+
+async function setStatus(status) {
+  const {error} = await db.from('ll_families').update({status}).eq('id', currentFamily.id);
+  if(error) { showToast('Error: '+error.message); return; }
+  currentFamily.status = status;
+  const idx = allFamilies.findIndex(f=>f.id===currentFamily.id);
+  if(idx>=0) allFamilies[idx].status = status;
+  document.getElementById('m-sub').textContent = document.getElementById('m-sub').textContent.replace(/\w+$/, status);
+  renderDash();
+  filterFamilies();
+  showToast('✅ Status updated to ' + status);
+}
+
+const CHECKLIST_ITEMS = [
+  'Pre-call message sent to family',
+  'Google Meet call scheduled',
+  'Questionnaire completed on call',
+  'QIDs requested from family',
+  'QID documents received',
+  'Padlet link sent',
+  'FAF Jobs WhatsApp sent (if applicable)',
+  'Year groups confirmed',
+  'Status updated',
+  'Status message sent to family',
+];
+
+function renderChecklist(f) {
+  const checks = f.checklist||{};
+  document.getElementById('tp-checklist').innerHTML = `<div class="checklist">
+    ${CHECKLIST_ITEMS.map((item,i)=>`
+      <label class="chk ${checks[i]?'done':''}">
+        <input type="checkbox" ${checks[i]?'checked':''} onchange="saveCheck(${i},this.checked)">
+        ${item}
+      </label>`).join('')}
+  </div>`;
+}
+
+async function saveCheck(idx, val) {
+  const checks = currentFamily.checklist||{};
+  checks[idx] = val;
+  currentFamily.checklist = checks;
+  document.querySelector(`#tp-checklist .chk:nth-child(${idx+1})`).classList.toggle('done', val);
+  await db.from('ll_families').update({checklist: checks}).eq('id', currentFamily.id);
+}
+
+// ── MODAL ──
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.body.style.overflow='';
+}
+function closeBg(e) { if(e.target===document.getElementById('modal')) closeModal(); }
+function switchTab(t, btn) {
+  document.querySelectorAll('.tab').forEach(b=>b.className='tab');
+  document.querySelectorAll('.tpanel').forEach(p=>p.className='tpanel');
+  if(btn) btn.className='tab on'; else document.querySelector('.tab').className='tab on';
+  document.getElementById('tp-'+t).className='tpanel on';
+}
+
+// ── NAV ──
+function showPg(p, btn) {
+  document.querySelectorAll('.pg').forEach(x=>x.classList.remove('active'));
+  document.getElementById('pg-'+p).classList.add('active');
+  document.querySelectorAll('.nb').forEach(b=>b.className='nb off');
+  if(btn) btn.className='nb on';
+}
+
+// ── TOAST ──
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+</script>
+</body>
+</html>

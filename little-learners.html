@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Little Learners — Apply</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--forest:#0A3D1F;--forest-mid:#145C30;--lime:#5CB85C;--lime-soft:#EAF5EA;--gold:#F5A623;--coral:#E05252;--muted:#5A7A65;--border:#C8DFC8;--cream:#F4F9F4;--shadow:0 4px 20px rgba(10,61,31,.09);--r:14px;--rs:10px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Quicksand',sans-serif;background:var(--cream);color:var(--forest);min-height:100vh;}
+header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14px;display:flex;align-items:center;height:56px;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 14px rgba(10,61,31,.25);}
+.logo img{height:36px;width:auto;}
+.logo-text{font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:white;white-space:nowrap;}
+.pg{display:none;padding:16px 14px;max-width:600px;margin:0 auto;}.pg.active{display:block;}
+.step-bar{display:flex;align-items:center;margin-bottom:18px;}
+.step{display:flex;flex-direction:column;align-items:center;flex:1;}
+.step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;font-family:'Nunito',sans-serif;}
+.step-dot.done{background:var(--lime);color:white;}
+.step-dot.active{background:var(--forest);color:var(--gold);border:2px solid var(--gold);}
+.step-dot.todo{background:var(--border);color:var(--muted);}
+.step-label{font-size:9.5px;font-weight:700;color:var(--muted);margin-top:3px;text-align:center;}
+.step-line{flex:1;height:2px;background:var(--border);margin-bottom:16px;}
+.step-line.done{background:var(--lime);}
+.hero{background:var(--forest);border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:center;color:white;}
+.hero h1{font-family:'Nunito',sans-serif;font-weight:900;font-size:21px;}
+.hero p{font-size:13px;opacity:.8;margin-top:5px;line-height:1.5;}
+.card{background:white;border-radius:var(--r);padding:18px;box-shadow:var(--shadow);margin-bottom:14px;}
+.card-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:14.5px;color:var(--forest);margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+.fg{display:flex;flex-direction:column;gap:3px;margin-bottom:11px;}
+.fg:last-child{margin-bottom:0;}
+.fg label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 13px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:13.5px;font-weight:500;outline:none;transition:border-color .2s;background:white;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--lime);}
+.fg textarea{resize:vertical;min-height:64px;}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px;}
+.fg-row .fg{margin-bottom:0;}
+.fluency-row{display:flex;gap:5px;margin-top:3px;}
+.fl{flex:1;padding:7px 4px;border-radius:8px;border:2px solid var(--border);text-align:center;cursor:pointer;font-size:11.5px;font-weight:700;transition:all .2s;color:var(--muted);background:white;}
+.fl.sel{border-color:var(--lime);background:var(--lime-soft);color:var(--forest);}
+.device-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px;}
+.dev{padding:10px;border-radius:var(--rs);border:2px solid var(--border);cursor:pointer;font-size:12.5px;font-weight:700;text-align:center;transition:all .2s;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;}
+.dev.sel{border-color:var(--lime);background:var(--lime-soft);color:var(--forest);}
+.dev .dicon{font-size:20px;}
+.child-block{background:var(--cream);border-radius:var(--rs);border:2px solid var(--border);padding:14px;margin-bottom:10px;}
+.child-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.child-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:13.5px;color:var(--forest);}
+.rm-btn{background:transparent;border:2px solid var(--border);color:var(--muted);border-radius:50px;padding:4px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:'Quicksand',sans-serif;}
+.rm-btn:hover{border-color:var(--coral);color:var(--coral);}
+.add-child{width:100%;padding:11px;border-radius:var(--rs);border:2.5px dashed var(--border);background:transparent;color:var(--muted);font-family:'Quicksand',sans-serif;font-weight:700;font-size:13.5px;cursor:pointer;transition:all .2s;margin-top:4px;}
+.add-child:hover{border-color:var(--lime);color:var(--forest);background:var(--lime-soft);}
+.upload-zone{border:2.5px dashed var(--border);border-radius:var(--rs);padding:18px;text-align:center;cursor:pointer;transition:all .2s;background:var(--cream);margin-bottom:10px;position:relative;}
+.upload-zone:hover{border-color:var(--lime);background:var(--lime-soft);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-zone .uicon{font-size:26px;margin-bottom:4px;}
+.upload-zone p{font-size:12.5px;color:var(--muted);font-weight:600;}
+.upload-zone small{font-size:11px;color:var(--muted);}
+.uploaded-file{display:flex;align-items:center;gap:8px;background:white;border:2px solid var(--lime);border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--forest);margin-bottom:6px;}
+.income-box{background:var(--lime-soft);border-radius:var(--rs);padding:12px;border:2px solid var(--border);margin-top:8px;}
+.income-result{font-family:'Nunito',sans-serif;font-weight:900;font-size:20px;color:var(--forest);margin-top:5px;}
+.income-result.fail{color:var(--coral);}
+.btn-gold{background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:13px 24px;width:100%;font-family:'Quicksand',sans-serif;font-weight:800;font-size:14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-gold:hover{background:#e09510;}
+.btn-gold:disabled{background:#ccc;cursor:not-allowed;}
+.btn-outline{background:transparent;border:2px solid var(--border);color:var(--muted);border-radius:50px;padding:11px 20px;font-family:'Quicksand',sans-serif;font-weight:700;font-size:13.5px;cursor:pointer;transition:all .2s;flex:1;}
+.btn-outline:hover{border-color:var(--lime);color:var(--forest);}
+.btn-row{display:flex;gap:10px;}
+.note{background:var(--lime-soft);border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:600;color:var(--forest);margin-bottom:12px;border-left:4px solid var(--lime);}
+.warn{background:#FEF3D6;border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:600;color:#7A5000;margin-bottom:12px;border-left:4px solid var(--gold);}
+.success-pg{text-align:center;padding:40px 20px;}
+.success-pg .sicon{font-size:64px;margin-bottom:14px;}
+.success-pg h2{font-family:'Nunito',sans-serif;font-weight:900;font-size:24px;color:var(--forest);}
+.success-pg p{font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.6;}
+.urn-box{background:var(--forest);color:var(--gold);font-family:'Nunito',sans-serif;font-weight:900;font-size:26px;padding:12px 28px;border-radius:12px;display:inline-block;margin:14px 0;letter-spacing:1px;}
+.spinner{display:inline-block;width:18px;height:18px;border:3px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-msg{background:#FDEAEA;border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:600;color:#8B2020;margin-top:10px;border-left:4px solid var(--coral);display:none;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo" style="display:flex;align-items:center;gap:9px;">
+    <img src="data:image/png;base64,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" alt="Feed a Friend">
+    <div class="logo-text">Feed a Friend</div>
+  </div>
+</header>
+
+<!-- STEP 1: PARENTS -->
+<div class="pg active" id="s1">
+<div style="padding:14px 0 4px;">
+  <div class="step-bar">
+    <div class="step"><div class="step-dot active">1</div><div class="step-label">Parents</div></div>
+    <div class="step-line"></div>
+    <div class="step"><div class="step-dot todo">2</div><div class="step-label">Children</div></div>
+    <div class="step-line"></div>
+    <div class="step"><div class="step-dot todo">3</div><div class="step-label">Household</div></div>
+    <div class="step-line"></div>
+    <div class="step"><div class="step-dot todo">4</div><div class="step-label">Docs</div></div>
+  </div>
+</div>
+<div class="hero"><h1>📚 Little Learners</h1><p>Apply for free educational support for your child.<br>Takes about 5 minutes.</p></div>
+
+<div class="card">
+  <div class="card-title">👨 Father / Guardian 1</div>
+  <div class="fg"><label>Full Name *</label><input id="f_name" placeholder="As on QID"></div>
+  <div class="fg"><label>QID Number *</label><input id="f_qid" placeholder="e.g. 28740400336"></div>
+  <div class="fg-row">
+    <div class="fg"><label>Nationality *</label><input id="f_nat" placeholder="e.g. Kenyan"></div>
+    <div class="fg"><label>Contact Number *</label><input id="f_phone" placeholder="77112704"></div>
+  </div>
+  <div class="fg"><label>Native Language / Mother Tongue</label><input id="f_lang" placeholder="e.g. Swahili, Amharic…"></div>
+  <div class="fg"><label>English Fluency</label>
+    <div class="fluency-row" id="f_eng">
+      <div class="fl" onclick="flSel(this,'f_eng')">None</div>
+      <div class="fl" onclick="flSel(this,'f_eng')">Basic</div>
+      <div class="fl" onclick="flSel(this,'f_eng')">Good</div>
+      <div class="fl" onclick="flSel(this,'f_eng')">Fluent</div>
+    </div>
+  </div>
+  <div class="fg"><label>Arabic Fluency</label>
+    <div class="fluency-row" id="f_ara">
+      <div class="fl" onclick="flSel(this,'f_ara')">None</div>
+      <div class="fl" onclick="flSel(this,'f_ara')">Basic</div>
+      <div class="fl" onclick="flSel(this,'f_ara')">Good</div>
+      <div class="fl" onclick="flSel(this,'f_ara')">Fluent</div>
+    </div>
+  </div>
+  <div class="fg-row">
+    <div class="fg"><label>Employment</label>
+      <select id="f_emp"><option value="">Select…</option><option>Employed</option><option>Self-employed</option><option>Unemployed</option></select>
+    </div>
+    <div class="fg"><label>Monthly Salary (QAR)</label><input id="f_salary" type="number" placeholder="0" min="0"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">👩 Mother / Guardian 2</div>
+  <div class="fg"><label>Full Name</label><input id="m_name" placeholder="As on QID"></div>
+  <div class="fg"><label>QID Number</label><input id="m_qid" placeholder="e.g. 29040403157"></div>
+  <div class="fg-row">
+    <div class="fg"><label>Nationality</label><input id="m_nat" placeholder="e.g. Kenyan"></div>
+    <div class="fg"><label>Contact Number</label><input id="m_phone" placeholder="71991048"></div>
+  </div>
+  <div class="fg"><label>Native Language / Mother Tongue</label><input id="m_lang" placeholder="e.g. Swahili…"></div>
+  <div class="fg"><label>English Fluency</label>
+    <div class="fluency-row" id="m_eng">
+      <div class="fl" onclick="flSel(this,'m_eng')">None</div>
+      <div class="fl" onclick="flSel(this,'m_eng')">Basic</div>
+      <div class="fl" onclick="flSel(this,'m_eng')">Good</div>
+      <div class="fl" onclick="flSel(this,'m_eng')">Fluent</div>
+    </div>
+  </div>
+  <div class="fg"><label>Arabic Fluency</label>
+    <div class="fluency-row" id="m_ara">
+      <div class="fl" onclick="flSel(this,'m_ara')">None</div>
+      <div class="fl" onclick="flSel(this,'m_ara')">Basic</div>
+      <div class="fl" onclick="flSel(this,'m_ara')">Good</div>
+      <div class="fl" onclick="flSel(this,'m_ara')">Fluent</div>
+    </div>
+  </div>
+  <div class="fg-row">
+    <div class="fg"><label>Employment</label>
+      <select id="m_emp"><option value="">Select…</option><option>Employed</option><option>Self-employed</option><option>Unemployed</option></select>
+    </div>
+    <div class="fg"><label>Monthly Salary (QAR)</label><input id="m_salary" type="number" placeholder="0" min="0"></div>
+  </div>
+  <div class="fg"><label>Pregnant?</label>
+    <select id="m_preg"><option value="">Select…</option><option>No</option><option>Yes</option></select>
+  </div>
+</div>
+<div id="err1" class="error-msg"></div>
+<button class="btn-gold" onclick="goStep(2)">Next: Children →</button>
+</div>
+
+<!-- STEP 2: CHILDREN -->
+<div class="pg" id="s2">
+<div style="padding:14px 0 4px;">
+  <div class="step-bar">
+    <div class="step"><div class="step-dot done">✓</div><div class="step-label">Parents</div></div>
+    <div class="step-line done"></div>
+    <div class="step"><div class="step-dot active">2</div><div class="step-label">Children</div></div>
+    <div class="step-line"></div>
+    <div class="step"><div class="step-dot todo">3</div><div class="step-label">Household</div></div>
+    <div class="step-line"></div>
+    <div class="step"><div class="step-dot todo">4</div><div class="step-label">Docs</div></div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-title">👦👧 Children (ages 3–13)</div>
+  <div id="children-container"></div>
+  <button class="add-child" onclick="addChild()">➕ Add another child</button>
+</div>
+<div id="err2" class="error-msg"></div>
+<div class="btn-row">
+  <button class="btn-outline" onclick="goStep(1)">← Back</button>
+  <button class="btn-gold" style="flex:2;" onclick="goStep(3)">Next: Household →</button>
+</div>
+</div>
+
+<!-- STEP 3: HOUSEHOLD -->
+<div class="pg" id="s3">
+<div style="padding:14px 0 4px;">
+  <div class="step-bar">
+    <div class="step"><div class="step-dot done">✓</div><div class="step-label">Parents</div></div>
+    <div class="step-line done"></div>
+    <div class="step"><div class="step-dot done">✓</div><div class="step-label">Children</div></div>
+    <div class="step-line done"></div>
+    <div class="step"><div class="step-dot active">3</div><div class="step-label">Household</div></div>
+    <div class="step-line"></div>
+    <div class="step"><div class="step-dot todo">4</div><div class="step-label">Docs</div></div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-title">🏠 Location & Finances</div>
+  <div class="fg-row">
+    <div class="fg"><label>Zone Number</label><input id="zone" placeholder="e.g. 25" oninput="fillZone(this.value)"></div>
+    <div class="fg"><label>Area</label><input id="zone_area" placeholder="Auto-filled" readonly style="background:#f8f8f8;"></div>
+  </div>
+  <div class="fg-row">
+    <div class="fg"><label>Monthly Rent (QAR)</label><input id="rent" type="number" placeholder="0" oninput="calcInc()"></div>
+    <div class="fg"><label>Total Monthly Income (QAR)</label><input id="income" type="number" placeholder="0" oninput="calcInc()"></div>
+  </div>
+  <div class="income-box">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Income after rent</div>
+    <div class="income-result" id="inc_result">Enter income + rent above</div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-title">💻 Devices at Home</div>
+  <p style="font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.5;">Select all devices the family has access to:</p>
+  <div class="device-grid" id="devices">
+    <div class="dev" onclick="this.classList.toggle('sel')"><div class="dicon">📱</div>Smartphone</div>
+    <div class="dev" onclick="this.classList.toggle('sel')"><div class="dicon">💻</div>Laptop</div>
+    <div class="dev" onclick="this.classList.toggle('sel')"><div class="dicon">🖥️</div>Desktop PC</div>
+    <div class="dev" onclick="this.classList.toggle('sel')"><div class="dicon">📟</div>Tablet / iPad</div>
+  </div>
+  <div class="fg" style="margin-top:12px;"><label>Internet Access?</label>
+    <select id="internet"><option value="">Select…</option><option>Yes — broadband/WiFi</option><option>Yes — mobile data only</option><option>No</option></select>
+  </div>
+  <div class="fg"><label>Study desk or table?</label>
+    <select id="desk"><option value="">Select…</option><option>Yes</option><option>No</option></select>
+  </div>
+</div>
+<div id="err3" class="error-msg"></div>
+<div class="btn-row">
+  <button class="btn-outline" onclick="goStep(2)">← Back</button>
+  <button class="btn-gold" style="flex:2;" onclick="goStep(4)">Next: Documents →</button>
+</div>
+</div>
+
+<!-- STEP 4: DOCUMENTS -->
+<div class="pg" id="s4">
+<div style="padding:14px 0 4px;">
+  <div class="step-bar">
+    <div class="step"><div class="step-dot done">✓</div><div class="step-label">Parents</div></div>
+    <div class="step-line done"></div>
+    <div class="step"><div class="step-dot done">✓</div><div class="step-label">Children</div></div>
+    <div class="step-line done"></div>
+    <div class="step"><div class="step-dot done">✓</div><div class="step-label">Household</div></div>
+    <div class="step-line done"></div>
+    <div class="step"><div class="step-dot active">4</div><div class="step-label">Docs</div></div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-title">🪪 Upload ID Documents</div>
+  <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">Upload a clear photo or scan for each person. Birth certificates accepted for children.</p>
+  <div id="upload-zones"></div>
+</div>
+<div class="warn">⚠️ Applications without documents within 3 days may be archived.</div>
+<div id="err4" class="error-msg"></div>
+<div class="btn-row">
+  <button class="btn-outline" onclick="goStep(3)">← Back</button>
+  <button class="btn-gold" id="submit-btn" style="flex:2;" onclick="submitForm()">✅ Submit Application</button>
+</div>
+</div>
+
+<!-- SUCCESS -->
+<div class="pg" id="s-success">
+<div class="success-pg">
+  <div class="sicon">🎉</div>
+  <h2>Application Submitted!</h2>
+  <p>Thank you for applying to Little Learners.<br>Your reference number is:</p>
+  <div class="urn-box" id="success-urn">LL---</div>
+  <p>A case handler will contact you within a few days to arrange a short video call.</p>
+  <div class="note" style="margin-top:18px;text-align:left;">📚 While you wait — your case handler will send you our free resource library link on Padlet.</div>
+</div>
+</div>
+
+<script>
+const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
+const SUPA_KEY = "sb_publishable_9RHEsJ3M0bDNwK3cEFFnUw_YxmT5C0N";
+const { createClient } = supabase;
+const db = createClient(SUPA_URL, SUPA_KEY);
+
+const ZONES = {"1":"Rawdat Al Khail","2":"Al Rumaila","3":"Al Dafna","4":"Al Qassar","5":"Fereej Al Nasr","6":"Al Sadd","7":"Al Mansoura","8":"Bin Mahmoud","9":"Doha Al Jadeed","10":"Old Airport","11":"Al Muntazah","12":"Al Hilal","13":"Al Matar Al Qadim","14":"Fereej Kulaib","15":"Al Thumama","16":"Al Aziziyah","17":"Al Wajba","18":"Al Rayyan","19":"Muaither","20":"Al Gharrafa","21":"Ain Khalid","22":"Al Wakra","23":"Mesaieed","24":"Al Khor","25":"Al Hilal","26":"Um Ghuwailina","27":"Al Nasr","28":"Al Duhail","29":"Bu Hamour","30":"Lusail"};
+
+let childCount = 0;
+let uploadedFiles = {};
+
+function flSel(el, group) {
+  document.getElementById(group).querySelectorAll('.fl').forEach(f => f.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function flGet(group) {
+  const sel = document.getElementById(group)?.querySelector('.fl.sel');
+  return sel ? sel.textContent : '';
+}
+
+function fillZone(v) {
+  document.getElementById('zone_area').value = ZONES[v.trim()] || '';
+}
+function calcInc() {
+  const inc = parseFloat(document.getElementById('income').value)||0;
+  const rent = parseFloat(document.getElementById('rent').value)||0;
+  if(!inc) return;
+  const after = inc - rent;
+  const el = document.getElementById('inc_result');
+  el.textContent = 'QAR ' + after.toLocaleString() + ' ' + (after<=5000 ? '✅ Eligible' : '❌ Over QAR 5,000 limit');
+  el.className = 'income-result' + (after>5000 ? ' fail' : '');
+}
+
+function goStep(n) {
+  // basic validation
+  if(n===2) {
+    const name = document.getElementById('f_name').value.trim();
+    const phone = document.getElementById('f_phone').value.trim();
+    if(!name || !phone) { showErr('err1','Please enter the father/guardian name and contact number.'); return; }
+  }
+  if(n===3) {
+    const blocks = document.querySelectorAll('.child-block');
+    if(blocks.length===0) { showErr('err2','Please add at least one child.'); return; }
+    let ok = true;
+    blocks.forEach(b => { if(!b.querySelector('.cname').value.trim()) ok = false; });
+    if(!ok) { showErr('err2','Please enter a name for each child.'); return; }
+  }
+  hideErr('err1'); hideErr('err2'); hideErr('err3');
+  document.querySelectorAll('.pg').forEach(p => p.classList.remove('active'));
+  document.getElementById('s'+n).classList.add('active');
+  // build upload zones for step 4
+  if(n===4) buildUploadZones();
+  window.scrollTo(0,0);
+}
+
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display = 'block';
+}
+function hideErr(id) { document.getElementById(id).style.display='none'; }
+
+function addChild() {
+  childCount++;
+  const idx = childCount;
+  const div = document.createElement('div');
+  div.className = 'child-block'; div.id = 'cb-'+idx;
+  div.innerHTML = `
+    <div class="child-hdr">
+      <div class="child-title">👦 Child ${idx}</div>
+      ${idx>1 ? '<button class="rm-btn" onclick="removeChild('+idx+')">✕ Remove</button>' : ''}
+    </div>
+    <div class="fg"><label>Full Name *</label><input class="cname" placeholder="As on ID"></div>
+    <div class="fg-row">
+      <div class="fg"><label>Date of Birth</label><input class="cdob" type="date"></div>
+      <div class="fg"><label>Gender</label><select class="cgender"><option value="">Select…</option><option>Girl</option><option>Boy</option></select></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>QID / Passport No.</label><input class="cqid" placeholder="e.g. C053961"></div>
+      <div class="fg"><label>Nationality</label><input class="cnat" placeholder="e.g. Kenyan"></div>
+    </div>
+    <div class="fg"><label>Language(s) spoken at home</label><input class="clang" placeholder="e.g. Swahili, English"></div>
+    <div class="fg"><label>English Fluency</label>
+      <div class="fluency-row" id="cef${idx}">
+        <div class="fl" onclick="flSel(this,'cef${idx}')">None</div>
+        <div class="fl" onclick="flSel(this,'cef${idx}')">Basic</div>
+        <div class="fl" onclick="flSel(this,'cef${idx}')">Good</div>
+        <div class="fl" onclick="flSel(this,'cef${idx}')">Fluent</div>
+      </div>
+    </div>
+    <div class="fg"><label>Arabic Fluency</label>
+      <div class="fluency-row" id="caf${idx}">
+        <div class="fl" onclick="flSel(this,'caf${idx}')">None</div>
+        <div class="fl" onclick="flSel(this,'caf${idx}')">Basic</div>
+        <div class="fl" onclick="flSel(this,'caf${idx}')">Good</div>
+        <div class="fl" onclick="flSel(this,'caf${idx}')">Fluent</div>
+      </div>
+    </div>
+    <div class="fg"><label>Current School Status</label>
+      <select class="cschool"><option value="">Select…</option><option>Never attended school</option><option>Previously attended — left</option><option>On waiting list</option><option>Online school only</option><option>Part-time (≤2.5 days/week)</option><option>Enrolled full-time</option></select>
+    </div>
+    <div class="fg"><label>If previously attended — how many years ago did they leave?</label>
+      <select class="cyears"><option value="">Select…</option><option>Never attended</option><option>Less than 1 year ago</option><option>1–2 years ago</option><option>2–3 years ago</option><option>3–4 years ago</option><option>4+ years ago</option></select>
+    </div>
+    <div class="fg"><label>Any known special needs or learning difficulties?</label>
+      <select class="csn" onchange="toggleSNDetail(this,${idx})"><option value="">Select…</option><option>No</option><option>Yes — please describe below</option></select>
+    </div>
+    <div class="fg" id="snd-${idx}" style="display:none;"><label>Special needs details</label>
+      <textarea class="csnd" placeholder="e.g. Dyslexia suspected, speech delay, ADHD…"></textarea>
+    </div>`;
+  document.getElementById('children-container').appendChild(div);
+}
+
+function removeChild(idx) {
+  document.getElementById('cb-'+idx)?.remove();
+}
+function toggleSNDetail(sel, idx) {
+  document.getElementById('snd-'+idx).style.display = sel.value.startsWith('Yes') ? 'block' : 'none';
+}
+
+function buildUploadZones() {
+  const zones = document.getElementById('upload-zones');
+  zones.innerHTML = '';
+  const people = [
+    {key:'father', label:"Father's QID or Passport"},
+    {key:'mother', label:"Mother's QID or Passport"},
+  ];
+  document.querySelectorAll('.child-block').forEach((b,i) => {
+    const name = b.querySelector('.cname').value.trim() || 'Child '+(i+1);
+    people.push({key:'child_'+(i+1), label: name + "'s QID, Passport or Birth Certificate"});
+  });
+  people.forEach(p => {
+    if(uploadedFiles[p.key]) {
+      zones.innerHTML += `<div class="uploaded-file">✅ ${p.label} — uploaded</div>`;
+    } else {
+      zones.innerHTML += `
+        <div class="upload-zone" id="uz-${p.key}">
+          <input type="file" accept="image/*,.pdf" onchange="handleFile(event,'${p.key}','${p.label}')">
+          <div class="uicon">📎</div>
+          <p>${p.label}</p><small>JPG, PNG or PDF</small>
+        </div>`;
+    }
+  });
+}
+
+function handleFile(e, key, label) {
+  const file = e.target.files[0];
+  if(!file) return;
+  uploadedFiles[key] = {file, label};
+  buildUploadZones();
+}
+
+function getChildrenData() {
+  const children = [];
+  document.querySelectorAll('.child-block').forEach((b,i) => {
+    children.push({
+      full_name: b.querySelector('.cname').value.trim(),
+      dob: b.querySelector('.cdob').value,
+      gender: b.querySelector('.cgender').value,
+      qid: b.querySelector('.cqid').value.trim(),
+      nationality: b.querySelector('.cnat').value.trim(),
+      lang_home: b.querySelector('.clang').value.trim(),
+      english_fluency: flGet('cef'+(i+1)),
+      arabic_fluency: flGet('caf'+(i+1)),
+      school_status: b.querySelector('.cschool').value,
+      years_since_school: b.querySelector('.cyears').value,
+      special_needs: b.querySelector('.csn').value,
+      special_needs_detail: b.querySelector('.csnd')?.value || '',
+    });
+  });
+  return children;
+}
+
+async function submitForm() {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Submitting…';
+
+  try {
+    const income = parseFloat(document.getElementById('income').value)||0;
+    const rent = parseFloat(document.getElementById('rent').value)||0;
+    const devices = [...document.querySelectorAll('#devices .dev.sel')].map(d => d.querySelector('.dicon').nextSibling.textContent.trim());
+
+    // Count existing families to generate URN
+    const {count} = await db.from('ll_families').select('*', {count:'exact', head:true});
+    const urn = 'LL' + String((count||0)+1).padStart(3,'0');
+
+    const familyData = {
+      urn,
+      father_name: document.getElementById('f_name').value.trim(),
+      father_qid: document.getElementById('f_qid').value.trim(),
+      father_nationality: document.getElementById('f_nat').value.trim(),
+      father_phone: document.getElementById('f_phone').value.trim(),
+      father_native_lang: document.getElementById('f_lang').value.trim(),
+      father_english: flGet('f_eng'),
+      father_arabic: flGet('f_ara'),
+      father_employment: document.getElementById('f_emp').value,
+      father_salary: parseFloat(document.getElementById('f_salary').value)||0,
+      mother_name: document.getElementById('m_name').value.trim(),
+      mother_qid: document.getElementById('m_qid').value.trim(),
+      mother_nationality: document.getElementById('m_nat').value.trim(),
+      mother_phone: document.getElementById('m_phone').value.trim(),
+      mother_native_lang: document.getElementById('m_lang').value.trim(),
+      mother_english: flGet('m_eng'),
+      mother_arabic: flGet('m_ara'),
+      mother_employment: document.getElementById('m_emp').value,
+      mother_salary: parseFloat(document.getElementById('m_salary').value)||0,
+      mother_pregnant: document.getElementById('m_preg').value,
+      zone: document.getElementById('zone').value.trim(),
+      area: document.getElementById('zone_area').value.trim(),
+      monthly_rent: rent,
+      total_income: income,
+      income_after_rent: income - rent,
+      internet: document.getElementById('internet').value,
+      study_desk: document.getElementById('desk').value,
+      devices,
+      status: 'pending',
+    };
+
+    const {data: family, error: fErr} = await db.from('ll_families').insert(familyData).select().single();
+    if(fErr) throw fErr;
+
+    // Insert children
+    const children = getChildrenData();
+    for(let i=0; i<children.length; i++) {
+      children[i].family_id = family.id;
+      children[i].urn = urn + '.' + (i+1);
+      const {error: cErr} = await db.from('ll_children').insert(children[i]);
+      if(cErr) throw cErr;
+    }
+
+    // Upload documents
+    for(const [key, {file, label}] of Object.entries(uploadedFiles)) {
+      const ext = file.name.split('.').pop();
+      const path = family.id + '/' + key + '.' + ext;
+      const {error: uErr} = await db.storage.from('ll-documents').upload(path, file);
+      if(!uErr) {
+        await db.from('ll_documents').insert({
+          family_id: family.id,
+          file_name: label,
+          file_path: path,
+          doc_type: key,
+        });
+      }
+    }
+
+    document.getElementById('success-urn').textContent = urn;
+    document.querySelectorAll('.pg').forEach(p => p.classList.remove('active'));
+    document.getElementById('s-success').classList.add('active');
+    window.scrollTo(0,0);
+
+  } catch(err) {
+    console.error(err);
+    showErr('err4', 'Something went wrong: ' + (err.message||'Please try again.'));
+    btn.disabled = false;
+    btn.innerHTML = '✅ Submit Application';
+  }
+}
+
+// Init first child
+addChild();
+</script>
+</body>
+</html>
