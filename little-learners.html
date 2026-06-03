@@ -339,7 +339,6 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 </div>
 
 <script>
-window.addEventListener('DOMContentLoaded', function() {
 
 const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
@@ -529,12 +528,12 @@ function addChild() {
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px;font-weight:600;">Upload child's QID, passport or birth certificate.</p>
       <div style="margin-bottom:12px;">
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📷 Front of ID</div>
-        <input type="file" accept="image/*" class="file-input-styled" id="fi-child_${idx}-front" onchange="handleQID(event,'child_${idx}','front')">
+        <input type="file" accept="image/*" class="file-input-styled" id="fi-child_${idx}-front">
         <div id="prev-child_${idx}-front" style="margin-top:6px;display:none;"><img id="img-child_${idx}-front" style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid var(--lime);"></div>
       </div>
       <div style="margin-bottom:12px;">
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📷 Back of ID</div>
-        <input type="file" accept="image/*" class="file-input-styled" id="fi-child_${idx}-back" onchange="handleQID(event,'child_${idx}','back')">
+        <input type="file" accept="image/*" class="file-input-styled" id="fi-child_${idx}-back">
         <div id="prev-child_${idx}-back" style="margin-top:6px;display:none;"><img id="img-child_${idx}-back" style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid var(--lime);"></div>
       </div>
       <button class="scan-btn" id="scan-child_${idx}" onclick="scanQID('child_${idx}')" disabled>🤖 Scan &amp; Auto-fill</button>
@@ -582,6 +581,18 @@ function addChild() {
       </div>
     </div>`;
   document.getElementById('children-container').appendChild(div);
+
+  // Attach listeners for child file inputs
+  const frontEl = document.getElementById('fi-child_'+idx+'-front');
+  const backEl  = document.getElementById('fi-child_'+idx+'-back');
+  if(frontEl) {
+    frontEl.addEventListener('change', function() { handleQID({target:this}, 'child_'+idx, 'front'); });
+    frontEl.addEventListener('input',  function() { if(this.files&&this.files[0]) handleQID({target:this}, 'child_'+idx, 'front'); });
+  }
+  if(backEl) {
+    backEl.addEventListener('change', function() { handleQID({target:this}, 'child_'+idx, 'back'); });
+    backEl.addEventListener('input',  function() { if(this.files&&this.files[0]) handleQID({target:this}, 'child_'+idx, 'back'); });
+  }
 }
 
 function removeChild(idx) { document.getElementById('cb-'+idx)?.remove(); }
@@ -747,7 +758,31 @@ async function submitForm() {
 // Init
 addChild();
 
-}); // DOMContentLoaded
+// Attach file input listeners directly — more reliable on Android
+function attachFileListeners() {
+  const pairs = [
+    ['fi-father-front', 'father', 'front'],
+    ['fi-father-back',  'father', 'back'],
+    ['fi-mother-front', 'mother', 'front'],
+    ['fi-mother-back',  'mother', 'back'],
+  ];
+  pairs.forEach(([id, key, side]) => {
+    const el = document.getElementById(id);
+    if(el) {
+      el.addEventListener('change', function() {
+        handleQID({target: this}, key, side);
+      });
+      // Also try input event as fallback
+      el.addEventListener('input', function() {
+        if(this.files && this.files[0]) {
+          handleQID({target: this}, key, side);
+        }
+      });
+    }
+  });
+}
+attachFileListeners();
+
 </script>
 </body>
 </html>
