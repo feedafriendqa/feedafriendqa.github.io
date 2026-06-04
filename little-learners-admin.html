@@ -47,18 +47,18 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 14
 .logout:hover{background:var(--coral);color:white;}
 
 /* PAGES */
-.pg{display:none;padding:14px;max-width:900px;margin:0 auto;}.pg.active{display:block;}
+.pg{display:none;padding:16px 14px;max-width:900px;margin:0 auto;}.pg.active{display:block;}
 
 /* STATS */
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
-.stat{background:white;border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);border-top:4px solid var(--teal);}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+.stat{background:white;border-radius:var(--r);padding:20px 18px;box-shadow:var(--shadow);border-top:4px solid var(--teal);}
 .stat.lime{border-top-color:var(--lime);}
 .stat.coral{border-top-color:var(--coral);}
 .stat.gold{border-top-color:var(--gold);}
 .stat.sky{border-top-color:var(--sky);}
 .stat.forest{border-top-color:var(--forest);}
-.stat-num{font-family:'Nunito',sans-serif;font-size:36px;font-weight:900;color:var(--forest);line-height:1;}
-.stat-lbl{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:3px;}
+.stat-num{font-family:'Nunito',sans-serif;font-size:44px;font-weight:900;color:var(--forest);line-height:1;}
+.stat-lbl{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:6px;}
 
 /* PIPELINE TABS */
 .pipeline{display:flex;gap:0;overflow-x:auto;margin-bottom:16px;background:white;border-radius:var(--r);box-shadow:var(--shadow);padding:4px;}
@@ -68,7 +68,7 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 14
 .pipe-tab:not(.on) .cnt{background:var(--border);color:var(--muted);}
 
 /* FAMILY CARDS */
-.fam-card{background:white;border-radius:var(--rs);padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .2s;border-left:5px solid var(--teal);margin-bottom:8px;}
+.fam-card{background:white;border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .2s;border-left:5px solid var(--teal);margin-bottom:10px;}
 .fam-card:hover{transform:translateX(3px);box-shadow:var(--shadow-lg);}
 .fam-card.new{border-left-color:var(--teal);}
 .fam-card.pre_assessment_scheduled{border-left-color:var(--sky);}
@@ -78,11 +78,11 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 14
 .fam-card.pack_sent{border-left-color:var(--forest);}
 .fam-card.assessment_day{border-left-color:var(--coral);}
 .fam-card.completed{border-left-color:#888;}
-.urn-badge{background:var(--forest);color:var(--teal);font-family:'Nunito',sans-serif;font-weight:900;font-size:11px;padding:4px 9px;border-radius:6px;white-space:nowrap;flex-shrink:0;}
+.urn-badge{background:var(--forest);color:var(--teal);font-family:'Nunito',sans-serif;font-weight:900;font-size:12px;padding:6px 12px;border-radius:8px;white-space:nowrap;flex-shrink:0;}
 .fam-info{flex:1;min-width:0;}
-.fam-name{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.fam-meta{font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;}
-.status-tag{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:50px;white-space:nowrap;flex-shrink:0;}
+.fam-name{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fam-meta{font-size:12.5px;color:var(--muted);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;}
+.status-tag{font-size:12px;font-weight:700;padding:5px 12px;border-radius:50px;white-space:nowrap;flex-shrink:0;}
 .st-new{background:var(--teal-soft);color:var(--teal-mid);}
 .st-pre_assessment_scheduled{background:#E8F4FD;color:#1a5c8b;}
 .st-pre_assessed{background:#FEF3D6;color:#8B6000;}
@@ -225,7 +225,7 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 14
 .warn-box{background:#FEF3D6;border-radius:var(--rs);padding:10px 14px;font-size:12.5px;font-weight:600;color:#7A5000;margin-bottom:12px;border-left:4px solid var(--gold);}
 
 /* SECTION TITLE */
-.sec-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:17px;color:var(--forest);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.sec-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:20px;color:var(--forest);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
 .pill{background:var(--forest);color:white;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:50px;}
 
 /* TOAST */
@@ -378,10 +378,16 @@ async function doLogin() {
   if(!email||!pass){err.textContent='Please enter email and password.';err.style.display='block';return;}
   btn.disabled=true;btn.innerHTML='<div class="spinner"></div>';err.style.display='none';
   try {
-    const {data:allowedRows,error:aErr} = await db.from('ll_admins').select('email,name,role').ilike('email',email);
-    if(aErr||!allowedRows||allowedRows.length===0) throw new Error('You do not have access to this portal.');
+    // Sign in first
     const {error:authError} = await db.auth.signInWithPassword({email,password:pass});
     if(authError) throw authError;
+
+    // Then check allowed list
+    const {data:allowedRows} = await db.from('ll_admins').select('email,name,role').ilike('email',email);
+    if(!allowedRows||allowedRows.length===0) {
+      await db.auth.signOut();
+      throw new Error('You do not have access to this portal.');
+    }
     currentUserRole = allowedRows[0].role;
     document.getElementById('user-badge').textContent = allowedRows[0].name || email.split('@')[0];
     showApp();
