@@ -377,23 +377,22 @@ async function doLogin() {
   const err = document.getElementById('login-err');
   if(!email||!pass){err.textContent='Please enter email and password.';err.style.display='block';return;}
   btn.disabled=true;btn.innerHTML='<div class="spinner"></div>';err.style.display='none';
-  try {
-    // Sign in first
-    const {error:authError} = await db.auth.signInWithPassword({email,password:pass});
-    if(authError) throw authError;
 
-    // Then check allowed list
-    const {data:allowedRows} = await db.from('ll_admins').select('email,name,role').ilike('email',email);
-    if(!allowedRows||allowedRows.length===0) {
-      await db.auth.signOut();
-      throw new Error('You do not have access to this portal.');
-    }
-    currentUserRole = allowedRows[0].role;
-    document.getElementById('user-badge').textContent = allowedRows[0].name || email.split('@')[0];
+  try {
+    // Race login against a 10 second timeout
+    const loginPromise = db.auth.signInWithPassword({email, password:pass});
+    const timeoutPromise = new Promise((_,reject) => setTimeout(()=>reject(new Error('Connection timed out. Please check your internet and try again.')), 10000));
+    
+    const {data, error} = await Promise.race([loginPromise, timeoutPromise]);
+    
+    if(error) throw error;
+    document.getElementById('user-badge').textContent = email.split('@')[0];
     showApp();
   } catch(e) {
-    err.textContent=e.message||'Login failed.';err.style.display='block';
-    btn.disabled=false;btn.innerHTML='Sign In';
+    err.textContent = e.message || 'Login failed. Please try again.';
+    err.style.display='block';
+    btn.disabled=false;
+    btn.innerHTML='Sign In';
   }
 }
 
@@ -409,14 +408,10 @@ async function showApp() {
   await loadData();
 }
 
-db.auth.onAuthStateChange(async(event,session)=>{
-  if(event==='SIGNED_IN'&&session) {
-    const {data:rows} = await db.from('ll_admins').select('name,role').ilike('email',session.user.email);
-    if(rows&&rows.length) {
-      currentUserRole = rows[0].role;
-      document.getElementById('user-badge').textContent = rows[0].name||session.user.email.split('@')[0];
-      showApp();
-    }
+db.auth.onAuthStateChange((event,session)=>{
+  if(event==='SIGNED_IN'&&session){
+    document.getElementById('user-badge').textContent = session.user.email.split('@')[0];
+    showApp();
   }
 });
 
