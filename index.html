@@ -46,8 +46,8 @@ const PROJECTS = [
 ];
 const gp = id => PROJECTS.find(p=>p.id===id)||PROJECTS[0];
 
-async function sendEmail(type,name,email,adminEmail=""){
-  try{ await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"},body:JSON.stringify({type,name,email,adminEmail})});}
+async function sendEmail(type,name,email,adminEmail="",eventTitle=""){
+  try{ await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"},body:JSON.stringify({type,name,email,adminEmail,eventTitle})});}
   catch(e){console.log("Email error",e);}
 }
 
@@ -344,6 +344,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   const [volSearch,setVolSearch]=useState("");
   const [volHistory,setVolHistory]=useState([]);
   const [csvResult,setCsvResult]=useState(null);
+  const [manualHours,setManualHours]=useState(null);
   const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,questions:[]});
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
@@ -359,8 +360,8 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
 
   async function load(){
     const oppQuery = isSuperAdmin
-      ? sb.from("opportunities").select("*").order("date")
-      : sb.from("opportunities").select("*").in("project",profile.admin_projects||[]).order("date");
+      ? sb.from("opportunities").select("*").eq("archived",false).order("date")
+      : sb.from("opportunities").select("*").eq("archived",false).in("project",profile.admin_projects||[]).order("date");
     const [{data:p},{data:v},{data:a},{data:o},{data:s},{data:h},{data:al}] = await Promise.all([
       sb.from("profiles").select("*").eq("approved",false).eq("role","volunteer"),
       sb.from("profiles").select("*").eq("approved",true).eq("role","volunteer"),
@@ -426,10 +427,17 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     await sb.from("hour_logs").insert({volunteer_id:volId,name:volName,activity:title,project:proj,hours:Number(hours),date:new Date().toISOString().split("T")[0],notes:"Logged via check-in/out",status:"approved"});
     st("✅ "+hours+"h logged!"); load();
   };
-  const delOpp=async id=>{
+  const delOpp=async(id,title)=>{
+    if(!window.confirm("Cancel this event? All signed-up volunteers will be emailed.")) return;
+    // Fetch all signups with volunteer profiles
+    const {data:sups}=await sb.from("signups").select("*,profiles(first_name,email)").eq("opportunity_id",id);
+    // Send cancellation email to each
+    if(sups&&sups.length>0){
+      await Promise.all(sups.map(s=>sendEmail("event_cancelled",s.profiles?.first_name||"Volunteer",s.profiles?.email||"","",title)));
+    }
     const {error}=await sb.from("opportunities").delete().eq("id",id);
     if(error){st("Error removing: "+error.message);return;}
-    st("Removed."); load();
+    st("Event cancelled & emails sent."); load();
   };
   const addOpp=async()=>{
     if(!no.title||!no.date||!no.location){st("Fill title, date and location.");return;}
@@ -492,8 +500,29 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
         <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{viewProf.projects.map(pid=><Tag key={pid} pid={pid}/>)}</div>
       </div>}
       {(()=>{const vhl=volHistory.filter(l=>l.volunteer_id===viewProf.id);const vth=vhl.reduce((s,l)=>s+Number(l.hours),0);return <div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
-        <h3 style={{fontFamily:HF,fontSize:14,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Hour History</h3>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+          <h3 style={{fontFamily:HF,fontSize:14,fontWeight:900,textTransform:"uppercase",color:DK,margin:0}}>Hour History</h3>
+          <button onClick={()=>setManualHours(manualHours?null:{activity:"Baby sorting clothes",project:"welcome-baby",hours:"",date:"2026-06-02"})} style={{background:DK,color:MD,border:"none",borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Add Hours</button>
+        </div>
         <p style={{fontSize:12,color:MT,marginBottom:12,fontFamily:BF}}>{Math.round(vth*100)/100}h across {vhl.length} activities</p>
+        {manualHours&&<div style={{background:PL,borderRadius:10,padding:12,marginBottom:12,border:"1px solid "+BR}}>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            <input placeholder="Activity name" value={manualHours.activity} onChange={e=>setManualHours({...manualHours,activity:e.target.value})} style={{...inp,fontSize:13}}/>
+            <div style={{display:"flex",gap:8}}>
+              <select value={manualHours.project} onChange={e=>setManualHours({...manualHours,project:e.target.value})} style={{...inp,flex:1,fontSize:13}}>
+                {PROJECTS.map(p=><option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}
+              </select>
+              <input type="number" placeholder="Hours" value={manualHours.hours} onChange={e=>setManualHours({...manualHours,hours:e.target.value})} style={{...inp,width:80,fontSize:13}}/>
+            </div>
+            <input type="date" value={manualHours.date} onChange={e=>setManualHours({...manualHours,date:e.target.value})} style={{...inp,fontSize:13}}/>
+            <button onClick={async()=>{
+              if(!manualHours.activity||!manualHours.hours||!manualHours.date){st("Fill all fields.");return;}
+              const {error}=await sb.from("hour_logs").insert({volunteer_id:viewProf.id,name:viewProf.first_name+" "+viewProf.surname,activity:manualHours.activity,project:manualHours.project,hours:Number(manualHours.hours),date:manualHours.date,status:"approved",notes:"Manually added by admin"});
+              if(error){st("Error: "+error.message);return;}
+              st("✓ Hours added!");setManualHours(null);load();
+            }} style={{background:DK,color:MD,border:"none",borderRadius:8,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer"}}>Save Hours</button>
+          </div>
+        </div>}
         <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>{PROJECTS.map(p=>{const ph=vhl.filter(l=>l.project===p.id).reduce((s,l)=>s+Number(l.hours),0);if(!ph)return null;return <span key={p.id} style={{background:p.bg,color:"#fff",borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>{p.emoji} {Math.round(ph*100)/100}h {p.label}</span>;})}</div>
         {vhl.length===0&&<p style={{color:MT,fontSize:13}}>No approved hours yet.</p>}
         <div style={{display:"flex",flexDirection:"column",gap:8}}>{vhl.map(l=>{const p=gp(l.project);return <div key={l.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,background:PL,border:"1px solid "+BR}}>
@@ -754,6 +783,24 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
               </div>
               <div style={{display:"flex",gap:6,marginLeft:10,flexShrink:0}}>
                 <button onClick={()=>setEditOpp({...o})} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Edit</button>
+                <button onClick={()=>{
+                  const rows=oppSignups[o.id]||[];
+                  const headers=["Name","Email","Phone","Status","Checked In","Checked Out","Hours","Did Not Attend"];
+                  const lines=[headers.join(","),...rows.map(s=>[
+                    (s.profiles?.first_name+" "+s.profiles?.surname).trim(),
+                    s.profiles?.email||"",
+                    s.profiles?.phone||"",
+                    s.status||"",
+                    s.checked_in?new Date(s.checked_in).toLocaleTimeString():"",
+                    s.checked_out?new Date(s.checked_out).toLocaleTimeString():"",
+                    s.checked_in&&s.checked_out?o.hours:"",
+                    s.did_not_attend?"Yes":"",
+                  ].map(v=>`"${v}"`).join(","))];
+                  const b=new Blob([lines.join("\n")],{type:"text/csv"});
+                  const a=document.createElement("a");a.href=URL.createObjectURL(b);
+                  a.download=o.title.replace(/\s+/g,"_")+"_attendance.csv";a.click();
+                }} style={{background:"#DBEAFE",color:"#1D4ED8",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>⬇ Export</button>
+                <button onClick={async()=>{if(!window.confirm("Archive this event? It will be hidden but kept in the database."))return;const{error}=await sb.from("opportunities").update({archived:true}).eq("id",o.id);if(error){st("Error: "+error.message);return;}st("Event archived.");load();}} style={{background:"#FEF3C7",color:"#D97706",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Archive</button>
                 <button onClick={()=>delOpp(o.id,o.title,o.project)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Cancel Event</button>
               </div>
             </div>
@@ -778,7 +825,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                     const now=new Date();
                     const eventDate=new Date(o.date+"T"+(o.start_time||"00:00")+":00");
                     const minsUntil=(eventDate-now)/60000;
-                    const canCheckin=minsUntil<=30&&minsUntil>-((o.hours||2)*60+60);
+                    const canCheckin=minsUntil<=30&&minsUntil>-((o.hours||2)*60+120);
                     return <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                     {canCheckin&&<><button onClick={()=>checkIn(s.id)} style={{background:"#DBEAFE",color:"#1D4ED8",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>📍 In</button>
                     <button onClick={()=>markDNA(s.id)} style={{background:"#FEF3C7",color:"#D97706",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>❌ DNA</button></>}
@@ -786,7 +833,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                     <button onClick={()=>declineSignup(s.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>Unsub</button>
                   </div>;
                   })()}
-                  {s.checked_in&&!s.checked_out&&!s.did_not_attend&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,(s.profiles?.first_name+" "+s.profiles?.surname).trim(),o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>}
+                  {s.checked_in&&!s.checked_out&&!s.did_not_attend&&(()=>{const now=new Date();const eventDate=new Date(o.date+"T"+(o.start_time||"00:00")+":00");const minsUntil=(eventDate-now)/60000;const canCheckout=minsUntil<=30&&minsUntil>-((o.hours||2)*60+120);return canCheckout&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,(s.profiles?.first_name+" "+s.profiles?.surname).trim(),o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>;})()}
                   {s.did_not_attend&&<span style={{fontSize:11,color:"#D97706",fontWeight:700,background:"#FEF3C7",padding:"3px 8px",borderRadius:20}}>❌ DNA</span>}
                   {s.checked_out&&<span style={{fontSize:11,color:"#7C3AED",fontWeight:700,background:"#F3E8FF",padding:"3px 8px",borderRadius:20}}>✅ {o.hours}h</span>}
                 </div>
@@ -854,13 +901,14 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   const [volSearch,setVolSearch]=useState("");
   const [volHistory,setVolHistory]=useState([]);
   const [csvResult,setCsvResult]=useState(null);
+  const [manualHours,setManualHours]=useState(null);
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
   useEffect(()=>{loadData();}, []);
 
   async function loadData(){
     const [{data:o},{data:l},{data:s}]=await Promise.all([
-      sb.from("opportunities").select("*").order("date"),
+      sb.from("opportunities").select("*").eq("archived",false).order("date"),
       sb.from("hour_logs").select("*").eq("volunteer_id",profile.id).order("created_at",{ascending:false}),
       sb.from("signups").select("opportunity_id,status,checked_in,checked_out").eq("volunteer_id",profile.id),
     ]);
