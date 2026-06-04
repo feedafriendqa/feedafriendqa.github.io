@@ -421,11 +421,14 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     if(error){st("Error: "+error.message);return;}
     st("✓ Checked in!"); load();
   };
-  const checkOut=async(id,oppId,volId,volName,title,proj,hours)=>{
-    const {error}=await sb.from("signups").update({checked_out:new Date().toISOString()}).eq("id",id);
+  const checkOut=async(id,oppId,volId,volName,title,proj,checkinTime)=>{
+    const now=new Date();
+    const checkoutISO=now.toISOString();
+    const {error}=await sb.from("signups").update({checked_out:checkoutISO}).eq("id",id);
     if(error){st("Error: "+error.message);return;}
-    await sb.from("hour_logs").insert({volunteer_id:volId,name:volName,activity:title,project:proj,hours:Number(hours),date:new Date().toISOString().split("T")[0],notes:"Logged via check-in/out",status:"approved"});
-    st("✅ "+hours+"h logged!"); load();
+    const exactHours=checkinTime?Math.round((now-new Date(checkinTime))/36000)/100:0;
+    await sb.from("hour_logs").insert({volunteer_id:volId,name:volName,activity:title,project:proj,hours:exactHours,date:now.toISOString().split("T")[0],notes:"Logged via check-in/out",status:"approved"});
+    st("✅ "+exactHours+"h logged!"); load();
   };
   const delOpp=async(id,title)=>{
     if(!window.confirm("Cancel this event? All signed-up volunteers will be emailed.")) return;
@@ -534,6 +537,24 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
           <div style={{fontWeight:900,fontSize:18,color:p.bg,fontFamily:HF,flexShrink:0}}>{l.hours}h</div>
         </div>;})}</div>
       </div>;})()}
+      {(()=>{
+        const dnaList=Object.values(oppSignups).flat().filter(s=>s.volunteer_id===viewProf.id&&s.did_not_attend);
+        if(!dnaList.length) return null;
+        return <div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
+          <h3 style={{fontFamily:HF,fontSize:14,fontWeight:900,textTransform:"uppercase",color:"#DC2626",marginBottom:12}}>❌ Did Not Attend ({dnaList.length})</h3>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>{dnaList.map(s=>{
+            const o=opps.find(op=>op.id===s.opportunity_id);
+            if(!o) return null;
+            return <div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,background:"#FEF2F2",border:"1px solid #FECACA"}}>
+              <div style={{fontSize:20,flexShrink:0}}>❌</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:12,fontFamily:BF}}>{o.title}</div>
+                <div style={{fontSize:11,color:MT}}>{o.date}</div>
+              </div>
+            </div>;
+          })}</div>
+        </div>;
+      })()}
       {isSuperAdmin&&<div style={{display:"flex",gap:8}}>
         <button onClick={()=>deleteVol(viewProf.id)} style={{flex:1,background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:10,padding:"12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>🗑️ Delete Volunteer</button>
       </div>}
@@ -833,7 +854,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                     <button onClick={()=>declineSignup(s.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>Unsub</button>
                   </div>;
                   })()}
-                  {s.checked_in&&!s.checked_out&&!s.did_not_attend&&(()=>{const now=new Date();const eventDate=new Date(o.date+"T"+(o.start_time||"00:00")+":00");const minsUntil=(eventDate-now)/60000;const canCheckout=minsUntil<=30&&minsUntil>-((o.hours||2)*60+120);return canCheckout&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,(s.profiles?.first_name+" "+s.profiles?.surname).trim(),o.title,o.project,o.hours)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>;})()}
+                  {s.checked_in&&!s.checked_out&&!s.did_not_attend&&(()=>{const now=new Date();const eventDate=new Date(o.date+"T"+(o.start_time||"00:00")+":00");const minsUntil=(eventDate-now)/60000;const canCheckout=minsUntil<=30&&minsUntil>-((o.hours||2)*60+120);return canCheckout&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,(s.profiles?.first_name+" "+s.profiles?.surname).trim(),o.title,o.project,s.checked_in)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>;})()}
                   {s.did_not_attend&&<span style={{fontSize:11,color:"#D97706",fontWeight:700,background:"#FEF3C7",padding:"3px 8px",borderRadius:20}}>❌ DNA</span>}
                   {s.checked_out&&<span style={{fontSize:11,color:"#7C3AED",fontWeight:700,background:"#F3E8FF",padding:"3px 8px",borderRadius:20}}>✅ {o.hours}h</span>}
                 </div>
