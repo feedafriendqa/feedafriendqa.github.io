@@ -182,7 +182,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
         <div class="fg"><label>Employment</label>
           <select id="f_emp"><option value="">Select…</option><option>Employed</option><option>Self-employed</option><option>Unemployed</option></select>
         </div>
-        <div class="fg"><label>Monthly Salary (QAR)</label><input id="f_salary" type="number" placeholder="0" min="0"></div>
+        <div class="fg"><label>Monthly Salary (QAR)</label><input id="f_salary" type="number" placeholder="0" min="0" oninput="calcInc()"></div>
       </div>
     </div>
   </div>
@@ -237,7 +237,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
         <div class="fg"><label>Employment</label>
           <select id="m_emp"><option value="">Select…</option><option>Employed</option><option>Self-employed</option><option>Unemployed</option></select>
         </div>
-        <div class="fg"><label>Monthly Salary (QAR)</label><input id="m_salary" type="number" placeholder="0" min="0"></div>
+        <div class="fg"><label>Monthly Salary (QAR)</label><input id="m_salary" type="number" placeholder="0" min="0" oninput="calcInc()"></div>
       </div>
       <div class="fg"><label>Pregnant?</label>
         <select id="m_preg"><option value="">Select…</option><option>No</option><option>Yes</option></select>
@@ -294,13 +294,23 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div class="fg"><label>Zone Number</label><input id="zone" placeholder="e.g. 25" oninput="fillZone(this.value)"></div>
     <div class="fg"><label>Area</label><input id="zone_area" placeholder="Auto-filled" readonly style="background:#f8f8f8;"></div>
   </div>
-  <div class="fg-row">
-    <div class="fg"><label>Monthly Rent (QAR)</label><input id="rent" type="number" placeholder="0" oninput="calcInc()"></div>
-    <div class="fg"><label>Total Monthly Income (QAR)</label><input id="income" type="number" placeholder="0" oninput="calcInc()"></div>
-  </div>
-  <div class="income-box">
-    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Income after rent</div>
-    <div class="income-result" id="inc_result">Enter income + rent above</div>
+  <div class="fg"><label>Monthly Rent (QAR)</label><input id="rent" type="number" placeholder="0" oninput="calcInc()"></div>
+  <div class="income-box" style="margin-top:4px;">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Combined Household Income</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:3px;">Father Salary</div>
+        <div style="font-size:15px;font-weight:700;color:var(--forest);" id="father-sal-display">QAR 0</div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:3px;">Mother Salary</div>
+        <div style="font-size:15px;font-weight:700;color:var(--forest);" id="mother-sal-display">QAR 0</div>
+      </div>
+    </div>
+    <div style="border-top:2px solid var(--border);margin-top:10px;padding-top:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Income after rent</div>
+      <div class="income-result" id="inc_result">Enter salaries on step 1 + rent above</div>
+    </div>
   </div>
 </div>
 <div class="card">
@@ -616,11 +626,21 @@ function fillZone(v) {
 
 // ── INCOME ──
 function calcInc() {
-  const inc = parseFloat(document.getElementById('income').value)||0;
-  const rent = parseFloat(document.getElementById('rent').value)||0;
-  if(!inc) return;
-  const after = inc - rent;
+  const fSal = parseFloat(document.getElementById('f_salary')?.value)||0;
+  const mSal = parseFloat(document.getElementById('m_salary')?.value)||0;
+  const total = fSal + mSal;
+  const rent = parseFloat(document.getElementById('rent')?.value)||0;
+  
+  // Update display
+  const fd = document.getElementById('father-sal-display');
+  const md = document.getElementById('mother-sal-display');
+  if(fd) fd.textContent = 'QAR ' + fSal.toLocaleString();
+  if(md) md.textContent = 'QAR ' + mSal.toLocaleString();
+
   const el = document.getElementById('inc_result');
+  if(!el) return;
+  if(total===0 && rent===0) { el.textContent='Enter salaries on step 1 + rent above'; el.className='income-result'; return; }
+  const after = total - rent;
   el.textContent = 'QAR ' + after.toLocaleString() + ' ' + (after<=5000 ? '✅ Eligible' : '❌ Over QAR 5,000 limit');
   el.className = 'income-result' + (after>5000?' fail':'');
 }
@@ -654,7 +674,9 @@ async function submitForm() {
   btn.innerHTML = '<div class="spinner"></div> Submitting…';
 
   try {
-    const income = parseFloat(document.getElementById('income').value)||0;
+    const fSal = parseFloat(document.getElementById('f_salary')?.value)||0;
+    const mSal = parseFloat(document.getElementById('m_salary')?.value)||0;
+    const income = fSal + mSal;
     const rent = parseFloat(document.getElementById('rent').value)||0;
     const devices = [...document.querySelectorAll('#devices .dev.sel')].map(d => d.childNodes[1].textContent.trim());
 
