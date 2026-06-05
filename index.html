@@ -801,6 +801,8 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                 <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
                   {pendingSups.length>0&&<span style={{background:"#FEF3C7",color:"#D97706",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>⏳ {pendingSups.length} pending</span>}
                   {approvedSups.length>0&&<span style={{background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✓ {approvedSups.length} approved</span>}
+                  {sups.filter(s=>s.status==="waitlist").length>0&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>⏸ {sups.filter(s=>s.status==="waitlist").length} waitlist</span>}
+                  <span style={{fontSize:11,color:MT}}>({Number(o.spots)||10} spots)</span>
                 </div>
               </div>
               <div style={{display:"flex",gap:6,marginLeft:10,flexShrink:0}}>
@@ -963,12 +965,19 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   }
 
   async function submitSignup(o,answersArr){
-    await sb.from("signups").insert({volunteer_id:profile.id,opportunity_id:o.id,status:"pending",answers:answersArr});
+    // Check current approved signup count vs capacity
+    const {data:existing}=await sb.from("signups").select("id,status").eq("opportunity_id",o.id);
+    const approvedCount=(existing||[]).filter(s=>s.status==="approved").length;
+    const spots=Number(o.spots)||10;
+    const isFull=approvedCount>=spots;
+    const status=isFull?"waitlist":"pending";
+    await sb.from("signups").insert({volunteer_id:profile.id,opportunity_id:o.id,status,answers:answersArr});
     setSignupModal(null); setAnswers({});
-    st("✓ Request sent! Awaiting admin approval."); loadData();
+    st(isFull?"✓ Added to waitlist! You'll be notified if a spot opens.":"✓ Request sent! Awaiting admin approval."); loadData();
   }
 
   const approvedLogs=logs.filter(l=>l.approved!==false); const th=approvedLogs.reduce((s,l)=>s+Number(l.hours),0);
+  const getOppCounts=(oId)=>{const sups=signups.filter(s=>s.opportunity_id===oId);return{approved:sups.filter(s=>s.status==="approved").length,waitlist:sups.filter(s=>s.status==="waitlist").length};};
   const visibleOpps=opps.filter(o=>!o.students_only||profile.is_student);
   const fo=fp==="all"?visibleOpps:visibleOpps.filter(o=>o.project===fp);
   const NAV=[{id:"dashboard",label:"Home"},{id:"opportunities",label:"Opportunities"},{id:"log",label:"Log Hours"},{id:"history",label:"My Hours"}];
@@ -1079,6 +1088,10 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
               {done&&signup?.status==="pending"&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
                 <span style={{background:"#FEF3C7",color:"#D97706",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>⏳ Pending</span>
                 <button onClick={async()=>{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Signup cancelled.");loadData();}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>
+              </div>}
+              {done&&signup?.status==="waitlist"&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
+                <span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>⏸ Waitlist</span>
+                <button onClick={async()=>{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Removed from waitlist.");loadData();}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>
               </div>}
               {done&&signup?.status==="approved"&&!signup?.checked_in&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
                 <span style={{background:p.light,color:p.text,borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>✓ Approved</span>
