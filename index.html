@@ -128,7 +128,7 @@ function Auth({onAuth}){
 
   async function register(){
     setErr("");
-    if(!r.fn||!r.sn||!r.dob||!r.email||!r.pw){setErr("Please fill in all required fields.");return;}
+    if(!r.fn||!r.sn||!r.dob||!r.phone||!r.email||!r.pw){setErr("Please fill in all required fields.");return;}
     if(r.pw!==r.pw2){setErr("Passwords do not match.");return;}
     if(r.pw.length<6){setErr("Password must be at least 6 characters.");return;}
     setLoading(true);
@@ -136,7 +136,7 @@ function Auth({onAuth}){
     if(error){setErr(error.message);setLoading(false);return;}
     let photo_url=null;
     if(r.photoFile&&data.user) photo_url=await uploadPhoto(data.user.id,r.photoFile);
-    await sb.from("profiles").insert({id:data.user.id,first_name:r.fn,surname:r.sn,email:r.email,dob:r.dob,is_student:r.employment==="student",student_level:r.studentLevel,student_school:r.studentSchool,is_working:r.employment==="working",profession:r.prof,projects:r.projs,photo_url,role:"volunteer",approved:false});
+    await sb.from("profiles").insert({id:data.user.id,first_name:r.fn,surname:r.sn,email:r.email,dob:r.dob,phone:r.phone||"",is_student:r.employment==="student",student_level:r.studentLevel,student_school:r.studentSchool,is_working:r.employment==="working",profession:r.prof,projects:r.projs,photo_url,role:"volunteer",approved:false});
     await sendEmail("volunteer_pending",r.fn,r.email);
     await sendEmail("new_volunteer",r.fn+" "+r.sn,r.email,"salaam@feedafriend.org");
     setMsg("Registration submitted! An admin will review and approve your account shortly.");
@@ -201,6 +201,7 @@ function Auth({onAuth}){
           <Field label="Surname *"><input type="text" placeholder="Ahmed" value={r.sn} onChange={e=>setR(x=>{return{...x,sn:e.target.value};} )} style={inp}/></Field>
         </div>
         <Field label="Date of Birth *"><input type="date" value={r.dob} onChange={e=>setR(x=>{return{...x,dob:e.target.value};} )} style={inp}/></Field>
+        <Field label="Phone Number *"><input type="tel" placeholder="e.g. 33123456" value={r.phone||""} onChange={e=>setR(x=>{return{...x,phone:e.target.value};} )} style={inp}/></Field>
         <Field label="Email *"><input type="email" placeholder="you@email.com" value={r.email} onChange={e=>setR(x=>{return{...x,email:e.target.value};} )} style={inp}/></Field>
         <Field label="Password *"><input type="password" placeholder="Min. 6 characters" value={r.pw} onChange={e=>setR(x=>{return{...x,pw:e.target.value};} )} style={inp}/></Field>
         <Field label="Confirm Password *"><input type="password" placeholder="Repeat password" value={r.pw2} onChange={e=>setR(x=>{return{...x,pw2:e.target.value};} )} style={inp}/></Field>
@@ -345,7 +346,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   const [volHistory,setVolHistory]=useState([]);
   const [csvResult,setCsvResult]=useState(null);
   const [manualHours,setManualHours]=useState(null);
-  const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,questions:[]});
+  const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
   const calcHours=(s,e)=>{
@@ -446,7 +447,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     if(!no.title||!no.date||!no.location){st("Fill title, date and location.");return;}
     const {error}=await sb.from("opportunities").insert({...no,spots:Number(no.spots)||10,hours:Number(no.hours)||2,created_by:profile.id});
     if(error){st("Error: "+error.message);return;}
-    setNo({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,questions:[]});
+    setNo({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
     st("✓ Published!"); setTab("opps"); load();
   };
   const saveEditOpp=async()=>{
@@ -882,6 +883,14 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
             <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:no.students_only?"#EDE9FE":"#F9FAFB",border:"1.5px solid "+(no.students_only?"#9B59B6":"#E5E7EB")}}>
               <input type="checkbox" checked={no.students_only} onChange={e=>setNo(n=>{return{...n,students_only:e.target.checked};} )} style={{width:18,height:18,accentColor:"#9B59B6"}}/>
               <div><div style={{fontWeight:700,fontSize:14,color:no.students_only?"#5B21B6":DK}}>🎓 Students Only</div></div>
+            </label>
+            <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:no.student_friendly?"#EDE9FE":"#F9FAFB",border:"1.5px solid "+(no.student_friendly?"#9B59B6":"#E5E7EB")}}>
+              <input type="checkbox" checked={no.student_friendly} onChange={e=>setNo(n=>{return{...n,student_friendly:e.target.checked};} )} style={{width:18,height:18,accentColor:"#9B59B6"}}/>
+              <div><div style={{fontWeight:700,fontSize:14,color:no.student_friendly?"#5B21B6":DK}}>🎓 Student Friendly (14+)</div></div>
+            </label>
+            <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:no.kid_friendly?"#DCFCE7":"#F9FAFB",border:"1.5px solid "+(no.kid_friendly?"#16A34A":"#E5E7EB")}}>
+              <input type="checkbox" checked={no.kid_friendly} onChange={e=>setNo(n=>{return{...n,kid_friendly:e.target.checked};} )} style={{width:18,height:18,accentColor:"#16A34A"}}/>
+              <div><div style={{fontWeight:700,fontSize:14,color:no.kid_friendly?"#166534":DK}}>👦 Kid Friendly (6+)</div></div>
             </label>
             <div style={{borderTop:"1px solid "+BR,paddingTop:14}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
