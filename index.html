@@ -823,7 +823,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
               {l.notes&&<div style={{fontSize:12,color:MT,marginTop:2,fontStyle:"italic"}}>"{l.notes}"</div>}
             </div>
             <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:10}}>
-              <button onClick={async()=>{await sb.from("hour_logs").update({status:"approved"}).eq("id",l.id);st("✓ Hours approved!");load();}} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
+              <button onClick={async()=>{const{error}=await sb.from("hour_logs").update({status:"approved"}).eq("id",l.id);if(error){st("Error: "+error.message);return;}st("✓ Hours approved!");load();}} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
               <button onClick={async()=>{await sb.from("hour_logs").delete().eq("id",l.id);st("Hours declined.");load();}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
             </div>
           </div>
@@ -984,12 +984,16 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
 
   useEffect(()=>{loadData();}, []);
 
+  const prevTh=React.useRef(0);
   async function loadData(){
     const [{data:o},{data:l},{data:s}]=await Promise.all([
       sb.from("opportunities").select("*").eq("archived",false).order("date"),
       sb.from("hour_logs").select("*").eq("volunteer_id",profile.id).order("created_at",{ascending:false}),
       sb.from("signups").select("opportunity_id,status,checked_in,checked_out").eq("volunteer_id",profile.id),
     ]);
+    const newTh=(l||[]).filter(x=>x.status==="approved").reduce((a,x)=>a+Number(x.hours),0);
+    if(prevTh.current>0&&newTh>prevTh.current){setVolCelebrateHours(Math.round((newTh-prevTh.current)*100)/100);setVolCelebrate(true);setTimeout(()=>setVolCelebrate(false),4500);}
+    prevTh.current=newTh;
     setOpps(o||[]); setLogs(l||[]); setSu(s||[]);
   }
 
@@ -1022,7 +1026,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
     st(isFull?"✓ Added to waitlist! You'll be notified if a spot opens.":"✓ Request sent! Awaiting admin approval."); loadData();
   }
 
-  const approvedLogs=logs.filter(l=>l.approved!==false); const th=approvedLogs.reduce((s,l)=>s+Number(l.hours),0);
+  const approvedLogs=logs.filter(l=>l.status==="approved"); const th=approvedLogs.reduce((s,l)=>s+Number(l.hours),0);
   const [volCelebrate,setVolCelebrate]=React.useState(false);
   const [volCelebrateHours,setVolCelebrateHours]=React.useState(0);
   const getOppCounts=(oId)=>{const sups=signups.filter(s=>s.opportunity_id===oId);return{approved:sups.filter(s=>s.status==="approved").length,waitlist:sups.filter(s=>s.status==="waitlist").length};};
