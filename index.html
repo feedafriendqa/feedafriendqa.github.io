@@ -109,6 +109,47 @@ function PhotoEditor({current,onSelect}){
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
+function playCheer(){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const play=(f,t,d)=>{const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*1.5,t+d*0.3);g.gain.setValueAtTime(0.3,t);g.gain.exponentialRampToValueAtTime(0.001,t+d);o.start(t);o.stop(t+d);};const t=ctx.currentTime;[523,659,784,1047].forEach((f,i)=>play(f,t+i*0.12,0.15));play(1047,t+0.5,0.4);}catch(e){}}
+function Confetti({active,hours}){
+  const [particles,setParticles]=React.useState([]);
+  React.useEffect(()=>{
+    if(!active)return;
+    const cols=["#FFD700","#FF6B6B","#4ECDC4","#45B7D1","#96CEB4","#FFEAA7","#DDA0DD","#98D8C8","#FF8C69","#87CEEB"];
+    const shapes=["●","★","♦","▲","♥","✦"];
+    const p=Array.from({length:80},(_,i)=>({
+      id:i, x:Math.random()*100, delay:Math.random()*0.8,
+      dur:1.5+Math.random()*1.5, color:cols[Math.floor(Math.random()*cols.length)],
+      shape:shapes[Math.floor(Math.random()*shapes.length)],
+      size:10+Math.random()*14, drift:(Math.random()-0.5)*200,
+      rotate:Math.random()*720,
+    }));
+    setParticles(p);
+    playCheer();
+    setTimeout(()=>setParticles([]),4000);
+  },[active]);
+  if(!particles.length)return null;
+  return <div style={{position:"fixed",top:0,left:0,width:"100%",height:"100%",pointerEvents:"none",zIndex:9999,overflow:"hidden"}}>
+    {particles.map(p=><div key={p.id} style={{
+      position:"absolute", left:p.x+"%", top:"-20px",
+      fontSize:p.size, color:p.color, lineHeight:1,
+      animation:`fall${p.id%4} ${p.dur}s ${p.delay}s ease-in forwards`,
+    }}>{p.shape}</div>)}
+    <div style={{position:"absolute",top:"40%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center",animation:"popIn 0.5s ease-out"}}>
+      <div style={{fontSize:52,marginBottom:8}}>🎉</div>
+      <div style={{fontFamily:"Georgia,serif",fontSize:28,fontWeight:900,color:"#1a3c2e",textShadow:"0 2px 8px rgba(255,255,255,0.9)",background:"rgba(255,255,255,0.92)",borderRadius:16,padding:"12px 24px",boxShadow:"0 4px 20px rgba(0,0,0,0.15)"}}>
+        +{hours}h logged! 🌟
+      </div>
+    </div>
+    <style>{`
+      @keyframes fall0{to{transform:translateY(110vh) translateX(${50}px) rotate(360deg);opacity:0}}
+      @keyframes fall1{to{transform:translateY(110vh) translateX(-${80}px) rotate(-360deg);opacity:0}}
+      @keyframes fall2{to{transform:translateY(110vh) translateX(${30}px) rotate(540deg);opacity:0}}
+      @keyframes fall3{to{transform:translateY(110vh) translateX(-${60}px) rotate(-540deg);opacity:0}}
+      @keyframes popIn{from{transform:translate(-50%,-50%) scale(0.5);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+    `}</style>
+  </div>;
+}
+
 function Auth({onAuth}){
   const [mode,setMode]=useState("login");
   const [loading,setLoading]=useState(false);
@@ -275,6 +316,7 @@ function ProfileEdit({profile, onSave, onBack}){
   }
 
   return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
+    <Confetti active={volCelebrate} hours={volCelebrateHours}/>
     <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 16px",gap:12,position:"sticky",top:0,zIndex:100}}>
       <button onClick={onBack} style={{background:"rgba(255,255,255,0.1)",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13,fontWeight:700}}>← Back</button>
       <span style={{fontFamily:HF,fontWeight:900,fontSize:16,color:"#fff",textTransform:"uppercase"}}>Edit Profile</span>
@@ -346,6 +388,8 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   const [volHistory,setVolHistory]=useState([]);
   const [csvResult,setCsvResult]=useState(null);
   const [manualHours,setManualHours]=useState(null);
+  const [celebrate,setCelebrate]=useState(false);
+  const [celebrateHours,setCelebrateHours]=useState(0);
   const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
@@ -429,7 +473,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     if(error){st("Error: "+error.message);return;}
     const exactHours=checkinTime?Math.round((now-new Date(checkinTime))/36000)/100:0;
     await sb.from("hour_logs").insert({volunteer_id:volId,name:volName,activity:title,project:proj,hours:exactHours,date:now.toISOString().split("T")[0],notes:"Logged via check-in/out",status:"approved"});
-    st("✅ "+exactHours+"h logged!"); load();
+    st("✅ "+exactHours+"h logged!"); setCelebrateHours(exactHours); setCelebrate(true); setTimeout(()=>setCelebrate(false),4500); load();
   };
   const delOpp=async(id,title)=>{
     if(!window.confirm("Cancel this event? All signed-up volunteers will be emailed.")) return;
@@ -594,6 +638,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   </div>;
 
   return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
+    <Confetti active={celebrate} hours={celebrateHours}/>
     <header style={{background:DK,height:60,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",position:"sticky",top:0,zIndex:100}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <img src={LOGO} style={{height:40}}/>
@@ -934,6 +979,8 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   const [volHistory,setVolHistory]=useState([]);
   const [csvResult,setCsvResult]=useState(null);
   const [manualHours,setManualHours]=useState(null);
+  const [celebrate,setCelebrate]=useState(false);
+  const [celebrateHours,setCelebrateHours]=useState(0);
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
   useEffect(()=>{loadData();}, []);
@@ -977,6 +1024,8 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   }
 
   const approvedLogs=logs.filter(l=>l.approved!==false); const th=approvedLogs.reduce((s,l)=>s+Number(l.hours),0);
+  const [volCelebrate,setVolCelebrate]=React.useState(false);
+  const [volCelebrateHours,setVolCelebrateHours]=React.useState(0);
   const getOppCounts=(oId)=>{const sups=signups.filter(s=>s.opportunity_id===oId);return{approved:sups.filter(s=>s.status==="approved").length,waitlist:sups.filter(s=>s.status==="waitlist").length};};
   const visibleOpps=opps.filter(o=>!o.students_only||profile.is_student);
   const fo=fp==="all"?visibleOpps:visibleOpps.filter(o=>o.project===fp);
@@ -987,6 +1036,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   }} onBack={()=>setEditingProfile(false)}/>;
 
   return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
+    <Confetti active={volCelebrate} hours={volCelebrateHours}/>
     <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 14px",position:"sticky",top:0,zIndex:100,gap:12,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>
       <button onClick={()=>setView("dashboard")} style={{background:"none",border:"none",cursor:"pointer",padding:0,flexShrink:0}}>
         <img src={LOGO} alt="Feed a Friend" style={{height:42,display:"block"}}/>
@@ -997,6 +1047,16 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
       </nav>
     </header>
     <Toast msg={toast}/>
+    {!profile.phone&&<div style={{background:"#FEF3C7",borderTop:"3px solid #F59E0B",padding:"12px 16px",display:"flex",alignItems:"center",gap:10,justifyContent:"space-between"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <span style={{fontSize:18}}>📞</span>
+        <div>
+          <div style={{fontWeight:700,fontSize:13,color:"#92400E"}}>Please add your phone number</div>
+          <div style={{fontSize:12,color:"#78350F"}}>We need it to contact you about events.</div>
+        </div>
+      </div>
+      <button onClick={()=>setEditingProfile(true)} style={{background:"#F59E0B",color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}>Update Profile</button>
+    </div>}
     <main style={{maxWidth:640,margin:"0 auto",padding:"16px 14px 40px"}}>
 
       {view==="dashboard"&&<div className="fade">
