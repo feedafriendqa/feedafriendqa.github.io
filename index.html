@@ -439,13 +439,13 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     st("Declined."); load();
   };
   const deleteVol=async id=>{
-    if(!window.confirm("Are you sure you want to delete this volunteer? This cannot be undone.")) return;
+    if(!window.confirm("Are you sure you want to delete this volunteer? They will be able to re-register with the same email.")) return;
     await sb.from("signups").delete().eq("volunteer_id",id);
     await sb.from("hour_logs").delete().eq("volunteer_id",id);
     const {error}=await sb.from("profiles").delete().eq("id",id);
     if(error){st("Error: "+error.message);return;}
-    await fetch(`https://xbxagukdvgyaoqvbqoic.supabase.co/auth/v1/admin/users/${id}`,{method:"DELETE",headers:{"Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4","apikey":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"}});
-    st("Volunteer removed."); load();
+    await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"},body:JSON.stringify({type:"delete_user",userId:id})});
+    setViewProf(null); st("Volunteer removed."); load();
   };
   const approveSignup=async id=>{
     const {error}=await sb.from("signups").update({status:"approved"}).eq("id",id);
@@ -982,7 +982,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   const [manualHours,setManualHours]=useState(null);
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
-  useEffect(()=>{loadData();}, []);
+  useEffect(()=>{loadData(); const t=setInterval(loadData,30000); return ()=>clearInterval(t);}, []);
 
   const prevTh=React.useRef(0);
   async function loadData(){
