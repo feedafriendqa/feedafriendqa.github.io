@@ -289,6 +289,7 @@ function Auth({onAuth}){
 function ProfileEdit({profile, onSave, onBack}){
   const [fn,setFn]=useState(profile.first_name||"");
   const [sn,setSn]=useState(profile.surname||"");
+  const [phone,setPhone]=useState(profile.phone||"");
   const [dob,setDob]=useState(profile.dob||"");
   const [employment,setEmployment]=useState(profile.is_student?"student":profile.is_working?"working":"not_working");
   const [studentLevel,setStudentLevel]=useState(profile.student_level||"");
@@ -305,7 +306,7 @@ function ProfileEdit({profile, onSave, onBack}){
     setSaving(true);
     let photo_url = profile.photo_url;
     if(photoFile) photo_url = await uploadPhoto(profile.id, photoFile) || photo_url;
-    const updates = {first_name:fn,surname:sn,photo_url};
+    const updates = {first_name:fn,surname:sn,photo_url,phone};
     if(!isAdmin){
       Object.assign(updates,{dob,is_student:employment==="student",is_working:employment==="working",student_level:studentLevel,student_school:studentSchool,profession:prof,projects:projs});
     }
@@ -316,7 +317,6 @@ function ProfileEdit({profile, onSave, onBack}){
   }
 
   return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
-    <Confetti active={volCelebrate} hours={volCelebrateHours}/>
     <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 16px",gap:12,position:"sticky",top:0,zIndex:100}}>
       <button onClick={onBack} style={{background:"rgba(255,255,255,0.1)",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13,fontWeight:700}}>← Back</button>
       <span style={{fontFamily:HF,fontWeight:900,fontSize:16,color:"#fff",textTransform:"uppercase"}}>Edit Profile</span>
@@ -329,6 +329,7 @@ function ProfileEdit({profile, onSave, onBack}){
           </div>
           <Field label="First Name"><input type="text" value={fn} onChange={e=>setFn(e.target.value)} style={inp}/></Field>
           <Field label="Surname"><input type="text" value={sn} onChange={e=>setSn(e.target.value)} style={inp}/></Field>
+          <Field label="Phone Number"><input type="tel" placeholder="e.g. 33123456" value={phone} onChange={e=>setPhone(e.target.value)} style={inp}/></Field>
           {!isAdmin&&<>
             <Field label="Date of Birth"><input type="date" value={dob} onChange={e=>setDob(e.target.value)} style={inp}/></Field>
             <Field label="Employment Status">
@@ -979,8 +980,6 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   const [volHistory,setVolHistory]=useState([]);
   const [csvResult,setCsvResult]=useState(null);
   const [manualHours,setManualHours]=useState(null);
-  const [celebrate,setCelebrate]=useState(false);
-  const [celebrateHours,setCelebrateHours]=useState(0);
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
   useEffect(()=>{loadData();}, []);
@@ -1092,7 +1091,10 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
                     <div style={{fontWeight:700,fontSize:13,fontFamily:BF,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{o.title}</div>
                     <div style={{fontSize:11,color:MT,fontFamily:BF}}>📅 {o.date}{o.start_time?" · ⏰ "+o.start_time:""} · 📍 {o.location}</div>
                   </div>
-                  <span style={{fontSize:11,background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"3px 8px",fontWeight:700,flexShrink:0}}>✓ Approved</span>
+                  <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0,alignItems:"flex-end"}}>
+                    <span style={{fontSize:11,background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"3px 8px",fontWeight:700}}>✓ Approved</span>
+                    <button onClick={async()=>{if(window.confirm("Cancel your attendance?")){{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Attendance cancelled.");loadData();}}}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"4px 8px",fontSize:10,fontWeight:700,cursor:"pointer"}}>Cancel</button>
+                  </div>
                 </div>;
               })
           }
@@ -1159,7 +1161,6 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
               </div>}
               {done&&signup?.checked_in&&<span style={{background:p.light,color:p.text,borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>📍 Checked In</span>}
             </div>
-              {done&&!signup?.checked_in&&<button onClick={()=>cancelSignup(o.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"8px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:BF}}>Cancel</button>}
             </div>
             </div>
           </div>;})}
