@@ -156,7 +156,7 @@ function Auth({onAuth}){
   const [err,setErr]=useState(""), [msg,setMsg]=useState("");
   const [showPw,setShowPw]=useState(false);
   const [em,setEm]=useState(""), [pw,setPw]=useState("");
-  const [r,setR]=useState({fn:"",sn:"",dob:"",email:"",pw:"",pw2:"",employment:"",student:false,studentLevel:"",studentSchool:"",working:false,prof:"",projs:[],photo:null,photoFile:null});
+  const [r,setR]=useState({fn:"",sn:"",dob:"",email:"",pw:"",pw2:"",employment:"",student:false,studentLevel:"",studentSchool:"",working:false,prof:"",projs:[],photo:null,photoFile:null,nationality:""});
 
   async function login(){
     setErr(""); setLoading(true);
@@ -169,7 +169,7 @@ function Auth({onAuth}){
 
   async function register(){
     setErr("");
-    if(!r.fn||!r.sn||!r.dob||!r.phone||!r.email||!r.pw){setErr("Please fill in all required fields.");return;}
+    if(!r.fn||!r.sn||!r.dob||!r.phone||!r.nationality||!r.email||!r.pw){setErr("Please fill in all required fields.");return;}
     if(r.pw!==r.pw2){setErr("Passwords do not match.");return;}
     if(r.pw.length<6){setErr("Password must be at least 6 characters.");return;}
     setLoading(true);
@@ -177,7 +177,7 @@ function Auth({onAuth}){
     if(error){setErr(error.message);setLoading(false);return;}
     let photo_url=null;
     if(r.photoFile&&data.user) photo_url=await uploadPhoto(data.user.id,r.photoFile);
-    await sb.from("profiles").insert({id:data.user.id,first_name:r.fn,surname:r.sn,email:r.email,dob:r.dob,phone:r.phone||"",is_student:r.employment==="student",student_level:r.studentLevel,student_school:r.studentSchool,is_working:r.employment==="working",profession:r.prof,projects:r.projs,photo_url,role:"volunteer",approved:false});
+    await sb.from("profiles").insert({id:data.user.id,first_name:r.fn,surname:r.sn,email:r.email,dob:r.dob,phone:r.phone||"",nationality:r.nationality||"",is_student:r.employment==="student",student_level:r.studentLevel,student_school:r.studentSchool,is_working:r.employment==="working",profession:r.prof,projects:r.projs,photo_url,role:"volunteer",approved:false});
     await sendEmail("volunteer_pending",r.fn,r.email);
     await sendEmail("new_volunteer",r.fn+" "+r.sn,r.email,"salaam@feedafriend.org");
     setMsg("Registration submitted! An admin will review and approve your account shortly.");
@@ -243,6 +243,7 @@ function Auth({onAuth}){
         </div>
         <Field label="Date of Birth *"><input type="date" value={r.dob} onChange={e=>setR(x=>{return{...x,dob:e.target.value};} )} style={inp}/></Field>
         <Field label="Phone Number *"><input type="tel" placeholder="e.g. 33123456" value={r.phone||""} onChange={e=>setR(x=>{return{...x,phone:e.target.value};} )} style={inp}/></Field>
+        <Field label="Nationality *"><input type="text" placeholder="e.g. British, Qatari, Egyptian" value={r.nationality||""} onChange={e=>setR(x=>{return{...x,nationality:e.target.value};} )} style={inp}/></Field>
         <Field label="Email *"><input type="email" placeholder="you@email.com" value={r.email} onChange={e=>setR(x=>{return{...x,email:e.target.value};} )} style={inp}/></Field>
         <Field label="Password *"><input type="password" placeholder="Min. 6 characters" value={r.pw} onChange={e=>setR(x=>{return{...x,pw:e.target.value};} )} style={inp}/></Field>
         <Field label="Confirm Password *"><input type="password" placeholder="Repeat password" value={r.pw2} onChange={e=>setR(x=>{return{...x,pw2:e.target.value};} )} style={inp}/></Field>
@@ -290,6 +291,7 @@ function ProfileEdit({profile, onSave, onBack}){
   const [fn,setFn]=useState(profile.first_name||"");
   const [sn,setSn]=useState(profile.surname||"");
   const [phone,setPhone]=useState(profile.phone||"");
+  const [nationality,setNationality]=useState(profile.nationality||"");
   const [dob,setDob]=useState(profile.dob||"");
   const [employment,setEmployment]=useState(profile.is_student?"student":profile.is_working?"working":"not_working");
   const [studentLevel,setStudentLevel]=useState(profile.student_level||"");
@@ -306,7 +308,7 @@ function ProfileEdit({profile, onSave, onBack}){
     setSaving(true);
     let photo_url = profile.photo_url;
     if(photoFile) photo_url = await uploadPhoto(profile.id, photoFile) || photo_url;
-    const updates = {first_name:fn,surname:sn,photo_url,phone};
+    const updates = {first_name:fn,surname:sn,photo_url,phone,nationality};
     if(!isAdmin){
       Object.assign(updates,{dob,is_student:employment==="student",is_working:employment==="working",student_level:studentLevel,student_school:studentSchool,profession:prof,projects:projs});
     }
@@ -330,6 +332,7 @@ function ProfileEdit({profile, onSave, onBack}){
           <Field label="First Name"><input type="text" value={fn} onChange={e=>setFn(e.target.value)} style={inp}/></Field>
           <Field label="Surname"><input type="text" value={sn} onChange={e=>setSn(e.target.value)} style={inp}/></Field>
           <Field label="Phone Number"><input type="tel" placeholder="e.g. 33123456" value={phone} onChange={e=>setPhone(e.target.value)} style={inp}/></Field>
+          <Field label="Nationality"><input type="text" placeholder="e.g. British, Qatari, Egyptian" value={nationality} onChange={e=>setNationality(e.target.value)} style={inp}/></Field>
           {!isAdmin&&<>
             <Field label="Date of Birth"><input type="date" value={dob} onChange={e=>setDob(e.target.value)} style={inp}/></Field>
             <Field label="Employment Status">
@@ -533,6 +536,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
           <div style={{fontSize:13,color:MT}}>{viewProf.email}</div>
           <div style={{fontSize:12,color:MT,marginTop:2}}>DOB: {viewProf.dob||"Not provided"}</div>
           {viewProf.phone&&<div style={{fontSize:12,color:MT,marginTop:2}}>📞 {viewProf.phone}</div>}
+          {viewProf.nationality&&<div style={{fontSize:12,color:MT,marginTop:2}}>🌍 {viewProf.nationality}</div>}
           <div style={{marginTop:6}}><span style={{background:DK,color:MD,borderRadius:20,padding:"3px 10px",fontSize:12,fontWeight:700}}>⏱ {Math.round(hourLogs.filter(l=>l.volunteer_id===viewProf.id).reduce((s,l)=>s+Number(l.hours),0)*100)/100}h volunteered</span></div>
         </div>
       </div>
