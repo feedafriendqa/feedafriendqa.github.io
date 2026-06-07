@@ -290,9 +290,16 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 </div>
 <div class="card">
   <div class="card-title">🏠 Location &amp; Finances</div>
-  <div class="fg-row">
-    <div class="fg"><label>Zone Number</label><input id="zone" placeholder="e.g. 25" oninput="fillZone(this.value)"></div>
-    <div class="fg"><label>Area</label><input id="zone_area" placeholder="Auto-filled" readonly style="background:#f8f8f8;"></div>
+  <div class="fg"><label>Zone Number</label>
+    <input id="zone" placeholder="e.g. 42" oninput="fillZone(this.value)" list="zone-list">
+    <datalist id="zone-list">
+      ${Object.entries(ZONES).map(([k,v])=>`<option value="${k}">${k} — ${v}</option>`).join('')}
+    </datalist>
+  </div>
+  <div class="fg" id="zone-area-row" style="display:none;">
+    <label>Area</label>
+    <div style="padding:10px 13px;border-radius:var(--rs);border:2px solid var(--lime);background:var(--lime-soft);font-weight:700;font-size:13.5px;color:var(--forest);" id="zone_area_display">—</div>
+    <input type="hidden" id="zone_area">
   </div>
   <div class="fg"><label>Monthly Rent (QAR)</label><input id="rent" type="number" placeholder="0" oninput="calcInc()"></div>
   <div class="income-box" style="margin-top:4px;">
@@ -366,7 +373,7 @@ if(!initDB()) {
   document.addEventListener('DOMContentLoaded', initDB);
 }
 
-const ZONES = {"1":"Rawdat Al Khail","2":"Al Rumaila","3":"Al Dafna","4":"Al Qassar","5":"Fereej Al Nasr","6":"Al Sadd","7":"Al Mansoura","8":"Bin Mahmoud","9":"Doha Al Jadeed","10":"Old Airport","11":"Al Muntazah","12":"Al Hilal","13":"Al Matar Al Qadim","14":"Fereej Kulaib","15":"Al Thumama","16":"Al Aziziyah","17":"Al Wajba","18":"Al Rayyan","19":"Muaither","20":"Al Gharrafa","21":"Ain Khalid","22":"Al Wakra","23":"Mesaieed","24":"Al Khor","25":"Al Hilal","26":"Um Ghuwailina","27":"Al Nasr","28":"Al Duhail","29":"Bu Hamour","30":"Lusail"};
+const ZONES = {"1": "Al Jasrah", "2": "Al Bidda", "3": "Fereej Mohamed Bin Jasim / Mushayrib", "4": "Mushayrib", "5": "Al Najada / Barahat Al Jufairi / Fereej Al Asmakh", "6": "Old Al Ghanim", "7": "Al Souq", "10": "Wadi Al Sail", "11": "Rumeilah", "12": "Al Bidda", "13": "Mushayrib", "14": "Fereej Abdel Aziz", "15": "Ad Dawhah al Jadidah", "16": "Old Al Ghanim", "17": "Al Rufaa / Old Al Hitmi", "18": "As Salatah / Al Mirqab", "19": "Doha Port", "20": "Wadi Al Sail", "21": "Rumeilah", "22": "Fereej Bin Mahmoud", "23": "Fereej Bin Mahmoud", "24": "Rawdat Al Khail", "25": "Fereej Bin Durham / Al Mansoura", "26": "Najma", "27": "Umm Ghuwailina", "28": "Al Khulaifat / Ras Abu Aboud", "30": "Duhail", "31": "Umm Lekhba", "32": "Madinat Khalifa North / Dahl Al Hamam", "33": "Al Markhiya", "34": "Madinat Khalifa South", "35": "Fereej Kulaib", "36": "Al Messila", "37": "Fereej Bin Omran / New Al Hitmi / Hamad Medical City", "38": "Al Sadd", "39": "Al Sadd / New Al Mirqab / Fereej Al Nasr", "40": "New Salatah", "41": "Nuaija", "42": "Al Hilal", "43": "Nuaija", "44": "Nuaija", "45": "Old Airport", "46": "Al Thumama", "47": "Al Thumama", "48": "Doha International Airport", "49": "Ras Abu Fontas", "50": "Al Thumama", "51": "Al Gharrafa / Gharrafat Al Rayyan", "52": "Al Luqta / Old Al Rayyan", "53": "New Al Rayyan / Al Wajbah / Muaither", "54": "Fereej Al Amir / Luaib / Muraikh", "55": "Al Waab / Al Aziziya / Abu Hamour", "56": "Abu Samra / Al Mamoura / Mesaimeer", "57": "Industrial Area", "58": "Wholesale Market", "61": "Al Dafna / Al Qassar", "63": "Onaiza", "64": "Lejbailat", "65": "Onaiza", "66": "Onaiza / Leqtaifiya / Al Qassar", "67": "Hazm Al Markhiya", "68": "Jelaiah / Al Tarfa", "69": "Lusail / Al Egla", "70": "Leabaib / Al Kheesa / Rawdat Al Hamama", "71": "Umm Salal Ali / Umm Salal Mohammed", "72": "Al Utouriya", "73": "Al Jemailiya", "74": "Simaisma / Al Khor City", "75": "Al Thakhira / Ras Laffan", "76": "Al Ghuwariyah", "77": "Ain Sinan / Fuwayrit", "78": "Abu Dhalouf / Zubarah", "79": "Madinat ash Shamal / Ar Ru'ays", "80": "Al-Shahaniya City", "81": "Mebaireek", "82": "Rawdat Rashed", "83": "Al Karaana", "84": "Umm Bab", "85": "Al Nasraniya", "86": "Dukhan", "90": "Al Wakrah", "91": "Al Wukair / Al Mashaf", "92": "Mesaieed", "93": "Mesaieed Industrial Area", "94": "Shagra", "95": "Al Kharrara", "96": "Abu Samra", "97": "Sawda Natheel", "98": "Khor Al Adaid"};
 
 let qidFiles = {};   // key_front / key_back
 let qidData  = {};   // key -> extracted data
@@ -621,7 +628,16 @@ function flGet(group) {
 
 // ── ZONE ──
 function fillZone(v) {
-  document.getElementById('zone_area').value = ZONES[v.trim()] || '';
+  const area = ZONES[v.trim()] || '';
+  document.getElementById('zone_area').value = area;
+  const display = document.getElementById('zone_area_display');
+  const row = document.getElementById('zone-area-row');
+  if(area) {
+    display.textContent = 'Zone ' + v.trim() + ' — ' + area;
+    row.style.display = 'block';
+  } else {
+    row.style.display = 'none';
+  }
 }
 
 // ── INCOME ──
@@ -708,6 +724,7 @@ async function submitForm() {
       mother_pregnant: document.getElementById('m_preg').value,
       mother_sponsor: qidData['mother']?.sponsor || null,
       mother_qid_expiry: qidData['mother']?.expiry || null,
+      father_email: document.getElementById('f_email')?.value.trim()||'',
       zone: document.getElementById('zone').value.trim(),
       area: document.getElementById('zone_area').value.trim(),
       monthly_rent: rent,
@@ -768,6 +785,25 @@ async function submitForm() {
     document.querySelectorAll('.pg').forEach(p => p.classList.remove('active'));
     document.getElementById('s-success').classList.add('active');
     window.scrollTo(0,0);
+
+    // Send confirmation email
+    const fEmail = document.getElementById('f_email')?.value.trim();
+    const fName = document.getElementById('f_name')?.value.trim() || 'Parent';
+    if(fEmail) {
+      fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/ll-send-email', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4'
+        },
+        body: JSON.stringify({
+          type: 'application_received',
+          to_email: fEmail,
+          to_name: fName,
+          data: { urn }
+        })
+      }).catch(()=>{}); // silent fail — don't block the success screen
+    }
 
   } catch(err) {
     showErr('err3', 'Something went wrong: ' + (err.message||'Please try again.'));
