@@ -34,6 +34,9 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 .fg label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
 .fg input,.fg select,.fg textarea{width:100%;padding:10px 13px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:13.5px;font-weight:500;outline:none;transition:border-color .2s;background:white;}
 .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--lime);}
+.fg input:required:invalid,.fg select:required:invalid{border-color:var(--border);}
+.field-error{border-color:var(--coral)!important;background:#fff8f8!important;}
+.req-star{color:var(--coral);margin-left:2px;}
 .fg textarea{resize:vertical;min-height:64px;}
 .fg-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px;}
 .fg-row .fg{margin-bottom:0;}
@@ -676,14 +679,21 @@ function goStep(n) {
       {id:'f_emp', label:'Father employment status'},
       {id:'f_salary', label:'Father monthly salary'},
     ];
+    // Clear previous errors
+    required1.forEach(f => {
+      const el = document.getElementById(f.id);
+      if(el) el.classList.remove('field-error');
+    });
     for(const f of required1) {
       const el = document.getElementById(f.id);
       if(!el) continue;
       if(!el.value.trim()) {
         showErr('err1', '⚠️ Please fill in: ' + f.label);
-        el.focus(); el.style.borderColor='var(--coral)';
+        el.classList.add('field-error');
+        el.scrollIntoView({behavior:'smooth', block:'center'});
+        el.focus();
         return;
-      } else { el.style.borderColor=''; }
+      }
     }
   }
   if(n===3) {
