@@ -320,7 +320,10 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
       <div class="modal-hdr-title" id="m-title">Family</div>
       <div class="modal-hdr-sub" id="m-sub"></div>
     </div>
-    <button class="close-btn" onclick="closeModal()">✕</button>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+      <button class="close-btn" onclick="closeModal()">✕</button>
+      <button onclick="deleteFamily()" style="background:var(--coral);border:none;color:white;border-radius:50px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Quicksand,sans-serif;white-space:nowrap;">🗑 Delete</button>
+    </div>
   </div>
   <div class="modal-body">
     <div class="tab-bar">
@@ -618,16 +621,7 @@ function renderOverview(f) {
       </div>
     </div>
 
-    <!-- ZOOM LINK -->
-    <div style="margin-bottom:14px;">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📹 Zoom / Video Call Link</div>
-      <div style="display:flex;gap:8px;">
-        <input id="zoom-link-input" style="flex:1;padding:9px 13px;border-radius:var(--rs);border:2px solid var(--border);font-family:Quicksand,sans-serif;font-size:13px;outline:none;" placeholder="Paste Zoom link here…" value="${f.zoom_link||''}">
-        <button class="btn-teal btn-sm" onclick="saveZoomLink()">Save</button>
-      </div>
-    </div>
-
-    <div class="info-sec">
+        <div class="info-sec">
       <h3>Father / Guardian 1</h3>
       <div class="info-grid">
         <div class="irow"><div class="ikey">Name</div><div class="ival">${f.father_name||'—'}</div></div>
@@ -859,15 +853,6 @@ async function setPipelineStatus(status, updateUI=true) {
   showToast('✅ Status: '+STATUS_LABELS[status]);
 }
 
-// ── ZOOM LINK ──
-async function saveZoomLink() {
-  const link = document.getElementById('zoom-link-input').value.trim();
-  const {error} = await db.from('ll_families').update({zoom_link:link}).eq('id',currentFamily.id);
-  if(error) { showToast('Error: '+error.message); return; }
-  currentFamily.zoom_link = link;
-  showToast('✅ Zoom link saved');
-}
-
 // ── DOCUMENTS ──
 async function renderDocs(f) {
   const {data:docs} = await db.from('ll_documents').select('*').eq('family_id',f.id);
@@ -893,22 +878,95 @@ function renderAssessment(f, children) {
   const hasKids = children.length>0;
   const notFullTime = children.some(c=>c.school_status&&c.school_status!=='Enrolled full-time');
   document.getElementById('tp-assess').innerHTML = `
-    <div class="note">✏️ Fill this in after the pre-assessment video call.</div>
+    <div class="note">✏️ Complete this section during or after the pre-assessment video call.</div>
+
     <div class="criteria-list">
       <div class="crit"><div class="cdot ${hasKids?'pass':'fail'}">${hasKids?'✓':'✗'}</div>Child registered in Qatar</div>
       <div class="crit"><div class="cdot ${iar<=5000&&iar>=0?'pass':'fail'}">${iar<=5000&&iar>=0?'✓':'✗'}</div>Income after rent: QAR ${iar.toLocaleString()} (limit QAR 5,000)</div>
       <div class="crit"><div class="cdot ${notFullTime?'pass':'warn'}">${notFullTime?'✓':'!'}</div>Child not in full-time school</div>
-      <div class="crit"><div class="cdot ${f.assessor?'pass':'fail'}">${f.assessor?'✓':'✗'}</div>${f.assessor?'Assessment completed by '+f.assessor:'Not yet assessed'}</div>
+      <div class="crit"><div class="cdot ${f.assessor?'pass':'fail'}">${f.assessor?'✓':'✗'}</div>${f.assessor?'Pre-assessment completed by '+f.assessor:'Not yet assessed'}</div>
     </div>
+
     <div class="af">
-      <div><label>Method</label><select id="a-method"><option value="">Select…</option><option ${f.assess_method==='Video Call'?'selected':''}>Video Call</option><option ${f.assess_method==='Phone Call'?'selected':''}>Phone Call</option><option ${f.assess_method==='In-person'?'selected':''}>In-person</option></select></div>
-      <div><label>Date</label><input type="date" id="a-date" value="${f.assess_date||''}"></div>
-      <div><label>Your Name</label><input id="a-assessor" placeholder="Case handler name" value="${f.assessor||''}"></div>
-      <div><label>English Confirmed</label><select id="a-english"><option value="">Select…</option><option ${f.english_confirmed==='Fluent'?'selected':''}>Fluent</option><option ${f.english_confirmed==='Good'?'selected':''}>Good</option><option ${f.english_confirmed==='Basic'?'selected':''}>Basic</option><option ${f.english_confirmed==='None'?'selected':''}>None</option></select></div>
-      <div><label>Learning Difficulties</label><select id="a-ld"><option value="">Select…</option><option ${f.learning_difficulties==='No'?'selected':''}>No</option><option ${f.learning_difficulties==='Yes – manageable'?'selected':''}>Yes – manageable</option><option ${f.learning_difficulties==='Yes – severe'?'selected':''}>Yes – severe</option></select></div>
-      <div><label>Assessment Notes</label><textarea id="a-notes" placeholder="Observations about family, child level, home environment…">${f.assess_notes||''}</textarea></div>
-      <button class="btn-teal" onclick="saveAssessment()">💾 Save Assessment</button>
+
+      <div>
+        <label>Which child is being assessed?</label>
+        <select id="a-child-id">
+          <option value="">Select child…</option>
+          ${children.map(c=>`<option value="${c.id}">${c.full_name||'Child'} — ${suggestYG(c).yg}</option>`).join('')}
+        </select>
+      </div>
+
+      <div>
+        <label>📹 Video Call Link</label>
+        <input id="a-zoom" placeholder="Paste Zoom/Meet/Teams link…" value="${f.zoom_link||''}">
+      </div>
+      <div>
+        <label>Date &amp; Time of Call</label>
+        <input id="a-zoom-dt" type="datetime-local" value="${f.zoom_datetime||''}">
+      </div>
+      <button class="btn-teal btn-sm" onclick="saveAndSendCallDetails()" style="width:100%;margin-bottom:4px;">📧 Save Link &amp; Email Family</button>
+
+      <div>
+        <label>Method</label>
+        <select id="a-method">
+          <option value="">Select…</option>
+          <option ${f.assess_method==='Video Call'?'selected':''}>Video Call</option>
+          <option ${f.assess_method==='Phone Call'?'selected':''}>Phone Call</option>
+          <option ${f.assess_method==='In-person'?'selected':''}>In-person</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Date of Assessment</label>
+        <input type="date" id="a-date" value="${f.assess_date||''}">
+      </div>
+
+      <div>
+        <label>English Level Confirmed</label>
+        <select id="a-english">
+          <option value="">Select…</option>
+          <option ${f.english_confirmed==='Fluent'?'selected':''}>Fluent</option>
+          <option ${f.english_confirmed==='Good'?'selected':''}>Good</option>
+          <option ${f.english_confirmed==='Basic'?'selected':''}>Basic</option>
+          <option ${f.english_confirmed==='None'?'selected':''}>None</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Learning Difficulties</label>
+        <select id="a-ld">
+          <option value="">Select…</option>
+          <option ${f.learning_difficulties==='No'?'selected':''}>No</option>
+          <option ${f.learning_difficulties==='Yes – manageable'?'selected':''}>Yes – manageable</option>
+          <option ${f.learning_difficulties==='Yes – severe'?'selected':''}>Yes – severe</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Who will support the child's learning at home?</label>
+        <input id="a-support-person" placeholder="e.g. Mother, older sister Fatima…" value="${f.support_person||''}">
+      </div>
+
+      <div>
+        <label>Support person's English level</label>
+        <select id="a-support-english">
+          <option value="">Select…</option>
+          <option ${f.support_person_english==='Fluent'?'selected':''}>Fluent</option>
+          <option ${f.support_person_english==='Good'?'selected':''}>Good</option>
+          <option ${f.support_person_english==='Basic'?'selected':''}>Basic</option>
+          <option ${f.support_person_english==='None'?'selected':''}>None</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Assessment Notes</label>
+        <textarea id="a-notes" placeholder="Observations about the child's level, home environment, family commitment…">${f.assess_notes||''}</textarea>
+      </div>
+
+      <button class="btn-teal" onclick="saveAssessment()" style="width:100%;">💾 Save Pre-Assessment</button>
     </div>
+
     <div style="margin-top:16px;padding-top:14px;border-top:2px solid var(--border);">
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Application Decision</div>
       <div class="decision-btns">
@@ -1160,6 +1218,36 @@ function showPg(p,btn) {
   document.getElementById('pg-'+p).classList.add('active');
   document.querySelectorAll('.nb').forEach(b=>b.className='nb off');
   if(btn) btn.className='nb on';
+}
+
+// ── DELETE FAMILY ──
+async function deleteFamily() {
+  if(!currentFamily) return;
+  const name = (currentFamily.father_name||'this family');
+  const confirmed = confirm('Permanently delete ' + name + ' ('+currentFamily.urn+') and all their records? This cannot be undone.');
+  if(!confirmed) return;
+
+  // Delete documents from storage first
+  const {data:docs} = await db.from('ll_documents').select('file_path').eq('family_id', currentFamily.id);
+  if(docs && docs.length) {
+    const paths = docs.map(d=>d.file_path);
+    await db.storage.from('ll-documents').remove(paths);
+  }
+
+  // Delete family (cascades to children, documents, activity logs)
+  const {error} = await db.from('ll_families').delete().eq('id', currentFamily.id);
+  if(error) { showToast('Error: '+error.message); return; }
+
+  // Remove from local state
+  allFamilies = allFamilies.filter(f=>f.id!==currentFamily.id);
+  allChildren = allChildren.filter(c=>c.family_id!==currentFamily.id);
+  allActivityLogs = allActivityLogs.filter(l=>l.family_id!==currentFamily.id);
+
+  closeModal();
+  renderDash();
+  renderPipelineTabs();
+  renderFams();
+  showToast('🗑 '+name+' deleted');
 }
 
 // ── TOAST ──

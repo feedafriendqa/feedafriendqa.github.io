@@ -155,14 +155,14 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div id="scan-result-father" style="display:none;"></div>
     <div class="review-section" id="review-father">
       <div class="review-title">✏️ Review &amp; complete</div>
-      <div class="fg"><label>Full Name *</label><input id="f_name" placeholder="As on QID"></div>
-      <div class="fg"><label>QID Number</label><input id="f_qid" placeholder="e.g. 28740400336"></div>
+      <div class="fg"><label>Full Name *</label><input id="f_name" placeholder="As on QID" required></div>
+      <div class="fg"><label>QID Number</label><input id="f_qid" placeholder="e.g. 28740400336" required></div>
       <div class="fg-row">
-        <div class="fg"><label>Nationality</label><input id="f_nat" placeholder="e.g. Kenyan"></div>
-        <div class="fg"><label>Contact Number *</label><input id="f_phone" placeholder="77112704"></div>
+        <div class="fg"><label>Nationality</label><input id="f_nat" placeholder="e.g. Kenyan" required></div>
+        <div class="fg"><label>Contact Number *</label><input id="f_phone" placeholder="77112704" required></div>
       </div>
-      <div class="fg"><label>Email Address *</label><input id="f_email" type="email" placeholder="For updates about your application — e.g. name@email.com"></div>
-      <div class="fg"><label>Native Language</label><input id="f_lang" placeholder="e.g. Swahili, Amharic…"></div>
+      <div class="fg"><label>Email Address *</label><input id="f_email" type="email" required placeholder="For updates about your application — e.g. name@email.com"></div>
+      <div class="fg"><label>Native Language</label><input id="f_lang" placeholder="e.g. Swahili, Amharic…" required></div>
       <div class="fg"><label>English Fluency</label>
         <div class="fluency-row" id="f_eng">
           <div class="fl" onclick="flSel(this,'f_eng')">None</div>
@@ -181,9 +181,9 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
       </div>
       <div class="fg-row">
         <div class="fg"><label>Employment</label>
-          <select id="f_emp"><option value="">Select…</option><option>Employed</option><option>Self-employed</option><option>Unemployed</option></select>
+          <select id="f_emp" required><option value="">Select…</option><option>Employed</option><option>Self-employed</option><option>Unemployed</option></select>
         </div>
-        <div class="fg"><label>Monthly Salary (QAR)</label><input id="f_salary" type="number" placeholder="0" min="0" oninput="calcInc()"></div>
+        <div class="fg"><label>Monthly Salary (QAR)</label><input id="f_salary" type="number" placeholder="0" min="0" oninput="calcInc()" required></div>
       </div>
     </div>
   </div>
@@ -292,7 +292,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 <div class="card">
   <div class="card-title">🏠 Location &amp; Finances</div>
   <div class="fg"><label>Zone Number</label>
-    <input id="zone" placeholder="e.g. 42" oninput="fillZone(this.value)" list="zone-list">
+    <input id="zone" placeholder="e.g. 42" required oninput="fillZone(this.value)" list="zone-list">
     <datalist id="zone-list">
       ${Object.entries(ZONES).map(([k,v])=>`<option value="${k}">${k} — ${v}</option>`).join('')}
     </datalist>
@@ -302,7 +302,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div style="padding:10px 13px;border-radius:var(--rs);border:2px solid var(--lime);background:var(--lime-soft);font-weight:700;font-size:13.5px;color:var(--forest);" id="zone_area_display">—</div>
     <input type="hidden" id="zone_area">
   </div>
-  <div class="fg"><label>Monthly Rent (QAR)</label><input id="rent" type="number" placeholder="0" oninput="calcInc()"></div>
+  <div class="fg"><label>Monthly Rent (QAR)</label><input id="rent" type="number" placeholder="0" oninput="calcInc()" required></div>
   <div class="income-box" style="margin-top:4px;">
     <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Combined Household Income</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
@@ -331,10 +331,10 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div class="dev" onclick="this.classList.toggle('sel')"><div class="dicon">📟</div>Tablet / iPad</div>
   </div>
   <div class="fg" style="margin-top:12px;"><label>Internet Access?</label>
-    <select id="internet"><option value="">Select…</option><option>Yes — broadband/WiFi</option><option>Yes — mobile data only</option><option>No</option></select>
+    <select id="internet" required><option value="">Select…</option><option>Yes — broadband/WiFi</option><option>Yes — mobile data only</option><option>No</option></select>
   </div>
   <div class="fg"><label>Study desk or table?</label>
-    <select id="desk"><option value="">Select…</option><option>Yes</option><option>No</option></select>
+    <select id="desk" required><option value="">Select…</option><option>Yes</option><option>No</option></select>
   </div>
 </div>
 <div id="err3" class="err-msg"></div>
@@ -557,10 +557,10 @@ function addChild() {
       <div id="scan-result-child_${idx}" style="display:none;"></div>
       <div class="review-section">
         <div class="review-title">✏️ Review &amp; complete</div>
-        <div class="fg"><label>Full Name *</label><input class="cname" placeholder="As on ID"></div>
+        <div class="fg"><label>Full Name *</label><input class="cname" placeholder="As on ID" required></div>
         <div class="fg-row">
-          <div class="fg"><label>Date of Birth</label><input class="cdob" type="date"></div>
-          <div class="fg"><label>Gender</label><select class="cgender"><option value="">Select…</option><option>Girl</option><option>Boy</option></select></div>
+          <div class="fg"><label>Date of Birth</label><input class="cdob" type="date" required></div>
+          <div class="fg"><label>Gender</label><select class="cgender" required><option value="">Select…</option><option>Girl</option><option>Boy</option></select></div>
         </div>
         <div class="fg-row">
           <div class="fg"><label>QID / Passport No.</label><input class="cqid" placeholder="e.g. C053961"></div>
@@ -584,7 +584,7 @@ function addChild() {
           </div>
         </div>
         <div class="fg"><label>Current School Status</label>
-          <select class="cschool"><option value="">Select…</option><option>Never attended school</option><option>Previously attended — left</option><option>On waiting list</option><option>Online school only</option><option>Part-time (≤2.5 days/week)</option><option>Enrolled full-time</option></select>
+          <select class="cschool" required><option value="">Select…</option><option>Never attended school</option><option>Previously attended — left</option><option>On waiting list</option><option>Online school only</option><option>Part-time (≤2.5 days/week)</option><option>Enrolled full-time</option></select>
         </div>
         <div class="fg"><label>If previously attended — how many years ago did they leave?</label>
           <select class="cyears"><option value="">Select…</option><option>Never attended</option><option>Less than 1 year ago</option><option>1–2 years ago</option><option>2–3 years ago</option><option>3–4 years ago</option><option>4+ years ago</option></select>
@@ -665,16 +665,44 @@ function calcInc() {
 // ── STEP NAV ──
 function goStep(n) {
   if(n===2) {
-    if(!document.getElementById('f_name').value.trim() || !document.getElementById('f_phone').value.trim()) {
-      showErr('err1','Please enter the father/guardian name and contact number.'); return;
+    // Validate father fields
+    const required1 = [
+      {id:'f_name', label:'Father/guardian full name'},
+      {id:'f_qid', label:'Father QID number'},
+      {id:'f_nat', label:'Father nationality'},
+      {id:'f_phone', label:'Father contact number'},
+      {id:'f_email', label:'Email address'},
+      {id:'f_lang', label:'Father native language'},
+      {id:'f_emp', label:'Father employment status'},
+      {id:'f_salary', label:'Father monthly salary'},
+    ];
+    for(const f of required1) {
+      const el = document.getElementById(f.id);
+      if(!el) continue;
+      if(!el.value.trim()) {
+        showErr('err1', '⚠️ Please fill in: ' + f.label);
+        el.focus(); el.style.borderColor='var(--coral)';
+        return;
+      } else { el.style.borderColor=''; }
     }
   }
   if(n===3) {
     const blocks = document.querySelectorAll('.child-block');
     if(!blocks.length) { showErr('err2','Please add at least one child.'); return; }
-    let ok = true;
-    blocks.forEach(b => { if(!b.querySelector('.cname').value.trim()) ok = false; });
-    if(!ok) { showErr('err2','Please enter a name for each child.'); return; }
+    let missing = '';
+    blocks.forEach((b,i) => {
+      if(!b.querySelector('.cname').value.trim()) missing = 'Child '+(i+1)+' name';
+      if(!b.querySelector('.cgender').value) missing = missing||'Child '+(i+1)+' gender';
+      if(!b.querySelector('.cdob').value) missing = missing||'Child '+(i+1)+' date of birth';
+      if(!b.querySelector('.cschool').value) missing = missing||'Child '+(i+1)+' school status';
+    });
+    if(missing) { showErr('err2','⚠️ Please fill in: '+missing); return; }
+  }
+  if(n===4) {
+    if(!document.getElementById('zone').value.trim()) { showErr('err3','⚠️ Please enter your zone number.'); return; }
+    if(!document.getElementById('rent').value) { showErr('err3','⚠️ Please enter your monthly rent.'); return; }
+    if(!document.getElementById('internet').value) { showErr('err3','⚠️ Please select internet access.'); return; }
+    if(!document.getElementById('desk').value) { showErr('err3','⚠️ Please select study desk availability.'); return; }
   }
   hideErr('err1'); hideErr('err2'); hideErr('err3');
   document.querySelectorAll('.pg').forEach(p => p.classList.remove('active'));
