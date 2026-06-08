@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome Baby — CRM Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #1e7230;
+  --green-dark: #155224;
+  --green-light: #e8f5eb;
+  --green-mid: #b7dfc0;
+  --purple: #8e44ad;
+  --purple-light: #f3eaf8;
+  --purple-mid: #d4a8e8;
+  --amber: #e8a020;
+  --amber-light: #fef6e7;
+  --teal: #3ab4a6;
+  --teal-light: #e6f7f6;
+  --coral: #e05c3a;
+  --coral-light: #fdeee9;
+  --white: #ffffff;
+  --bg: #f7f8f6;
+  --surface: #ffffff;
+  --border: #e8ece8;
+  --ink: #1a2e1c;
+  --muted: #6b7f6d;
+  --light-text: #9aab9c;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 2px 12px rgba(45,122,58,0.08);
+  --shadow-md: 0 4px 24px rgba(45,122,58,0.12);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: var(--bg);
+  font-family: 'Nunito', sans-serif;
+  color: var(--ink);
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: white;
+  border-top: 1.5px solid var(--border);
+  display: flex;
+  z-index: 200;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 4px 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  gap: 3px;
+}
+.nav-item .nav-icon { font-size: 22px; line-height: 1; }
+.nav-item .nav-label { font-size: 10px; font-weight: 600; color: var(--light-text); letter-spacing: 0.3px; }
+.nav-item.active .nav-label { color: var(--purple); }
+.nav-item.active .nav-icon { filter: none; }
+.nav-item .nav-pip {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--purple);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.nav-item.active .nav-pip { opacity: 1; }
+
+/* ── SCREENS ── */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ── TOP BAR ── */
+.topbar {
+  background: white;
+  padding: 16px 20px 14px;
+  border-bottom: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.topbar-logo {
+  width: 32px; height: 32px;
+  background: var(--green);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  color: white;
+}
+.topbar-title { font-size: 16px; font-weight: 800; color: var(--ink); }
+.topbar-title span { color: var(--purple); }
+.topbar-badge {
+  background: var(--purple-light);
+  color: var(--purple);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 100px;
+}
+
+/* ── DASHBOARD ── */
+.dash-header {
+  padding: 20px 20px 0;
+}
+.dash-greeting {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.dash-greeting span { color: var(--green); }
+.dash-date { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+/* Stats row */
+.stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px 20px 0;
+}
+.stat-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  border: 1.5px solid var(--border);
+}
+.stat-card.purple { background: var(--purple); border-color: var(--purple); }
+.stat-card.green { background: var(--green); border-color: var(--green); }
+.stat-num {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.stat-card.purple .stat-num,
+.stat-card.green .stat-num { color: white; }
+.stat-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.stat-card.purple .stat-label,
+.stat-card.green .stat-label { color: rgba(255,255,255,0.75); }
+.stat-card.coral { background: var(--coral); border-color: var(--coral); }
+.stat-card.coral .stat-num { color: white; }
+.stat-card.coral .stat-label { color: rgba(255,255,255,0.8); }
+.stat-icon { font-size: 22px; margin-bottom: 8px; }
+
+/* Section heading */
+.section-head {
+  padding: 20px 20px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.section-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.section-link {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--purple);
+  cursor: pointer;
+}
+
+/* Family cards */
+.family-list { padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
+
+.family-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.1s;
+  active: transform: scale(0.98);
+}
+.family-card:active { transform: scale(0.98); }
+
+.family-avatar {
+  width: 46px; height: 46px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  font-weight: 800;
+  font-size: 16px;
+}
+.avatar-purple { background: var(--purple-light); color: var(--purple); }
+.avatar-green { background: var(--green-light); color: var(--green); }
+.avatar-teal { background: var(--teal-light); color: var(--teal); }
+.avatar-amber { background: var(--amber-light); color: var(--amber); }
+
+.family-info { flex: 1; min-width: 0; }
+.family-name { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.family-meta { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+.stage-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 100px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pill-new { background: var(--amber-light); color: var(--amber); }
+.pill-active { background: var(--green-light); color: var(--green-dark); }
+.pill-follow { background: var(--purple-light); color: var(--purple); }
+.pill-emergency { background: var(--coral-light); color: var(--coral); }
+.pill-closed { background: var(--border); color: var(--muted); }
+
+/* Milestones due */
+.milestone-list { padding: 0 20px; display: flex; flex-direction: column; gap: 8px; }
+.milestone-item {
+  background: white;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.milestone-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-amber { background: var(--amber); }
+.dot-purple { background: var(--purple); }
+.dot-green { background: var(--green); }
+.dot-coral { background: var(--coral); }
+.milestone-text { flex: 1; font-size: 13px; font-weight: 600; color: var(--ink); }
+.milestone-when { font-size: 11px; color: var(--muted); font-weight: 500; }
+
+/* ── FAMILIES SCREEN ── */
+.search-bar {
+  padding: 14px 20px;
+  position: sticky;
+  top: 61px;
+  background: var(--bg);
+  z-index: 99;
+}
+.search-input {
+  width: 100%;
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px 12px 40px;
+  font-size: 14px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 500;
+  color: var(--ink);
+  outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7f6d' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 14px center;
+}
+.search-input:focus { border-color: var(--purple); }
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.filter-row::-webkit-scrollbar { display: none; }
+.filter-chip {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 100px;
+  border: 1.5px solid var(--border);
+  background: white;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.filter-chip.active { background: var(--purple); color: white; border-color: var(--purple); }
+
+/* FAB */
+.fab {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 56px; height: 56px;
+  background: var(--purple);
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  box-shadow: 0 4px 20px rgba(142,68,173,0.4);
+  cursor: pointer;
+  z-index: 150;
+  transition: transform 0.15s;
+}
+.fab:active { transform: scale(0.93); }
+
+/* ── PROFILE SCREEN ── */
+.profile-hero {
+  background: linear-gradient(160deg, var(--purple) 0%, #6c3483 100%);
+  padding: 24px 20px 28px;
+  position: relative;
+  overflow: hidden;
+}
+.profile-hero::after {
+  content: '👶';
+  position: absolute;
+  right: 20px; top: 20px;
+  font-size: 64px;
+  opacity: 0.15;
+}
+.profile-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255,255,255,0.7);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+.profile-back::before { content: '←'; font-size: 16px; }
+.profile-baby-name {
+  font-size: 28px;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 4px;
+}
+.profile-family-name { font-size: 14px; color: rgba(255,255,255,0.75); font-weight: 600; margin-bottom: 14px; }
+.profile-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.profile-pill {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 100px;
+}
+
+/* Profile sections */
+.profile-body { padding: 0 20px; }
+
+.info-card {
+  background: white;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow);
+  margin-top: 14px;
+  overflow: hidden;
+}
+.info-card-header {
+  padding: 14px 16px 12px;
+  border-bottom: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.info-card-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.info-card-edit {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--purple);
+  cursor: pointer;
+}
+.info-rows { padding: 4px 0; }
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.info-row:last-child { border-bottom: none; }
+.info-key {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  flex-shrink: 0;
+  width: 110px;
+}
+.info-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: right;
+  flex: 1;
+}
+.info-val.feeding-bf { color: var(--green); }
+.info-val.feeding-formula { color: var(--amber); }
+.info-val.feeding-mixed { color: var(--teal); }
+
+/* Timeline / log */
+.timeline { padding: 0 16px 16px; }
+.timeline-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.timeline-item:last-child { border-bottom: none; }
+.timeline-dot-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 28px;
+  flex-shrink: 0;
+}
+.tl-dot {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.tl-dot.green { background: var(--green-light); }
+.tl-dot.purple { background: var(--purple-light); }
+.tl-dot.amber { background: var(--amber-light); }
+.tl-dot.teal { background: var(--teal-light); }
+.tl-line {
+  width: 2px;
+  flex: 1;
+  background: var(--border);
+  margin-top: 4px;
+  min-height: 20px;
+}
+.tl-content { flex: 1; }
+.tl-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+.tl-note { font-size: 12px; color: var(--muted); font-weight: 500; line-height: 1.5; }
+.tl-meta { font-size: 11px; color: var(--light-text); font-weight: 500; margin-top: 4px; }
+
+/* Add note box */
+.add-note-box {
+  background: white;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow);
+  margin: 14px 20px 0;
+  padding: 14px 16px;
+}
+.add-note-label { font-size: 12px; font-weight: 800; color: var(--ink); margin-bottom: 8px; }
+.add-note-input {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  resize: none;
+  outline: none;
+  min-height: 72px;
+}
+.add-note-input:focus { border-color: var(--purple); }
+.add-note-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+}
+.note-type-select {
+  flex: 1;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  outline: none;
+  background: white;
+}
+.btn-log {
+  background: var(--purple);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.btn-log:active { transform: scale(0.96); }
+
+/* ── TEAM SCREEN ── */
+.fairy-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.fairy-avatar {
+  width: 46px; height: 46px;
+  border-radius: 14px;
+  background: var(--purple-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.fairy-name { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+.fairy-meta { font-size: 12px; color: var(--muted); font-weight: 500; }
+.fairy-count {
+  background: var(--purple-light);
+  color: var(--purple);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 100px;
+  flex-shrink: 0;
+}
+
+/* ── REMINDERS SCREEN ── */
+.reminder-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  border: 1.5px solid var(--border);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.reminder-icon {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.ri-amber { background: var(--amber-light); }
+.ri-purple { background: var(--purple-light); }
+.ri-green { background: var(--green-light); }
+.ri-coral { background: var(--coral-light); }
+.reminder-body { flex: 1; }
+.reminder-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+.reminder-sub { font-size: 12px; color: var(--muted); font-weight: 500; line-height: 1.5; }
+.reminder-due { font-size: 11px; font-weight: 700; margin-top: 6px; }
+.due-soon { color: var(--coral); }
+.due-upcoming { color: var(--amber); }
+.due-ok { color: var(--green); }
+
+/* Divider */
+.divider-label {
+  padding: 16px 20px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--light-text);
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════
+     SCREEN 1: DASHBOARD
+════════════════════════════ -->
+<div class="screen active" id="screen-dashboard">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <img src="https://feedafriend.org/wp-content/uploads/2022/01/Feed-A-Friend-Logo.png" style="height:32px;width:auto;" alt="Feed a Friend"><div style="width:1px;height:24px;background:var(--border);margin:0 4px;"></div><div class="topbar-title">Welcome <span>Baby</span></div>
+    </div>
+    <div class="topbar-badge">4 active</div>
+  </div>
+
+  <div class="dash-header">
+    <div class="dash-greeting">Good morning, <span id="dash-name">Alliyah</span> 👋</div>
+    <div class="dash-date" id="dash-date"></div>
+  </div>
+
+  <!-- Role toggle (for demo) -->
+  <div style="padding: 12px 20px 0; display:flex; gap:8px;">
+    <div class="filter-chip active" id="role-admin" onclick="setRole('admin')" style="font-size:11px;">👩‍💼 Admin view</div>
+    <div class="filter-chip" id="role-super" onclick="setRole('super')" style="font-size:11px;">⭐ Super admin view</div>
+  </div>
+
+  <!-- ADMIN STATS -->
+  <div id="stats-admin">
+    <div class="stats-row">
+      <div class="stat-card purple">
+        <div class="stat-icon">👨‍👩‍👧</div>
+        <div class="stat-num">4</div>
+        <div class="stat-label">My families</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⏰</div>
+        <div class="stat-num">3</div>
+        <div class="stat-label">Reminders due</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-icon">🎂</div>
+        <div class="stat-num">1</div>
+        <div class="stat-label">Birthdays this month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🤰</div>
+        <div class="stat-num">2</div>
+        <div class="stat-label">Due in 30 days</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPER ADMIN STATS -->
+  <div id="stats-super" style="display:none;">
+    <div class="stats-row">
+      <div class="stat-card purple">
+        <div class="stat-icon">👨‍👩‍👧</div>
+        <div class="stat-num">12</div>
+        <div class="stat-label">Total families</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-icon">🧚‍♀️</div>
+        <div class="stat-num">12</div>
+        <div class="stat-label">Baby fairies</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-num">2</div>
+        <div class="stat-label">Unassigned families</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-num">10</div>
+        <div class="stat-label">Assigned families</div>
+      </div>
+    </div>
+    <div class="stats-row" style="padding-top:0;">
+      <div class="stat-card">
+        <div class="stat-icon">🎂</div>
+        <div class="stat-num">3</div>
+        <div class="stat-label">Birthdays this month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🤰</div>
+        <div class="stat-num">4</div>
+        <div class="stat-label">Due in 30 days</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⏰</div>
+        <div class="stat-num">6</div>
+        <div class="stat-label">Reminders due</div>
+      </div>
+      <div class="stat-card coral" style="background:var(--coral);border-color:var(--coral);">
+        <div class="stat-icon">🚨</div>
+        <div class="stat-num" style="color:white;">1</div>
+        <div class="stat-label" style="color:rgba(255,255,255,0.8);">Concerns flagged</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <div class="section-title">Recent families</div>
+    <div class="section-link" onclick="showScreen('screen-families')">See all →</div>
+  </div>
+
+  <div class="family-list">
+    <div class="family-card" onclick="showProfile()">
+      <div class="family-avatar avatar-purple">AR</div>
+      <div class="family-info">
+        <div class="family-name">Al-Rashidi — Baby Lina</div>
+        <div class="family-meta">🧚‍♀️ Sumaya · Week 1</div>
+      </div>
+      <div class="stage-pill pill-new">New</div>
+    </div>
+    <div class="family-card">
+      <div class="family-avatar avatar-green">MA</div>
+      <div class="family-info">
+        <div class="family-name">Malik — Baby Yusuf</div>
+        <div class="family-meta">🧚‍♀️ Hamda · Week 6</div>
+      </div>
+      <div class="stage-pill pill-active">Active</div>
+    </div>
+    <div class="family-card">
+      <div class="family-avatar avatar-teal">IB</div>
+      <div class="family-info">
+        <div class="family-name">Ibrahim — Baby Sara</div>
+        <div class="family-meta">🧚‍♀️ Rania · Month 5</div>
+      </div>
+      <div class="stage-pill pill-emergency">Emergency</div>
+    </div>
+    <div class="family-card">
+      <div class="family-avatar avatar-amber">HA</div>
+      <div class="family-info">
+        <div class="family-name">Hassan — Baby Adam</div>
+        <div class="family-meta">🧚‍♀️ Nour · Week 3</div>
+      </div>
+      <div class="stage-pill pill-active">Active</div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <div class="section-title">Upcoming milestones</div>
+    <div class="section-link" onclick="showScreen('screen-reminders')">See all →</div>
+  </div>
+
+  <div class="milestone-list">
+    <div class="milestone-item">
+      <div class="milestone-dot dot-amber"></div>
+      <div class="milestone-text">Yusuf — 1 month birth cert due</div>
+      <div class="milestone-when">Today</div>
+    </div>
+    <div class="milestone-item">
+      <div class="milestone-dot dot-purple"></div>
+      <div class="milestone-text">Sara — 6 month check-in</div>
+      <div class="milestone-when">3 days</div>
+    </div>
+    <div class="milestone-item">
+      <div class="milestone-dot dot-green"></div>
+      <div class="milestone-text">Adam — Post-birth visit</div>
+      <div class="milestone-when">This week</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════
+     SCREEN 2: FAMILIES
+════════════════════════════ -->
+<div class="screen" id="screen-families">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">👨‍👩‍👧</div>
+      <div class="topbar-title">Families</div>
+    </div>
+    <div class="topbar-badge">12 total</div>
+  </div>
+
+  <div class="search-bar">
+    <input class="search-input" type="text" placeholder="Search families…">
+  </div>
+
+  <div class="filter-row">
+    <div class="filter-chip active">All</div>
+    <div class="filter-chip">New</div>
+    <div class="filter-chip">Active</div>
+    <div class="filter-chip">Emergency</div>
+    <div class="filter-chip">Closed</div>
+  </div>
+
+  <div class="divider-label">Active — 4</div>
+  <div class="family-list">
+    <div class="family-card" onclick="showProfile()">
+      <div class="family-avatar avatar-purple">AR</div>
+      <div class="family-info">
+        <div class="family-name">Al-Rashidi — Baby Lina</div>
+        <div class="family-meta">🧚‍♀️ Sumaya · Born 01 Jun 2026</div>
+      </div>
+      <div class="stage-pill pill-new">New</div>
+    </div>
+    <div class="family-card">
+      <div class="family-avatar avatar-green">MA</div>
+      <div class="family-info">
+        <div class="family-name">Malik — Baby Yusuf</div>
+        <div class="family-meta">🧚‍♀️ Hamda · Born 03 May 2026</div>
+      </div>
+      <div class="stage-pill pill-active">Active</div>
+    </div>
+    <div class="family-card">
+      <div class="family-avatar avatar-teal">IB</div>
+      <div class="family-info">
+        <div class="family-name">Ibrahim — Baby Sara</div>
+        <div class="family-meta">🧚‍♀️ Rania · Born 10 Jan 2026</div>
+      </div>
+      <div class="stage-pill pill-emergency">Emergency</div>
+    </div>
+    <div class="family-card">
+      <div class="family-avatar avatar-amber">HA</div>
+      <div class="family-info">
+        <div class="family-name">Hassan — Baby Adam</div>
+        <div class="family-meta">🧚‍♀️ Nour · Born 17 May 2026</div>
+      </div>
+      <div class="stage-pill pill-active">Active</div>
+    </div>
+  </div>
+
+  <div class="divider-label">Closed — 2</div>
+  <div class="family-list">
+    <div class="family-card" style="opacity:0.6;">
+      <div class="family-avatar avatar-purple">KH</div>
+      <div class="family-info">
+        <div class="family-name">Khalil — Baby Mariam</div>
+        <div class="family-meta">Graduated Jun 2025</div>
+      </div>
+      <div class="stage-pill pill-closed">Closed</div>
+    </div>
+    <div class="family-card" style="opacity:0.6;">
+      <div class="family-avatar avatar-green">OT</div>
+      <div class="family-info">
+        <div class="family-name">Omar — Baby Tariq</div>
+        <div class="family-meta">Graduated Feb 2025</div>
+      </div>
+      <div class="stage-pill pill-closed">Closed</div>
+    </div>
+  </div>
+
+  <div class="fab" onclick="showScreen('screen-profile')">＋</div>
+</div>
+
+<!-- ════════════════════════════
+     SCREEN 3: FAMILY PROFILE
+════════════════════════════ -->
+<div class="screen" id="screen-profile">
+  <div class="profile-hero">
+    <div class="profile-back" onclick="showScreen('screen-families')">Families</div>
+    <div class="profile-baby-name">Baby Lina</div>
+    <div class="profile-family-name">Al-Rashidi family · Born 1 June 2026</div>
+    <div class="profile-pills">
+      <div class="profile-pill">🧚‍♀️ Sumaya</div>
+      <div class="profile-pill">Week 1</div>
+      <div class="profile-pill">🤱 Breastfeeding</div>
+      <div class="profile-pill">Arabic</div>
+    </div>
+  </div>
+
+  <div class="profile-body">
+
+    <!-- Baby details -->
+    <div class="info-card">
+      <div class="info-card-header">
+        <div class="info-card-title">👶 Baby details</div>
+        <div class="info-card-edit">Edit</div>
+      </div>
+      <div class="info-rows">
+        <div class="info-row"><div class="info-key">Baby name</div><div class="info-val">Lina</div></div>
+        <div class="info-row"><div class="info-key">Date of birth</div><div class="info-val">1 June 2026</div></div>
+        <div class="info-row"><div class="info-key">Birth weight</div><div class="info-val">3.1 kg</div></div>
+        <div class="info-row"><div class="info-key">Feeding</div><div class="info-val feeding-bf">Breastfeeding</div></div>
+        <div class="info-row"><div class="info-key">Medical</div><div class="info-val">None noted</div></div>
+      </div>
+    </div>
+
+    <!-- Family details -->
+    <div class="info-card">
+      <div class="info-card-header">
+        <div class="info-card-title">👨‍👩‍👧 Family details</div>
+        <div class="info-card-edit">Edit</div>
+      </div>
+      <div class="info-rows">
+        <div class="info-row"><div class="info-key">Mother</div><div class="info-val">Fatima Al-Rashidi</div></div>
+        <div class="info-row"><div class="info-key">Father</div><div class="info-val">Hassan Al-Rashidi</div></div>
+        <div class="info-row"><div class="info-key">Siblings</div><div class="info-val">1 (boy, age 3)</div></div>
+        <div class="info-row"><div class="info-key">Location</div><div class="info-val">Al Wakrah</div></div>
+        <div class="info-row"><div class="info-key">Language</div><div class="info-val">Arabic</div></div>
+        <div class="info-row"><div class="info-key">Food box</div><div class="info-val">Active ✓</div></div>
+      </div>
+    </div>
+
+    <!-- Parental health (admin only) -->
+    <div class="info-card">
+      <div class="info-card-header">
+        <div class="info-card-title">🔒 Parental health <span style="font-size:10px;background:var(--coral-light);color:var(--coral);padding:2px 7px;border-radius:100px;margin-left:4px;font-weight:700;">Admin only</span></div>
+        <div class="info-card-edit">Edit</div>
+      </div>
+      <div class="info-rows">
+        <div class="info-row"><div class="info-key">Mother health</div><div class="info-val">None noted</div></div>
+        <div class="info-row"><div class="info-key">Father health</div><div class="info-val">None noted</div></div>
+        <div class="info-row"><div class="info-key">Postnatal</div><div class="info-val">Monitoring</div></div>
+      </div>
+    </div>
+
+    <!-- Milestones -->
+    <div class="info-card">
+      <div class="info-card-header">
+        <div class="info-card-title">📅 Milestones</div>
+      </div>
+      <div class="info-rows">
+        <div class="info-row"><div class="info-key">Baby fairy assigned</div><div class="info-val">✅ 28 May 2026</div></div>
+        <div class="info-row"><div class="info-key">WhatsApp group</div><div class="info-val">✅ 28 May 2026</div></div>
+        <div class="info-row"><div class="info-key">Pre-birth visit</div><div class="info-val">✅ 30 May 2026</div></div>
+        <div class="info-row"><div class="info-key">Baby born</div><div class="info-val">✅ 1 Jun 2026</div></div>
+        <div class="info-row"><div class="info-key">Post-birth visit</div><div class="info-val">⏳ Pending</div></div>
+        <div class="info-row"><div class="info-key">Baby box delivered</div><div class="info-val">⏳ Pending</div></div>
+        <div class="info-row"><div class="info-key">1 month — birth cert</div><div class="info-val">— 1 Jul 2026</div></div>
+        <div class="info-row"><div class="info-key">6 months</div><div class="info-val">— 1 Dec 2026</div></div>
+        <div class="info-row"><div class="info-key">12 months 🎂</div><div class="info-val">— 1 Jun 2027</div></div>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="info-card">
+      <div class="info-card-header">
+        <div class="info-card-title">📝 Activity log</div>
+      </div>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot-col">
+            <div class="tl-dot green">✅</div>
+            <div class="tl-line"></div>
+          </div>
+          <div class="tl-content">
+            <div class="tl-title">Pre-birth home visit completed</div>
+            <div class="tl-note">Space assessed. Cot fits in bedroom. Father present and engaged.</div>
+            <div class="tl-meta">Sumaya · 30 May 2026</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot-col">
+            <div class="tl-dot purple">💬</div>
+            <div class="tl-line"></div>
+          </div>
+          <div class="tl-content">
+            <div class="tl-title">WhatsApp group created</div>
+            <div class="tl-note">Fairy introduced. Family details added to group description.</div>
+            <div class="tl-meta">Sumaya · 28 May 2026</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot-col">
+            <div class="tl-dot amber">📋</div>
+          </div>
+          <div class="tl-content">
+            <div class="tl-title">Family registered</div>
+            <div class="tl-note">Referred via food box application. Due date confirmed.</div>
+            <div class="tl-meta">Admin · 25 May 2026</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add note -->
+    <div class="add-note-box">
+      <div class="add-note-label">➕ Log an update</div>
+      <textarea class="add-note-input" placeholder="Write a note, visit summary, or update…"></textarea>
+      <div class="add-note-row">
+        <select class="note-type-select">
+          <option>Check-in</option>
+          <option>Home visit</option>
+          <option>Feeding update</option>
+          <option>Milestone</option>
+          <option>Concern flagged</option>
+          <option>Box delivered</option>
+          <option>Other</option>
+        </select>
+        <button class="btn-log" onclick="logNote()">Log it</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════
+     SCREEN 4: TEAM (FAIRIES)
+════════════════════════════ -->
+<div class="screen" id="screen-team">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">🧚‍♀️</div>
+      <div class="topbar-title">Baby Fairies</div>
+    </div>
+    <div class="topbar-badge">12 active</div>
+  </div>
+
+  <div class="divider-label">Current fairies</div>
+  <div class="family-list">
+    <div class="fairy-card">
+      <div class="fairy-avatar">🧚‍♀️</div>
+      <div class="family-info">
+        <div class="fairy-name">Sumaya</div>
+        <div class="fairy-meta">Arabic · Al Wakrah area</div>
+      </div>
+      <div class="fairy-count">2 families</div>
+    </div>
+    <div class="fairy-card">
+      <div class="fairy-avatar">🧚‍♀️</div>
+      <div class="family-info">
+        <div class="fairy-name">Hamda</div>
+        <div class="fairy-meta">Arabic · Doha</div>
+      </div>
+      <div class="fairy-count">1 family</div>
+    </div>
+    <div class="fairy-card">
+      <div class="fairy-avatar">🧚‍♀️</div>
+      <div class="family-info">
+        <div class="fairy-name">Rania</div>
+        <div class="fairy-meta">Arabic / English · Lusail</div>
+      </div>
+      <div class="fairy-count">1 family</div>
+    </div>
+    <div class="fairy-card">
+      <div class="fairy-avatar">🧚‍♀️</div>
+      <div class="family-info">
+        <div class="fairy-name">Nour</div>
+        <div class="fairy-meta">Urdu / Arabic · Al Khor</div>
+      </div>
+      <div class="fairy-count">1 family</div>
+    </div>
+  </div>
+
+  <div class="divider-label">Escalation contacts</div>
+  <div class="family-list">
+    <div class="fairy-card">
+      <div class="fairy-avatar" style="background:var(--green-light);">👩‍💼</div>
+      <div class="family-info">
+        <div class="fairy-name">Alliyah</div>
+        <div class="fairy-meta">Admin · English families</div>
+      </div>
+      <div class="stage-pill pill-active">Admin</div>
+    </div>
+    <div class="fairy-card">
+      <div class="fairy-avatar" style="background:var(--purple-light);">👩‍💼</div>
+      <div class="family-info">
+        <div class="fairy-name">Sarah El Sabbagh</div>
+        <div class="fairy-meta">Lead · Arabic families</div>
+      </div>
+      <div class="stage-pill pill-follow">Lead</div>
+    </div>
+    <div class="fairy-card">
+      <div class="fairy-avatar" style="background:var(--teal-light);">🤱</div>
+      <div class="family-info">
+        <div class="fairy-name">Naomi</div>
+        <div class="fairy-meta">Breastfeeding Consultant</div>
+      </div>
+      <div class="stage-pill" style="background:var(--teal-light);color:var(--teal);">Consultant</div>
+    </div>
+  </div>
+
+  <div class="fab">＋</div>
+</div>
+
+<!-- ════════════════════════════
+     SCREEN 5: REMINDERS
+════════════════════════════ -->
+<div class="screen" id="screen-reminders">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">⏰</div>
+      <div class="topbar-title">Reminders</div>
+    </div>
+    <div class="topbar-badge">3 due</div>
+  </div>
+
+  <div class="divider-label">Due today</div>
+  <div class="family-list">
+    <div class="reminder-card">
+      <div class="reminder-icon ri-amber">📄</div>
+      <div class="reminder-body">
+        <div class="reminder-title">Baby Yusuf — Birth certificate</div>
+        <div class="reminder-sub">1 month has passed. Ask the Malik family for a copy and upload to the profile.</div>
+        <div class="reminder-due due-soon">⚠ Due today</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider-label">This week</div>
+  <div class="family-list">
+    <div class="reminder-card">
+      <div class="reminder-icon ri-purple">📅</div>
+      <div class="reminder-body">
+        <div class="reminder-title">Baby Sara — 6 month milestone</div>
+        <div class="reminder-sub">Inform the Ibrahim family they are now on emergency support. Diapers and formula subject to food box balance.</div>
+        <div class="reminder-due due-upcoming">📅 In 3 days</div>
+      </div>
+    </div>
+    <div class="reminder-card">
+      <div class="reminder-icon ri-green">🏠</div>
+      <div class="reminder-body">
+        <div class="reminder-title">Baby Adam — Post-birth visit</div>
+        <div class="reminder-sub">Hassan family discharged. Schedule post-birth welfare visit. Baby box ready to deliver.</div>
+        <div class="reminder-due due-upcoming">📅 This week</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider-label">Upcoming</div>
+  <div class="family-list">
+    <div class="reminder-card">
+      <div class="reminder-icon ri-coral">🎂</div>
+      <div class="reminder-body">
+        <div class="reminder-title">Baby Lina — 1st Birthday</div>
+        <div class="reminder-sub">Organise birthday cake and gift for the Al-Rashidi family. Then close the case.</div>
+        <div class="reminder-due due-ok">📅 1 June 2027</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════
+     SCREEN 6: DONATIONS & NEEDS
+════════════════════════════ -->
+<div class="screen" id="screen-donations">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">🎁</div>
+      <div class="topbar-title">Donations & <span>Needs</span></div>
+    </div>
+    <div class="topbar-badge" style="background:var(--amber-light);color:var(--amber);">2 matches</div>
+  </div>
+
+  <!-- Sub-tabs -->
+  <div class="tabs" style="top:61px;">
+    <div class="tab active" id="dtab-needs" onclick="showDTab('needs')">🛒 Needs</div>
+    <div class="tab" id="dtab-available" onclick="showDTab('available')">📦 Available</div>
+    <div class="tab" id="dtab-matched" onclick="showDTab('matched')">✅ Matched</div>
+  </div>
+
+  <!-- NEEDS panel -->
+  <div id="dpanel-needs" class="dpanel" style="display:block;">
+    <div style="padding:14px 20px 0; display:flex; justify-content:space-between; align-items:center;">
+      <div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--light-text);">Pending needs — 5</div>
+      <div style="font-size:12px;font-weight:700;color:var(--purple);cursor:pointer;" onclick="showAddNeed()">+ Add need</div>
+    </div>
+
+    <div class="family-list" style="padding-top:12px;">
+
+      <div class="need-card" onclick="showNeedDetail(this)">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div class="need-icon" style="background:var(--purple-light);">🛏️</div>
+          <div style="flex:1;">
+            <div class="need-title">Baby crib</div>
+            <div class="need-family">Al-Rashidi family · Baby Lina</div>
+          </div>
+          <div class="stage-pill pill-new">Urgent</div>
+        </div>
+        <div class="need-meta-row">
+          <span>📅 Requested 1 Jun 2026</span>
+          <span>📍 Al Wakrah</span>
+        </div>
+      </div>
+
+      <div class="need-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div class="need-icon" style="background:var(--amber-light);">🪑</div>
+          <div style="flex:1;">
+            <div class="need-title">Bouncer chair</div>
+            <div class="need-family">Hassan family · Baby Adam</div>
+          </div>
+          <div class="stage-pill pill-active">When available</div>
+        </div>
+        <div class="need-meta-row">
+          <span>📅 Requested 18 May 2026</span>
+          <span>📍 Doha</span>
+        </div>
+      </div>
+
+      <div class="need-card" style="border-color:var(--amber);background:var(--amber-light);">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div class="need-icon" style="background:white;">🍼</div>
+          <div style="flex:1;">
+            <div class="need-title">Bottle steriliser</div>
+            <div class="need-family">Malik family · Baby Yusuf</div>
+          </div>
+          <div class="stage-pill" style="background:var(--amber);color:white;">Match found!</div>
+        </div>
+        <div class="need-meta-row">
+          <span>📅 Requested 4 May 2026</span>
+          <span>📍 Al Rayyan</span>
+        </div>
+        <div style="margin-top:8px;padding:8px 10px;background:white;border-radius:8px;font-size:12px;font-weight:600;color:var(--amber);">
+          ✨ Donor matched — awaiting admin confirmation
+        </div>
+      </div>
+
+      <div class="need-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div class="need-icon" style="background:var(--teal-light);">🚿</div>
+          <div style="flex:1;">
+            <div class="need-title">Baby bath tub</div>
+            <div class="need-family">Ibrahim family · Baby Sara</div>
+          </div>
+          <div class="stage-pill pill-active">When available</div>
+        </div>
+        <div class="need-meta-row">
+          <span>📅 Requested 12 Jan 2026</span>
+          <span>📍 Lusail</span>
+        </div>
+      </div>
+
+      <div class="need-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div class="need-icon" style="background:var(--purple-light);">🗄️</div>
+          <div style="flex:1;">
+            <div class="need-title">Baby wardrobe / cabinet</div>
+            <div class="need-family">Al-Rashidi family · Baby Lina</div>
+          </div>
+          <div class="stage-pill pill-new">Urgent</div>
+        </div>
+        <div class="need-meta-row">
+          <span>📅 Requested 1 Jun 2026</span>
+          <span>📍 Al Wakrah</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- AVAILABLE DONATIONS panel -->
+  <div id="dpanel-available" class="dpanel" style="display:none;">
+    <div style="padding:14px 20px 0; display:flex; justify-content:space-between; align-items:center;">
+      <div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--light-text);">Available donations — 3</div>
+    </div>
+
+    <div class="family-list" style="padding-top:12px;">
+
+      <div class="need-card" style="border-color:var(--amber);background:var(--amber-light);">
+        <div style="display:flex;gap:12px;margin-bottom:8px;">
+          <div style="width:72px;height:72px;border-radius:12px;background:#ddd;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:32px;">🍼</div>
+          <div style="flex:1;">
+            <div class="need-title">Bottle steriliser</div>
+            <div class="need-family" style="margin-bottom:4px;">Good condition · Donated by Sara K.</div>
+            <div class="need-meta-row" style="flex-direction:column;gap:2px;align-items:flex-start;">
+              <span>📍 Al Rayyan — can hold until 1 Aug 2026</span>
+              <span>📞 Admin only</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:4px;padding:8px 10px;background:white;border-radius:8px;font-size:12px;font-weight:600;color:var(--amber);">
+          ✨ Matched to Malik family — <span style="text-decoration:underline;cursor:pointer;">Confirm match</span>
+        </div>
+      </div>
+
+      <div class="need-card">
+        <div style="display:flex;gap:12px;margin-bottom:8px;">
+          <div style="width:72px;height:72px;border-radius:12px;background:#e8f5eb;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:32px;">🛺</div>
+          <div style="flex:1;">
+            <div class="need-title">Stroller</div>
+            <div class="need-family" style="margin-bottom:4px;">Very good condition · Donated by Maha R.</div>
+            <div class="need-meta-row" style="flex-direction:column;gap:2px;align-items:flex-start;">
+              <span>📍 The Pearl — can hold until 15 Sep 2026</span>
+              <span>📞 Admin only</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:4px;padding:8px 10px;background:var(--green-light);border-radius:8px;font-size:12px;font-weight:600;color:var(--green-dark);">
+          No match yet — will be allocated when a family requests
+        </div>
+      </div>
+
+      <div class="need-card">
+        <div style="display:flex;gap:12px;margin-bottom:8px;">
+          <div style="width:72px;height:72px;border-radius:12px;background:#fef6e7;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:32px;">🪑</div>
+          <div style="flex:1;">
+            <div class="need-title">High chair</div>
+            <div class="need-family" style="margin-bottom:4px;">Good condition · Donated by Nadia T.</div>
+            <div class="need-meta-row" style="flex-direction:column;gap:2px;align-items:flex-start;">
+              <span>📍 West Bay — can hold until 30 Jul 2026</span>
+              <span>📞 Admin only</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:4px;padding:8px 10px;background:var(--green-light);border-radius:8px;font-size:12px;font-weight:600;color:var(--green-dark);">
+          No match yet — will be allocated when a family requests
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MATCHED panel -->
+  <div id="dpanel-matched" class="dpanel" style="display:none;">
+    <div style="padding:14px 20px 0;">
+      <div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--light-text);">Confirmed matches — 2</div>
+    </div>
+
+    <div class="family-list" style="padding-top:12px;">
+
+      <div class="need-card" style="border-color:var(--green);background:var(--green-light);">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div class="need-icon" style="background:white;">🛏️</div>
+          <div style="flex:1;">
+            <div class="need-title">Baby crib</div>
+            <div class="need-family">Khalil family ↔ Donor: Ahmed S.</div>
+          </div>
+          <div class="stage-pill pill-active">Confirmed</div>
+        </div>
+        <div class="need-meta-row">
+          <span>✅ Matched 20 May 2026</span>
+          <span>🧚‍♀️ Fairy coordinating</span>
+        </div>
+      </div>
+
+      <div class="need-card" style="border-color:var(--green);background:var(--green-light);">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div class="need-icon" style="background:white;">🤱</div>
+          <div style="flex:1;">
+            <div class="need-title">Breast pump</div>
+            <div class="need-family">Omar family ↔ Donor: Layla M.</div>
+          </div>
+          <div class="stage-pill pill-active">Confirmed</div>
+        </div>
+        <div class="need-meta-row">
+          <span>✅ Matched 2 Apr 2026</span>
+          <span>🧚‍♀️ Fairy coordinating</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ADD NEED MODAL -->
+<div id="modal-need" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.4);align-items:flex-end;">
+  <div style="background:white;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-height:85vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div style="font-size:18px;font-weight:800;color:var(--ink);">Log a need</div>
+      <div style="font-size:22px;cursor:pointer;color:var(--muted);" onclick="hideModal()">✕</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Item needed</label>
+      <input class="form-input" type="text" placeholder="e.g. Baby crib, stroller, bouncer…">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Family</label>
+      <select class="form-input">
+        <option>Al-Rashidi — Baby Lina</option>
+        <option>Malik — Baby Yusuf</option>
+        <option>Hassan — Baby Adam</option>
+        <option>Ibrahim — Baby Sara</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Priority</label>
+      <div style="display:flex;gap:8px;">
+        <div class="priority-btn active" onclick="selectPriority(this)">🔴 Urgent</div>
+        <div class="priority-btn" onclick="selectPriority(this)">🟡 When available</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes (optional)</label>
+      <textarea class="form-input" style="min-height:72px;resize:none;" placeholder="Any specific size, colour, or condition requirements…"></textarea>
+    </div>
+    <button class="btn-log" style="width:100%;padding:14px;font-size:15px;border-radius:14px;" onclick="hideModal()">Save need</button>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════
+     BOTTOM NAV
+════════════════════════════ -->
+<div class="bottom-nav">
+  <div class="nav-item active" onclick="showScreen('screen-dashboard', this)">
+    <div class="nav-icon">🏠</div>
+    <div class="nav-label">Home</div>
+    <div class="nav-pip"></div>
+  </div>
+  <div class="nav-item" onclick="showScreen('screen-families', this)">
+    <div class="nav-icon">👨‍👩‍👧</div>
+    <div class="nav-label">Families</div>
+    <div class="nav-pip"></div>
+  </div>
+  <div class="nav-item" onclick="showScreen('screen-reminders', this)">
+    <div class="nav-icon">⏰</div>
+    <div class="nav-label">Reminders</div>
+    <div class="nav-pip"></div>
+  </div>
+  <div class="nav-item" onclick="showScreen('screen-team', this)">
+    <div class="nav-icon">🧚‍♀️</div>
+    <div class="nav-label">Fairies</div>
+    <div class="nav-pip"></div>
+  </div>
+  <div class="nav-item" onclick="showScreen('screen-donations', this)">
+    <div class="nav-icon">🎁</div>
+    <div class="nav-label">Donations</div>
+    <div class="nav-pip"></div>
+  </div>
+</div>
+
+<script>
+  // Set date
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  // Screen navigation
+  function showScreen(id, navEl) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if (navEl) {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      navEl.classList.add('active');
+    }
+    window.scrollTo(0, 0);
+  }
+
+  // Show profile
+  function showProfile() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-profile').classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  // Filter chips (families screen only)
+  document.querySelectorAll('#screen-families .filter-chip').forEach(chip => {
+    chip.addEventListener('click', function() {
+      document.querySelectorAll('#screen-families .filter-chip').forEach(c => c.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+
+  // Role toggle
+  function setRole(role) {
+    if (role === 'admin') {
+      document.getElementById('stats-admin').style.display = 'block';
+      document.getElementById('stats-super').style.display = 'none';
+      document.getElementById('role-admin').classList.add('active');
+      document.getElementById('role-super').classList.remove('active');
+      document.getElementById('dash-name').textContent = 'Alliyah';
+    } else {
+      document.getElementById('stats-admin').style.display = 'none';
+      document.getElementById('stats-super').style.display = 'block';
+      document.getElementById('role-super').classList.add('active');
+      document.getElementById('role-admin').classList.remove('active');
+      document.getElementById('dash-name').textContent = 'Sophia';
+    }
+  }
+
+  // Donations sub-tabs
+  function showDTab(tab) {
+    document.querySelectorAll('.dpanel').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('[id^="dtab-"]').forEach(t => t.classList.remove('active'));
+    document.getElementById('dpanel-' + tab).style.display = 'block';
+    document.getElementById('dtab-' + tab).classList.add('active');
+  }
+
+  // Need modal
+  function showAddNeed() {
+    const modal = document.getElementById('modal-need');
+    modal.style.display = 'flex';
+  }
+  function hideModal() {
+    document.getElementById('modal-need').style.display = 'none';
+  }
+  function selectPriority(el) {
+    el.closest('div').querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // Log note
+  function logNote() {
+    const textarea = document.querySelector('.add-note-input');
+    const select = document.querySelector('.note-type-select');
+    if (!textarea.value.trim()) return;
+
+    const timeline = document.querySelector('.timeline');
+    const now = new Date().toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+    const type = select.value;
+    const icons = { 'Check-in':'📱', 'Home visit':'🏠', 'Feeding update':'🍼', 'Milestone':'📅', 'Concern flagged':'⚠️', 'Box delivered':'📦', 'Other':'📝' };
+
+    const item = document.createElement('div');
+    item.className = 'timeline-item';
+    item.innerHTML = `
+      <div class="timeline-dot-col">
+        <div class="tl-dot purple">${icons[type] || '📝'}</div>
+        <div class="tl-line"></div>
+      </div>
+      <div class="tl-content">
+        <div class="tl-title">${type}</div>
+        <div class="tl-note">${textarea.value}</div>
+        <div class="tl-meta">Alliyah · ${now}</div>
+      </div>`;
+
+    timeline.insertBefore(item, timeline.firstChild);
+    textarea.value = '';
+    select.value = 'Check-in';
+  }
+</script>
+</body>
+</html>
