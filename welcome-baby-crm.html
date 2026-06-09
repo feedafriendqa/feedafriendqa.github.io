@@ -40,7 +40,7 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
 @keyframes spin { to { transform:rotate(360deg); } }
 .loading-text { font-size:14px; font-weight:600; color:var(--muted); }
 
-.screen { display:none; } .screen.active { display:block; } #screen-signin.active, #screen-signup.active, #screen-pending.active { display:flex; }
+.screen { display:none; } .screen.active { display:block; } #screen-signin.active, #screen-signup.active, #screen-pending.active { display:flex !important; flex-direction:column; }
 .screen.active { display:block; }
 
 /* ── AUTH SCREENS ── */
@@ -1307,7 +1307,8 @@ document.addEventListener('click', e=>{ if(!e.target.closest('.user-menu')&&!e.t
 // ── UTILS ──
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
   window.scrollTo(0,0);
 }
 
