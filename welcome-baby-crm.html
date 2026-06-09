@@ -852,12 +852,16 @@ async function handleSession(session) {
   currentRole = roleData.role;
   window.currentRoleData = roleData;
   const initials = (roleData.full_name || session.user.email).split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-  // Set user menu
-  document.getElementById('menu-name').textContent = roleData.full_name || session.user.email;
-  document.getElementById('menu-email').textContent = session.user.email;
-  document.getElementById('menu-initials').textContent = initials;
+  // Set user menu safely
+  const menuName = document.getElementById('menu-name');
+  const menuEmail = document.getElementById('menu-email');
+  const menuInitials = document.getElementById('menu-initials');
+  const menuRole = document.getElementById('menu-role');
+  if (menuName) menuName.textContent = roleData.full_name || session.user.email;
+  if (menuEmail) menuEmail.textContent = session.user.email;
+  if (menuInitials) menuInitials.textContent = initials;
   const roleLabels = {super:'⭐ Super admin', admin:'👩‍💼 Admin', fairy:'🧚‍♀️ Baby fairy', consultant:'🤱 Consultant'};
-  document.getElementById('menu-role').textContent = roleLabels[currentRole] || currentRole;
+  if (menuRole) menuRole.textContent = roleLabels[currentRole] || currentRole;
   // Set avatar initials
   ['super-avatar','admin-avatar','fairy-avatar'].forEach(id => {
     const el = document.getElementById(id);
