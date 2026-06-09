@@ -395,12 +395,12 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
     <div class="dash-role-badge badge-super">⭐ Super admin</div>
   </div>
   <div class="stats-row">
-    <div class="stat-card purple"><div class="stat-icon">👨‍👩‍👧</div><div class="stat-num" id="s-total">–</div><div class="stat-label">Total families</div></div>
-    <div class="stat-card green"><div class="stat-icon">🧚‍♀️</div><div class="stat-num" id="s-fairies">–</div><div class="stat-label">Baby fairies</div></div>
-    <div class="stat-card coral"><div class="stat-icon">⚠️</div><div class="stat-num" id="s-unassigned">–</div><div class="stat-label">Unassigned</div></div>
-    <div class="stat-card"><div class="stat-icon">🤰</div><div class="stat-num" id="s-due">–</div><div class="stat-label">Due in 30 days</div></div>
-    <div class="stat-card amber"><div class="stat-icon">🎂</div><div class="stat-num" id="s-bday">–</div><div class="stat-label">Birthdays this month</div></div>
-    <div class="stat-card"><div class="stat-icon">⏰</div><div class="stat-num" id="s-rem">–</div><div class="stat-label">Reminders due</div></div>
+    <div class="stat-card purple" style="cursor:pointer;" onclick="showMainScreen('screen-families')"><div class="stat-icon">👨‍👩‍👧</div><div class="stat-num" id="s-total">–</div><div class="stat-label">Total families</div></div>
+    <div class="stat-card green" style="cursor:pointer;" onclick="showMainScreen('screen-team')"><div class="stat-icon">🧚‍♀️</div><div class="stat-num" id="s-fairies">–</div><div class="stat-label">Baby fairies</div></div>
+    <div class="stat-card coral" style="cursor:pointer;" onclick="filterAndGo('unassigned')"><div class="stat-icon">⚠️</div><div class="stat-num" id="s-unassigned">–</div><div class="stat-label">Unassigned</div></div>
+    <div class="stat-card" style="cursor:pointer;" onclick="filterAndGo('due')"><div class="stat-icon">🤰</div><div class="stat-num" id="s-due">–</div><div class="stat-label">Due in 30 days</div></div>
+    <div class="stat-card amber" style="cursor:pointer;" onclick="filterAndGo('birthdays')"><div class="stat-icon">🎂</div><div class="stat-num" id="s-bday">–</div><div class="stat-label">Birthdays this month</div></div>
+    <div class="stat-card" style="cursor:pointer;" onclick="showMainScreen('screen-reminders')"><div class="stat-icon">⏰</div><div class="stat-num" id="s-rem">–</div><div class="stat-label">Reminders due</div></div>
   </div>
   <div class="section-head"><div class="section-title">All families</div><div class="section-link" onclick="showMainScreen('screen-families')">See all →</div></div>
   <div class="family-list" id="super-fam-list"></div>
@@ -427,10 +427,10 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
     <div class="dash-role-badge badge-admin">👩‍💼 Admin</div>
   </div>
   <div class="stats-row">
-    <div class="stat-card purple"><div class="stat-icon">👨‍👩‍👧</div><div class="stat-num" id="a-families">–</div><div class="stat-label">Active families</div></div>
-    <div class="stat-card"><div class="stat-icon">⏰</div><div class="stat-num" id="a-rem">–</div><div class="stat-label">Reminders due</div></div>
-    <div class="stat-card amber"><div class="stat-icon">🎂</div><div class="stat-num" id="a-bday">–</div><div class="stat-label">Birthdays this month</div></div>
-    <div class="stat-card green"><div class="stat-icon">🤰</div><div class="stat-num" id="a-due">–</div><div class="stat-label">Due in 30 days</div></div>
+    <div class="stat-card purple" style="cursor:pointer;" onclick="showMainScreen('screen-families')"><div class="stat-icon">👨‍👩‍👧</div><div class="stat-num" id="a-families">–</div><div class="stat-label">Active families</div></div>
+    <div class="stat-card" style="cursor:pointer;" onclick="showMainScreen('screen-reminders')"><div class="stat-icon">⏰</div><div class="stat-num" id="a-rem">–</div><div class="stat-label">Reminders due</div></div>
+    <div class="stat-card amber" style="cursor:pointer;" onclick="filterAndGo('birthdays')"><div class="stat-icon">🎂</div><div class="stat-num" id="a-bday">–</div><div class="stat-label">Birthdays this month</div></div>
+    <div class="stat-card green" style="cursor:pointer;" onclick="filterAndGo('due')"><div class="stat-icon">🤰</div><div class="stat-num" id="a-due">–</div><div class="stat-label">Due in 30 days</div></div>
   </div>
   <div class="section-head"><div class="section-title">Families</div><div class="section-link" onclick="showMainScreen('screen-families')">See all →</div></div>
   <div class="family-list" id="admin-fam-list"></div>
@@ -456,10 +456,10 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
     <div class="dash-role-badge badge-fairy" id="fairy-role-badge">🧚‍♀️ Baby fairy</div>
   </div>
   <div class="stats-row">
-    <div class="stat-card purple"><div class="stat-icon">👨‍👩‍👧</div><div class="stat-num" id="f-families">–</div><div class="stat-label">My families</div></div>
-    <div class="stat-card"><div class="stat-icon">⏰</div><div class="stat-num" id="f-rem">–</div><div class="stat-label">Reminders due</div></div>
-    <div class="stat-card amber"><div class="stat-icon">🎂</div><div class="stat-num" id="f-bday">–</div><div class="stat-label">Birthdays this month</div></div>
-    <div class="stat-card green"><div class="stat-icon">🤰</div><div class="stat-num" id="f-due">–</div><div class="stat-label">Due in 30 days</div></div>
+    <div class="stat-card purple" style="cursor:pointer;" onclick="showMainScreen('screen-families')"><div class="stat-icon">👨‍👩‍👧</div><div class="stat-num" id="f-families">–</div><div class="stat-label">My families</div></div>
+    <div class="stat-card" style="cursor:pointer;" onclick="showMainScreen('screen-reminders')"><div class="stat-icon">⏰</div><div class="stat-num" id="f-rem">–</div><div class="stat-label">Reminders due</div></div>
+    <div class="stat-card amber" style="cursor:pointer;" onclick="filterAndGo('birthdays')"><div class="stat-icon">🎂</div><div class="stat-num" id="f-bday">–</div><div class="stat-label">Birthdays this month</div></div>
+    <div class="stat-card green" style="cursor:pointer;" onclick="filterAndGo('due')"><div class="stat-icon">🤰</div><div class="stat-num" id="f-due">–</div><div class="stat-label">Due in 30 days</div></div>
   </div>
   <div class="section-head"><div class="section-title">My families</div></div>
   <div class="family-list" id="fairy-fam-list"></div>
@@ -498,6 +498,14 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
     <div class="profile-baby-name" id="p-baby-name">–</div>
     <div class="profile-family-name" id="p-family-name">–</div>
     <div class="profile-pills" id="p-pills"></div>
+  </div>
+  <!-- Assign fairy bar (admin/super only) -->
+  <div id="p-assign-bar" style="background:rgba(0,0,0,0.2);padding:10px 20px;display:none;align-items:center;justify-content:space-between;gap:12px;">
+    <div style="font-size:12px;color:rgba(255,255,255,0.8);font-weight:600;">🧚‍♀️ Assigned fairy</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span id="p-assigned-fairy-name" style="font-size:13px;font-weight:700;color:white;">Unassigned</span>
+      <span onclick="openAssignFairy()" style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);cursor:pointer;text-decoration:underline;">Change</span>
+    </div>
   </div>
   <div class="profile-body">
     <!-- BABY PHOTO -->
@@ -693,6 +701,16 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
 </div>
 
 <!-- ══ MODALS ══ -->
+<!-- Assign Fairy Modal -->
+<div class="modal" id="modal-assign-fairy">
+  <div class="modal-inner">
+    <div class="modal-title">Assign baby fairy <button class="modal-close" onclick="closeModal('modal-assign-fairy')">✕</button></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;" id="assign-family-label">–</div>
+    <div id="assign-fairy-list" style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;"></div>
+    <button class="btn-primary" style="margin-top:16px;background:var(--coral);" onclick="unassignFairy()">Remove assignment</button>
+  </div>
+</div>
+
 <div class="modal" id="modal-family">
   <div class="modal-inner">
     <div class="modal-title">Add family <button class="modal-close" onclick="closeModal('modal-family')">✕</button></div>
@@ -1030,6 +1048,22 @@ async function openProfile(familyId) {
   // Load doc status
   document.getElementById('p-qid-status').innerHTML = f.qid_uploaded ? '<span style="color:var(--green);font-weight:700;">✓ Uploaded</span>' : '<span style="color:var(--muted);">Not uploaded</span>';
   document.getElementById('p-cert-status').innerHTML = f.birth_cert_uploaded ? '<span style="color:var(--green);font-weight:700;">✓ Uploaded</span>' : '<span style="color:var(--muted);">Not uploaded</span>';
+  // Show assign fairy bar for admin/super
+  const assignBar = document.getElementById('p-assign-bar');
+  if (currentRole === 'super' || currentRole === 'admin') {
+    assignBar.style.display = 'flex';
+    // Find fairy name
+    if (f.assigned_fairy_id) {
+      sb.from('user_roles').select('full_name,email').eq('user_id', f.assigned_fairy_id).single().then(({data}) => {
+        if (data) document.getElementById('p-assigned-fairy-name').textContent = data.full_name || data.email;
+      });
+    } else {
+      document.getElementById('p-assigned-fairy-name').textContent = 'Unassigned';
+    }
+  } else {
+    assignBar.style.display = 'none';
+  }
+
   // Show Drive folder link if available
   window.currentDriveFolderUrl = f.drive_folder_url || null;
   const driveRow = document.getElementById('p-drive-row');
@@ -1234,6 +1268,101 @@ function formatDate(d) { if(!d) return '–'; return new Date(d).toLocaleDateStr
 function formatDateTime(d) { if(!d) return '–'; return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); }
 // ── PHOTO & DOCUMENT UPLOADS ──
 let currentDocType = null;
+
+// ── ASSIGN FAIRY ──
+// ── SMART FILTER NAVIGATION ──
+function filterAndGo(type) {
+  const today = new Date();
+  const in30 = new Date(today); in30.setDate(in30.getDate()+30);
+  const mStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const mEnd = new Date(today.getFullYear(), today.getMonth()+1, 0);
+  const src = getFamilySource();
+  let filtered = [];
+
+  if (type === 'unassigned') {
+    filtered = src.filter(f => !f.assigned_fairy_id);
+  } else if (type === 'due') {
+    filtered = src.filter(f => { const d = new Date(f.due_date); return d >= today && d <= in30; });
+  } else if (type === 'birthdays') {
+    filtered = src.filter(f => {
+      const b = f.babies && f.babies[0]; if (!b || !b.dob) return false;
+      const dob = new Date(b.dob);
+      const bday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
+      return bday >= mStart && bday <= mEnd;
+    });
+  }
+
+  showScreen('screen-families');
+  renderFamilies(filtered);
+  document.getElementById('families-badge').textContent = filtered.length + ' shown';
+  // Highlight correct nav item
+  const navId = 'nav-' + (currentRole === 'super' ? 'super' : currentRole === 'admin' ? 'admin' : 'fairy');
+  const nav = document.getElementById(navId);
+  if (nav) {
+    nav.querySelectorAll('.nav-item').forEach((n,i) => n.classList.toggle('active', i===1));
+  }
+}
+
+function openAssignFairy() {
+  const f = allFamilies.find(x => x.id === currentFamilyId);
+  if (!f) return;
+  document.getElementById('assign-family-label').textContent = (f.mother_name || '') + ' family';
+  // Load user_roles for fairies/admins
+  const list = document.getElementById('assign-fairy-list');
+  list.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:8px 0;">Loading fairies…</div>';
+  sb.from('user_roles').select('*').eq('approved', true).in('role', ['fairy','admin','consultant']).then(({data}) => {
+    if (!data || !data.length) { list.innerHTML = '<div style="font-size:13px;color:var(--muted);">No fairies found.</div>'; return; }
+    list.innerHTML = data.map(u => {
+      const isAssigned = f.assigned_fairy_id === u.user_id;
+      return `<div onclick="assignFairy('${u.user_id}','${(u.full_name||u.email).replace(/'/g,"\'")}',this)"
+        style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;border:1.5px solid ${isAssigned ? 'var(--green)' : 'var(--border)'};background:${isAssigned ? 'var(--green-light)' : 'white'};cursor:pointer;">
+        <div style="width:38px;height:38px;border-radius:50%;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🧚‍♀️</div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;color:var(--ink);">${u.full_name || u.email}</div>
+          <div style="font-size:11px;color:var(--muted);">${u.role}</div>
+        </div>
+        ${isAssigned ? '<span style="color:var(--green);font-size:18px;">✓</span>' : ''}
+      </div>`;
+    }).join('');
+  });
+  document.getElementById('modal-assign-fairy').classList.add('open');
+}
+
+async function assignFairy(fairyUserId, fairyName, el) {
+  await sb.from('families').update({ assigned_fairy_id: fairyUserId }).eq('id', currentFamilyId);
+  // Update local data
+  const f = allFamilies.find(x => x.id === currentFamilyId);
+  if (f) f.assigned_fairy_id = fairyUserId;
+  // Update UI
+  document.getElementById('p-assigned-fairy-name').textContent = fairyName;
+  // Update pills
+  const pills = document.getElementById('p-pills');
+  const existingFairy = pills.querySelector('[data-fairy]');
+  if (existingFairy) existingFairy.remove();
+  const pill = document.createElement('div');
+  pill.className = 'profile-pill';
+  pill.setAttribute('data-fairy', '1');
+  pill.textContent = '🧚‍♀️ ' + fairyName.split(' ')[0];
+  pills.insertBefore(pill, pills.firstChild);
+  closeModal('modal-assign-fairy');
+  showToast('✅ Fairy assigned!');
+  // Log it
+  await sb.from('activity_log').insert([{
+    family_id: currentFamilyId,
+    log_type: 'Milestone',
+    note: 'Baby fairy assigned: ' + fairyName,
+    logged_by: document.getElementById('menu-name').textContent
+  }]);
+}
+
+async function unassignFairy() {
+  await sb.from('families').update({ assigned_fairy_id: null }).eq('id', currentFamilyId);
+  const f = allFamilies.find(x => x.id === currentFamilyId);
+  if (f) f.assigned_fairy_id = null;
+  document.getElementById('p-assigned-fairy-name').textContent = 'Unassigned';
+  closeModal('modal-assign-fairy');
+  showToast('Fairy removed');
+}
 
 function openDriveFolder() {
   if (window.currentDriveFolderUrl) {
