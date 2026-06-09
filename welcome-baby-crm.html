@@ -719,6 +719,7 @@ async function handleSession(session) {
     return;
   }
   currentRole = roleData.role;
+  window.currentRoleData = roleData;
   const initials = (roleData.full_name || session.user.email).split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   // Set user menu
   document.getElementById('menu-name').textContent = roleData.full_name || session.user.email;
@@ -794,6 +795,11 @@ function goDash(navEl) {
   const in30 = new Date(today); in30.setDate(in30.getDate()+30);
   const mStart = new Date(today.getFullYear(), today.getMonth(), 1);
   const mEnd = new Date(today.getFullYear(), today.getMonth()+1, 0);
+  const hour = today.getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  document.querySelectorAll('.dash-greeting').forEach(el => {
+    el.innerHTML = el.innerHTML.replace('Good morning', greeting);
+  });
   const dateStr = today.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const overdue = allMilestones.filter(m => !m.completed && new Date(m.due_date) <= today);
   const active = allFamilies.filter(f => f.status !== 'closed');
@@ -814,7 +820,12 @@ function goDash(navEl) {
       const dob=new Date(b.dob); const bd=new Date(today.getFullYear(),dob.getMonth(),dob.getDate());
       return bd>=mStart&&bd<=mEnd;
     });
-    document.getElementById('super-date').textContent = dateStr;
+    const rd = window.currentRoleData || {};
+  const userName = rd.full_name ? rd.full_name.split(' ')[0] : 'there';
+  document.getElementById('super-name').textContent = userName;
+  document.getElementById('admin-name').textContent = userName;
+  document.getElementById('fairy-name').textContent = userName;
+  document.getElementById('super-date').textContent = dateStr;
     document.getElementById('s-total').textContent = active.length;
     document.getElementById('s-fairies').textContent = allFairies.length;
     document.getElementById('s-unassigned').textContent = unassigned.length;
