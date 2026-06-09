@@ -832,11 +832,27 @@ document.addEventListener('DOMContentLoaded', async function() {
 async function handleSession(session) {
   currentUser = session.user;
   // Look up role
-  const { data: roleData } = await sb.from('user_roles').select('*').eq('user_id', session.user.id).single();
+  const { data: roleData, error: roleError } = await sb.from('user_roles').select('*').eq('user_id', session.user.id).single();
   document.getElementById('loading').style.display = 'none';
-  if (!roleData || !roleData.approved) {
-    // Pending
-    document.getElementById('pending-name').textContent = roleData && roleData.full_name || session.user.email;
+
+  // No role record at all — create a pending one and show pending screen
+  if (!roleData) {
+    const email = session.user.email;
+    await sb.from('user_roles').insert([{
+      user_id: session.user.id,
+      email: email,
+      full_name: email.split('@')[0],
+      approved: false
+    }]);
+    document.getElementById('pending-name').textContent = email.split('@')[0];
+    document.getElementById('pending-email').textContent = email;
+    showScreen('screen-pending');
+    return;
+  }
+
+  // Has a role but not approved yet
+  if (!roleData.approved) {
+    document.getElementById('pending-name').textContent = roleData.full_name || session.user.email;
     document.getElementById('pending-email').textContent = session.user.email;
     showScreen('screen-pending');
     return;
