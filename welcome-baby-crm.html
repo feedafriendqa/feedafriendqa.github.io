@@ -1023,9 +1023,9 @@ function goDash(navEl) {
     document.getElementById('s-due').textContent = dueSoon.length;
     document.getElementById('s-bday').textContent = bdays.length;
     document.getElementById('s-rem').textContent = overdue.length;
-    document.getElementById('s-arabic').textContent = sArabic.length;
-    document.getElementById('s-english').textContent = sEnglish.length;
-    document.getElementById('super-badge').textContent = active.length+' active';
+    const sA = document.getElementById('s-arabic'); if(sA) sA.textContent = sArabic.length;
+    const sE = document.getElementById('s-english'); if(sE) sE.textContent = sEnglish.length;
+    const sBadge = document.getElementById('super-badge'); if(sBadge) sBadge.textContent = active.length+' active';
     renderFamList('super-fam-list', active.slice(0,4));
     renderMsList('super-ms-list', allMilestones.filter(m=>!m.completed).slice(0,3));
     showScreen('screen-super-dash');
@@ -1043,8 +1043,8 @@ function goDash(navEl) {
     document.getElementById('a-rem').textContent = overdue.length;
     document.getElementById('a-bday').textContent = bdays.length;
     document.getElementById('a-due').textContent = dueSoon.length;
-    document.getElementById('a-arabic').textContent = arabicFams.length;
-    document.getElementById('a-english').textContent = englishFams.length;
+    const aA = document.getElementById('a-arabic'); if(aA) aA.textContent = arabicFams.length;
+    const aE = document.getElementById('a-english'); if(aE) aE.textContent = englishFams.length;
     document.getElementById('admin-badge').textContent = active.length+' active';
     renderFamList('admin-fam-list', active.slice(0,4));
     renderMsList('admin-ms-list', allMilestones.filter(m=>!m.completed).slice(0,3));
@@ -1067,8 +1067,8 @@ function goDash(navEl) {
     document.getElementById('f-rem').textContent = myOverdue.length;
     document.getElementById('f-bday').textContent = bdays.length;
     document.getElementById('f-due').textContent = dueSoon.length;
-    document.getElementById('f-arabic').textContent = myArabic.length;
-    document.getElementById('f-english').textContent = myEnglish.length;
+    const fA = document.getElementById('f-arabic'); if(fA) fA.textContent = myArabic.length;
+    const fE = document.getElementById('f-english'); if(fE) fE.textContent = myEnglish.length;
     const badge = currentRole==='consultant' ? '🤱 Consultant' : '🧚‍♀️ Baby fairy';
     const badgeCls = currentRole==='consultant' ? 'badge-consultant' : 'badge-fairy';
     const el = document.getElementById('fairy-role-badge');
