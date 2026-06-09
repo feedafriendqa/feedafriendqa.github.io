@@ -418,6 +418,8 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
     <div class="stat-card" style="cursor:pointer;" onclick="filterAndGo('due')"><div class="stat-icon">🤰</div><div class="stat-num" id="s-due">–</div><div class="stat-label">Due in 30 days</div></div>
     <div class="stat-card amber" style="cursor:pointer;" onclick="filterAndGo('birthdays')"><div class="stat-icon">🎂</div><div class="stat-num" id="s-bday">–</div><div class="stat-label">Birthdays this month</div></div>
     <div class="stat-card" style="cursor:pointer;" onclick="showMainScreen('screen-reminders')"><div class="stat-icon">⏰</div><div class="stat-num" id="s-rem">–</div><div class="stat-label">Reminders due</div></div>
+    <div class="stat-card" style="cursor:pointer;" onclick="filterAndGo('arabic')"><div class="stat-icon">🌙</div><div class="stat-num" id="s-arabic">–</div><div class="stat-label">Arabic families</div></div>
+    <div class="stat-card" style="cursor:pointer;" onclick="filterAndGo('english')"><div class="stat-icon">🌍</div><div class="stat-num" id="s-english">–</div><div class="stat-label">English families</div></div>
   </div>
   <div class="section-head"><div class="section-title">All families</div><div class="section-link" onclick="showMainScreen('screen-families')">See all →</div></div>
   <div class="family-list" id="super-fam-list"></div>
@@ -521,7 +523,7 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
     <div class="profile-pills" id="p-pills"></div>
   </div>
   <!-- Assign fairy bar (admin/super only) -->
-  <div id="p-assign-bar" style="background:rgba(0,0,0,0.25);padding:12px 20px;display:none;align-items:center;justify-content:space-between;gap:12px;">
+  <div id="p-assign-bar" style="background:var(--green-dark);padding:12px 20px;display:none;align-items:center;justify-content:space-between;gap:12px;">
     <div style="display:flex;align-items:center;gap:10px;">
       <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:18px;">🧚‍♀️</div>
       <div>
@@ -1411,6 +1413,7 @@ function showMainScreen(id, navEl) {
   if(id==='screen-team') renderFairies();
   if(id==='screen-donations') renderNeeds();
   if(id==='screen-approvals') loadApprovals();
+  if(id==='screen-fairy-profile') {} // handled by openFairyProfile
   if(navEl) setNavActive(navEl);
   document.getElementById('user-menu').classList.remove('open');
 }
@@ -1735,18 +1738,45 @@ async function uploadDocument(event) {
 async function viewDoc(docType) {
   const viewEl = document.getElementById(docType === 'qid' ? 'p-qid-view' : 'p-cert-view');
   const path = viewEl && viewEl.getAttribute('data-path');
-  if (!path) {
-    // Try to find the file
+  let signedUrl = null;
+  if (path) {
+    const { data, error } = await sb.storage.from('documents').createSignedUrl(path, 3600);
+    if (!error && data) signedUrl = data.signedUrl;
+  } else {
     for (const ext of ['jpg','jpeg','png','pdf','webp']) {
       const p = `${currentFamilyId}/${docType}.${ext}`;
       const { data, error } = await sb.storage.from('documents').createSignedUrl(p, 3600);
-      if (!error && data && data.signedUrl) { window.open(data.signedUrl, '_blank'); return; }
+      if (!error && data && data.signedUrl) { signedUrl = data.signedUrl; break; }
     }
-    showToast('Document not found'); return;
   }
-  const { data, error } = await sb.storage.from('documents').createSignedUrl(path, 3600);
-  if (error || !data) { showToast('Could not open document'); return; }
-  window.open(data.signedUrl, '_blank');
+  if (!signedUrl) { showToast('Document not found'); return; }
+  // Show inline in a modal overlay
+  showDocModal(signedUrl, docType);
+}
+
+function showDocModal(url, docType) {
+  // Remove existing modal if any
+  const existing = document.getElementById('doc-viewer-modal');
+  if (existing) existing.remove();
+  const isImg = !url.toLowerCase().includes('.pdf');
+  const modal = document.createElement('div');
+  modal.id = 'doc-viewer-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = `
+    <div style="width:100%;max-width:600px;background:white;border-radius:16px;overflow:hidden;max-height:85vh;display:flex;flex-direction:column;">
+      <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;">
+        <div style="font-size:14px;font-weight:700;color:#1a2e1c;">${docType === 'qid' ? 'QID Document' : 'Birth Certificate'}</div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <a href="${url}" target="_blank" style="font-size:12px;font-weight:700;color:var(--green);text-decoration:none;">Open full size ↗</a>
+          <span onclick="document.getElementById('doc-viewer-modal').remove()" style="font-size:22px;cursor:pointer;color:#999;">✕</span>
+        </div>
+      </div>
+      <div style="flex:1;overflow:auto;padding:16px;text-align:center;">
+        ${isImg ? `<img src="${url}" style="max-width:100%;height:auto;border-radius:8px;">` : `<iframe src="${url}" style="width:100%;height:500px;border:none;"></iframe>`}
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e) { if(e.target===modal) modal.remove(); });
 }
 
 // Load baby photo when opening profile
