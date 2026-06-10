@@ -1463,8 +1463,33 @@ function renderNeeds() {
 }
 
 async function confirmMatch(needId,donationId) {
-  await Promise.all([sb.from('needs').update({matched:true}).eq('id',needId),sb.from('donations').update({matched:true}).eq('id',donationId)]);
-  showToast('✅ Match confirmed!');
+  await Promise.all([
+    sb.from('needs').update({matched:true}).eq('id',needId),
+    sb.from('donations').update({matched:true}).eq('id',donationId)
+  ]);
+  // Send congratulations email to donor
+  const donation = allDonations.find(d => d.id === donationId);
+  if (donation && donation.donor_phone) {
+    // We have phone not email for donor - just show toast to call them
+    showToast('✅ Match confirmed! Call ' + donation.donor_name + ' on ' + donation.donor_phone);
+  } else {
+    showToast('✅ Match confirmed!');
+  }
+  // If donor submitted email via form, send congrats
+  if (donation && donation.donor_email) {
+    try {
+      await fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/welcome-baby-mailer', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4'},
+        body: JSON.stringify({
+          type: 'donor_congrats',
+          to: donation.donor_email,
+          donor_name: donation.donor_name || 'Friend',
+          item: donation.item
+        })
+      });
+    } catch(e) {}
+  }
   await loadAllData(); renderNeeds();
 }
 

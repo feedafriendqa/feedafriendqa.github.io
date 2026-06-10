@@ -424,12 +424,17 @@ textarea.form-input { min-height: 80px; resize: none; }
 
       <div class="form-group">
         <label class="form-label">Your name <span>*</span></label>
-        <input class="form-input" type="text" placeholder="First name is fine">
+        <input class="form-input" id="donor-name" type="text" placeholder="First name is fine">
       </div>
 
       <div class="form-group">
         <label class="form-label">WhatsApp / phone number <span>*</span></label>
-        <input class="form-input" type="tel" placeholder="+974…">
+        <input class="form-input" id="donor-phone" type="tel" placeholder="+974…">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email address <span style="color:var(--muted);font-weight:400;">(optional — to receive a confirmation)</span></label>
+        <input class="form-input" id="donor-email" type="email" placeholder="your@email.com">
       </div>
 
       <div class="privacy-note">
@@ -447,7 +452,7 @@ textarea.form-input { min-height: 80px; resize: none; }
 <div class="success-screen" id="success-view">
   <div class="success-icon">💚</div>
   <div class="success-title">Thank you!</div>
-  <div class="success-sub">Your donation has been logged. Our team will be in touch as soon as we match it to a family who needs it.<br><br>You're making a real difference. ✦</div>
+  <div class="success-sub">Your donation has been logged. We'll call you as soon as we match it to a family who needs it — usually within a few days.<br><br>Please keep your phone nearby. You're making a real difference. ✦</div>
 </div>
 
 <script>
@@ -551,7 +556,7 @@ async function submitForm() {
   if (item) {
     const { error } = await _sb.from('donations').insert([{
       item, condition, description, location,
-      donor_name, donor_phone, hold_until, matched: false
+      donor_name, donor_phone, donor_email, hold_until, matched: false
     }]);
     if (!error) {
       // Check for matching needs and notify admin
