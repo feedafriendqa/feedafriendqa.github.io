@@ -1012,7 +1012,7 @@ function goDash(navEl) {
       return bd>=mStart&&bd<=mEnd;
     });
     const rd = window.currentRoleData || {};
-  const userName = rd.full_name ? rd.full_name.split(' ')[0] : 'there';
+  const userName = (rd.full_name && rd.full_name.trim()) ? rd.full_name.trim().split(' ')[0] : (currentUser && currentUser.email ? currentUser.email.split('@')[0] : 'there');
   (function(){var __e=document.getElementById('super-name');if(__e)__e.textContent=userName;})(void 0);
   (function(){var __e=document.getElementById('admin-name');if(__e)__e.textContent=userName;})(void 0);
   (function(){var __e=document.getElementById('fairy-name');if(__e)__e.textContent=userName;})(void 0);
@@ -1303,18 +1303,27 @@ function renderReminders() {
 async function renderFairies() {
   const {data} = await sb.from('user_roles').select('*').eq('approved',true).in('role',['fairy','consultant','admin']);
   const el=document.getElementById('fairies-list');
+  if (!el) return;
   document.getElementById('fairies-badge').textContent=(data||[]).length+' active';
   el.innerHTML=(data||[]).map(u=>{
     const roleIcon=u.role==='consultant'?'🤱':u.role==='admin'?'👩‍💼':'🧚‍♀️';
     const roleLabel=u.role==='consultant'?'Consultant':u.role==='admin'?'Admin + Fairy':'Baby fairy';
-    return `<div class="fairy-card">
+    const firstName=(u.full_name||u.email||'').split(' ')[0];
+    const famCount=allFamilies.filter(f=>f.assigned_fairy_id===u.user_id).length;
+    const escapedName=(u.full_name||u.email||'').replace(/'/g,"\'");
+    return `<div class="fairy-card" onclick="openFairyProfile('${u.user_id}','${escapedName}','${roleLabel}')" style="cursor:pointer;">
       <div class="fairy-avatar" style="background:var(--purple-light);">${roleIcon}</div>
-      <div class="family-info"><div style="font-size:15px;font-weight:700;">${u.full_name||u.email}</div><div style="font-size:12px;color:var(--muted);">${u.email}</div></div>
-      <div class="stage-pill pill-follow">${roleLabel}</div>
+      <div class="family-info">
+        <div style="font-size:16px;font-weight:800;color:var(--ink);">${firstName}</div>
+        <div style="font-size:12px;color:var(--muted);">${u.full_name||u.email} · ${roleLabel}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:24px;font-weight:800;color:var(--purple);">${famCount}</div>
+        <div style="font-size:10px;color:var(--muted);font-weight:600;">${famCount===1?'family':'families'}</div>
+      </div>
     </div>`;
-  }).join('') || '<div class="empty-state"><div class="empty-icon">🧚‍♀️</div><p>No fairies yet.</p></div>';
+  }).join('')||'<div class="empty-state"><div class="empty-icon">🧚‍♀️</div><p>No fairies yet.</p></div>';
 }
-
 // ── SAVE FAMILY ──
 async function saveFamily() {
   const mother=document.getElementById('f-mother').value.trim();
