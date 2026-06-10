@@ -1160,9 +1160,9 @@ function famCardHTML(f,i) {
     var fairyLabel = '';
   }
   // Load photo async after render
-  setTimeout(() => {
+  setTimeout(async () => {
     const el = document.getElementById(avatarId);
-    if (el) loadCardPhoto(f.id, el);
+    if (el) await loadCardPhoto(f.id, el);
   }, 100);
   return `<div class="family-card" onclick="openProfile('${f.id}')">
     <div class="family-avatar ${AVATARS[i%4]}" id="${avatarId}" style="border-radius:14px;overflow:hidden;">${initials}</div>
@@ -1408,8 +1408,40 @@ function renderNeeds() {
   document.getElementById('needs-count').textContent='Pending needs — '+allNeeds.length;
   document.getElementById('donations-badge').textContent=allDonations.length+' unmatched';
   document.getElementById('donations-count').textContent='Available donations — '+allDonations.length;
+
+  // Smart keyword matching
+  const SYNONYMS = {
+    crib: ['cot','bed','bassinet','crib','moses basket'],
+    stroller: ['stroller','pram','pushchair','buggy','travel system'],
+    formula: ['formula','milk','aptamil','nan','similac'],
+    bouncer: ['bouncer','rocker','swing','rocking chair'],
+    steriliser: ['steriliser','sterilizer','sterilize'],
+    carrier: ['carrier','sling','wrap'],
+    carseat: ['car seat','carseat','car-seat'],
+    highchair: ['high chair','highchair','feeding chair'],
+    monitor: ['monitor','baby monitor'],
+    bathtub: ['bath','bathtub','tub'],
+    playmat: ['play mat','playmat','gym mat','activity mat'],
+  };
+
+  function findMatch(needItem, donations) {
+    const n = needItem.toLowerCase();
+    for (const d of donations) {
+      const dItem = (d.item||'').toLowerCase();
+      // Direct match
+      if (dItem.includes(n) || n.includes(dItem)) return d;
+      // Synonym match
+      for (const [key, syns] of Object.entries(SYNONYMS)) {
+        const nMatch = syns.some(s => n.includes(s));
+        const dMatch = syns.some(s => dItem.includes(s));
+        if (nMatch && dMatch) return d;
+      }
+    }
+    return null;
+  }
+
   document.getElementById('needs-list').innerHTML=allNeeds.map(n=>{
-    const match=allDonations.find(d=>d.item.toLowerCase().includes(n.item.toLowerCase())||n.item.toLowerCase().includes(d.item.toLowerCase()));
+    const match=findMatch(n.item, allDonations);
     const banner=match?`<div style="margin-top:8px;padding:8px 10px;background:white;border-radius:8px;font-size:12px;font-weight:600;color:var(--amber);">✨ Possible match: ${match.item} — <span style="text-decoration:underline;cursor:pointer;" onclick="confirmMatch('${n.id}','${match.id}')">Confirm</span></div>`:'';
     return `<div class="need-card" style="${match?'border-color:var(--amber);background:var(--amber-light);':''}">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
@@ -1867,6 +1899,27 @@ async function addNeedFromProfile() {
   document.getElementById('add-need-form').style.display = 'none';
   showToast('✅ Request saved');
   loadProfileNeeds(currentFamilyId);
+  // Check for matches immediately
+  checkNewNeedForMatches(item, priority);
+}
+
+async function checkNewNeedForMatches(needItem, priority) {
+  const {data: donations} = await sb.from('donations').select('*').eq('matched', false);
+  if (!donations || !donations.length) return;
+  // Use same synonym matching
+  const SYNS = {crib:['cot','bed','bassinet','crib'],stroller:['stroller','pram','pushchair','buggy'],formula:['formula','milk'],bouncer:['bouncer','rocker','swing'],steriliser:['steriliser','sterilizer'],carrier:['carrier','sling'],bathtub:['bath','tub']};
+  const n = needItem.toLowerCase();
+  const match = donations.find(d => {
+    const di = (d.item||'').toLowerCase();
+    if (di.includes(n) || n.includes(di)) return true;
+    for (const syns of Object.values(SYNS)) {
+      if (syns.some(s=>n.includes(s)) && syns.some(s=>di.includes(s))) return true;
+    }
+    return false;
+  });
+  if (match) {
+    showToast('✨ Possible match found! Check Donations tab');
+  }
 }
 
 // ── INLINE FIELD EDITING ──
