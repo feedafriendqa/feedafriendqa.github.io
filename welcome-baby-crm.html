@@ -611,9 +611,9 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
     <div class="info-card" id="p-health-card">
       <div class="info-card-header"><div class="info-card-title">🔒 Parental health <span style="font-size:10px;background:var(--coral-light);color:var(--coral);padding:2px 7px;border-radius:100px;margin-left:4px;font-weight:700;">Admin only</span></div></div>
       <div class="info-rows">
-        <div class="info-row"><div class="info-key">Mother health</div><div class="info-val" id="p-mhealth">–</div></div>
-        <div class="info-row"><div class="info-key">Father health</div><div class="info-val" id="p-fhealth">–</div></div>
-        <div class="info-row"><div class="info-key">Postnatal</div><div class="info-val" id="p-postnatal">–</div></div>
+        <div class="info-row"><div class="info-key">Mother health</div><div class="info-val" id="p-mhealth" contenteditable="true" onblur="saveField('family','mother_health',this.textContent)" style="outline:none;border-bottom:1px dashed var(--border);">–</div></div>
+        <div class="info-row"><div class="info-key">Father health</div><div class="info-val" id="p-fhealth" contenteditable="true" onblur="saveField('family','father_health',this.textContent)" style="outline:none;border-bottom:1px dashed var(--border);">–</div></div>
+        <div class="info-row"><div class="info-key">Postnatal</div><div class="info-val" id="p-postnatal" contenteditable="true" onblur="saveField('family','postnatal_notes',this.textContent)" style="outline:none;border-bottom:1px dashed var(--border);">–</div></div>
       </div>
     </div>
     <div class="info-card">
@@ -1181,11 +1181,15 @@ async function openProfile(familyId) {
   document.getElementById('p-baby-name').textContent = baby&&baby.baby_name?'Baby '+baby.baby_name:'Awaiting birth';
   document.getElementById('p-family-name').textContent = (f.mother_name||'')+' family'+(baby&&baby.dob?' · Born '+formatDate(baby.dob):f.due_date?' · Due '+formatDate(f.due_date):'');
   document.getElementById('p-pills').innerHTML = [baby&&baby.feeding_method||'🤱 Breastfeeding',f.language||'',(f.status||'active').charAt(0).toUpperCase()+(f.status||'active').slice(1)].map(p=>`<div class="profile-pill">${p}</div>`).join('');
-  document.getElementById('p-bname').textContent=baby&&baby.baby_name||'–';
-  document.getElementById('p-dob').textContent=baby&&baby.dob?formatDate(baby.dob):'–';
-  document.getElementById('p-weight').textContent=baby&&baby.birth_weight||'–';
-  document.getElementById('p-feeding').textContent=baby&&baby.feeding_method||'Breastfeeding';
-  document.getElementById('p-medical').textContent=(baby&&baby.medical_conditions)||'None noted';
+  // Store baby ID for saves
+  currentBabyId = baby ? baby.id : null;
+  // Baby fields
+  (function(){const el=document.getElementById('p-bname');if(el)el.textContent=baby&&baby.baby_name||'–';})();
+  (function(){const el=document.getElementById('p-dob');if(el){el.value=baby&&baby.dob?baby.dob:'';el.setAttribute('data-display',baby&&baby.dob?formatDate(baby.dob):'–');}})();
+  (function(){const el=document.getElementById('p-weight');if(el)el.textContent=baby&&baby.birth_weight||'–';})();
+  (function(){const el=document.getElementById('p-feeding');if(el){const v=baby&&baby.feeding_method||'Breastfeeding';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
+  (function(){const el=document.getElementById('p-medical');if(el)el.textContent=baby&&baby.medical_conditions||'None noted';})();
+  (function(){const el=document.getElementById('p-gender');if(el){const v=baby&&baby.gender||'';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
   document.getElementById('p-mother').textContent=f.mother_name||'–';
   (function(){ const el=document.getElementById('p-mother-phone'); if(el) el.innerHTML=f.mother_phone?`<a href="tel:${f.mother_phone}" style="color:var(--green);font-weight:600;">${f.mother_phone}</a>`:"–"; })();
   document.getElementById('p-father').textContent=f.father_name||'–';
@@ -1195,9 +1199,10 @@ async function openProfile(familyId) {
   if(mPhone) mPhone.innerHTML = f.mother_phone ? `<a href="tel:${f.mother_phone}" style="color:var(--green);font-weight:700;">${f.mother_phone}</a>` : '–';
   if(fPhone) fPhone.innerHTML = f.father_phone ? `<a href="tel:${f.father_phone}" style="color:var(--green);font-weight:700;">${f.father_phone}</a>` : '–';
   document.getElementById('p-siblings').textContent=f.siblings||'–';
-  document.getElementById('p-location').textContent=f.location||'–';
-  document.getElementById('p-language').textContent=f.language||'–';
-  document.getElementById('p-foodbox').textContent=f.food_box_active?'Active ✓':'Inactive';
+  (function(){const el=document.getElementById('p-location');if(el)el.textContent=f.location||'–';})();
+  (function(){const el=document.getElementById('p-language');if(el){const v=f.language||'English';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
+  (function(){const el=document.getElementById('p-foodbox');if(el){const v=f.food_box_active?'Active':'Inactive';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
+  (function(){const el=document.getElementById('p-status');if(el){const v=f.status||'active';Array.from(el.options).forEach(o=>o.selected=o.value===v);}})();
   // Health — admin/super only
   const hCard=document.getElementById('p-health-card');
   if (currentRole==='super'||currentRole==='admin') {
@@ -1569,7 +1574,7 @@ async function confirmApproval() {
     portalUrl: 'https://feedafriendqa.github.io/welcome-baby-crm.html'
   };
   try {
-    await fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder', {
+    await fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/welcome-baby-mailer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4' },
       body: JSON.stringify({
@@ -1696,7 +1701,7 @@ async function assignFairy(fairyUserId, fairyName, el) {
   if (fr && fr.email) {
     const fam = allFamilies.find(x=>x.id===currentFamilyId);
     try {
-      await fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder', {
+      await fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/welcome-baby-mailer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4' },
         body: JSON.stringify({
@@ -1787,6 +1792,25 @@ async function uploadDocument(event) {
   showToast('✅ Document uploaded!');
   event.target.value = '';
   currentDocType = null;
+}
+
+// ── INLINE FIELD EDITING ──
+let currentBabyId = null;
+
+async function saveField(table, field, value) {
+  if (!value || value.trim() === '–' || value.trim() === '') return;
+  value = value.trim();
+  if (table === 'family') {
+    await sb.from('families').update({[field]: value}).eq('id', currentFamilyId);
+    // Update local cache
+    const f = allFamilies.find(x => x.id === currentFamilyId);
+    if (f) f[field] = value;
+  } else if (table === 'baby' && currentBabyId) {
+    await sb.from('babies').update({[field]: value}).eq('id', currentBabyId);
+    const f = allFamilies.find(x => x.id === currentFamilyId);
+    if (f && f.babies && f.babies[0]) f.babies[0][field] = value;
+  }
+  showToast('✅ Saved');
 }
 
 async function viewDoc(docType) {
