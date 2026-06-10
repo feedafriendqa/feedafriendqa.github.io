@@ -1187,11 +1187,9 @@ async function openProfile(familyId) {
   document.getElementById('p-feeding').textContent=baby&&baby.feeding_method||'Breastfeeding';
   document.getElementById('p-medical').textContent=(baby&&baby.medical_conditions)||'None noted';
   document.getElementById('p-mother').textContent=f.mother_name||'–';
-  const mPhone = document.getElementById('p-mother-phone');
-  if(mPhone) mPhone.innerHTML = f.mother_phone ? `<a href="tel:${f.mother_phone}" style="color:var(--green);font-weight:600;">${f.mother_phone}</a>` : '–';
+  (function(){ const el=document.getElementById('p-mother-phone'); if(el) el.innerHTML=f.mother_phone?`<a href="tel:${f.mother_phone}" style="color:var(--green);font-weight:600;">${f.mother_phone}</a>`:"–"; })();
   document.getElementById('p-father').textContent=f.father_name||'–';
-  const fPhone = document.getElementById('p-father-phone');
-  if(fPhone) fPhone.innerHTML = f.father_phone ? `<a href="tel:${f.father_phone}" style="color:var(--green);font-weight:600;">${f.father_phone}</a>` : '–';
+  (function(){ const el=document.getElementById('p-father-phone'); if(el) el.innerHTML=f.father_phone?`<a href="tel:${f.father_phone}" style="color:var(--green);font-weight:600;">${f.father_phone}</a>`:"–"; })();
   const mPhone = document.getElementById('p-mother-phone');
   const fPhone = document.getElementById('p-father-phone');
   if(mPhone) mPhone.innerHTML = f.mother_phone ? `<a href="tel:${f.mother_phone}" style="color:var(--green);font-weight:700;">${f.mother_phone}</a>` : '–';
