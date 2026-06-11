@@ -1201,7 +1201,16 @@ function getFamilySource() {
 async function openProfile(familyId) {
   prevScreen = document.querySelector('.screen.active').id;
   currentFamilyId = familyId;
-  const f = allFamilies.find(x=>x.id===familyId); if(!f) return;
+  let f = allFamilies.find(x=>x.id===familyId);
+  // If not found or no babies data, fetch fresh from DB
+  if (!f || !f.babies) {
+    const {data} = await sb.from('families').select('*, babies(*)').eq('id', familyId).single();
+    if (!data) { showToast('Could not load family'); return; }
+    f = data;
+    // Update local cache
+    const idx = allFamilies.findIndex(x=>x.id===familyId);
+    if (idx >= 0) allFamilies[idx] = f; else allFamilies.push(f);
+  }
   const baby=f.babies&&f.babies[0];
   document.getElementById('p-baby-name').textContent = baby&&baby.baby_name?'Baby '+baby.baby_name:'Awaiting birth';
   document.getElementById('p-family-name').textContent = (f.mother_name||'')+' family'+(baby&&baby.dob?' · Born '+formatDate(baby.dob):f.due_date?' · Due '+formatDate(f.due_date):'');
