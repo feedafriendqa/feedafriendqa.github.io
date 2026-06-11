@@ -1144,6 +1144,12 @@ function goDash(navEl) {
     const el = document.getElementById(r+'-quote-card');
     if (el) el.innerHTML = quoteHTML;
   });
+  // User name — available to all branches
+  const rd = window.currentRoleData || {};
+  const userName = (rd.full_name && rd.full_name.trim()) ? rd.full_name.trim().split(' ')[0] : (currentUser && currentUser.email ? currentUser.email.split('@')[0] : 'there');
+  (function(){var __e=document.getElementById('super-name');if(__e)__e.textContent=userName;})(void 0);
+  (function(){var __e=document.getElementById('admin-name');if(__e)__e.textContent=userName;})(void 0);
+  (function(){var __e=document.getElementById('fairy-name');if(__e)__e.textContent=userName;})(void 0);
   const today = new Date();
   const in30 = new Date(today); in30.setDate(in30.getDate()+30);
   const mStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -1173,11 +1179,7 @@ function goDash(navEl) {
       const dob=new Date(b.dob); const bd=new Date(today.getFullYear(),dob.getMonth(),dob.getDate());
       return bd>=mStart&&bd<=mEnd;
     });
-    const rd = window.currentRoleData || {};
-  const userName = (rd.full_name && rd.full_name.trim()) ? rd.full_name.trim().split(' ')[0] : (currentUser && currentUser.email ? currentUser.email.split('@')[0] : 'there');
-  (function(){var __e=document.getElementById('super-name');if(__e)__e.textContent=userName;})(void 0);
-  (function(){var __e=document.getElementById('admin-name');if(__e)__e.textContent=userName;})(void 0);
-  (function(){var __e=document.getElementById('fairy-name');if(__e)__e.textContent=userName;})(void 0);
+    // userName already set above
   (function(){var __e=document.getElementById('super-date');if(__e)__e.textContent=dateStr;})(void 0);
     const sArabic = active.filter(f => (f.language||'').toLowerCase().includes('arabic'));
     const sEnglish = active.filter(f => !(f.language||'').toLowerCase().includes('arabic'));
