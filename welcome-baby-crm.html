@@ -658,6 +658,13 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
       </div>
     </div>
 
+    <!-- Save profile changes button -->
+    <div style="padding:0 20px;margin-top:14px;">
+      <button onclick="saveAllProfileFields()" style="width:100%;background:var(--green);color:white;border:none;border-radius:14px;padding:14px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;">
+        💾 Save changes
+      </button>
+    </div>
+
     <div class="add-note-box">
       <div class="add-note-label">➕ Log an update</div>
       <textarea class="add-note-input" id="note-text" placeholder="Write a note, visit summary, or update…"></textarea>
@@ -2108,6 +2115,61 @@ async function checkNewNeedForMatches(needItem, priority) {
 
 // ── INLINE FIELD EDITING ──
 let currentBabyId = null;
+
+async function saveAllProfileFields() {
+  if (!currentFamilyId) return;
+  // Collect all field values
+  const familyFields = {};
+  const babyFields = {};
+  const fieldMap = {
+    'p-mother': ['family','mother_name'],
+    'p-mother-phone': ['family','mother_phone'],
+    'p-father': ['family','father_name'],
+    'p-father-phone': ['family','father_phone'],
+    'p-siblings': ['family','siblings'],
+    'p-location': ['family','location'],
+    'p-language': ['family','language'],
+    'p-foodbox': ['family','food_box_active'],
+    'p-status': ['family','status'],
+    'p-bname': ['baby','baby_name'],
+    'p-weight': ['baby','birth_weight'],
+    'p-feeding': ['baby','feeding_method'],
+    'p-gender': ['baby','gender'],
+    'p-medical': ['baby','medical_conditions'],
+    'p-mhealth': ['family','mother_health'],
+    'p-fhealth': ['family','father_health'],
+    'p-postnatal': ['family','postnatal_notes'],
+  };
+  for (const [id, [table, field]] of Object.entries(fieldMap)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    let val = el.tagName === 'SELECT' ? el.value : el.textContent.trim();
+    if (!val || val === '–') continue;
+    if (field === 'food_box_active') val = val === 'Active';
+    if (table === 'family') familyFields[field] = val;
+    else babyFields[field] = val;
+  }
+  // Also get DOB
+  const dobEl = document.getElementById('p-dob');
+  if (dobEl && dobEl.value) babyFields['dob'] = dobEl.value;
+  
+  let ok = true;
+  if (Object.keys(familyFields).length) {
+    const {error} = await sb.from('families').update(familyFields).eq('id', currentFamilyId);
+    if (error) { showToast('Error saving: ' + error.message); ok = false; }
+  }
+  if (Object.keys(babyFields).length && currentBabyId) {
+    const {error} = await sb.from('babies').update(babyFields).eq('id', currentBabyId);
+    if (error) { showToast('Error saving baby: ' + error.message); ok = false; }
+  }
+  if (ok) {
+    showToast('✅ Profile saved!');
+    // Update local cache
+    const f = allFamilies.find(x => x.id === currentFamilyId);
+    if (f) Object.assign(f, familyFields);
+    if (f && f.babies && f.babies[0]) Object.assign(f.babies[0], babyFields);
+  }
+}
 
 async function saveField(table, field, value) {
   if (!value || value.trim() === '–' || value.trim() === '') return;
