@@ -1368,9 +1368,9 @@ async function openProfile(familyId) {
   (function(){const el=document.getElementById('p-bname');if(el)el.textContent=baby&&baby.baby_name||'–';})();
   (function(){const el=document.getElementById('p-dob');if(el){el.value=baby&&baby.dob?baby.dob:'';el.setAttribute('data-display',baby&&baby.dob?formatDate(baby.dob):'–');}})();
   (function(){const el=document.getElementById('p-weight');if(el)el.textContent=baby&&baby.birth_weight||'–';})();
-  (function(){const el=document.getElementById('p-feeding');if(el){const v=baby&&baby.feeding_method||'Breastfeeding';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
+  (function(){const el=document.getElementById('p-feeding');if(el&&el.options){const v=baby&&baby.feeding_method||'Breastfeeding';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
   (function(){const el=document.getElementById('p-medical');if(el)el.textContent=baby&&baby.medical_conditions||'None noted';})();
-  (function(){const el=document.getElementById('p-gender');if(el){const v=baby&&baby.gender||'';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
+  (function(){const el=document.getElementById('p-gender');if(el&&el.options){const v=baby&&baby.gender||'';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
   document.getElementById('p-mother').textContent=f.mother_name||'–';
   (function(){ const el=document.getElementById('p-mother-phone'); if(el) el.innerHTML=f.mother_phone?`<a href="tel:${f.mother_phone}" style="color:var(--green);font-weight:600;">${f.mother_phone}</a>`:"–"; })();
   document.getElementById('p-father').textContent=f.father_name||'–';
@@ -1378,9 +1378,9 @@ async function openProfile(familyId) {
 
   document.getElementById('p-siblings').textContent=f.siblings||'–';
   (function(){const el=document.getElementById('p-location');if(el)el.textContent=f.location||'–';})();
-  (function(){const el=document.getElementById('p-language');if(el){const v=f.language||'English';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
-  (function(){const el=document.getElementById('p-foodbox');if(el){const v=f.food_box_active?'Active':'Inactive';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
-  (function(){const el=document.getElementById('p-status');if(el){const v=f.status||'active';Array.from(el.options).forEach(o=>o.selected=o.value===v);}})();
+  (function(){const el=document.getElementById('p-language');if(el&&el.options){const v=f.language||'English';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
+  (function(){const el=document.getElementById('p-foodbox');if(el&&el.options){const v=f.food_box_active?'Active':'Inactive';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
+  (function(){const el=document.getElementById('p-status');if(el&&el.options){const v=f.status||'active';Array.from(el.options).forEach(o=>o.selected=o.value===v);}})();
   // Health — admin/super only
   const hCard=document.getElementById('p-health-card');
   if (currentRole==='super'||currentRole==='admin') {
@@ -1392,12 +1392,12 @@ async function openProfile(familyId) {
   // Milestones from DB
   const {data:ms} = await sb.from('milestones').select('*').eq('family_id',familyId).order('due_date');
   const today=new Date();
-  document.getElementById('p-milestones').innerHTML = ms&&ms.length ? ms.map(m=>{
+  (function(){const el=document.getElementById('p-milestones'); if(el) el.innerHTML = ms&&ms.length ? ms.map(m=>{
     const due=new Date(m.due_date);
     const cls=m.completed?'done':due<today?'overdue':'pending';
     const icon=m.completed?'✓':due<today?'!':'·';
     return `<div class="ms-row"><div class="ms-check ${cls}" onclick="toggleMs('${m.id}','${familyId}',${m.completed})">${icon}</div><div class="ms-label">${m.milestone_name}</div><div class="ms-date">${formatDate(m.due_date)}</div></div>`;
-  }).join('') : '<div style="padding:14px 16px;font-size:13px;color:var(--muted);">No milestones yet.</div>';
+  }).join('') : '<div style="padding:14px 16px;font-size:13px;color:var(--muted);">No milestones yet.</div>';})();
   // Activity log from DB
   const {data:logs} = await sb.from('activity_log').select('*').eq('family_id',familyId).order('created_at',{ascending:false});
   document.getElementById('p-timeline').innerHTML = logs&&logs.length ? logs.map(l=>`
