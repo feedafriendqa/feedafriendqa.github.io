@@ -1057,7 +1057,9 @@ async function loadAllData() {
   allMilestones = mil.data || [];
 }
 
-function goConsultantDash(navEl) {
+async function goConsultantDash(navEl) {
+  // Reload data if needed
+  if (!allFamilies.length) await loadAllData();
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const rd = window.currentRoleData || {};
@@ -1256,8 +1258,9 @@ function renderFamList(elId, list, loadPhotos=false) {
 }
 function renderMsList(elId, list) {
   const el = document.getElementById(elId);
+  if (!el) return;
   el.innerHTML = list.length ? list.map(m=>`
-    <div class="milestone-item">
+    <div class="milestone-item" onclick="openProfile('${m.family_id}')" style="cursor:pointer;">
       <div class="milestone-dot dot-amber"></div>
       <div class="milestone-text">${m.families&&m.families.mother_name||'Family'} — ${m.milestone_name}</div>
       <div class="milestone-when">${daysFromNow(m.due_date)}</div>
