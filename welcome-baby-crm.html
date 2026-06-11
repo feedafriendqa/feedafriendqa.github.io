@@ -1190,7 +1190,7 @@ function goDash(navEl) {
     (function(){var __e=document.getElementById('s-arabic');if(__e)__e.textContent=sArabic.length;})(void 0);
     (function(){var __e=document.getElementById('s-english');if(__e)__e.textContent=sEnglish.length;})(void 0);
     (function(){var __e=document.getElementById('super-badge');if(__e)__e.textContent=active.length+' active';})(void 0);
-    renderFamList('super-fam-list', active.slice(0,4));
+    renderFamList('super-fam-list', active.slice(0,4), true);
     renderMsList('super-ms-list', allMilestones.filter(m=>!m.completed).slice(0,3));
     showScreen('screen-super-dash');
   } else if (currentRole === 'admin') {
@@ -1210,7 +1210,7 @@ function goDash(navEl) {
     (function(){var __e=document.getElementById('a-arabic');if(__e)__e.textContent=arabicFams.length;})(void 0);
     (function(){var __e=document.getElementById('a-english');if(__e)__e.textContent=englishFams.length;})(void 0);
     (function(){var __e=document.getElementById('admin-badge');if(__e)__e.textContent=active.length+' active';})(void 0);
-    renderFamList('admin-fam-list', active.slice(0,4));
+    renderFamList('admin-fam-list', active.slice(0,4), true);
     renderMsList('admin-ms-list', allMilestones.filter(m=>!m.completed).slice(0,3));
     showScreen('screen-admin-dash');
   } else {
@@ -1237,7 +1237,7 @@ function goDash(navEl) {
     const badgeCls = currentRole==='consultant' ? 'badge-consultant' : 'badge-fairy';
     const el = document.getElementById('fairy-role-badge');
     el.textContent = badge; el.className = 'dash-role-badge '+badgeCls;
-    renderFamList('fairy-fam-list', myFams);
+    renderFamList('fairy-fam-list', myFams.slice(0,4), true);
     renderMsList('fairy-ms-list', myMs.filter(m=>!m.completed).slice(0,4));
     // Birthdays
     const bdayEl = document.getElementById('fairy-bday-list');
@@ -1250,9 +1250,9 @@ function goDash(navEl) {
   if (navEl) setNavActive(navEl);
 }
 
-function renderFamList(elId, list) {
+function renderFamList(elId, list, loadPhotos=false) {
   const el = document.getElementById(elId);
-  el.innerHTML = list.length ? list.map((f,i)=>famCardHTML(f,i)).join('') : '<div class="empty-state"><div class="empty-icon">👨‍👩‍👧</div><p>No families yet.</p></div>';
+  el.innerHTML = list.length ? list.map((f,i)=>famCardHTML(f,i,loadPhotos)).join('') : '<div class="empty-state"><div class="empty-icon">👨‍👩‍👧</div><p>No families yet.</p></div>';
 }
 function renderMsList(elId, list) {
   const el = document.getElementById(elId);
@@ -1278,13 +1278,13 @@ async function loadCardPhoto(familyId, imgEl) {
   }
 }
 
-function famCardHTML(f,i) {
+function famCardHTML(f,i,loadPhoto=false) {
   const baby=f.babies&&f.babies[0];
   const label=baby&&baby.baby_name?'Baby '+baby.baby_name:'Awaiting birth';
   const stage=f.status||'active';
   const pillMap={new:'pill-new',active:'pill-active',emergency:'pill-emergency',closed:'pill-closed'};
   const initials=(f.mother_name||'F').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-  const avatarId = `avatar-${f.id}`;
+
   if (f.assigned_fairy_id) {
     const fr = window.fairyCache && window.fairyCache[f.assigned_fairy_id];
     const fname = fr ? (fr.full_name||fr.email).split(' ')[0] : 'Assigned';
@@ -1295,14 +1295,18 @@ function famCardHTML(f,i) {
     var fairyLabel = '';
   }
   // Load photo async after render
-  setTimeout(async () => {
-    try {
-      const el = document.getElementById(avatarId);
-      if (el) await loadCardPhoto(f.id, el);
-    } catch(e) {}
-  }, 200);
+
+  const avatarId = `avatar-${f.id}-${i}`;
+  if (loadPhoto) {
+    setTimeout(async () => {
+      try {
+        const el = document.getElementById(avatarId);
+        if (el) await loadCardPhoto(f.id, el);
+      } catch(e) {}
+    }, i * 150); // stagger requests
+  }
   return `<div class="family-card" onclick="openProfile('${f.id}')">
-    <div class="family-avatar ${AVATARS[i%4]}" id="${avatarId}" style="border-radius:14px;overflow:hidden;">${initials}</div>
+    <div class="family-avatar ${AVATARS[i%4]}" id="${avatarId}">${initials}</div>
     <div class="family-info">
       <div class="family-name">${f.mother_name||'Unknown'} — ${label}</div>
       <div class="family-meta">📍 ${f.location||'–'} · ${f.language||'–'}</div>
@@ -1352,7 +1356,12 @@ async function openProfile(familyId) {
   const baby=f.babies&&f.babies[0];
   document.getElementById('p-baby-name').textContent = baby&&baby.baby_name?'Baby '+baby.baby_name:'Awaiting birth';
   document.getElementById('p-family-name').textContent = (f.mother_name||'')+' family'+(baby&&baby.dob?' · Born '+formatDate(baby.dob):f.due_date?' · Due '+formatDate(f.due_date):'');
-  document.getElementById('p-pills').innerHTML = [baby&&baby.feeding_method||'🤱 Breastfeeding',f.language||'',(f.status||'active').charAt(0).toUpperCase()+(f.status||'active').slice(1)].map(p=>`<div class="profile-pill">${p}</div>`).join('');
+  const pillItems = [
+    baby&&baby.feeding_method ? baby.feeding_method : '🤱 Breastfeeding',
+    f.language || null,
+    (f.status||'active').charAt(0).toUpperCase()+(f.status||'active').slice(1)
+  ].filter(Boolean);
+  (function(){const el=document.getElementById('p-pills'); if(el) el.innerHTML=pillItems.map(p=>`<div class="profile-pill">${p}</div>`).join('');})();
   // Store baby ID for saves
   currentBabyId = baby ? baby.id : null;
   // Baby fields
@@ -1366,10 +1375,7 @@ async function openProfile(familyId) {
   (function(){ const el=document.getElementById('p-mother-phone'); if(el) el.innerHTML=f.mother_phone?`<a href="tel:${f.mother_phone}" style="color:var(--green);font-weight:600;">${f.mother_phone}</a>`:"–"; })();
   document.getElementById('p-father').textContent=f.father_name||'–';
   (function(){ const el=document.getElementById('p-father-phone'); if(el) el.innerHTML=f.father_phone?`<a href="tel:${f.father_phone}" style="color:var(--green);font-weight:600;">${f.father_phone}</a>`:"–"; })();
-  const mPhone = document.getElementById('p-mother-phone');
-  const fPhone = document.getElementById('p-father-phone');
-  if(mPhone) mPhone.innerHTML = f.mother_phone ? `<a href="tel:${f.mother_phone}" style="color:var(--green);font-weight:700;">${f.mother_phone}</a>` : '–';
-  if(fPhone) fPhone.innerHTML = f.father_phone ? `<a href="tel:${f.father_phone}" style="color:var(--green);font-weight:700;">${f.father_phone}</a>` : '–';
+
   document.getElementById('p-siblings').textContent=f.siblings||'–';
   (function(){const el=document.getElementById('p-location');if(el)el.textContent=f.location||'–';})();
   (function(){const el=document.getElementById('p-language');if(el){const v=f.language||'English';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
