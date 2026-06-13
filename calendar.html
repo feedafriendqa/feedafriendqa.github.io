@@ -150,6 +150,7 @@ html,body{height:100%;font-family:'Nunito Sans',sans-serif;background:#f4f7f4;co
   <div class="bot">
     <div class="leg" id="legend"></div>
     <div class="br">
+      <button class="btn btno" id="submitBtn">＋ Submit Event</button>
       <a href="https://feedafriendqa.github.io/" target="_blank" class="btn btng">🙋 Volunteer Portal →</a>
     </div>
   </div>
@@ -432,6 +433,78 @@ async function renderContent(){
   c.appendChild(view==="month"?renderMonth():renderList());
 }
 
+function openSubmit(prefill){
+  prefill=prefill||{};
+  window._priv=prefill.privacy||"public";
+  const opts=PROGS.map(p=>'<option value="'+p.id+'" '+(prefill.prog===p.id?'selected':'')+'>'+p.em+' '+p.label+'</option>').join('');
+  const pv=window._priv;
+  document.getElementById("modal").innerHTML='<div class="ov" id="ov"><div class="modal">'
+    +'<div class="mh" id="sh" style="background:#F5C431;color:#1a2b1c"><div><h2>Submit an Event</h2><p>Add a meeting, session, or community event</p></div><button class="xb" onclick="closeModal()">&#10005;</button></div>'
+    +'<div class="mb">'
+    +(prefill.fromOpportunity?'<div style="background:#fff8e1;border:2px solid #F5C431;border-radius:9px;padding:9px 13px;font-size:12px;color:#7a5c00;font-weight:700;margin-bottom:13px;">&#128203; Pre-filled from: <strong>'+prefill.fromOpportunity+'</strong></div>':'')
+    +'<div class="fg"><label>Title *</label><input class="fi" id="sf_t" placeholder="e.g. Monthly Food Box Distribution" value="'+(prefill.title||'')+'"/></div>'
+    +'<div class="fr"><div class="fg"><label>Programme *</label><select class="fs" id="sf_p" onchange="updateSH()">'+opts+'</select></div>'
+    +'<div class="fg"><label>Type</label><select class="fs" id="sf_ty"><option value="volunteer">&#128587; Volunteer</option><option value="meeting">&#128203; Meeting</option><option value="event">&#127881; Event</option><option value="training">&#128218; Training</option></select></div></div>'
+    +'<div class="fr"><div class="fg"><label>Date *</label><input class="fi" type="date" id="sf_d" value="'+(prefill.date||'')+'"/></div>'
+    +'<div class="fg"><label>Start Time</label><input class="fi" type="time" id="sf_st" value="'+(prefill.time||'')+'"/></div></div>'
+    +'<div class="fr"><div class="fg"><label>End Time</label><input class="fi" type="time" id="sf_et" value="'+(prefill.endTime||'')+'"/></div>'
+    +'<div class="fg"><label>Location</label><input class="fi" id="sf_l" placeholder="Venue or Zoom link" value="'+(prefill.location||'')+'"/></div></div>'
+    +'<div class="fg"><label>Description</label><textarea class="ft" id="sf_desc" placeholder="What\'s happening? Who should come?">'+(prefill.desc||'')+'</textarea></div>'
+    +'<div class="fg"><label>Visibility</label><div class="pr">'
+    +'<button class="po" id="p_pub" style="background:'+(pv==="public"?"#2A6E35":"transparent")+';color:'+(pv==="public"?"white":"#8a9e8c")+'" onclick="setPriv(\'public\')">&#127760; Public</button>'
+    +'<button class="po" id="p_prv" style="background:'+(pv==="private"?"#9B59B6":"transparent")+';color:'+(pv==="private"?"white":"#8a9e8c")+'" onclick="setPriv(\'private\')">&#128274; Project Heads Only</button>'
+    +'</div><p class="pn" id="pn">'+(pv==="public"?"Visible to everyone on the calendar.":"Only visible to authenticated project leads.")+'</p></div>'
+    +'<div class="fg"><div class="vr"><label for="sf_v">&#128587; Link to volunteer sign-up portal</label>'
+    +'<label class="sw"><input type="checkbox" id="sf_v" '+(prefill.volLink?"checked":"")+'/><span class="sl"></span></label></div></div>'
+    +'</div>'
+    +'<div class="mf"><button class="btn btno" onclick="closeModal()">Cancel</button>'
+    +'<button class="btn" id="sf_go" style="background:#F5C431;color:#1a2b1c" onclick="doSubmit()">'+(isAdmin?"Add to Calendar \u2192":"Submit for Review \u2192")+'</button></div>'
+    +'</div></div>';
+  document.getElementById("ov").onclick=e=>{if(e.target===e.currentTarget)closeModal();};
+  updateSH();
+}
+
+function updateSH(){
+  const sel=document.getElementById("sf_p");if(!sel)return;
+  const p=gp(sel.value),c=tc(p);
+  const sh=document.getElementById("sh");if(sh){sh.style.background=p.bg;sh.style.color=c;}
+  const go=document.getElementById("sf_go");if(go){go.style.background=p.bg;go.style.color=c;}
+}
+
+function setPriv(v){
+  window._priv=v;
+  const pub=document.getElementById("p_pub"),prv=document.getElementById("p_prv"),pn=document.getElementById("pn");
+  if(pub){pub.style.background=v==="public"?"#2A6E35":"transparent";pub.style.color=v==="public"?"white":"#8a9e8c";}
+  if(prv){prv.style.background=v==="private"?"#9B59B6":"transparent";prv.style.color=v==="private"?"white":"#8a9e8c";}
+  if(pn){pn.textContent=v==="public"?"Visible to everyone on the calendar.":"Only visible to authenticated project leads.";}
+}
+
+async function doSubmit(){
+  const title=(document.getElementById("sf_t")||{}).value||"";
+  const dateStr=(document.getElementById("sf_d")||{}).value||"";
+  if(!title.trim()||!dateStr){alert("Title and date are required.");return;}
+  const go=document.getElementById("sf_go");if(go){go.textContent="Saving...";go.disabled=true;}
+  const body={
+    title:title.trim(),
+    description:(document.getElementById("sf_desc")||{}).value||"",
+    programme:(document.getElementById("sf_p")||{}).value||"food-boxes",
+    event_type:(document.getElementById("sf_ty")||{}).value||"event",
+    privacy:window._priv||"public",
+    event_date:dateStr,
+    start_time:(document.getElementById("sf_st")||{}).value||null,
+    end_time:(document.getElementById("sf_et")||{}).value||null,
+    location:(document.getElementById("sf_l")||{}).value||"",
+    vol_link:((document.getElementById("sf_v")||{}).checked)||false,
+    submitted_by:"Community member",
+    approved:isAdmin,
+  };
+  try{
+    await fetch(SUPA_URL+"/rest/v1/calendar_events",{method:"POST",headers:{...H,"Prefer":"return=representation"},body:JSON.stringify(body)});
+    closeModal();await renderContent();
+    toast(isAdmin?"Added to calendar!":"Submitted for review!");
+  }catch(e){toast("Could not save. Please try again.");console.error(e);}
+}
+
 function closeModal(){document.getElementById("modal").innerHTML="";}
 
 function openDetail(ev){
@@ -481,14 +554,26 @@ document.getElementById("nextM").onclick=()=>{curM++;if(curM>11){curM=0;curY++;}
 document.getElementById("todayB").onclick=()=>{curY=TY;curM=TM;renderContent();};
 document.getElementById("vMonth").onclick=()=>{view="month";document.getElementById("vMonth").classList.add("on");document.getElementById("vList").classList.remove("on");renderContent();};
 document.getElementById("vList").onclick=()=>{view="list";document.getElementById("vList").classList.add("on");document.getElementById("vMonth").classList.remove("on");renderContent();};
+document.getElementById("submitBtn").onclick=function(){openSubmit();};
 document.getElementById("loginBtn").onclick=openLogin;
 document.getElementById("exitAdmin").onclick=()=>{isAdmin=false;document.getElementById("adminBadge").style.display="none";document.getElementById("exitAdmin").style.display="none";document.getElementById("loginBtn").style.display="flex";renderContent();toast("Public view restored");};
 
 // ── EXPOSE for volunteer portal ─────────────────────────────
 window.FaFCalendar={
   addFromOpportunity:function(opp){
-    // When called from volunteer portal, just open the portal
-    window.open("https://feedafriendqa.github.io/","_blank");
+    openSubmit({
+      title:opp.title||"",
+      prog:opp.project||"faf-general",
+      date:opp.date||"",
+      time:opp.time||"",
+      endTime:opp.endTime||"",
+      location:opp.location||"",
+      desc:opp.description||"",
+      type:"volunteer",
+      privacy:"public",
+      volLink:true,
+      fromOpportunity:opp.title||"Opportunity",
+    });
   }
 };
 
