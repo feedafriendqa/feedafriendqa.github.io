@@ -807,6 +807,8 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
     <div class="stat-card amber"><div class="stat-icon">📅</div><div class="stat-num" id="c-3month">–</div><div class="stat-label">3 month check-ins</div></div>
     <div class="stat-card coral"><div class="stat-icon">⚠️</div><div class="stat-num" id="c-6month">–</div><div class="stat-label">6 month reviews</div></div>
   </div>
+  <div class="section-head"><div class="section-title">👨‍👩‍👧 All families</div><div class="section-link" onclick="showMainScreen('screen-families')">See all →</div></div>
+  <div class="family-list" id="c-all-families"></div>
   <div class="section-head"><div class="section-title">🍼 Needs feeding support</div></div>
   <div class="family-list" id="c-formula-list"></div>
   <div class="section-head"><div class="section-title">📅 3 month milestones due</div></div>
@@ -1100,8 +1102,9 @@ async function goConsultantDash(navEl) {
   const qEl = document.getElementById('consultant-quote-card');
   if(qEl) qEl.innerHTML = `<div style="font-size:13px;font-style:italic;color:rgba(255,255,255,0.9);line-height:1.6;margin-bottom:6px;">"${qText}"</div><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.65);">— ${qAuthor}</div>`;
   // Stats
-  const formula = allFamilies.filter(f => f.status !== 'closed' && ['Formula','Mixed','Other'].includes(f.babies&&f.babies[0]&&f.babies[0].feeding_method));
-  const breast = allFamilies.filter(f => f.status !== 'closed' && f.babies&&f.babies[0]&&(f.babies[0].feeding_method||'').toLowerCase().includes('breast'));
+  const activeFams = allFamilies.filter(f => f.status !== 'closed');
+  const formula = activeFams.filter(f => ['Formula','Mixed','Other'].includes(f.babies&&f.babies[0]&&f.babies[0].feeding_method));
+  const breast = activeFams.filter(f => f.babies&&f.babies[0]&&(f.babies[0].feeding_method||'').toLowerCase().includes('breast'));
   (function(){const el=document.getElementById('c-formula');if(el)el.textContent=formula.length;})();
   (function(){const el=document.getElementById('c-breast');if(el)el.textContent=breast.length;})();
   // Milestones by type
@@ -1111,6 +1114,9 @@ async function goConsultantDash(navEl) {
   (function(){const el=document.getElementById('c-3month');if(el)el.textContent=ms3.length;})();
   (function(){const el=document.getElementById('c-6month');if(el)el.textContent=ms6.length;})();
   // Render lists
+  // Show ALL families section too
+  const allList = document.getElementById('c-all-families');
+  if(allList) allList.innerHTML = activeFams.length ? activeFams.map((f,i)=>famCardHTML(f,i)).join('') : '<div style="padding:0 20px;font-size:13px;color:var(--muted);">No families.</div>';
   const fList = document.getElementById('c-formula-list');
   if(fList) fList.innerHTML = formula.length ? formula.map((f,i)=>famCardHTML(f,i)).join('') : '<div style="padding:0 20px;font-size:13px;color:var(--muted);">No families currently needing feeding support.</div>';
   const render3 = document.getElementById('c-3month-list');
