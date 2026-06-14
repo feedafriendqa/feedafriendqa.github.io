@@ -1170,7 +1170,7 @@ function getDailyQuote() {
   return QUOTES[dayOfYear % QUOTES.length];
 }
 
-function goDash(navEl) {
+async function goDash(navEl) {
   // Render daily quote on all dashboards
   const [qText, qAuthor] = getDailyQuote();
   const quoteHTML = `<div style="font-size:13px;font-style:italic;color:rgba(255,255,255,0.9);line-height:1.6;margin-bottom:6px;">"${qText}"</div><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.65);">— ${qAuthor}</div>`;
@@ -1251,8 +1251,11 @@ function goDash(navEl) {
     renderFamList('admin-fam-list', active.slice(0,4), true);
     renderMsList('admin-ms-list', allMilestones.filter(m=>!m.completed).slice(0,3));
     showScreen('screen-admin-dash');
+  } else if (currentRole === 'consultant') {
+    goConsultantDash(navEl);
+    return;
   } else {
-    // fairy / consultant — filter to assigned families
+    // fairy — filter to assigned families
     const myFams = allFamilies.filter(f => f.assigned_fairy_id === currentUser.id);
     const myMs = allMilestones.filter(m => myFams.some(f=>f.id===m.family_id));
     const dueSoon = myFams.filter(f=>{const d=new Date(f.due_date);return d>=today&&d<=in30;});
