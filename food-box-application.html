@@ -1188,6 +1188,11 @@ function buildMemberCard(n) {
   h += '<label class="radio-opt"><input type="radio" name="m' + n + '-gender" value="male" onchange="handleMemberGender(' + n + ')"><span>' + (ar ? 'ذكر' : 'Male') + '</span></label>';
   h += '<label class="radio-opt"><input type="radio" name="m' + n + '-gender" value="female" onchange="handleMemberGender(' + n + ')"><span>' + (ar ? 'أنثى' : 'Female') + '</span></label>';
   h += '</div></div>';
+  // Phone - shown for adults 18+ after DOB entered
+  h += '<div class="conditional" id="m' + n + '-phone-q">';
+  h += '<div class="field"><label>' + (ar ? 'رقم الهاتف' : 'Phone / WhatsApp number') + ' <span class="req">*</span><span style="font-size:12px;color:var(--muted);display:block;margin-top:2px;font-weight:500;">' + (ar ? 'مطلوب للبالغين (١٨+)' : 'Required for adults 18+') + '</span></label>';
+  h += '<input type="tel" id="m' + n + '-phone" inputmode="tel" placeholder="+974 5xxx xxxx" data-en="+974 5xxx xxxx" data-ar="+٩٧٤ ٥xxx xxxx">';
+  h += '</div></div>';
   h += '<div class="field"><label>' + (ar ? 'الدور في الأسرة' : 'Role in household') + ' <span class="req">*</span></label>';
   h += '<div class="radio-group">';
   h += '<label class="radio-opt"><input type="radio" name="m' + n + '-role" value="husband"><span>' + (ar ? 'زوج' : 'Husband') + '</span></label>';
@@ -1199,10 +1204,16 @@ function buildMemberCard(n) {
   h += '<div class="conditional" id="m' + n + '-school-q">';
   h += '<div class="field"><label>' + (ar ? 'هل يذهب إلى المدرسة؟' : 'Is this child attending school?') + ' <span class="req">*</span></label>';
   h += '<div class="radio-group">';
-  h += '<label class="radio-opt"><input type="radio" name="m' + n + '-school" value="yes"><span>' + (ar ? 'نعم' : 'Yes') + '</span></label>';
-  h += '<label class="radio-opt"><input type="radio" name="m' + n + '-school" value="no"><span>' + (ar ? 'لا' : 'No') + '</span></label>';
-  h += '<label class="radio-opt"><input type="radio" name="m' + n + '-school" value="nursery"><span>' + (ar ? 'روضة' : 'Nursery / pre-school') + '</span></label>';
-  h += '</div></div></div>';
+  h += '<label class="radio-opt"><input type="radio" name="m' + n + '-school" value="yes" onchange="handleSchoolQ(' + n + ')"><span>' + (ar ? 'نعم' : 'Yes') + '</span></label>';
+  h += '<label class="radio-opt"><input type="radio" name="m' + n + '-school" value="no" onchange="handleSchoolQ(' + n + ')"><span>' + (ar ? 'لا، خارج المدرسة' : 'No — out of school') + '</span></label>';
+  h += '<label class="radio-opt"><input type="radio" name="m' + n + '-school" value="nursery" onchange="handleSchoolQ(' + n + ')"><span>' + (ar ? 'روضة' : 'Nursery / pre-school') + '</span></label>';
+  h += '</div>';
+  h += '<div class="conditional" id="m' + n + '-ll-prompt" style="margin-top:10px;background:#eaf5ec;border:1.5px solid #b2d9b8;border-radius:8px;padding:12px 14px;">';
+  h += '<p style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:8px;">📚 ' + (ar ? 'هذا الطفل قد يستفيد من برنامج Little Learners!' : 'This child may benefit from the Little Learners programme!') + '</p>';
+  h += '<p style="font-size:12px;color:var(--muted);margin-bottom:10px;">' + (ar ? 'يدعم برنامج Little Learners الأطفال في سن الدراسة خارج المدرسة بالتعلم المنزلي.' : 'Little Learners supports school-age children who are out of school with home learning packs.') + '</p>';
+  h += '<label class="radio-opt" style="display:inline-flex;"><input type="checkbox" id="m' + n + '-ll-consent" style="display:inline;margin-right:6px;accent-color:var(--green);"> <span>' + (ar ? 'نعم، أرغب في التقديم لـ Little Learners أيضاً' : 'Yes — also apply for Little Learners') + '</span></label>';
+  h += '</div>';
+  h += '</div></div>';
   h += '<div class="conditional" id="m' + n + '-diaper-q">';
   h += '<div class="field"><label>' + (ar ? 'مقاس الحفاضات' : 'Diaper size needed') + ' <span class="req">*</span></label>';
   h += '<div class="diaper-pills" id="m' + n + '-diaper-pills"></div>';
@@ -1246,8 +1257,35 @@ function handleMemberDOB(n) {
   var dq = document.getElementById('m' + n + '-diaper-q');
   if (dq) dq.classList.toggle('visible', ageYears < 3);
   var sq = document.getElementById('m' + n + '-school-q');
-  if (sq) sq.classList.toggle('visible', ageYears >= 1 && ageYears < 16);
+  if (sq) sq.classList.toggle('visible', ageYears >= 3 && ageYears < 16);
+  // Phone required for adults
+  var pq = document.getElementById('m' + n + '-phone-q');
+  if (pq) pq.classList.toggle('visible', ageYears >= 18);
+  // Little Learners alert for ages 3-14
+  checkLittleLearners(n, ageYears);
   handleMemberGender(n);
+}
+
+
+function checkLittleLearners(n, ageYears) {
+  // Ages 3-14: check school status once entered
+  var sq = document.getElementById('m' + n + '-school-q');
+  if (!sq) return;
+  // LL prompt shown only when school=no and age 3-14
+  // Triggered by handleSchoolQ below
+}
+
+function handleSchoolQ(n) {
+  var schoolEl = document.querySelector('input[name="m' + n + '-school"]:checked');
+  var school = schoolEl ? schoolEl.value : '';
+  var dobEl = document.getElementById('m' + n + '-dob');
+  var ageYears = dobEl && dobEl.value ? (new Date() - new Date(dobEl.value)) / (1000*60*60*24*365.25) : 0;
+  var llPrompt = document.getElementById('m' + n + '-ll-prompt');
+  // Show LL prompt if child is 3-14 and NOT in school
+  if (llPrompt) {
+    var showLL = school === 'no' && ageYears >= 3 && ageYears < 15;
+    llPrompt.classList.toggle('visible', showLL);
+  }
 }
 
 function handleMemberGender(n) {
@@ -1388,6 +1426,27 @@ function collectMembers() {
     });
   }
   return members;
+}
+
+
+function triggerLittleLearnersReferrals(data) {
+  if (!data.household_members) return;
+  var llKids = data.household_members.filter(function(m) {
+    return m.ll_referral === true || m.ll_consent === true;
+  });
+  if (llKids.length === 0) return;
+  // Send to clever-responder edge function
+  fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4' },
+    body: JSON.stringify({
+      type: 'little_learners_referral',
+      applicant_name: data.full_name_en || data.full_name,
+      whatsapp: data.whatsapp,
+      area: data.area,
+      children: llKids.map(function(k) { return { name: k.name, dob: k.dob }; })
+    })
+  }).catch(function() {});
 }
 
 function submitApplication() {
