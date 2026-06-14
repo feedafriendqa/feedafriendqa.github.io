@@ -417,8 +417,8 @@ function renderTable(apps) {
       '<td style="font-size:12px;color:var(--muted);">' + date + '</td>' +
       '<td>' + langTag + '</td>' +
       '<td>' + statusBadge + '</td>' +
-      '<td><button class="action-btn btn-view" onclick="event.stopPropagation();viewApp('' + app.id + '')">View</button>' +
-      (status === 'pending' ? '<button class="action-btn btn-approve" onclick="event.stopPropagation();quickApprove('' + app.id + '')">✓</button>' : '') + '</td>';
+      '<td><button class="action-btn btn-view" onclick="event.stopPropagation();viewApp(\'' + app.id + '\')">View</button>' +
+      (status === 'pending' ? '<button class="action-btn btn-approve" onclick="event.stopPropagation();quickApprove(\'' + app.id + '\')">✓</button>' : '') + '</td>';
     tbody.appendChild(tr);
   });
 }
@@ -498,10 +498,10 @@ function renderModal(app, members) {
   body += '<div style="font-size:11px;color:var(--muted);">Submitted: ' + date + ' · Lang: ' + (app.submission_lang||'en').toUpperCase() + ' · Status: ' + (app.status||'pending') + '</div>';
   document.getElementById('modal-body').innerHTML = body;
   var actions = '';
-  if (app.status === 'pending') actions += '<button class="modal-actions btn-approve-full" onclick="updateStatus('' + app.id + '','approved')">Approve</button>';
-  if (app.status === 'pending' || app.status === 'approved') actions += '<button class="modal-actions btn-active-full" onclick="updateStatus('' + app.id + '','active')">Mark Active</button>';
-  actions += '<button class="modal-actions btn-note" onclick="saveNote('' + app.id + '')">Save Note</button>';
-  actions += '<button class="modal-actions btn-reject-full" onclick="updateStatus('' + app.id + '','rejected')">Reject</button>';
+  if (app.status === 'pending') actions += '<button class="modal-actions btn-approve-full" onclick="updateStatus(\'' + app.id + '\',' + "'approved'" + ')">Approve</button>';
+  if (app.status === 'pending' || app.status === 'approved') actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\'' + app.id + '\',' + "'active'" + ')">Mark Active</button>';
+  actions += '<button class="modal-actions btn-note" onclick="saveNote(\'' + app.id + '\')">Save Note</button>';
+  actions += '<button class="modal-actions btn-reject-full" onclick="updateStatus(\'' + app.id + '\',' + "'rejected'" + ')">Reject</button>';
   document.getElementById('modal-actions').innerHTML = actions;
   document.getElementById('modal').classList.add('visible');
 }
