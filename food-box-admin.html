@@ -141,12 +141,27 @@ tr:hover td{background:#fafcfa;}
       <span class="login-subtitle">Admin Portal</span>
     </div>
     <div class="login-body">
-      <p id="login-err" class="login-err">⚠️ Incorrect email or password. Please try again.</p>
+      <div id="login-err" class="login-err" style="display:none;"></div>
+      <div id="login-success" class="pw-msg success" style="display:none;"></div>
+
+      <!-- Google Sign In -->
+      <button onclick="doGoogleLogin()" id="google-btn" style="width:100%;padding:13px;background:white;color:#1a2e1d;border:1.5px solid #d0e4d3;border-radius:var(--radius-sm);font-size:15px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;transition:all 0.2s;">
+        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Sign in with Google
+      </button>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+        <span style="font-size:12px;color:var(--muted);font-weight:700;">OR</span>
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+      </div>
+
+      <!-- Email + Password -->
       <label for="login-email">Email address</label>
-      <input type="email" id="login-email" placeholder="you@feedafriend.org" autocomplete="email">
+      <input type="email" id="login-email" placeholder="you@email.com" autocomplete="email">
       <label for="login-password">Password</label>
       <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
-      <button onclick="doLogin()">Sign in →</button>
+      <button onclick="doLogin()" id="login-btn">Sign in →</button>
     </div>
     <div class="login-footer">Together for Good · feedafriend.org</div>
   </div>
@@ -243,13 +258,17 @@ tr:hover td{background:#fafcfa;}
 </div>
 
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ── INLINE FAF AUTH ───────────────────────────────────────────────────
 var FAF_SUPABASE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co';
-var FAF_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU3NjA3NjcsImV4cCI6MjAzMTMzNjc2N30.Wd6nNf_TbQmmhDbeXZNPlxNWKnV3B3IyVDdFYJ4YXVM';
-// Alias for REST calls in this file
+var FAF_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
+// Alias for REST calls
 var SUPABASE_URL = FAF_SUPABASE_URL;
 var SUPABASE_ANON_KEY = FAF_ANON_KEY;
+
+// Use the same Supabase JS client as Welcome Baby
+const sb = supabase.createClient(FAF_SUPABASE_URL, FAF_ANON_KEY);
 
 var fafAuth = {
   token: null, user: null, role: null, portals: [],
@@ -314,294 +333,90 @@ var currentFilter = 'all';
 var currentAppId = null;
 
 // ── AUTH ──────────────────────────────────────────────────────────────
-function doLogin() {
+async function doGoogleLogin() {
+  var btn = document.getElementById('google-btn');
+  btn.textContent = 'Redirecting to Google…'; btn.disabled = true;
+  await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: 'https://feedafriendqa.github.io/food-box-admin.html' }
+  });
+}
+
+async function doLogin() {
   var email = document.getElementById('login-email').value.trim();
   var password = document.getElementById('login-password').value;
   var errEl = document.getElementById('login-err');
-  var btn = document.querySelector('.login-body button');
-  btn.textContent = 'Signing in…';
-  btn.disabled = true;
+  var btn = document.getElementById('login-btn');
   errEl.style.display = 'none';
-  fafAuth.signIn(email, password).then(function() {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('admin-app').style.display = 'block';
-    var label = fafAuth.displayName || email;
-    var langNames = {ar:'Arabic',bn:'Bengali + Bangladeshi',hi:'Hindi',ur:'Urdu',tl:'Filipino',en:'English'};
-    var langScope = fafAuth.languages ? ' · ' + fafAuth.languages.map(function(l){ return langNames[l]||l; }).join(', ') + ' cases' : ' · All cases';
-    document.getElementById('admin-email-label').textContent = label + langScope;
-    loadApps();
-  }).catch(function(e) {
-    errEl.textContent = '⚠️ ' + (e.message || 'Incorrect email or password.');
+  if (!email || !password) {
+    errEl.textContent = 'Please enter your email and password.';
+    errEl.style.display = 'block'; return;
+  }
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+  var result = await sb.auth.signInWithPassword({ email: email, password: password });
+  if (result.error) {
+    errEl.textContent = '⚠️ ' + result.error.message;
     errEl.style.display = 'block';
     btn.textContent = 'Sign in →'; btn.disabled = false;
-  });
-}
-
-function doLogout() {
-  fafAuth.signOut();
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('admin-app').style.display = 'none';
-  document.querySelector('.login-body button').textContent = 'Sign in →';
-  document.querySelector('.login-body button').disabled = false;
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  // Try restore session on load
-  fafAuth.restore().then(function(auth) {
-    if (auth && auth.token) {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('admin-app').style.display = 'block';
-      var label = fafAuth.displayName || fafAuth.user.email;
-      var langNames = {ar:'Arabic',bn:'Bengali + Bangladeshi',hi:'Hindi',ur:'Urdu',tl:'Filipino',en:'English'};
-      var langScope = fafAuth.languages ? ' · ' + fafAuth.languages.map(function(l){ return langNames[l]||l; }).join(', ') + ' cases' : ' · All cases';
-      document.getElementById('admin-email-label').textContent = label + langScope;
-      loadApps();
-    }
-  });
-  document.getElementById('login-password').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') doLogin();
-  });
-});
-
-// ── LOAD DATA ─────────────────────────────────────────────────────────
-function apiHeaders() {
-  return fafAuth.headers();
-}
-
-function loadApps() {
-  document.getElementById('table-loading').style.display = 'block';
-  document.getElementById('apps-table').style.display = 'none';
-  document.getElementById('table-empty').style.display = 'none';
-
-  // Build query — language + nationality filter for non-super-admins
-  var langFilter = '';
-  if (fafAuth.role !== 'super_admin' && fafAuth.languages && fafAuth.languages.length > 0) {
-    langFilter = '&submission_lang=in.(' + fafAuth.languages.join(',') + ')';
-  }
-  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=*&order=created_at.desc' + langFilter, {
-    headers: apiHeaders()
-  }).then(function(r) { return r.json(); }).then(function(data) {
-    var apps = Array.isArray(data) ? data : [];
-    // Badana: Bengali language OR Bangladeshi nationality
-    if (fafAuth.role !== 'super_admin' && fafAuth.languages && fafAuth.languages.indexOf('bn') !== -1) {
-      apps = apps.filter(function(a) {
-        return a.submission_lang === 'bn' || a.nationality === 'Bangladeshi';
-      });
-    }
-    allApps = apps;
-    updateStats();
-    renderTable(allApps);
-    document.getElementById('table-loading').style.display = 'none';
-  }).catch(function(e) {
-    document.getElementById('table-loading').innerHTML = '⚠️ Failed to load. Check your connection.';
-  });
-}
-
-function updateStats() {
-  document.getElementById('stat-total').textContent = allApps.length;
-  document.getElementById('stat-pending').textContent = allApps.filter(function(a){return a.status==='pending';}).length;
-  document.getElementById('stat-approved').textContent = allApps.filter(function(a){return a.status==='approved';}).length;
-  document.getElementById('stat-active').textContent = allApps.filter(function(a){return a.status==='active';}).length;
-  document.getElementById('stat-translation').textContent = allApps.filter(function(a){return a.translation_pending;}).length;
-}
-
-// ── RENDER TABLE ──────────────────────────────────────────────────────
-function renderTable(apps) {
-  var tbody = document.getElementById('apps-tbody');
-  var table = document.getElementById('apps-table');
-  var empty = document.getElementById('table-empty');
-  if (!apps || apps.length === 0) {
-    table.style.display = 'none';
-    empty.style.display = 'block';
     return;
   }
-  table.style.display = 'table';
-  empty.style.display = 'none';
-  tbody.innerHTML = '';
-  apps.forEach(function(app) {
-    var disp = (app.monthly_salary || 0) - (app.monthly_rent || 0);
-    var dispColor = disp <= 1500 ? 'color:var(--green);' : 'color:var(--red);';
-    var date = app.created_at ? new Date(app.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '–';
-    var statusBadge = '<span class="badge badge-' + (app.status||'pending') + '">' + (app.status||'pending') + '</span>';
-    if (app.translation_pending) statusBadge += '<span class="badge badge-translation">🌐 review</span>';
-    var name = app.full_name_en || app.full_name || '–';
-    var tr = document.createElement('tr');
-    tr.innerHTML = (
-      '<td><div class="name-cell">' + name + '</div><div class="qid-cell">' + (app.qid_number||'–') + '</div></td>' +
-      '<td class="area-cell">' + (app.area||'–') + '</td>' +
-      '<td>' + (app.household_size||1) + ' people</td>' +
-      '<td><span style="font-weight:800;' + dispColor + '">QAR ' + Math.round(disp) + '</span></td>' +
-      '<td style="font-size:12px;color:var(--muted);">' + date + '</td>' +
-      '<td>' + statusBadge + '</td>' +
-      '<td><span style="font-size:11px;font-weight:700;color:var(--muted);">' + ({'ar':'🇶🇦 AR','bn':'🇧🇩 BN','hi':'🇮🇳 HI','ur':'🇵🇰 UR','tl':'🇵🇭 TL','en':'🇬🇧 EN'}[app.submission_lang] || app.submission_lang || 'en') + '</span></td>' +
-      '<td><button class="action-btn btn-view" onclick="viewApp(\'' + app.id + '\')">View</button>' +
-      (app.status === 'pending' ? '<button class="action-btn btn-approve" onclick="quickApprove(\'' + app.id + '\')">✓</button>' : '') + '</td>'
-    );
-    tbody.appendChild(tr);
-  });
+  // session will be picked up by onAuthStateChange
+}
+async function doLogout() {
+  await sb.auth.signOut();
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('admin-app').style.display = 'none';
 }
 
-// ── FILTERS ───────────────────────────────────────────────────────────
-function setFilter(status, btn) {
-  currentFilter = status;
-  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
-  btn.classList.add('active');
-  filterApps();
-}
-
-function filterApps() {
-  var q = document.getElementById('search-box').value.toLowerCase();
-  var filtered = allApps.filter(function(a) {
-    if (currentFilter !== 'all' && a.status !== currentFilter) return false;
-    if (!q) return true;
-    var name = (a.full_name_en || a.full_name || '').toLowerCase();
-    var qid = (a.qid_number || '').toLowerCase();
-    var wa = (a.whatsapp || '').toLowerCase();
-    var area = (a.area || '').toLowerCase();
-    return name.includes(q) || qid.includes(q) || wa.includes(q) || area.includes(q);
-  });
-  renderTable(filtered);
-}
-
-// ── VIEW APPLICATION ──────────────────────────────────────────────────
-function viewApp(id) {
-  currentAppId = id;
-  var app = allApps.find(function(a){return a.id===id;});
-  if (!app) return;
-
-  // Fetch members
-  fetch(SUPABASE_URL + '/rest/v1/food_box_members?application_id=eq.' + id + '&select=*', {
-    headers: apiHeaders()
-  }).then(function(r){return r.json();}).then(function(members){
-    renderModal(app, members||[]);
-  }).catch(function(){ renderModal(app, []); });
-}
-
-function renderModal(app, members) {
-  var name = app.full_name_en || app.full_name || '–';
-  var disp = (app.monthly_salary||0) - (app.monthly_rent||0);
-  var date = app.created_at ? new Date(app.created_at).toLocaleString('en-GB') : '–';
-
-  document.getElementById('modal-title').textContent = name;
-
-  var body = '';
-  if (app.translation_pending) {
-    body += '<div class="translation-alert">🌐 This application was submitted in Arabic. The translation below is auto-generated — please review for accuracy before approving.</div>';
+document.addEventListener('DOMContentLoaded', async function() {
+  // Use same pattern as Welcome Baby — check session on load
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    await handleAdminSession(session);
   }
 
-  body += '<div class="detail-section"><h3>Applicant</h3><div class="detail-grid">';
-  var fields = [
-    ['Name (displayed)', name],
-    ['Name (original)', app.full_name||'–'],
-    ['QID', app.qid_number||'–'],
-    ['QID expiry', app.qid_expiry||'–'],
-    ['Gender', app.gender||'–'],
-    ['Nationality', app.nationality||'–'],
-    ['Sponsor', app.sponsor||'–'],
-    ['WhatsApp', app.whatsapp||'–'],
-    ['Role', app.applicant_role||'–'],
-    ['Language', app.preferred_lang||'–'],
-    ['Working', app.is_working ? 'Yes' : 'No'],
-    ['Muslim', app.is_muslim ? 'Yes' : 'No'],
-    ['Pregnant', app.is_pregnant ? 'Yes (' + (app.baby_gender||'unknown gender') + (app.due_date ? ', due '+app.due_date : '') + ')' : 'No'],
-  ];
-  fields.forEach(function(f){
-    body += '<div class="detail-item"><div class="lbl">' + f[0] + '</div><div class="val">' + f[1] + '</div></div>';
+  // Listen for auth changes (handles OAuth redirects automatically)
+  sb.auth.onAuthStateChange(async function(_event, session) {
+    if (session) {
+      await handleAdminSession(session);
+    } else {
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('admin-app').style.display = 'none';
+    }
   });
-  body += '</div></div>';
 
-  body += '<div class="detail-section"><h3>Address</h3><div class="detail-grid">';
-  [['Zone', app.zone], ['Street', app.street], ['Building', app.building], ['Unit', app.unit], ['Flat', app.flat], ['Area', app.area]].forEach(function(f){
-    body += '<div class="detail-item"><div class="lbl">' + f[0] + '</div><div class="val">' + (f[1]||'–') + '</div></div>';
-  });
-  body += '</div></div>';
-
-  body += '<div class="detail-section"><h3>Financial</h3><div class="detail-grid">';
-  var dispColor = disp <= 1500 ? 'color:var(--green)' : 'color:var(--red)';
-  [
-    ['Monthly salary', 'QAR ' + (app.monthly_salary||0)],
-    ['Monthly rent', 'QAR ' + (app.monthly_rent||0)],
-    ['Disposable income', '<span style="font-weight:900;' + dispColor + '">QAR ' + Math.round(disp) + '</span>'],
-    ['Household size', app.household_size + ' people'],
-  ].forEach(function(f){
-    body += '<div class="detail-item"><div class="lbl">' + f[0] + '</div><div class="val">' + f[1] + '</div></div>';
-  });
-  body += '</div></div>';
-
-  if (members.length > 0) {
-    body += '<div class="detail-section"><h3>Household Members (' + members.length + ')</h3>';
-    members.forEach(function(m,i){
-      body += '<div class="member-card-mini">';
-      body += '<div class="name">' + (m.full_name||'Unknown') + ' <span style="font-weight:400;color:var(--muted);font-size:12px;">· ' + (m.role||'') + ' · ' + (m.gender||'') + '</span></div>';
-      body += '<div class="meta">QID: ' + (m.qid_number||'–') + ' · DOB: ' + (m.dob||'–') + (m.diaper_size?' · Diapers: '+m.diaper_size:'') + (m.is_pregnant?' · 🤰 Pregnant':'') + (m.is_attending_school?' · School: '+m.is_attending_school:'') + '</div>';
-      body += '</div>';
-    });
-    body += '</div>';
-  }
-
-  body += '<div class="detail-section"><h3>Admin notes</h3>';
-  body += '<textarea class="notes-area" id="modal-notes" placeholder="Add notes about this application…">' + (app.admin_notes||'') + '</textarea>';
-  body += '</div>';
-  var langMap = {'ar':'Arabic','bn':'Bengali','hi':'Hindi','ur':'Urdu','tl':'Filipino','en':'English'};
-  body += '<div style="font-size:12px;color:var(--muted);margin-top:4px;">Submitted: ' + date + ' · Lang: ' + (langMap[app.submission_lang] || app.submission_lang || 'English') + ' · Status: ' + (app.status||'pending') + ' · ID: ' + app.id.substring(0,8) + '</div>';
-
-  document.getElementById('modal-body').innerHTML = body;
-
-  var actions = '';
-  if (app.status === 'pending' || app.status === 'approved') {
-    actions += '<button class="admin-actions btn-approve-full" onclick="updateStatus(\'' + app.id + '\',\'active\')">✓ Mark Active</button>';
-  }
-  if (app.status !== 'approved' && app.status !== 'active') {
-    actions += '<button class="admin-actions btn-approve-full" onclick="updateStatus(\'' + app.id + '\',\'approved\')" style="background:var(--green-mid);">Approve</button>';
-  }
-  actions += '<button class="admin-actions btn-note" onclick="saveNote(\'' + app.id + '\')">Save Note</button>';
-  actions += '<button class="admin-actions btn-reject-full" onclick="updateStatus(\'' + app.id + '\',\'rejected\')" style="flex:0.5;">Reject</button>';
-
-  document.getElementById('modal-actions').innerHTML = actions;
-  document.getElementById('modal').classList.add('visible');
-}
-
-function closeModal() {
-  document.getElementById('modal').classList.remove('visible');
-  currentAppId = null;
-}
-
-// ── ACTIONS ───────────────────────────────────────────────────────────
-function updateStatus(id, status) {
-  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
-    method: 'PATCH',
-    headers: Object.assign({'Content-Type':'application/json','Prefer':'return=representation'}, apiHeaders()),
-    body: JSON.stringify({ status: status })
-  }).then(function(r){return r.json();}).then(function(data){
-    var idx = allApps.findIndex(function(a){return a.id===id;});
-    if (idx !== -1) allApps[idx].status = status;
-    updateStats();
-    filterApps();
-    closeModal();
-  }).catch(function(e){ alert('Update failed: ' + e.message); });
-}
-
-function quickApprove(id) {
-  updateStatus(id, 'approved');
-}
-
-function saveNote(id) {
-  var notes = document.getElementById('modal-notes').value;
-  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
-    method: 'PATCH',
-    headers: Object.assign({'Content-Type':'application/json'}, apiHeaders()),
-    body: JSON.stringify({ admin_notes: notes })
-  }).then(function(){
-    var idx = allApps.findIndex(function(a){return a.id===id;});
-    if (idx !== -1) allApps[idx].admin_notes = notes;
-    var btn = document.querySelector('#modal-actions .btn-note');
-    if (btn) { btn.textContent = '✓ Saved'; setTimeout(function(){ btn.textContent = 'Save Note'; }, 2000); }
-  });
-}
-
-document.getElementById('modal').addEventListener('click', function(e){
-  if (e.target === this) closeModal();
+  // Keyboard shortcut
+  var pwField = document.getElementById('login-password');
+  if (pwField) pwField.addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
 });
+
+async function handleAdminSession(session) {
+  // Fetch role from faf_user_roles
+  var result = await sb.from('faf_user_roles')
+    .select('role, portals, languages, display_name')
+    .eq('email', session.user.email)
+    .single();
+
+  var role = result.data;
+  var displayName = (role && role.display_name) || session.user.email;
+  var languages = role ? role.languages : null;
+
+  var langNames = {ar:'Arabic',bn:'Bengali + Bangladeshi',hi:'Hindi',ur:'Urdu',tl:'Filipino',en:'English'};
+  var langScope = languages
+    ? ' · ' + languages.map(function(l){ return langNames[l]||l; }).join(', ') + ' cases'
+    : ' · All cases';
+
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-app').style.display = 'block';
+  document.getElementById('admin-email-label').textContent = displayName + langScope;
+
+  // Store for use by loadApps
+  window.fafRole = role ? role.role : 'admin';
+  window.fafLanguages = languages;
+
+  loadApps();
+}
+
 
 // ── CHANGE PASSWORD ───────────────────────────────────────────────
 function openChangePassword() {
