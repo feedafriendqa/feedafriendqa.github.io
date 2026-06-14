@@ -332,32 +332,49 @@ textarea.form-input { min-height: 80px; resize: none; }
 
       <div class="form-group">
         <label class="form-label">What are you donating? <span>*</span></label>
-        <input class="form-input" type="text" id="item-input" placeholder="Type or pick below…" oninput="filterSuggestions(this.value)" autocomplete="off">
-        <div class="suggestions-grid" id="suggestions-grid">
-          <div class="sug-chip" onclick="pickItem(this)">Crib</div>
-          <div class="sug-chip" onclick="pickItem(this)">Stroller</div>
-          <div class="sug-chip" onclick="pickItem(this)">Bouncer</div>
-          <div class="sug-chip" onclick="pickItem(this)">High chair</div>
-          <div class="sug-chip" onclick="pickItem(this)">Car seat</div>
-          <div class="sug-chip" onclick="pickItem(this)">Baby bath</div>
-          <div class="sug-chip" onclick="pickItem(this)">Breast pump</div>
-          <div class="sug-chip" onclick="pickItem(this)">Steriliser</div>
-          <div class="sug-chip" onclick="pickItem(this)">Nappy bag</div>
-          <div class="sug-chip" onclick="pickItem(this)">Baby clothes</div>
-          <div class="sug-chip" onclick="pickItem(this)">Play gym</div>
-          <div class="sug-chip" onclick="pickItem(this)">Baby monitor</div>
-          <div class="sug-chip" onclick="pickItem(this)">Moses basket</div>
-          <div class="sug-chip" onclick="pickItem(this)">Baby swing</div>
-          <div class="sug-chip" onclick="pickItem(this)">Wardrobe</div>
-          <div class="sug-chip" onclick="pickItem(this)">Change table</div>
-          <div class="sug-chip" onclick="pickItem(this)">Storage unit</div>
-          <div class="sug-chip" onclick="pickItem(this)">Toys bundle</div>
-          <div class="sug-chip" onclick="pickItem(this)">Cot mattress</div>
-          <div class="sug-chip" onclick="pickItem(this)">Baby carrier</div>
-          <div class="sug-chip" onclick="pickItem(this)">Feeding chair</div>
-          <div class="sug-chip" onclick="pickItem(this)">Baby walker</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Select one or more items, or type to search</div>
+        <input class="form-input" type="text" id="item-input" placeholder="Search items…" oninput="filterSuggestions(this.value)" autocomplete="off" style="margin-bottom:10px;">
+        
+        <!-- Selected items display -->
+        <div id="selected-items-display" style="display:none;background:var(--green-light);border-radius:10px;padding:10px 14px;margin-bottom:10px;">
+          <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;">Selected items</div>
+          <div id="selected-items-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+        </div>
+
+        <!-- Quick picks -->
+        <div id="suggestions-grid" style="display:flex;flex-wrap:wrap;gap:7px;margin-top:4px;">
+          <div class="sug-chip" onclick="toggleItem(this)">Crib / Cot</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Stroller</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Bouncer</div>
+          <div class="sug-chip" onclick="toggleItem(this)">High chair</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Car seat</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Baby clothes</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Baby bath</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Breast pump</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Single bed</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Double bed</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Mattress</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Wardrobe</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Dining table</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Sofa</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Fridge</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Washing machine</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Microwave</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Clothing</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Toys</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Books</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Prayer mat</div>
+          <div class="sug-chip" onclick="toggleItem(this)">Other</div>
+        </div>
+
+        <!-- Custom item input -->
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <input class="form-input" type="text" id="custom-item-input" placeholder="Add custom item…" style="flex:1;">
+          <button type="button" onclick="addCustomItem()" style="background:var(--green);color:white;border:none;border-radius:10px;padding:10px 16px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">+ Add</button>
         </div>
       </div>
+
+</div>
 
       <div class="form-group">
         <label class="form-label">Condition <span>*</span></label>
@@ -374,14 +391,15 @@ textarea.form-input { min-height: 80px; resize: none; }
       </div>
 
       <div class="form-group">
-        <label class="form-label">Photo</label>
-        <div class="photo-upload" onclick="triggerUpload()">
-          <input type="file" accept="image/*" id="photo-input" onchange="previewPhoto(event)">
+        <label class="form-label">Photos <span style="color:var(--muted);font-weight:400;">(up to 10)</span></label>
+        <div class="photo-upload" onclick="document.getElementById('photo-input').click()">
+          <input type="file" accept="image/*" id="photo-input" multiple onchange="previewPhotos(event)" style="display:none;">
           <div class="photo-icon">📷</div>
-          <div class="photo-label">Tap to upload a photo</div>
-          <div class="photo-sub">JPG or PNG — helps us match faster</div>
-          <img id="photo-preview" class="photo-preview" alt="Preview">
+          <div class="photo-label">Tap to add photos</div>
+          <div class="photo-sub">Up to 10 photos — helps us match faster</div>
         </div>
+        <div id="photo-preview-grid" style="margin-top:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
+        <div id="photo-count" style="font-size:12px;color:var(--muted);margin-top:6px;"></div>
       </div>
     </div>
 
@@ -501,24 +519,71 @@ textarea.form-input { min-height: 80px; resize: none; }
     document.getElementById('specific-date').min = today;
   });
 
-  function pickItem(el) {
-    document.querySelectorAll('.sug-chip').forEach(function(c) { c.classList.remove('selected'); });
-    el.classList.add('selected');
-    document.getElementById('item-input').value = el.textContent.trim();
+  let selectedItems = [];
+
+  function toggleItem(el) {
+    const item = el.textContent.trim();
+    if (el.classList.contains('selected')) {
+      el.classList.remove('selected');
+      selectedItems = selectedItems.filter(i => i !== item);
+    } else {
+      el.classList.add('selected');
+      selectedItems.push(item);
+    }
+    updateSelectedDisplay();
+  }
+
+  function addCustomItem() {
+    const input = document.getElementById('custom-item-input');
+    const item = input.value.trim();
+    if (!item) return;
+    if (!selectedItems.includes(item)) {
+      selectedItems.push(item);
+      updateSelectedDisplay();
+    }
+    input.value = '';
+  }
+
+  function removeSelectedItem(item) {
+    selectedItems = selectedItems.filter(i => i !== item);
+    // Deselect chip if exists
+    document.querySelectorAll('.sug-chip').forEach(c => {
+      if (c.textContent.trim() === item) c.classList.remove('selected');
+    });
+    updateSelectedDisplay();
+  }
+
+  function updateSelectedDisplay() {
+    const display = document.getElementById('selected-items-display');
+    const list = document.getElementById('selected-items-list');
+    if (!display || !list) return;
+    if (selectedItems.length === 0) {
+      display.style.display = 'none';
+      return;
+    }
+    display.style.display = 'block';
+    list.innerHTML = selectedItems.map(item => 
+      `<div style="background:var(--green);color:white;padding:4px 10px 4px 12px;border-radius:100px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">
+        ${item}
+        <span onclick="removeSelectedItem('${item.replace(/'/g, "\'")}')" style="cursor:pointer;font-size:14px;opacity:0.8;">✕</span>
+      </div>`
+    ).join('');
   }
 
   function filterSuggestions(val) {
-    var chips = document.querySelectorAll('.sug-chip');
-    chips.forEach(function(c) { c.classList.remove('selected'); });
+    const chips = document.querySelectorAll('.sug-chip');
     if (!val.trim()) {
-      chips.forEach(function(c) { c.classList.remove('hidden'); });
+      chips.forEach(c => c.style.display = '');
       return;
     }
-    chips.forEach(function(c) {
-      var match = c.textContent.toLowerCase().indexOf(val.toLowerCase()) >= 0;
-      if (match) { c.classList.remove('hidden'); } else { c.classList.add('hidden'); }
+    chips.forEach(c => {
+      const match = c.textContent.toLowerCase().includes(val.toLowerCase());
+      c.style.display = match ? '' : 'none';
     });
   }
+
+  // Legacy - keep for compatibility
+  function pickItem(el) { toggleItem(el); }
 
   function selectChip(el, group) {
     el.closest('.chip-row, .duration-row').querySelectorAll('[onclick]').forEach(c => c.classList.remove('active'));
@@ -527,23 +592,53 @@ textarea.form-input { min-height: 80px; resize: none; }
 
   function triggerUpload() {}
 
-  function previewPhoto(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      const preview = document.getElementById('photo-preview');
-      preview.src = ev.target.result;
-      preview.style.display = 'block';
-    };
-    reader.readAsDataURL(file);
+  function previewPhotos(e) {
+    const files = Array.from(e.target.files).slice(0, 10);
+    if (!files.length) return;
+    const grid = document.getElementById('photo-preview-grid');
+    const countEl = document.getElementById('photo-count');
+    grid.innerHTML = '';
+    files.forEach((file, i) => {
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#eee;';
+        const img = document.createElement('img');
+        img.src = ev.target.result;
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+        const badge = document.createElement('div');
+        badge.style.cssText = 'position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.5);color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;';
+        badge.textContent = '✕';
+        badge.onclick = () => { wrapper.remove(); updatePhotoCount(); };
+        wrapper.appendChild(img);
+        wrapper.appendChild(badge);
+        grid.appendChild(wrapper);
+        updatePhotoCount();
+      };
+      reader.readAsDataURL(file);
+    });
+    // Store files for upload
+    window.selectedPhotoFiles = files;
   }
+
+  function updatePhotoCount() {
+    const grid = document.getElementById('photo-preview-grid');
+    const count = grid.children.length;
+    const countEl = document.getElementById('photo-count');
+    if (countEl) countEl.textContent = count > 0 ? count + ' photo' + (count > 1 ? 's' : '') + ' selected' : '';
+  }
+
+  // Legacy
+  function previewPhoto(e) { previewPhotos(e); }
+  function triggerUpload() { document.getElementById('photo-input').click(); }
+
 
   const _sb = supabase.createClient('https://xbxagukdvgyaoqvbqoic.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4');
 
 async function submitForm() {
   // Collect form values - adjust IDs to match your form fields
-  const item = (document.getElementById('item') || document.getElementById('item-name') || document.querySelector('[name="item"]') || {}).value || '';
+  // Collect selected items
+  const item = selectedItems.length > 0 ? selectedItems.join(', ') : (document.getElementById('item-input')||{}).value || '';
   const condition = (document.getElementById('condition') || document.querySelector('[name="condition"]') || {}).value || '';
   const description = (document.getElementById('description') || document.querySelector('textarea') || {}).value || '';
   const location = (document.getElementById('location') || document.querySelector('[name="location"]') || {}).value || '';
@@ -554,10 +649,31 @@ async function submitForm() {
 
   // Save to Supabase
   if (item) {
+    // Upload photos to Supabase storage
+    const photoUrls = [];
+    const photos = window.selectedPhotoFiles || [];
+    for (let i = 0; i < photos.length; i++) {
+      const file = photos[i];
+      const ext = file.name.split('.').pop().toLowerCase();
+      const path = `donations/${Date.now()}_${i}.${ext}`;
+      const { error: uploadErr } = await _sb.storage.from('donor-photos').upload(path, file, { contentType: file.type });
+      if (!uploadErr) {
+        const { data } = _sb.storage.from('donor-photos').getPublicUrl(path);
+        if (data) photoUrls.push(data.publicUrl);
+      }
+    }
+    const photoUrlString = photoUrls.join(',');
+
+    // Insert one record per item for better matching
+    const itemsToInsert = selectedItems.length > 0 ? selectedItems : [item];
+    for (const singleItem of itemsToInsert) {
     const { error } = await _sb.from('donations').insert([{
-      item, condition, description, location,
+      item: singleItem,
+      photo_url: photoUrlString || null,
+      condition, description, location,
       donor_name, donor_phone, donor_email, hold_until, matched: false
     }]);
+    } // end for loop
     if (!error) {
       // Check for matching needs and notify admin
       const { data: needs } = await _sb.from('needs')
