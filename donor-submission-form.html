@@ -666,15 +666,17 @@ async function submitForm() {
 
     // Insert one record per item for better matching
     const itemsToInsert = selectedItems.length > 0 ? selectedItems : [item];
+    let lastError = null;
     for (const singleItem of itemsToInsert) {
-    const { error } = await _sb.from('donations').insert([{
-      item: singleItem,
-      photo_url: photoUrlString || null,
-      condition, description, location,
-      donor_name, donor_phone, donor_email, hold_until, matched: false
-    }]);
-    } // end for loop
-    if (!error) {
+      const { error } = await _sb.from('donations').insert([{
+        item: singleItem,
+        photo_url: photoUrlString || null,
+        condition, description, location,
+        donor_name, donor_phone, donor_email, hold_until, matched: false
+      }]);
+      if (error) lastError = error;
+    }
+    if (!lastError) {
       // Check for matching needs and notify admin
       const { data: needs } = await _sb.from('needs')
         .select('*, families(mother_name)')
