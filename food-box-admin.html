@@ -104,6 +104,24 @@ tr:hover td{background:#fafcfa;}
 .login-footer{text-align:center;padding:0 24px 20px;font-size:12px;color:var(--muted);}
 
 .empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:14px;}
+
+/* Change password modal */
+.pw-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:2000;padding:16px;}
+.pw-modal-overlay.visible{display:flex;}
+.pw-modal{background:white;border-radius:var(--radius);width:100%;max-width:380px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
+.pw-modal-header{background:var(--green);color:white;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;}
+.pw-modal-header h2{font-size:15px;font-weight:900;}
+.pw-modal-close{background:none;border:none;color:white;font-size:22px;cursor:pointer;line-height:1;}
+.pw-modal-body{padding:24px;}
+.pw-modal-body label{display:block;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;}
+.pw-modal-body input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'Nunito',sans-serif;outline:none;margin-bottom:14px;background:var(--off-white);}
+.pw-modal-body input:focus{border-color:var(--green);background:white;}
+.pw-save-btn{width:100%;padding:13px;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;transition:background 0.2s;}
+.pw-save-btn:hover{background:var(--green-dark);}
+.pw-save-btn:disabled{background:#9cbfa2;cursor:not-allowed;}
+.pw-msg{font-size:13px;font-weight:700;padding:10px 12px;border-radius:var(--radius-sm);margin-bottom:12px;display:none;}
+.pw-msg.success{background:var(--green-light);color:var(--green);border:1.5px solid #b2d9b8;}
+.pw-msg.error{background:var(--red-light);color:var(--red);border:1.5px solid #f5b8b8;}
 .loading{text-align:center;padding:40px;color:var(--muted);}
 @keyframes spin{to{transform:rotate(360deg);}}
 .spinner-lg{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;}
@@ -112,7 +130,7 @@ tr:hover td{background:#fafcfa;}
 <body>
 
 <!-- LOGIN SCREEN -->
-<div id="login-screen" class="login-page">
+<div id="login-screen" class="login-page" style="display:flex;">
   <div class="login-card">
     <div class="login-hero">
       <div class="login-logo">
@@ -148,7 +166,7 @@ tr:hover td{background:#fafcfa;}
     </div>
     <div class="topbar-right">
       <span id="admin-email-label"></span>
-      <button class="login-btn" onclick="doLogout()">Sign out</button>
+      <button class="login-btn" onclick="openChangePassword()" style="background:transparent;border-color:rgba(255,255,255,0.4);margin-right:4px;">🔑 Change password</button><button class="login-btn" onclick="doLogout()">Sign out</button>
     </div>
   </div>
 
@@ -181,6 +199,7 @@ tr:hover td{background:#fafcfa;}
             <th>Income after rent</th>
             <th>Submitted</th>
             <th>Status</th>
+            <th>Lang</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -203,51 +222,144 @@ tr:hover td{background:#fafcfa;}
   </div>
 </div>
 
+<!-- CHANGE PASSWORD MODAL -->
+<div class="pw-modal-overlay" id="pw-modal">
+  <div class="pw-modal">
+    <div class="pw-modal-header">
+      <h2>🔑 Change password</h2>
+      <button class="pw-modal-close" onclick="closeChangePassword()">×</button>
+    </div>
+    <div class="pw-modal-body">
+      <div class="pw-msg" id="pw-msg"></div>
+      <label for="pw-current">Current password</label>
+      <input type="password" id="pw-current" placeholder="••••••••" autocomplete="current-password">
+      <label for="pw-new">New password</label>
+      <input type="password" id="pw-new" placeholder="••••••••" autocomplete="new-password">
+      <label for="pw-confirm">Confirm new password</label>
+      <input type="password" id="pw-confirm" placeholder="••••••••" autocomplete="new-password">
+      <button class="pw-save-btn" id="pw-save-btn" onclick="doChangePassword()">Update password</button>
+    </div>
+  </div>
+</div>
+
+
 <script>
-var SUPABASE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co';
-var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU3NjA3NjcsImV4cCI6MjAzMTMzNjc2N30.Wd6nNf_TbQmmhDbeXZNPlxNWKnV3B3IyVDdFYJ4YXVM';
+// ── INLINE FAF AUTH ───────────────────────────────────────────────────
+var FAF_SUPABASE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co';
+var FAF_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU3NjA3NjcsImV4cCI6MjAzMTMzNjc2N30.Wd6nNf_TbQmmhDbeXZNPlxNWKnV3B3IyVDdFYJ4YXVM';
+// Alias for REST calls in this file
+var SUPABASE_URL = FAF_SUPABASE_URL;
+var SUPABASE_ANON_KEY = FAF_ANON_KEY;
+
+var fafAuth = {
+  token: null, user: null, role: null, portals: [],
+  signIn: function(email, password) {
+    return fetch(FAF_SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': FAF_ANON_KEY },
+      body: JSON.stringify({ email: email, password: password })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (!data.access_token) throw new Error(data.error_description || 'Login failed');
+      fafAuth.token = data.access_token;
+      fafAuth.user = data.user || { email: email };
+      sessionStorage.setItem('faf_token', data.access_token);
+      sessionStorage.setItem('faf_email', email);
+      return fafAuth.fetchRole();
+    });
+  },
+  fetchRole: function() {
+    return fetch(FAF_SUPABASE_URL + '/rest/v1/faf_user_roles?email=eq.' + encodeURIComponent(fafAuth.user.email) + '&select=role,portals,languages,display_name', {
+      headers: { 'apikey': FAF_ANON_KEY, 'Authorization': 'Bearer ' + fafAuth.token }
+    }).then(function(r) { return r.json(); }).then(function(rows) {
+      if (rows && rows.length > 0) {
+        fafAuth.role = rows[0].role;
+        fafAuth.portals = rows[0].portals || [];
+        fafAuth.languages = rows[0].languages || null; // null = all languages
+        fafAuth.displayName = rows[0].display_name || fafAuth.user.email;
+      }
+      return fafAuth;
+    });
+  },
+  restore: function() {
+    var token = sessionStorage.getItem('faf_token');
+    var email = sessionStorage.getItem('faf_email');
+    if (!token || !email) return Promise.resolve(null);
+    fafAuth.token = token;
+    fafAuth.user = { email: email };
+    return fafAuth.fetchRole().catch(function() { fafAuth.signOut(); return null; });
+  },
+  signOut: function() {
+    fafAuth.token = null; fafAuth.user = null; fafAuth.role = null;
+    fafAuth.portals = []; fafAuth.languages = null; fafAuth.displayName = null;
+    sessionStorage.removeItem('faf_token');
+    sessionStorage.removeItem('faf_email');
+  },
+  headers: function() {
+    return { 'apikey': FAF_ANON_KEY, 'Authorization': 'Bearer ' + (fafAuth.token || FAF_ANON_KEY), 'Content-Type': 'application/json' };
+  }
+};
 
 var allApps = [];
 var currentFilter = 'all';
-var authToken = null;
 var currentAppId = null;
 
 // ── AUTH ──────────────────────────────────────────────────────────────
 function doLogin() {
   var email = document.getElementById('login-email').value.trim();
   var password = document.getElementById('login-password').value;
-  fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
-    body: JSON.stringify({ email: email, password: password })
-  }).then(function(r) { return r.json(); }).then(function(data) {
-    if (data.access_token) {
-      authToken = data.access_token;
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('admin-app').style.display = 'block';
-      document.getElementById('admin-email-label').textContent = email;
-      loadApps();
-    } else {
-      document.getElementById('login-err').style.display = 'block';
+  var errEl = document.getElementById('login-err');
+  var btn = document.querySelector('.login-body button');
+  btn.textContent = 'Signing in…';
+  btn.disabled = true;
+  errEl.style.display = 'none';
+  fafAuth.signIn(email, password).then(function() {
+    if (!fafAuth.role) {
+      errEl.textContent = '⚠️ Your account does not have access to this portal.';
+      errEl.style.display = 'block';
+      fafAuth.signOut();
+      btn.textContent = 'Sign in →'; btn.disabled = false;
+      return;
     }
-  }).catch(function() {
-    document.getElementById('login-err').style.display = 'block';
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-app').style.display = 'block';
+    document.getElementById('admin-email-label').textContent = email;
+    loadApps();
+  }).catch(function(e) {
+    errEl.textContent = '⚠️ ' + (e.message || 'Incorrect email or password.');
+    errEl.style.display = 'block';
+    btn.textContent = 'Sign in →'; btn.disabled = false;
   });
 }
 
 function doLogout() {
-  authToken = null;
-  document.getElementById('login-screen').style.display = 'block';
+  fafAuth.signOut();
+  document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('admin-app').style.display = 'none';
+  document.querySelector('.login-body button').textContent = 'Sign in →';
+  document.querySelector('.login-body button').disabled = false;
 }
 
-document.getElementById('login-password').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') doLogin();
+document.addEventListener('DOMContentLoaded', function() {
+  // Try restore session on load
+  fafAuth.restore().then(function(auth) {
+    if (auth && auth.token) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('admin-app').style.display = 'block';
+      var label = fafAuth.displayName || fafAuth.user.email;
+      var langNames = {ar:'Arabic',bn:'Bengali + Bangladeshi',hi:'Hindi',ur:'Urdu',tl:'Filipino',en:'English'};
+      var langScope = fafAuth.languages ? ' · ' + fafAuth.languages.map(function(l){ return langNames[l]||l; }).join(', ') + ' cases' : ' · All cases';
+      document.getElementById('admin-email-label').textContent = label + langScope;
+      loadApps();
+    }
+  });
+  document.getElementById('login-password').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') doLogin();
+  });
 });
 
 // ── LOAD DATA ─────────────────────────────────────────────────────────
 function apiHeaders() {
-  return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (authToken || SUPABASE_ANON_KEY) };
+  return fafAuth.headers();
 }
 
 function loadApps() {
@@ -255,10 +367,22 @@ function loadApps() {
   document.getElementById('apps-table').style.display = 'none';
   document.getElementById('table-empty').style.display = 'none';
 
-  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=*&order=created_at.desc', {
+  // Build query — language + nationality filter for non-super-admins
+  var langFilter = '';
+  if (fafAuth.role !== 'super_admin' && fafAuth.languages && fafAuth.languages.length > 0) {
+    langFilter = '&submission_lang=in.(' + fafAuth.languages.join(',') + ')';
+  }
+  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=*&order=created_at.desc' + langFilter, {
     headers: apiHeaders()
   }).then(function(r) { return r.json(); }).then(function(data) {
-    allApps = Array.isArray(data) ? data : [];
+    var apps = Array.isArray(data) ? data : [];
+    // Badana: Bengali language OR Bangladeshi nationality
+    if (fafAuth.role !== 'super_admin' && fafAuth.languages && fafAuth.languages.indexOf('bn') !== -1) {
+      apps = apps.filter(function(a) {
+        return a.submission_lang === 'bn' || a.nationality === 'Bangladeshi';
+      });
+    }
+    allApps = apps;
     updateStats();
     renderTable(allApps);
     document.getElementById('table-loading').style.display = 'none';
@@ -303,6 +427,7 @@ function renderTable(apps) {
       '<td><span style="font-weight:800;' + dispColor + '">QAR ' + Math.round(disp) + '</span></td>' +
       '<td style="font-size:12px;color:var(--muted);">' + date + '</td>' +
       '<td>' + statusBadge + '</td>' +
+      '<td><span style="font-size:11px;font-weight:700;color:var(--muted);">' + ({'ar':'🇶🇦 AR','bn':'🇧🇩 BN','hi':'🇮🇳 HI','ur':'🇵🇰 UR','tl':'🇵🇭 TL','en':'🇬🇧 EN'}[app.submission_lang] || app.submission_lang || 'en') + '</span></td>' +
       '<td><button class="action-btn btn-view" onclick="viewApp(\'' + app.id + '\')">View</button>' +
       (app.status === 'pending' ? '<button class="action-btn btn-approve" onclick="quickApprove(\'' + app.id + '\')">✓</button>' : '') + '</td>'
     );
@@ -411,7 +536,8 @@ function renderModal(app, members) {
   body += '<div class="detail-section"><h3>Admin notes</h3>';
   body += '<textarea class="notes-area" id="modal-notes" placeholder="Add notes about this application…">' + (app.admin_notes||'') + '</textarea>';
   body += '</div>';
-  body += '<div style="font-size:12px;color:var(--muted);">Submitted: ' + date + ' · Status: ' + (app.status||'pending') + ' · ID: ' + app.id.substring(0,8) + '</div>';
+  var langMap = {'ar':'Arabic','bn':'Bengali','hi':'Hindi','ur':'Urdu','tl':'Filipino','en':'English'};
+  body += '<div style="font-size:12px;color:var(--muted);margin-top:4px;">Submitted: ' + date + ' · Lang: ' + (langMap[app.submission_lang] || app.submission_lang || 'English') + ' · Status: ' + (app.status||'pending') + ' · ID: ' + app.id.substring(0,8) + '</div>';
 
   document.getElementById('modal-body').innerHTML = body;
 
@@ -469,6 +595,70 @@ function saveNote(id) {
 
 document.getElementById('modal').addEventListener('click', function(e){
   if (e.target === this) closeModal();
+});
+
+// ── CHANGE PASSWORD ───────────────────────────────────────────────
+function openChangePassword() {
+  ['pw-current','pw-new','pw-confirm'].forEach(function(id){ document.getElementById(id).value=''; });
+  var msg = document.getElementById('pw-msg');
+  msg.style.display = 'none'; msg.className = 'pw-msg';
+  document.getElementById('pw-save-btn').textContent = 'Update password';
+  document.getElementById('pw-save-btn').disabled = false;
+  document.getElementById('pw-modal').classList.add('visible');
+}
+
+function closeChangePassword() {
+  document.getElementById('pw-modal').classList.remove('visible');
+}
+
+function doChangePassword() {
+  var current = document.getElementById('pw-current').value;
+  var newPw = document.getElementById('pw-new').value;
+  var confirm = document.getElementById('pw-confirm').value;
+  var msg = document.getElementById('pw-msg');
+  var btn = document.getElementById('pw-save-btn');
+  msg.style.display = 'none';
+  if (!current || !newPw || !confirm) {
+    msg.textContent = 'Please fill in all three fields.';
+    msg.className = 'pw-msg error'; msg.style.display = 'block'; return;
+  }
+  if (newPw.length < 8) {
+    msg.textContent = 'New password must be at least 8 characters.';
+    msg.className = 'pw-msg error'; msg.style.display = 'block'; return;
+  }
+  if (newPw !== confirm) {
+    msg.textContent = 'New passwords do not match.';
+    msg.className = 'pw-msg error'; msg.style.display = 'block'; return;
+  }
+  btn.textContent = 'Updating…'; btn.disabled = true;
+  // Verify current password first
+  fetch(FAF_SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': FAF_ANON_KEY },
+    body: JSON.stringify({ email: fafAuth.user.email, password: current })
+  }).then(function(r){ return r.json(); }).then(function(data) {
+    if (!data.access_token) throw new Error('Current password is incorrect.');
+    return fetch(FAF_SUPABASE_URL + '/auth/v1/user', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'apikey': FAF_ANON_KEY, 'Authorization': 'Bearer ' + data.access_token },
+      body: JSON.stringify({ password: newPw })
+    });
+  }).then(function(r){ return r.json(); }).then(function(data) {
+    if (data.error) throw new Error(data.error_description || data.error);
+    msg.textContent = '✅ Password updated successfully!';
+    msg.className = 'pw-msg success'; msg.style.display = 'block';
+    btn.textContent = 'Update password'; btn.disabled = false;
+    ['pw-current','pw-new','pw-confirm'].forEach(function(id){ document.getElementById(id).value=''; });
+    setTimeout(closeChangePassword, 2000);
+  }).catch(function(e) {
+    msg.textContent = '⚠️ ' + (e.message || 'Something went wrong. Please try again.');
+    msg.className = 'pw-msg error'; msg.style.display = 'block';
+    btn.textContent = 'Update password'; btn.disabled = false;
+  });
+}
+
+document.getElementById('pw-modal').addEventListener('click', function(e){
+  if (e.target === this) closeChangePassword();
 });
 </script>
 </body>
