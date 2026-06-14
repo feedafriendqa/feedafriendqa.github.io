@@ -544,6 +544,12 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
     <span onclick="openAssignFairy()" style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.8);cursor:pointer;background:rgba(255,255,255,0.15);padding:6px 14px;border-radius:100px;">Change</span>
   </div>
   <div class="profile-body">
+    <!-- Missing fields warning -->
+    <div id="p-missing-warning" style="display:none;background:var(--amber-light);border-radius:12px;padding:12px 16px;margin:14px 0 0;border-left:4px solid var(--amber);">
+      <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:4px;">⚠️ Missing information</div>
+      <div id="p-missing-list" style="font-size:12px;color:var(--ink);line-height:1.8;"></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px;">Please complete these fields and tap Save changes.</div>
+    </div>
     <!-- BABY PHOTO -->
     <div class="info-card" id="p-photo-card">
       <div class="info-card-header">
@@ -921,6 +927,19 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
     <button class="btn-primary" onclick="saveFamily()">Save family</button>
   </div>
 </div>
+<!-- Box number modal -->
+<div class="modal" id="modal-box-number">
+  <div class="modal-inner">
+    <div class="modal-title">📦 Box delivered <button class="modal-close" onclick="closeModal('modal-box-number')">✕</button></div>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:16px;">Which box number was delivered to this family?</p>
+    <div class="form-group">
+      <label class="form-label">Box number *</label>
+      <input class="form-input" id="box-number-input" type="number" placeholder="e.g. 42" min="1" max="300">
+    </div>
+    <button class="btn-primary green" onclick="confirmBoxDelivery()">✅ Confirm delivery</button>
+  </div>
+</div>
+
 <div class="modal" id="modal-need">
   <div class="modal-inner">
     <div class="modal-title">Log a need <button class="modal-close" onclick="closeModal('modal-need')">✕</button></div>
@@ -1410,7 +1429,7 @@ async function openProfile(familyId) {
     const due=new Date(m.due_date);
     const cls=m.completed?'done':due<today?'overdue':'pending';
     const icon=m.completed?'✓':due<today?'!':'·';
-    return `<div class="ms-row"><div class="ms-check ${cls}" onclick="toggleMs('${m.id}','${familyId}',${m.completed})">${icon}</div><div class="ms-label">${m.milestone_name}</div><div class="ms-date">${formatDate(m.due_date)}</div></div>`;
+    return `<div class="ms-row"><div class="ms-check ${cls}" onclick="toggleMs('${m.id}','${familyId}',${m.completed},'${m.milestone_name}')">${icon}</div><div class="ms-label">${m.milestone_name}</div><div class="ms-date">${formatDate(m.due_date)}</div></div>`;
   }).join('') : '<div style="padding:14px 16px;font-size:13px;color:var(--muted);">No milestones yet.</div>';})();
   // Activity log from DB
   const {data:logs} = await sb.from('activity_log').select('*').eq('family_id',familyId).order('created_at',{ascending:false});
@@ -1454,6 +1473,25 @@ async function openProfile(familyId) {
     driveRow.style.display = 'none';
     driveBtn.style.display = 'none';
   }
+  // Check for missing fields
+  const missingFields = [];
+  if (!baby || !baby.baby_name) missingFields.push('Baby name');
+  if (!baby || !baby.dob) missingFields.push('Date of birth');
+  if (!baby || !baby.gender) missingFields.push('Baby gender');
+  if (!f.mother_phone) missingFields.push('Mother phone number');
+  if (!f.location) missingFields.push('Location');
+  if (!baby || !baby.feeding_method) missingFields.push('Feeding method');
+  if (!baby || !baby.birth_weight) missingFields.push('Birth weight');
+  const warningEl = document.getElementById('p-missing-warning');
+  const listEl = document.getElementById('p-missing-list');
+  if (warningEl && listEl) {
+    if (missingFields.length > 0) {
+      listEl.innerHTML = missingFields.map(f => '• ' + f).join('<br>');
+      warningEl.style.display = 'block';
+    } else {
+      warningEl.style.display = 'none';
+    }
+  }
   // Load baby photo and needs
   loadBabyPhoto(familyId);
   loadProfileNeeds(familyId);
@@ -1461,10 +1499,45 @@ async function openProfile(familyId) {
   } catch(err) { console.error('openProfile error:', err); showToast('Error loading profile: ' + err.message); }
 }
 
-async function toggleMs(id,familyId,completed) {
+async function toggleMs(id,familyId,completed,milestoneName) {
+  if (!completed && milestoneName && milestoneName.toLowerCase().includes('box')) {
+    // Ask for box number before marking done
+    pendingMilestoneId = id;
+    pendingFamilyId = familyId;
+    document.getElementById('modal-box-number').classList.add('open');
+    return;
+  }
   await sb.from('milestones').update({completed:!completed,completed_at:!completed?new Date().toISOString():null}).eq('id',id);
   showToast(!completed?'✅ Done':'Unmarked');
   openProfile(familyId);
+}
+
+let pendingMilestoneId = null;
+let pendingFamilyId = null;
+
+async function confirmBoxDelivery() {
+  const boxNum = document.getElementById('box-number-input').value.trim();
+  if (!boxNum) { showToast('Please enter a box number'); return; }
+  // Mark milestone complete
+  await sb.from('milestones').update({completed:true,completed_at:new Date().toISOString()}).eq('id',pendingMilestoneId);
+  // Save box number to family
+  await sb.from('families').update({box_number: boxNum}).eq('id',pendingFamilyId);
+  // Update local cache
+  const f = allFamilies.find(x=>x.id===pendingFamilyId);
+  if (f) f.box_number = boxNum;
+  // Log it
+  await sb.from('activity_log').insert([{
+    family_id: pendingFamilyId,
+    log_type: 'Box delivered',
+    note: 'Welcome Baby Box #' + boxNum + ' delivered',
+    logged_by: document.getElementById('menu-name').textContent
+  }]);
+  closeModal('modal-box-number');
+  document.getElementById('box-number-input').value = '';
+  showToast('✅ Box #' + boxNum + ' recorded!');
+  openProfile(pendingFamilyId);
+  pendingMilestoneId = null;
+  pendingFamilyId = null;
 }
 
 async function logNote() {
