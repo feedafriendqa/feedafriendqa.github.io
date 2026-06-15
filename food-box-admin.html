@@ -12,6 +12,10 @@
   --red:#c0392b;--red-light:#fdeaea;
   --border:#e0eee2;--off-white:#f7f9f7;--muted:#5a7060;--text:#1a2e1d;
   --radius:12px;--radius-sm:8px;
+  --teal:#00a896;--teal-dark:#007a6e;
+  --orange:#f4845f;--orange-dark:#c45e3a;
+  --purple:#7b5ea7;--purple-dark:#5a3f82;
+  --sky:#0ea5c9;--sky-dark:#0878a0;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh;}
@@ -32,15 +36,15 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 .main{max-width:1100px;margin:0 auto;padding:20px 16px 40px;}
 
 .stats{display:flex;gap:10px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
-.stat-card{flex:0 0 130px;background:white;border:none;border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.07);}
-.stat-card:hover,.stat-card:active{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.12);}
-.stat-card.sc-total{border-left:4px solid var(--green);}
-.stat-card.sc-pending{border-left:4px solid #f5b942;}
-.stat-card.sc-approved{border-left:4px solid var(--green-mid);}
-.stat-card.sc-active{border-left:4px solid #1a5fa8;}
-.stat-card.sc-review{border-left:4px solid #a0186a;}
-.stat-card .num{font-size:28px;font-weight:900;color:var(--green);line-height:1;}
-.stat-card .lbl{font-size:12px;color:var(--muted);font-weight:700;margin-top:4px;}
+.stat-card{flex:0 0 130px;border:none;border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 14px rgba(0,0,0,0.13);}
+.stat-card:hover,.stat-card:active{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.18);}
+.stat-card.sc-total{background:linear-gradient(135deg,#2d7a3a,#4a9e58);}
+.stat-card.sc-pending{background:linear-gradient(135deg,#e88c1a,#f5b942);}
+.stat-card.sc-approved{background:linear-gradient(135deg,#00a896,#00c9b5);}
+.stat-card.sc-active{background:linear-gradient(135deg,#0ea5c9,#38c9f0);}
+.stat-card.sc-review{background:linear-gradient(135deg,#7b5ea7,#a07fd4);}
+.stat-card .num{font-size:28px;font-weight:900;color:white;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,0.15);}
+.stat-card .lbl{font-size:12px;color:rgba(255,255,255,0.88);font-weight:700;margin-top:4px;}
 
 .filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
 .filter-btn{padding:7px 16px;border:1.5px solid var(--border);border-radius:20px;background:white;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.15s;}
@@ -60,7 +64,7 @@ tr:hover td{background:#fafcfa;cursor:pointer;}
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:800;}
 .badge-pending{background:#fff8e6;color:#9a6800;border:1px solid #f0d080;}
 .badge-approved{background:var(--green-light);color:var(--green);border:1px solid #b2d9b8;}
-.badge-active{background:#e6f4ff;color:#1a5fa8;border:1px solid #a8d4f5;}
+.badge-active{background:#e0f7fa;color:#007a6e;border:1px solid #80d5ce;}
 .badge-rejected{background:var(--red-light);color:var(--red);border:1px solid #f5b8b8;}
 .badge-translation{background:#fff0f8;color:#a0186a;border:1px solid #f0a8d8;font-size:10px;margin-left:4px;}
 .lang-tag{display:inline-block;font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px;background:var(--off-white);border:1px solid var(--border);color:var(--muted);}
@@ -89,7 +93,7 @@ tr:hover td{background:#fafcfa;cursor:pointer;}
 .modal-actions{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--border);background:white;position:sticky;bottom:0;}
 .modal-actions button{flex:1;padding:11px;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;transition:all 0.2s;}
 .btn-approve-full{background:var(--green);color:white;}
-.btn-active-full{background:#1a5fa8;color:white;}
+.btn-active-full{background:#00a896;color:white;}
 .btn-reject-full{background:var(--red);color:white;flex:0.5!important;}
 .btn-note{background:var(--off-white);color:var(--text);border:1.5px solid var(--border)!important;}
 .notes-area{width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'Nunito',sans-serif;font-size:13px;outline:none;resize:vertical;min-height:70px;margin-top:8px;}
@@ -195,11 +199,11 @@ tr:hover td{background:#fafcfa;cursor:pointer;}
 
   <div class="main">
     <div class="stats">
-      <div class="stat-card sc-total" onclick="setFilterFromTile('all')"><div class="num" id="stat-total" style="color:var(--green);">–</div><div class="lbl">Total</div></div>
-      <div class="stat-card sc-pending" onclick="setFilterFromTile('pending')"><div class="num" id="stat-pending" style="color:#9a6800;">–</div><div class="lbl">Pending</div></div>
-      <div class="stat-card sc-approved" onclick="setFilterFromTile('approved')"><div class="num" id="stat-approved" style="color:var(--green-mid);">–</div><div class="lbl">Approved</div></div>
-      <div class="stat-card sc-active" onclick="setFilterFromTile('active')"><div class="num" id="stat-active" style="color:#1a5fa8;">–</div><div class="lbl">Active</div></div>
-      <div class="stat-card sc-review" onclick="setFilterFromTile('review')"><div class="num" id="stat-translation" style="color:#a0186a;">–</div><div class="lbl">Needs review</div></div>
+      <div class="stat-card sc-total" onclick="setFilterFromTile('all')"><div class="num" id="stat-total">–</div><div class="lbl">Total</div></div>
+      <div class="stat-card sc-pending" onclick="setFilterFromTile('pending')"><div class="num" id="stat-pending">–</div><div class="lbl">Pending</div></div>
+      <div class="stat-card sc-approved" onclick="setFilterFromTile('approved')"><div class="num" id="stat-approved">–</div><div class="lbl">Approved</div></div>
+      <div class="stat-card sc-active" onclick="setFilterFromTile('active')"><div class="num" id="stat-active">–</div><div class="lbl">Confirmed</div></div>
+      <div class="stat-card sc-review" onclick="setFilterFromTile('review')"><div class="num" id="stat-translation">–</div><div class="lbl">Needs review</div></div>
     </div>
 
     <div id="daily-quote" style="background:var(--green);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;color:white;"></div>
@@ -209,7 +213,7 @@ tr:hover td{background:#fafcfa;cursor:pointer;}
       <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
       <button class="filter-btn" onclick="setFilter('pending',this)">Pending</button>
       <button class="filter-btn" onclick="setFilter('approved',this)">Approved</button>
-      <button class="filter-btn" onclick="setFilter('active',this)">Active</button>
+      <button class="filter-btn" onclick="setFilter('active',this)">Confirmed</button>
       <button class="filter-btn" onclick="setFilter('rejected',this)">Rejected</button>
     </div>
 
@@ -418,7 +422,8 @@ function renderTable(apps) {
     var dispColor = disp <= 1500 ? 'color:var(--green);' : 'color:var(--red);';
     var date = app.created_at ? new Date(app.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '–';
     var status = app.status || 'pending';
-    var statusBadge = '<span class="badge badge-' + status + '">' + status + '</span>';
+    var statusLabel = status === 'active' ? 'Confirmed' : status;
+    var statusBadge = '<span class="badge badge-' + status + '">' + statusLabel + '</span>';
     if (app.translation_pending) statusBadge += '<span class="badge badge-translation">🌐</span>';
     var name = app.full_name_en || app.full_name || '–';
     var qid = app.qid_number || '–';
@@ -549,7 +554,7 @@ function renderModal(app, members) {
   document.getElementById('modal-body').innerHTML = body;
   var actions = '';
   if (app.status === 'pending') actions += '<button class="modal-actions btn-approve-full" onclick="updateStatus(\'' + app.id + '\',' + "'approved'" + ')">Approve</button>';
-  if (app.status === 'pending' || app.status === 'approved') actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\'' + app.id + '\',' + "'active'" + ')">Mark Active</button>';
+  if (app.status === 'pending' || app.status === 'approved') actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\'' + app.id + '\',' + "'active'" + ')">Mark Confirmed</button>';
   actions += '<button class="modal-actions btn-note" onclick="saveNote(\'' + app.id + '\')">Save Note</button>';
   actions += '<button class="modal-actions btn-reject-full" onclick="updateStatus(\'' + app.id + '\',' + "'rejected'" + ')">Reject</button>';
   document.getElementById('modal-actions').innerHTML = actions;
