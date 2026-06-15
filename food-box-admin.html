@@ -64,7 +64,9 @@ tr:hover td{background:#fafcfa;cursor:pointer;}
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:800;}
 .badge-pending{background:#fff8e6;color:#9a6800;border:1px solid #f0d080;}
 .badge-approved{background:var(--green-light);color:var(--green);border:1px solid #b2d9b8;}
+.badge-new{background:#fff3e0;color:#b45309;border:1px solid #fbbf24;}
 .badge-active{background:#e0f7fa;color:#007a6e;border:1px solid #80d5ce;}
+.assigned-pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:800;background:#f0f4f0;color:var(--green);border:1px solid var(--border);}
 .badge-rejected{background:var(--red-light);color:var(--red);border:1px solid #f5b8b8;}
 .badge-translation{background:#fff0f8;color:#a0186a;border:1px solid #f0a8d8;font-size:10px;margin-left:4px;}
 .lang-tag{display:inline-block;font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px;background:var(--off-white);border:1px solid var(--border);color:var(--muted);}
@@ -211,6 +213,7 @@ tr:hover td{background:#fafcfa;cursor:pointer;}
     <div class="filters">
       <input class="search-box" id="search-box" placeholder="Search name, QID, WhatsApp, area…" oninput="filterApps()">
       <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+      <button class="filter-btn" onclick="setFilter('new',this)">New</button>
       <button class="filter-btn" onclick="setFilter('pending',this)">Pending</button>
       <button class="filter-btn" onclick="setFilter('approved',this)">Approved</button>
       <button class="filter-btn" onclick="setFilter('active',this)">Confirmed</button>
@@ -229,6 +232,7 @@ tr:hover td{background:#fafcfa;cursor:pointer;}
             <th>Date</th>
             <th>Lang</th>
             <th>Status</th>
+            <th>Assigned to</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -282,6 +286,24 @@ var currentFilter = 'all';
 var currentAppId = null;
 var myRole = 'admin';
 var myLanguages = null;
+
+var CASE_OWNERS = ['Alliyah', 'Sarah', 'Badana'];
+
+function autoAssign(app) {
+  // Already assigned — don't overwrite
+  if (app.assigned_to) return app.assigned_to;
+  // Arabic language → Sarah
+  if (app.submission_lang === 'ar') return 'Sarah';
+  // Bangladeshi nationality → Badana
+  if ((app.nationality||'').toLowerCase() === 'bangladeshi') return 'Badana';
+  // Default → Alliyah
+  return 'Alliyah';
+}
+
+function resolveStatus(app) {
+  // Imported rows with no status → 'new'
+  return app.status || 'new';
+}
 
 // ── AUTH ──────────────────────────────────────────────────────────
 async function doGoogleLogin() {
@@ -375,6 +397,27 @@ function loadApps() {
       apps = apps.filter(function(a) { return a.submission_lang === 'bn' || a.nationality === 'Bangladeshi'; });
     }
     if (apps.length === 0) apps = getDummyApps();
+    // Apply auto-assignment and status resolution
+    var toSave = [];
+    apps.forEach(function(app) {
+      var assignee = autoAssign(app);
+      var status = resolveStatus(app);
+      var changed = false;
+      if (!app.assigned_to) { app.assigned_to = assignee; changed = true; }
+      if (!app.status) { app.status = status; changed = true; }
+      if (changed && !String(app.id).startsWith('demo')) {
+        toSave.push({ id: app.id, assigned_to: app.assigned_to, status: app.status });
+      }
+    });
+    // Save assignments back to Supabase in background
+    if (toSave.length > 0) {
+      toSave.forEach(function(upd) {
+        fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + upd.id, {
+          method: 'PATCH', headers: apiHeaders(),
+          body: JSON.stringify({ assigned_to: upd.assigned_to, status: upd.status })
+        }).catch(function(){});
+      });
+    }
     allApps = apps;
     updateStats();
     renderTable(allApps);
@@ -391,20 +434,21 @@ function getDummyApps() {
   var now = new Date();
   var d = function(days) { var dt = new Date(now); dt.setDate(dt.getDate()-days); return dt.toISOString(); };
   return [
-    {id:'demo-1',created_at:d(1),full_name:'Ahmed Al Rashidi',full_name_en:'Ahmed Al Rashidi',qid_number:'28412345678',whatsapp:'+974 5512 3456',area:'Al Waab',monthly_salary:3200,monthly_rent:1800,household_size:4,submission_lang:'en',status:'pending',translation_pending:false,nationality:'Pakistani',gender:'male',sponsor:'Qatar Petroleum',is_muslim:true},
-    {id:'demo-2',created_at:d(2),full_name:'فاطمة محمد علي',full_name_en:'Fatima Mohammed Ali',qid_number:'28498765432',whatsapp:'+974 5598 7654',area:'Industrial Area',monthly_salary:2800,monthly_rent:1400,household_size:6,submission_lang:'ar',status:'pending',translation_pending:true,nationality:'Egyptian',gender:'female',sponsor:'Al Meera',is_muslim:true,is_pregnant:true,due_date:'2025-09-15'},
-    {id:'demo-3',created_at:d(5),full_name:'Priya Sharma',full_name_en:'Priya Sharma',qid_number:'28376543210',whatsapp:'+974 5576 5432',area:'Al Gharafa',monthly_salary:3000,monthly_rent:1600,household_size:3,submission_lang:'en',status:'approved',translation_pending:false,nationality:'Indian',gender:'female',sponsor:'Lulu Hypermarket',is_muslim:false},
-    {id:'demo-4',created_at:d(7),full_name:'রহিম উদ্দিন',full_name_en:'Rahim Uddin',qid_number:'28312345999',whatsapp:'+974 5534 5678',area:'Al Mansoura',monthly_salary:2500,monthly_rent:1200,household_size:5,submission_lang:'bn',status:'active',translation_pending:true,nationality:'Bangladeshi',gender:'male',sponsor:'Qatar Cool',is_muslim:true},
-    {id:'demo-5',created_at:d(10),full_name:'Maria Santos',full_name_en:'Maria Santos',qid_number:'28345678901',whatsapp:'+974 5545 6789',area:'Duhail',monthly_salary:2200,monthly_rent:1100,household_size:2,submission_lang:'en',status:'active',translation_pending:false,nationality:'Filipino',gender:'female',sponsor:'Private Household',is_muslim:false},
-    {id:'demo-6',created_at:d(14),full_name:'محمد عبد الله',full_name_en:'Mohammed Abdullah',qid_number:'28467890123',whatsapp:'+974 5567 8901',area:'Al Khor',monthly_salary:4000,monthly_rent:2600,household_size:3,submission_lang:'ar',status:'rejected',translation_pending:false,nationality:'Yemeni',gender:'male',sponsor:'Unsponsored',is_muslim:true}
+    {id:'demo-1',created_at:d(1),full_name:'Ahmed Al Rashidi',full_name_en:'Ahmed Al Rashidi',qid_number:'28412345678',whatsapp:'+974 5512 3456',area:'Al Waab',monthly_salary:3200,monthly_rent:1800,household_size:4,submission_lang:'en',status:'pending',translation_pending:false,nationality:'Pakistani',gender:'male',sponsor:'Qatar Petroleum',is_muslim:true,assigned_to:'Alliyah'},
+    {id:'demo-2',created_at:d(2),full_name:'فاطمة محمد علي',full_name_en:'Fatima Mohammed Ali',qid_number:'28498765432',whatsapp:'+974 5598 7654',area:'Industrial Area',monthly_salary:2800,monthly_rent:1400,household_size:6,submission_lang:'ar',status:'pending',translation_pending:true,nationality:'Egyptian',gender:'female',sponsor:'Al Meera',is_muslim:true,is_pregnant:true,due_date:'2025-09-15',assigned_to:'Sarah'},
+    {id:'demo-3',created_at:d(5),full_name:'Priya Sharma',full_name_en:'Priya Sharma',qid_number:'28376543210',whatsapp:'+974 5576 5432',area:'Al Gharafa',monthly_salary:3000,monthly_rent:1600,household_size:3,submission_lang:'en',status:'approved',translation_pending:false,nationality:'Indian',gender:'female',sponsor:'Lulu Hypermarket',is_muslim:false,assigned_to:'Alliyah'},
+    {id:'demo-4',created_at:d(7),full_name:'রহিম উদ্দিন',full_name_en:'Rahim Uddin',qid_number:'28312345999',whatsapp:'+974 5534 5678',area:'Al Mansoura',monthly_salary:2500,monthly_rent:1200,household_size:5,submission_lang:'bn',status:'active',translation_pending:true,nationality:'Bangladeshi',gender:'male',sponsor:'Qatar Cool',is_muslim:true,assigned_to:'Badana'},
+    {id:'demo-5',created_at:d(10),full_name:'Maria Santos',full_name_en:'Maria Santos',qid_number:'28345678901',whatsapp:'+974 5545 6789',area:'Duhail',monthly_salary:2200,monthly_rent:1100,household_size:2,submission_lang:'en',status:'active',translation_pending:false,nationality:'Filipino',gender:'female',sponsor:'Private Household',is_muslim:false,assigned_to:'Alliyah'},
+    {id:'demo-6',created_at:d(14),full_name:'محمد عبد الله',full_name_en:'Mohammed Abdullah',qid_number:'28467890123',whatsapp:'+974 5567 8901',area:'Al Khor',monthly_salary:4000,monthly_rent:2600,household_size:3,submission_lang:'ar',status:'rejected',translation_pending:false,nationality:'Yemeni',gender:'male',sponsor:'Unsponsored',is_muslim:true,assigned_to:'Sarah'},
+    {id:'demo-7',created_at:d(0),full_name:'Sunita Gurung',full_name_en:'Sunita Gurung',qid_number:'28399988776',whatsapp:'+974 5566 7788',area:'Al Sailiya',monthly_salary:1800,monthly_rent:900,household_size:3,submission_lang:'en',status:null,translation_pending:false,nationality:'Nepali',gender:'female',sponsor:'Private Household',is_muslim:false,assigned_to:null}
   ];
 }
 
 function updateStats() {
   document.getElementById('stat-total').textContent = allApps.length;
-  document.getElementById('stat-pending').textContent = allApps.filter(function(a){return a.status==='pending';}).length;
-  document.getElementById('stat-approved').textContent = allApps.filter(function(a){return a.status==='approved';}).length;
-  document.getElementById('stat-active').textContent = allApps.filter(function(a){return a.status==='active';}).length;
+  document.getElementById('stat-pending').textContent = allApps.filter(function(a){return resolveStatus(a)==='pending'||resolveStatus(a)==='new';}).length;
+  document.getElementById('stat-approved').textContent = allApps.filter(function(a){return resolveStatus(a)==='approved';}).length;
+  document.getElementById('stat-active').textContent = allApps.filter(function(a){return resolveStatus(a)==='active';}).length;
   document.getElementById('stat-translation').textContent = allApps.filter(function(a){return a.translation_pending;}).length;
 }
 
@@ -421,13 +465,15 @@ function renderTable(apps) {
     var disp = (app.monthly_salary||0) - (app.monthly_rent||0);
     var dispColor = disp <= 1500 ? 'color:var(--green);' : 'color:var(--red);';
     var date = app.created_at ? new Date(app.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '–';
-    var status = app.status || 'pending';
+    var status = resolveStatus(app);
     var statusLabel = status === 'active' ? 'Confirmed' : status;
     var statusBadge = '<span class="badge badge-' + status + '">' + statusLabel + '</span>';
     if (app.translation_pending) statusBadge += '<span class="badge badge-translation">🌐</span>';
     var name = app.full_name_en || app.full_name || '–';
     var qid = app.qid_number || '–';
     var langTag = '<span class="lang-tag">' + (LANG_TAGS[app.submission_lang] || app.submission_lang || 'EN') + '</span>';
+    var assignee = app.assigned_to || autoAssign(app);
+    var assignedPill = '<span class="assigned-pill">' + assignee + '</span>';
     var tr = document.createElement('tr');
     tr.onclick = function() { viewApp(app.id); };
     tr.innerHTML = '<td><div class="name-cell">' + name + '</div><div class="sub-cell">' + qid + '</div></td>' +
@@ -437,8 +483,9 @@ function renderTable(apps) {
       '<td style="font-size:12px;color:var(--muted);">' + date + '</td>' +
       '<td>' + langTag + '</td>' +
       '<td>' + statusBadge + '</td>' +
+      '<td>' + assignedPill + '</td>' +
       '<td><button class="action-btn btn-view" onclick="event.stopPropagation();viewApp(\'' + app.id + '\')">View</button>' +
-      (status === 'pending' ? '<button class="action-btn btn-approve" onclick="event.stopPropagation();quickApprove(\'' + app.id + '\')">✓</button>' : '') + '</td>';
+      (status === 'pending' || status === 'new' ? '<button class="action-btn btn-approve" onclick="event.stopPropagation();quickApprove(\'' + app.id + '\')">✓</button>' : '') + '</td>';
     tbody.appendChild(tr);
   });
 }
@@ -488,7 +535,7 @@ function setFilter(status, btn) {
 function filterApps() {
   var q = document.getElementById('search-box').value.toLowerCase();
   var filtered = allApps.filter(function(a) {
-    if (currentFilter !== 'all' && a.status !== currentFilter) return false;
+    if (currentFilter !== 'all' && resolveStatus(a) !== currentFilter) return false;
     if (!q) return true;
     return (a.full_name_en||a.full_name||'').toLowerCase().includes(q) ||
            (a.qid_number||'').includes(q) ||
@@ -550,7 +597,18 @@ function renderModal(app, members) {
   }
   body += '<div class="detail-section"><h3>Admin notes</h3>';
   body += '<textarea class="notes-area" id="modal-notes" placeholder="Add notes…">' + (app.admin_notes||'') + '</textarea></div>';
-  body += '<div style="font-size:11px;color:var(--muted);">Submitted: ' + date + ' · Lang: ' + (app.submission_lang||'en').toUpperCase() + ' · Status: ' + (app.status||'pending') + '</div>';
+  // Case owner reassign
+  var currentAssignee = app.assigned_to || autoAssign(app);
+  body += '<div class="detail-section"><h3>Case owner</h3>';
+  body += '<div style="display:flex;align-items:center;gap:10px;">';
+  body += '<select id="modal-assignee" style="border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:7px 12px;font-family:Nunito,sans-serif;font-size:13px;font-weight:700;color:var(--text);background:white;cursor:pointer;">';
+  CASE_OWNERS.forEach(function(owner) {
+    body += '<option value="' + owner + '"' + (owner === currentAssignee ? ' selected' : '') + '>' + owner + '</option>';
+  });
+  body += '</select>';
+  body += '<button class="modal-actions btn-note" style="margin:0;" onclick="saveAssignment(\'' + app.id + '\')">Reassign</button>';
+  body += '</div></div>';
+  body += '<div style="font-size:11px;color:var(--muted);margin-top:8px;">Submitted: ' + date + ' · Lang: ' + (app.submission_lang||'en').toUpperCase() + ' · Status: ' + resolveStatus(app) + '</div>';
   document.getElementById('modal-body').innerHTML = body;
   var actions = '';
   if (app.status === 'pending') actions += '<button class="modal-actions btn-approve-full" onclick="updateStatus(\'' + app.id + '\',' + "'approved'" + ')">Approve</button>';
@@ -575,6 +633,29 @@ function updateStatus(id, status) {
     if (idx !== -1) allApps[idx].status = status;
     updateStats(); filterApps(); closeModal();
   }).catch(function(e){ alert('Update failed: ' + e.message); });
+}
+
+function saveAssignment(id) {
+  var sel = document.getElementById('modal-assignee');
+  if (!sel) return;
+  var assignee = sel.value;
+  if (id.startsWith('demo')) {
+    var idx = allApps.findIndex(function(a){return a.id===id;});
+    if (idx !== -1) allApps[idx].assigned_to = assignee;
+    var btn = sel.nextElementSibling;
+    if (btn) { btn.textContent='✓ Reassigned'; setTimeout(function(){btn.textContent='Reassign';},2000); }
+    filterApps(); return;
+  }
+  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+    method: 'PATCH', headers: apiHeaders(),
+    body: JSON.stringify({ assigned_to: assignee })
+  }).then(function(){
+    var idx = allApps.findIndex(function(a){return a.id===id;});
+    if (idx !== -1) allApps[idx].assigned_to = assignee;
+    var btn = sel.nextElementSibling;
+    if (btn) { btn.textContent='✓ Reassigned'; setTimeout(function(){btn.textContent='Reassign';},2000); }
+    filterApps();
+  }).catch(function(e){ alert('Reassign failed: ' + e.message); });
 }
 
 function quickApprove(id) { updateStatus(id, 'approved'); }
