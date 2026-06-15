@@ -39,6 +39,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 .stat-card{flex:0 0 130px;border:none;border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 14px rgba(0,0,0,0.13);}
 .stat-card:hover,.stat-card:active{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.18);}
 .stat-card.sc-total{background:linear-gradient(135deg,#2d7a3a,#4a9e58);}
+.stat-card.sc-new{background:linear-gradient(135deg,#b45309,#f59e0b);}
 .stat-card.sc-pending{background:linear-gradient(135deg,#e88c1a,#f5b942);}
 .stat-card.sc-approved{background:linear-gradient(135deg,#00a896,#00c9b5);}
 .stat-card.sc-active{background:linear-gradient(135deg,#0ea5c9,#38c9f0);}
@@ -64,7 +65,17 @@ tr:hover td{background:#fafcfa;cursor:pointer;}
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:800;}
 .badge-pending{background:#fff8e6;color:#9a6800;border:1px solid #f0d080;}
 .badge-approved{background:var(--green-light);color:var(--green);border:1px solid #b2d9b8;}
-.badge-new{background:#fff3e0;color:#b45309;border:1px solid #fbbf24;}
+.badge-long_term{background:#fef3e2;color:#c45e3a;border:1px solid #f4845f;}
+.tag-pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:800;margin-right:4px;margin-top:2px;}
+.tag-lt{background:#fef3e2;color:#c45e3a;border:1px solid #f4845f;}
+.tag-wbb{background:#fce4ec;color:#ad1457;border:1px solid #f48fb1;}
+.tag-ll{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;}
+.tag-checkboxes{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;}
+.tag-check-label{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;cursor:pointer;padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:white;transition:all 0.15s;}
+.tag-check-label:has(input:checked){border-color:var(--green);background:var(--green-light);}
+.tag-check-label input{width:16px;height:16px;cursor:pointer;}
+.badge-duplicate{background:#f3e5f5;color:#6a1b9a;border:1px solid #ce93d8;}
+.badge-archived{background:#eceff1;color:#546e7a;border:1px solid #b0bec5;}
 .badge-active{background:#e0f7fa;color:#007a6e;border:1px solid #80d5ce;}
 .assigned-pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:800;background:#f0f4f0;color:var(--green);border:1px solid var(--border);}
 .badge-rejected{background:var(--red-light);color:var(--red);border:1px solid #f5b8b8;}
@@ -100,6 +111,21 @@ tr:hover td{background:#fafcfa;cursor:pointer;}
 .btn-note{background:var(--off-white);color:var(--text);border:1.5px solid var(--border)!important;}
 .notes-area{width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'Nunito',sans-serif;font-size:13px;outline:none;resize:vertical;min-height:70px;margin-top:8px;}
 .notes-area:focus{border-color:var(--green);}
+.comment-log{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+.comment-entry{background:var(--off-white);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;}
+.comment-meta{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px;display:flex;gap:8px;align-items:center;}
+.comment-type{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:800;background:var(--green-light);color:var(--green);}
+.comment-type.wa{background:#e8f5e9;color:#2e7d32;}
+.comment-type.call{background:#e3f2fd;color:#1565c0;}
+.comment-type.note{background:#f3e5f5;color:#6a1b9a;}
+.comment-text{font-size:13px;color:var(--text);line-height:1.4;}
+.comment-input-row{display:flex;gap:8px;margin-top:10px;align-items:flex-start;}
+.comment-type-select{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:var(--text);background:white;cursor:pointer;flex-shrink:0;}
+.comment-textarea{flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'Nunito',sans-serif;font-size:13px;outline:none;resize:none;min-height:60px;}
+.comment-textarea:focus{border-color:var(--green);}
+.btn-comment{background:var(--green);color:white;border:none;border-radius:var(--radius-sm);padding:8px 14px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;}
+.btn-duplicate{background:#7b5ea7;color:white;}
+.btn-archive{background:#5a7060;color:white;}
 
 /* LOGIN */
 .login-page{min-height:100vh;background:var(--green-dark);display:flex;align-items:center;justify-content:center;padding:20px;}
@@ -202,6 +228,7 @@ tr:hover td{background:#fafcfa;cursor:pointer;}
   <div class="main">
     <div class="stats">
       <div class="stat-card sc-total" onclick="setFilterFromTile('all')"><div class="num" id="stat-total">–</div><div class="lbl">Total</div></div>
+      <div class="stat-card sc-new" onclick="setFilterFromTile('new')"><div class="num" id="stat-new">–</div><div class="lbl">New</div></div>
       <div class="stat-card sc-pending" onclick="setFilterFromTile('pending')"><div class="num" id="stat-pending">–</div><div class="lbl">Pending</div></div>
       <div class="stat-card sc-approved" onclick="setFilterFromTile('approved')"><div class="num" id="stat-approved">–</div><div class="lbl">Approved</div></div>
       <div class="stat-card sc-active" onclick="setFilterFromTile('active')"><div class="num" id="stat-active">–</div><div class="lbl">Confirmed</div></div>
@@ -232,6 +259,7 @@ tr:hover td{background:#fafcfa;cursor:pointer;}
             <th>Date</th>
             <th>Lang</th>
             <th>Status</th>
+            <th>Boxes</th>
             <th>Assigned to</th>
             <th>Actions</th>
           </tr>
@@ -434,19 +462,20 @@ function getDummyApps() {
   var now = new Date();
   var d = function(days) { var dt = new Date(now); dt.setDate(dt.getDate()-days); return dt.toISOString(); };
   return [
-    {id:'demo-1',created_at:d(1),full_name:'Ahmed Al Rashidi',full_name_en:'Ahmed Al Rashidi',qid_number:'28412345678',whatsapp:'+974 5512 3456',area:'Al Waab',monthly_salary:3200,monthly_rent:1800,household_size:4,submission_lang:'en',status:'pending',translation_pending:false,nationality:'Pakistani',gender:'male',sponsor:'Qatar Petroleum',is_muslim:true,assigned_to:'Alliyah'},
-    {id:'demo-2',created_at:d(2),full_name:'فاطمة محمد علي',full_name_en:'Fatima Mohammed Ali',qid_number:'28498765432',whatsapp:'+974 5598 7654',area:'Industrial Area',monthly_salary:2800,monthly_rent:1400,household_size:6,submission_lang:'ar',status:'pending',translation_pending:true,nationality:'Egyptian',gender:'female',sponsor:'Al Meera',is_muslim:true,is_pregnant:true,due_date:'2025-09-15',assigned_to:'Sarah'},
-    {id:'demo-3',created_at:d(5),full_name:'Priya Sharma',full_name_en:'Priya Sharma',qid_number:'28376543210',whatsapp:'+974 5576 5432',area:'Al Gharafa',monthly_salary:3000,monthly_rent:1600,household_size:3,submission_lang:'en',status:'approved',translation_pending:false,nationality:'Indian',gender:'female',sponsor:'Lulu Hypermarket',is_muslim:false,assigned_to:'Alliyah'},
-    {id:'demo-4',created_at:d(7),full_name:'রহিম উদ্দিন',full_name_en:'Rahim Uddin',qid_number:'28312345999',whatsapp:'+974 5534 5678',area:'Al Mansoura',monthly_salary:2500,monthly_rent:1200,household_size:5,submission_lang:'bn',status:'active',translation_pending:true,nationality:'Bangladeshi',gender:'male',sponsor:'Qatar Cool',is_muslim:true,assigned_to:'Badana'},
-    {id:'demo-5',created_at:d(10),full_name:'Maria Santos',full_name_en:'Maria Santos',qid_number:'28345678901',whatsapp:'+974 5545 6789',area:'Duhail',monthly_salary:2200,monthly_rent:1100,household_size:2,submission_lang:'en',status:'active',translation_pending:false,nationality:'Filipino',gender:'female',sponsor:'Private Household',is_muslim:false,assigned_to:'Alliyah'},
-    {id:'demo-6',created_at:d(14),full_name:'محمد عبد الله',full_name_en:'Mohammed Abdullah',qid_number:'28467890123',whatsapp:'+974 5567 8901',area:'Al Khor',monthly_salary:4000,monthly_rent:2600,household_size:3,submission_lang:'ar',status:'rejected',translation_pending:false,nationality:'Yemeni',gender:'male',sponsor:'Unsponsored',is_muslim:true,assigned_to:'Sarah'},
-    {id:'demo-7',created_at:d(0),full_name:'Sunita Gurung',full_name_en:'Sunita Gurung',qid_number:'28399988776',whatsapp:'+974 5566 7788',area:'Al Sailiya',monthly_salary:1800,monthly_rent:900,household_size:3,submission_lang:'en',status:null,translation_pending:false,nationality:'Nepali',gender:'female',sponsor:'Private Household',is_muslim:false,assigned_to:null}
+    {id:'demo-1',created_at:d(1),full_name:'Ahmed Al Rashidi',full_name_en:'Ahmed Al Rashidi',qid_number:'28412345678',whatsapp:'+974 5512 3456',area:'Al Waab',monthly_salary:3200,monthly_rent:1800,household_size:4,submission_lang:'en',status:'pending',translation_pending:false,nationality:'Pakistani',gender:'male',sponsor:'Qatar Petroleum',is_muslim:true,assigned_to:'Alliyah',tags:[]},
+    {id:'demo-2',created_at:d(2),full_name:'فاطمة محمد علي',full_name_en:'Fatima Mohammed Ali',qid_number:'28498765432',whatsapp:'+974 5598 7654',area:'Industrial Area',monthly_salary:2800,monthly_rent:1400,household_size:6,submission_lang:'ar',status:'pending',translation_pending:true,nationality:'Egyptian',gender:'female',sponsor:'Al Meera',is_muslim:true,is_pregnant:true,due_date:'2025-09-15',assigned_to:'Sarah',tags:['wbb']},
+    {id:'demo-3',created_at:d(5),full_name:'Priya Sharma',full_name_en:'Priya Sharma',qid_number:'28376543210',whatsapp:'+974 5576 5432',area:'Al Gharafa',monthly_salary:3000,monthly_rent:1600,household_size:3,submission_lang:'en',status:'approved',translation_pending:false,nationality:'Indian',gender:'female',sponsor:'Lulu Hypermarket',is_muslim:false,assigned_to:'Alliyah',tags:['ll'],boxes_received:3,max_boxes:6},
+    {id:'demo-4',created_at:d(7),full_name:'রহিম উদ্দিন',full_name_en:'Rahim Uddin',qid_number:'28312345999',whatsapp:'+974 5534 5678',area:'Al Mansoura',monthly_salary:2500,monthly_rent:1200,household_size:5,submission_lang:'bn',status:'active',translation_pending:true,nationality:'Bangladeshi',gender:'male',sponsor:'Qatar Cool',is_muslim:true,assigned_to:'Badana',tags:['long_term'],boxes_received:14},
+    {id:'demo-5',created_at:d(10),full_name:'Maria Santos',full_name_en:'Maria Santos',qid_number:'28345678901',whatsapp:'+974 5545 6789',area:'Duhail',monthly_salary:2200,monthly_rent:1100,household_size:2,submission_lang:'en',status:'active',translation_pending:false,nationality:'Filipino',gender:'female',sponsor:'Private Household',is_muslim:false,assigned_to:'Alliyah',tags:[],boxes_received:2,max_boxes:3},
+    {id:'demo-6',created_at:d(14),full_name:'محمد عبد الله',full_name_en:'Mohammed Abdullah',qid_number:'28467890123',whatsapp:'+974 5567 8901',area:'Al Khor',monthly_salary:4000,monthly_rent:2600,household_size:3,submission_lang:'ar',status:'rejected',translation_pending:false,nationality:'Yemeni',gender:'male',sponsor:'Unsponsored',is_muslim:true,assigned_to:'Sarah',tags:[]},
+    {id:'demo-7',created_at:d(0),full_name:'Sunita Gurung',full_name_en:'Sunita Gurung',qid_number:'28399988776',whatsapp:'+974 5566 7788',area:'Al Sailiya',monthly_salary:1800,monthly_rent:900,household_size:3,submission_lang:'en',status:null,translation_pending:false,nationality:'Nepali',gender:'female',sponsor:'Private Household',is_muslim:false,assigned_to:null,tags:[]}
   ];
 }
 
 function updateStats() {
   document.getElementById('stat-total').textContent = allApps.length;
-  document.getElementById('stat-pending').textContent = allApps.filter(function(a){return resolveStatus(a)==='pending'||resolveStatus(a)==='new';}).length;
+  document.getElementById('stat-new').textContent = allApps.filter(function(a){return resolveStatus(a)==='new';}).length;
+  document.getElementById('stat-pending').textContent = allApps.filter(function(a){return resolveStatus(a)==='pending';}).length;
   document.getElementById('stat-approved').textContent = allApps.filter(function(a){return resolveStatus(a)==='approved';}).length;
   document.getElementById('stat-active').textContent = allApps.filter(function(a){return resolveStatus(a)==='active';}).length;
   document.getElementById('stat-translation').textContent = allApps.filter(function(a){return a.translation_pending;}).length;
@@ -469,6 +498,17 @@ function renderTable(apps) {
     var statusLabel = status === 'active' ? 'Confirmed' : status;
     var statusBadge = '<span class="badge badge-' + status + '">' + statusLabel + '</span>';
     if (app.translation_pending) statusBadge += '<span class="badge badge-translation">🌐</span>';
+    // Tags
+    var tags = Array.isArray(app.tags) ? app.tags : (app.tags ? JSON.parse(app.tags) : []);
+    var tagHtml = '';
+    if (tags.indexOf('long_term') !== -1) tagHtml += '<span class="tag-pill tag-lt">♾ Long Term</span>';
+    if (tags.indexOf('wbb') !== -1) tagHtml += '<span class="tag-pill tag-wbb">🍼 WBB</span>';
+    if (tags.indexOf('ll') !== -1) tagHtml += '<span class="tag-pill tag-ll">📚 LL</span>';
+    var isLongTerm = tags.indexOf('long_term') !== -1;
+    var boxesDisplay = '–';
+    if (['approved','active'].indexOf(status) !== -1 && app.boxes_received != null) {
+      boxesDisplay = app.boxes_received + (isLongTerm ? ' / ∞' : (app.max_boxes ? ' / ' + app.max_boxes : ''));
+    }
     var name = app.full_name_en || app.full_name || '–';
     var qid = app.qid_number || '–';
     var langTag = '<span class="lang-tag">' + (LANG_TAGS[app.submission_lang] || app.submission_lang || 'EN') + '</span>';
@@ -476,13 +516,14 @@ function renderTable(apps) {
     var assignedPill = '<span class="assigned-pill">' + assignee + '</span>';
     var tr = document.createElement('tr');
     tr.onclick = function() { viewApp(app.id); };
-    tr.innerHTML = '<td><div class="name-cell">' + name + '</div><div class="sub-cell">' + qid + '</div></td>' +
+    tr.innerHTML = '<td><div class="name-cell">' + name + '</div><div class="sub-cell">' + qid + '</div>' + (tagHtml ? '<div style="margin-top:4px;">' + tagHtml + '</div>' : '') + '</td>' +
       '<td>' + (app.area||'–') + '</td>' +
       '<td>' + (app.household_size||1) + ' people</td>' +
       '<td><span style="font-weight:800;font-size:13px;' + dispColor + '">QAR ' + Math.round(disp).toLocaleString() + '</span></td>' +
       '<td style="font-size:12px;color:var(--muted);">' + date + '</td>' +
       '<td>' + langTag + '</td>' +
       '<td>' + statusBadge + '</td>' +
+      '<td style="font-size:12px;font-weight:800;color:var(--green);">' + boxesDisplay + '</td>' +
       '<td>' + assignedPill + '</td>' +
       '<td><button class="action-btn btn-view" onclick="event.stopPropagation();viewApp(\'' + app.id + '\')">View</button>' +
       (status === 'pending' || status === 'new' ? '<button class="action-btn btn-approve" onclick="event.stopPropagation();quickApprove(\'' + app.id + '\')">✓</button>' : '') + '</td>';
@@ -566,6 +607,7 @@ function renderModal(app, members) {
   var disp = (app.monthly_salary||0) - (app.monthly_rent||0);
   var date = app.created_at ? new Date(app.created_at).toLocaleString('en-GB') : '–';
   var dispColor = disp <= 1500 ? 'color:var(--green)' : 'color:var(--red)';
+  var status = resolveStatus(app);
   document.getElementById('modal-title').textContent = name;
   var body = '';
   if (app.translation_pending) body += '<div class="translation-alert">🌐 Submitted in Arabic — translation needs review before approving.</div>';
@@ -580,11 +622,14 @@ function renderModal(app, members) {
   [['Zone',app.zone],['Street',app.street],['Building',app.building],['Unit',app.unit],['Flat',app.flat],['Area',app.area]
   ].forEach(function(f){ body += '<div class="detail-item"><div class="lbl">' + f[0] + '</div><div class="val">' + (f[1]||'–') + '</div></div>'; });
   body += '</div></div>';
+  var tags = Array.isArray(app.tags) ? app.tags : (app.tags ? (() => { try { return JSON.parse(app.tags); } catch(e) { return []; } })() : []);
+  var isLongTerm = tags.indexOf('long_term') !== -1;
   body += '<div class="detail-section"><h3>Financial</h3><div class="detail-grid">';
   [['Household monthly salary','QAR ' + (app.monthly_salary||0).toLocaleString()],
    ['Monthly rent','QAR ' + (app.monthly_rent||0).toLocaleString()],
    ['Disposable income','<span style="font-weight:900;' + dispColor + '">QAR ' + Math.round(disp).toLocaleString() + '</span>'],
-   ['Household size',(app.household_size||1) + ' people']
+   ['Household size',(app.household_size||1) + ' people'],
+   ['Food boxes received', (app.boxes_received != null) ? '<span style="font-weight:900;color:var(--green);">' + app.boxes_received + (isLongTerm ? ' / ∞ (no cap)' : (app.max_boxes ? ' / ' + app.max_boxes : '')) + '</span>' : '–']
   ].forEach(function(f){ body += '<div class="detail-item"><div class="lbl">' + f[0] + '</div><div class="val">' + f[1] + '</div></div>'; });
   body += '</div></div>';
   if (members && members.length > 0) {
@@ -595,9 +640,47 @@ function renderModal(app, members) {
     });
     body += '</div>';
   }
-  body += '<div class="detail-section"><h3>Admin notes</h3>';
-  body += '<textarea class="notes-area" id="modal-notes" placeholder="Add notes…">' + (app.admin_notes||'') + '</textarea></div>';
-  // Case owner reassign
+
+  // ── TAGS ──
+  body += '<div class="detail-section"><h3>Tags</h3>';
+  body += '<div class="tag-checkboxes">';
+  var tagDefs = [
+    {key:'long_term', label:'♾ Long Term', cls:'tag-lt', hint:'No box cap — ongoing support'},
+    {key:'wbb',       label:'🍼 Welcome Baby', cls:'tag-wbb', hint:'Enrolled in Welcome Baby'},
+    {key:'ll',        label:'📚 Little Learners', cls:'tag-ll', hint:'Enrolled in Little Learners'}
+  ];
+  tagDefs.forEach(function(t) {
+    var checked = tags.indexOf(t.key) !== -1 ? ' checked' : '';
+    body += '<label class="tag-check-label" title="' + t.hint + '"><input type="checkbox" id="tag-' + t.key + '"' + checked + '> ' + t.label + '</label>';
+  });
+  body += '</div>';
+  body += '<button class="btn-comment" style="margin-top:10px;" onclick="saveTags(\'' + app.id + '\')">Save tags</button>';
+  body += '</div>';
+
+  // ── COMMENT LOG ──
+  body += '<div class="detail-section"><h3>Comments & activity</h3>';
+  var comments = [];
+  try { comments = JSON.parse(app.admin_notes || '[]'); if (!Array.isArray(comments)) throw 0; } catch(e) {
+    // legacy plain text note
+    if (app.admin_notes) comments = [{type:'note', text:app.admin_notes, ts: app.created_at || new Date().toISOString(), author:'Admin'}];
+    else comments = [];
+  }
+  body += '<div class="comment-log" id="comment-log">';
+  if (comments.length === 0) body += '<div style="font-size:12px;color:var(--muted);padding:6px 0;">No comments yet.</div>';
+  comments.forEach(function(c) {
+    var ts = c.ts ? new Date(c.ts).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+    var typeClass = c.type === 'whatsapp' ? 'wa' : c.type === 'call' ? 'call' : 'note';
+    var typeLabel = c.type === 'whatsapp' ? '💬 WhatsApp' : c.type === 'call' ? '📞 Call' : '📝 Note';
+    body += '<div class="comment-entry"><div class="comment-meta"><span class="comment-type ' + typeClass + '">' + typeLabel + '</span>' + ts + (c.author?' · '+c.author:'') + '</div><div class="comment-text">' + (c.text||'').replace(/</g,'&lt;') + '</div></div>';
+  });
+  body += '</div>';
+  body += '<div class="comment-input-row">';
+  body += '<select class="comment-type-select" id="comment-type"><option value="note">📝 Note</option><option value="whatsapp">💬 WhatsApp</option><option value="call">📞 Call</option></select>';
+  body += '<textarea class="comment-textarea" id="comment-text" placeholder="Add a comment…"></textarea>';
+  body += '<button class="btn-comment" onclick="addComment(\'' + app.id + '\')">Add</button>';
+  body += '</div></div>';
+
+  // ── CASE OWNER ──
   var currentAssignee = app.assigned_to || autoAssign(app);
   body += '<div class="detail-section"><h3>Case owner</h3>';
   body += '<div style="display:flex;align-items:center;gap:10px;">';
@@ -606,15 +689,22 @@ function renderModal(app, members) {
     body += '<option value="' + owner + '"' + (owner === currentAssignee ? ' selected' : '') + '>' + owner + '</option>';
   });
   body += '</select>';
-  body += '<button class="modal-actions btn-note" style="margin:0;" onclick="saveAssignment(\'' + app.id + '\')">Reassign</button>';
+  body += '<button class="btn-comment" onclick="saveAssignment(\'' + app.id + '\')">Reassign</button>';
   body += '</div></div>';
-  body += '<div style="font-size:11px;color:var(--muted);margin-top:8px;">Submitted: ' + date + ' · Lang: ' + (app.submission_lang||'en').toUpperCase() + ' · Status: ' + resolveStatus(app) + '</div>';
+  body += '<div style="font-size:11px;color:var(--muted);margin-top:8px;">Submitted: ' + date + ' · Lang: ' + (app.submission_lang||'en').toUpperCase() + ' · Status: ' + status + '</div>';
   document.getElementById('modal-body').innerHTML = body;
+
+  // ── ACTIONS per status ──
   var actions = '';
-  if (app.status === 'pending') actions += '<button class="modal-actions btn-approve-full" onclick="updateStatus(\'' + app.id + '\',' + "'approved'" + ')">Approve</button>';
-  if (app.status === 'pending' || app.status === 'approved') actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\'' + app.id + '\',' + "'active'" + ')">Mark Confirmed</button>';
-  actions += '<button class="modal-actions btn-note" onclick="saveNote(\'' + app.id + '\')">Save Note</button>';
-  actions += '<button class="modal-actions btn-reject-full" onclick="updateStatus(\'' + app.id + '\',' + "'rejected'" + ')">Reject</button>';
+  if (status === 'new' || status === 'pending') {
+    actions += '<button class="modal-actions btn-approve-full" onclick="updateStatus(\'' + app.id + '\',' + "'approved'" + ')">✓ Approve</button>';
+    actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\'' + app.id + '\',' + "'active'" + ')">⚡ Confirm</button>';
+    actions += '<button class="modal-actions btn-reject-full" onclick="updateStatus(\'' + app.id + '\',' + "'rejected'" + ')">Reject</button>';
+    actions += '<button class="modal-actions btn-duplicate" onclick="updateStatus(\'' + app.id + '\',' + "'duplicate'" + ')">Duplicate</button>';
+  } else if (status === 'approved' || status === 'active') {
+    actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\'' + app.id + '\',' + "'active'" + ')">⚡ Mark Confirmed</button>';
+    actions += '<button class="modal-actions btn-archive" onclick="updateStatus(\'' + app.id + '\',' + "'archived'" + ')">Archive</button>';
+  }
   document.getElementById('modal-actions').innerHTML = actions;
   document.getElementById('modal').classList.add('visible');
 }
@@ -633,6 +723,58 @@ function updateStatus(id, status) {
     if (idx !== -1) allApps[idx].status = status;
     updateStats(); filterApps(); closeModal();
   }).catch(function(e){ alert('Update failed: ' + e.message); });
+}
+
+function addComment(id) {
+  var typeEl = document.getElementById('comment-type');
+  var textEl = document.getElementById('comment-text');
+  if (!typeEl || !textEl) return;
+  var text = textEl.value.trim();
+  if (!text) return;
+  var app = allApps.find(function(a){return a.id===id;});
+  if (!app) return;
+  var comments = [];
+  try { comments = JSON.parse(app.admin_notes || '[]'); if (!Array.isArray(comments)) throw 0; }
+  catch(e) { comments = app.admin_notes ? [{type:'note',text:app.admin_notes,ts:app.created_at||new Date().toISOString(),author:'Admin'}] : []; }
+  var newComment = { type: typeEl.value, text: text, ts: new Date().toISOString(), author: 'Admin' };
+  comments.push(newComment);
+  var notesJson = JSON.stringify(comments);
+  if (id.startsWith('demo')) {
+    app.admin_notes = notesJson;
+    renderModal(app, []); return;
+  }
+  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+    method: 'PATCH', headers: apiHeaders(),
+    body: JSON.stringify({ admin_notes: notesJson })
+  }).then(function(){
+    app.admin_notes = notesJson;
+    renderModal(app, []);
+  }).catch(function(e){ alert('Save failed: ' + e.message); });
+}
+
+
+function saveTags(id) {
+  var tagKeys = ['long_term','wbb','ll'];
+  var tags = tagKeys.filter(function(k) {
+    var el = document.getElementById('tag-' + k);
+    return el && el.checked;
+  });
+  var app = allApps.find(function(a){return a.id===id;});
+  if (!app) return;
+  app.tags = tags;
+  if (id.startsWith('demo')) {
+    var btn = document.querySelector('[onclick*="saveTags"]');
+    if (btn) { btn.textContent='✓ Saved'; setTimeout(function(){btn.textContent='Save tags';},2000); }
+    filterApps(); return;
+  }
+  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+    method: 'PATCH', headers: apiHeaders(),
+    body: JSON.stringify({ tags: JSON.stringify(tags) })
+  }).then(function(){
+    var btn = document.querySelector('[onclick*="saveTags"]');
+    if (btn) { btn.textContent='✓ Saved'; setTimeout(function(){btn.textContent='Save tags';},2000); }
+    filterApps();
+  }).catch(function(e){ alert('Save failed: ' + e.message); });
 }
 
 function saveAssignment(id) {
@@ -660,20 +802,6 @@ function saveAssignment(id) {
 
 function quickApprove(id) { updateStatus(id, 'approved'); }
 
-function saveNote(id) {
-  var notes = document.getElementById('modal-notes').value;
-  if (id.startsWith('demo')) { alert('Demo data — notes not saved.'); return; }
-  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
-    method: 'PATCH',
-    headers: apiHeaders(),
-    body: JSON.stringify({ admin_notes: notes })
-  }).then(function(){
-    var idx = allApps.findIndex(function(a){return a.id===id;});
-    if (idx !== -1) allApps[idx].admin_notes = notes;
-    var btn = document.querySelector('#modal-actions .btn-note');
-    if (btn) { btn.textContent='✓ Saved'; setTimeout(function(){btn.textContent='Save Note';},2000); }
-  });
-}
 
 // ── CHANGE PASSWORD ───────────────────────────────────────────────
 function openChangePassword() {
