@@ -336,7 +336,8 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
       <div class="elig-step active" id="elig-s1">
         <div class="elig-step-num">1</div>
         <div class="elig-step-content">
-          <div class="elig-step-title" id="lbl-salary">What is your monthly salary?</div>
+          <div class="elig-step-title" id="lbl-salary">What is your household's total monthly salary?</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px;" id="lbl-salary-note">Include all earners in the household — e.g. husband + wife combined</div>
           <div class="elig-step-input">
             <span class="elig-currency">QAR</span>
             <input type="text" id="elig-salary" data-numfield="true" inputmode="decimal" data-en="Enter amount" data-ar="أدخل المبلغ" placeholder="Enter amount" data-en="Enter amount" data-ar="أدخل المبلغ" min="0">
@@ -537,7 +538,7 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
   <div class="section-title"><div class="s-icon">💰</div><span id="sec3-title">Financial information</span></div>
   <div class="section-body">
     <div class="field-row">
-      <div class="field"><label id="lbl-salary2">Total monthly salary (QAR) <span class="req">*</span></label><input type="text" id="inp-salary" data-numfield="true" inputmode="decimal" placeholder="e.g. 3000" data-en="e.g. 3000" data-ar="مثال: ٣٠٠٠" min="0" oninput="updateFinancialCalc()" required></div>
+      <div class="field"><label id="lbl-salary2">Total household monthly salary (QAR) <span class="req">*</span><span class="hint" id="lbl-salary2-hint">Combined salary of all earners in the household</span></label><input type="text" id="inp-salary" data-numfield="true" inputmode="decimal" placeholder="e.g. 3000" data-en="e.g. 3000" data-ar="مثال: ٣٠٠٠" min="0" oninput="updateFinancialCalc()" required></div>
       <div class="field"><label id="lbl-rent2">Monthly rent / accommodation (QAR) <span class="req">*</span></label><input type="text" id="inp-rent" data-numfield="true" inputmode="decimal" placeholder="e.g. 1800" data-en="e.g. 1800" data-ar="مثال: ١٨٠٠" min="0" oninput="updateFinancialCalc()" required></div>
     </div>
     <div class="elig-result" id="fin-result"><span id="fin-icon" style="font-size:20px;flex-shrink:0"></span><span id="fin-msg"></span></div>
@@ -587,7 +588,7 @@ const T = {
     'hdr-title':'Food Box Application','hdr-sub':'feedafriend.org · Qatar',
     'hdr-badge':'Apply for monthly food support','prog-label':'Your progress',
     'elig-title':'Check your eligibility','elig-header-sub':'Three quick questions',
-    'lbl-salary':'What is your monthly salary?',
+    'lbl-salary':'What is your household\'s total monthly salary?',
     'lbl-rent':'How much do you pay in rent each month?',
     'lbl-hh':'How many people need food support?',
     'elig-hh-note':'Including yourself — must be 2 or more',
@@ -615,7 +616,7 @@ const T = {
     'members-intro':'Add every person in your household. Everyone aged 1+ needs a valid QID. Babies under 1 may use a Qatar birth certificate.',
     'btn-add-member':'Add household member',
     'sec3-title':'Financial information',
-    'lbl-salary2':'Total monthly salary (QAR)','lbl-rent2':'Monthly rent / accommodation (QAR)',
+    'lbl-salary2':'Total household monthly salary (QAR)','lbl-rent2':'Monthly rent / accommodation (QAR)',
     'badge-speed':'Speeds up your application',
     'lbl-proof':'Upload salary & rent proof',
     'lbl-proof-hint':'Salary slip, bank statement, tenancy contract or employer letter. JPG, PNG or PDF.',
@@ -642,7 +643,7 @@ const T = {
     'hdr-title':'طلب صندوق طعام','hdr-sub':'feedafriend.org · قطر',
     'hdr-badge':'قدّم طلبك للحصول على دعم غذائي شهري','prog-label':'تقدمك',
     'elig-title':'تحقق من أهليتك','elig-header-sub':'ثلاثة أسئلة سريعة',
-    'lbl-salary':'ما هو راتبك الشهري؟',
+    'lbl-salary':'ما هو إجمالي دخل أسرتك الشهري؟',
     'lbl-rent':'كم تدفع إيجاراً شهرياً؟',
     'lbl-hh':'كم عدد الأشخاص الذين يحتاجون دعماً غذائياً؟',
     'elig-hh-note':'بما فيهم أنت — يجب أن يكونوا ٢ على الأقل',
@@ -670,7 +671,7 @@ const T = {
     'members-intro':'أضف جميع أفراد الأسرة. كل من عمره سنة فأكثر يحتاج هوية قطرية. يُقبل للرضع أقل من سنة شهادة الميلاد.',
     'btn-add-member':'إضافة فرد من الأسرة',
     'sec3-title':'المعلومات المالية',
-    'lbl-salary2':'إجمالي الراتب الشهري (ريال)','lbl-rent2':'الإيجار الشهري (ريال)',
+    'lbl-salary2':'إجمالي دخل الأسرة الشهري (ريال)','lbl-rent2':'الإيجار الشهري (ريال)',
     'badge-speed':'يسرّع معالجة طلبك',
     'lbl-proof':'ارفع إثبات الراتب والإيجار',
     'lbl-proof-hint':'كشف راتب أو كشف بنكي أو عقد إيجار أو خطاب من صاحب العمل.',
@@ -753,7 +754,7 @@ var ZONE_AREA = {
 
 var EDGE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder';
 var SUPABASE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co';
-var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDk4MjI0MDAsImV4cCI6MjAyNTM5ODQwMH0.placeholder';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
 
 var currentLang = 'en';
 var memberCount = 0;
@@ -864,16 +865,16 @@ function calcEligibility() {
     var over = Math.round(disp - 1500);
     if (icon) icon.textContent = '⛔';
     if (msg) msg.textContent = ar
-      ? 'عذراً، الدخل المتاح ' + Math.round(disp) + ' ريال، يتجاوز الحد بمقدار ' + over + ' ريال.'
-      : 'Sorry — disposable income of QAR ' + Math.round(disp) + ' is QAR ' + over + ' above our QAR 1,500 limit.';
+      ? 'عذراً، الدخل المتاح للأسرة ' + Math.round(disp) + ' ريال، يتجاوز الحد بمقدار ' + over + ' ريال.'
+      : 'Sorry — household disposable income of QAR ' + Math.round(disp) + ' is QAR ' + over + ' above our QAR 1,500 limit.';
     verdict.className = 'elig-verdict ineligible show';
     if (mainForm) mainForm.style.display = 'none';
     return;
   }
   if (icon) icon.textContent = '✅';
   if (msg) msg.textContent = ar
-    ? 'مبروك! يبدو أنك مؤهل. الدخل المتاح: ' + Math.round(disp) + ' ريال. يرجى إكمال النموذج.'
-    : 'Great news — you appear eligible! Disposable income: QAR ' + Math.round(disp) + '. Complete the form below.';
+    ? 'مبروك! يبدو أنك مؤهل. الدخل المتاح للأسرة: ' + Math.round(disp) + ' ريال. يرجى إكمال النموذج.'
+    : 'Great news — you appear eligible! Household disposable income: QAR ' + Math.round(disp) + '. Complete the form below.';
   verdict.className = 'elig-verdict eligible show';
   if (mainForm) mainForm.style.display = 'block';
   var salFin = document.getElementById('inp-salary');
@@ -895,14 +896,14 @@ function updateFinancialCalc() {
     result.className = 'elig-result eligible';
     document.getElementById('fin-icon').textContent = '✅';
     document.getElementById('fin-msg').textContent = ar
-      ? 'الدخل المتاح بعد الإيجار: ' + Math.round(disp) + ' ريال'
-      : 'Disposable income after rent: QAR ' + Math.round(disp);
+      ? 'الدخل المتاح للأسرة بعد الإيجار: ' + Math.round(disp) + ' ريال'
+      : 'Household disposable income after rent: QAR ' + Math.round(disp);
   } else {
     result.className = 'elig-result ineligible';
     document.getElementById('fin-icon').textContent = '⚠️';
     document.getElementById('fin-msg').textContent = ar
-      ? 'تنبيه: الدخل المتاح ' + Math.round(disp) + ' ريال يتجاوز حد الأهلية.'
-      : 'Note: QAR ' + Math.round(disp) + ' is above our threshold.';
+      ? 'تنبيه: الدخل المتاح للأسرة ' + Math.round(disp) + ' ريال يتجاوز حد الأهلية.'
+      : 'Note: Household disposable income QAR ' + Math.round(disp) + ' is above our threshold.';
   }
 }
 
