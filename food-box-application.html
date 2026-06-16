@@ -932,10 +932,10 @@ function handleQIDBack(input) {
   if (qz) qz.classList.add('uploaded');
   backUploaded = true;
   var frontInput = document.getElementById('qid-front');
-  if (frontUploaded && frontInput && frontInput.files[0]) scanQID(frontInput.files[0]);
+  if (frontUploaded && frontInput && frontInput.files[0]) scanQID(frontInput.files[0], input.files[0]);
 }
 
-function scanQID(frontFile) {
+function scanQID(frontFile, backFile) {
   var status = document.getElementById('scan-status');
   if (status) {
     status.querySelector('span').textContent = currentLang === 'ar' ? 'جاري قراءة الهوية…' : 'Scanning QID…';
@@ -944,21 +944,30 @@ function scanQID(frontFile) {
   var scraped = document.getElementById('qid-scraped-result');
   if (scraped) scraped.classList.remove('visible');
 
-  fileToBase64(frontFile).then(function(b64) {
+  var promises = [fileToBase64(frontFile)];
+  if (backFile) promises.push(fileToBase64(backFile));
+
+  Promise.all(promises).then(function(results) {
+    var frontB64 = results[0];
+    var backB64 = results[1] || null;
+    var images = {
+      front: { type: frontFile.type || 'image/jpeg', data: frontB64 }
+    };
+    if (backB64) images.back = { type: (backFile ? backFile.type : 'image/jpeg') || 'image/jpeg', data: backB64 };
+
     return fetch(EDGE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
-      body: JSON.stringify({ action: 'scan_qid', image_base64: b64, media_type: frontFile.type || 'image/jpeg' })
-    }).then(function(r) { return r.json(); }).then(function(data) {
-      var parsed = data.data || {};
-
+      body: JSON.stringify({ images: images })
+    }).then(function(r) { return r.json(); }).then(function(parsed) {
+      // scan-qid returns flat object: { name, qid_number, nationality, dob, expiry, sponsor, gender }
       var fnEl = document.getElementById('inp-fullname');
       var qnEl = document.getElementById('inp-qidnum');
       if (fnEl) { fnEl.removeAttribute('readonly'); fnEl.style.background=''; fnEl.style.color=''; fnEl.style.cursor=''; }
       if (qnEl) { qnEl.removeAttribute('readonly'); qnEl.style.background=''; qnEl.style.color=''; qnEl.style.cursor=''; }
-      if (parsed.full_name) document.getElementById('inp-fullname').value = parsed.full_name;
+      if (parsed.name) document.getElementById('inp-fullname').value = parsed.name;
       if (parsed.qid_number) document.getElementById('inp-qidnum').value = parsed.qid_number;
-      if (parsed.expiry_date) document.getElementById('inp-expiry').value = parsed.expiry_date;
+      if (parsed.expiry) document.getElementById('inp-expiry').value = parsed.expiry;
       if (parsed.sponsor) document.getElementById('inp-sponsor').value = parsed.sponsor;
       if (parsed.nationality) {
         var sel = document.getElementById('inp-nationality');
@@ -973,10 +982,10 @@ function scanQID(frontFile) {
         if (gRad) { gRad.checked = true; handleApplicantGender(); }
       }
       var photoEl = document.getElementById('qid-photo');
-      if (photoEl) photoEl.src = 'data:' + frontFile.type + ';base64,' + b64;
-      var n = document.getElementById('scraped-name'); if (n) n.textContent = parsed.full_name || '–';
+      if (photoEl) photoEl.src = 'data:' + frontFile.type + ';base64,' + frontB64;
+      var n = document.getElementById('scraped-name'); if (n) n.textContent = parsed.name || '–';
       var q = document.getElementById('scraped-qid'); if (q) q.textContent = parsed.qid_number || '–';
-      var e = document.getElementById('scraped-expiry'); if (e) e.textContent = parsed.expiry_date || '–';
+      var e = document.getElementById('scraped-expiry'); if (e) e.textContent = parsed.expiry || '–';
       var sp = document.getElementById('scraped-sponsor'); if (sp) sp.textContent = parsed.sponsor || '–';
       if (scraped) scraped.classList.add('visible');
       updateProgress();
@@ -1001,19 +1010,17 @@ function scanMemberQID(n, input) {
     return fetch(EDGE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
-      body: JSON.stringify({ action: 'scan_qid', image_base64: b64, media_type: file.type || 'image/jpeg' })
-    }).then(function(r) { return r.json(); }).then(function(data) {
-      var parsed = data.data || {};
-
+      body: JSON.stringify({ images: { front: { type: file.type || 'image/jpeg', data: b64 } } })
+    }).then(function(r) { return r.json(); }).then(function(parsed) {
       var mNameEl = document.getElementById('m' + n + '-name');
       if (mNameEl) { mNameEl.removeAttribute('readonly'); mNameEl.style.background=''; mNameEl.style.color=''; mNameEl.style.cursor=''; }
       var nameEl = document.getElementById('m' + n + '-name');
       var idEl = document.getElementById('m' + n + '-idnum');
       var expEl = document.getElementById('m' + n + '-expiry');
       var dobEl = document.getElementById('m' + n + '-dob');
-      if (nameEl && parsed.full_name) nameEl.value = parsed.full_name;
+      if (nameEl && parsed.name) nameEl.value = parsed.name;
       if (idEl && parsed.qid_number) idEl.value = parsed.qid_number;
-      if (expEl && parsed.expiry_date) expEl.value = parsed.expiry_date;
+      if (expEl && parsed.expiry) expEl.value = parsed.expiry;
       if (dobEl && parsed.dob) { dobEl.value = parsed.dob; handleMemberDOB(n); }
       if (parsed.gender) {
         var gRad = document.querySelector('input[name="m' + n + '-gender"][value="' + parsed.gender + '"]');
@@ -1021,12 +1028,12 @@ function scanMemberQID(n, input) {
       }
       var photoEl = document.getElementById('m' + n + '-photo');
       if (photoEl) photoEl.src = 'data:' + file.type + ';base64,' + b64;
-      var sn = document.getElementById('m' + n + '-scraped-name'); if (sn) sn.textContent = parsed.full_name || '–';
+      var sn = document.getElementById('m' + n + '-scraped-name'); if (sn) sn.textContent = parsed.name || '–';
       var sq = document.getElementById('m' + n + '-scraped-qid'); if (sq) sq.textContent = parsed.qid_number || '–';
-      var se = document.getElementById('m' + n + '-scraped-expiry'); if (se) se.textContent = parsed.expiry_date || '–';
+      var se = document.getElementById('m' + n + '-scraped-expiry'); if (se) se.textContent = parsed.expiry || '–';
       if (scrapedEl) scrapedEl.classList.add('visible');
       if (parsed.qid_number) {
-        checkDuplicateQID(parsed.qid_number, parsed.full_name, 'member').then(function(isDup) {
+        checkDuplicateQID(parsed.qid_number, parsed.name, 'member').then(function(isDup) {
           if (isDup) {
             var idEl2 = document.getElementById('m' + n + '-idnum');
             var nameEl2 = document.getElementById('m' + n + '-name');
