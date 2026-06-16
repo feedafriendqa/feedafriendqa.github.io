@@ -247,6 +247,9 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
 .ms-check.done { background:var(--green); color:white; }
 .ms-check.pending { background:var(--border); color:var(--muted); }
 .ms-check.overdue { background:var(--coral-light); color:var(--coral); }
+.inline-input { border:none; border-bottom:1.5px solid var(--border); border-radius:0; padding:2px 4px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:600; color:var(--ink); background:transparent; text-align:right; width:100%; outline:none; }
+.inline-input:focus { border-bottom-color:var(--green); }
+select.inline-input { cursor:pointer; }
 .ms-label { flex:1; font-size:13px; font-weight:600; color:var(--ink); }
 .ms-date { font-size:11px; color:var(--muted); font-weight:500; }
 .timeline { padding:0 16px 16px; }
@@ -604,32 +607,32 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
     <div class="info-card">
       <div class="info-card-header"><div class="info-card-title">👶 Baby details</div></div>
       <div class="info-rows">
-        <div class="info-row"><div class="info-key">Baby name</div><div class="info-val" id="p-bname">–</div></div>
-        <div class="info-row"><div class="info-key">Date of birth</div><div class="info-val" id="p-dob">–</div></div>
-        <div class="info-row"><div class="info-key">Birth weight</div><div class="info-val" id="p-weight">–</div></div>
-        <div class="info-row"><div class="info-key">Feeding</div><div class="info-val" id="p-feeding">–</div></div>
-        <div class="info-row"><div class="info-key">Medical</div><div class="info-val" id="p-medical">–</div></div>
+        <div class="info-row"><div class="info-key">Baby name</div><div class="info-val"><input id="p-bname" type="text" class="inline-input" placeholder="Baby name"></div></div>
+        <div class="info-row"><div class="info-key">Date of birth</div><div class="info-val"><input id="p-dob" type="date" class="inline-input"></div></div>
+        <div class="info-row"><div class="info-key">Birth weight</div><div class="info-val"><input id="p-weight" type="text" class="inline-input" placeholder="e.g. 3.2kg"></div></div>
+        <div class="info-row"><div class="info-key">Feeding</div><div class="info-val"><select id="p-feeding" class="inline-input"><option value="">–</option><option>Breastfeeding</option><option>Formula</option><option>Mixed</option><option>Other</option></select></div></div>
+        <div class="info-row"><div class="info-key">Medical</div><div class="info-val"><input id="p-medical" type="text" class="inline-input" placeholder="None noted"></div></div>
       </div>
     </div>
     <div class="info-card">
       <div class="info-card-header"><div class="info-card-title">👨‍👩‍👧 Family details</div></div>
       <div class="info-rows">
-        <div class="info-row"><div class="info-key">Mother</div><div class="info-val" id="p-mother">–</div></div>
-        <div class="info-row"><div class="info-key">Mother phone</div><div class="info-val" id="p-mother-phone">–</div></div>
-        <div class="info-row"><div class="info-key">Father</div><div class="info-val" id="p-father">–</div></div>
-        <div class="info-row"><div class="info-key">Father phone</div><div class="info-val" id="p-father-phone">–</div></div>
-        <div class="info-row"><div class="info-key">Siblings</div><div class="info-val" id="p-siblings">–</div></div>
-        <div class="info-row"><div class="info-key">Location</div><div class="info-val" id="p-location">–</div></div>
-        <div class="info-row"><div class="info-key">Language</div><div class="info-val" id="p-language">–</div></div>
-        <div class="info-row"><div class="info-key">Food box</div><div class="info-val" id="p-foodbox">–</div></div>
+        <div class="info-row"><div class="info-key">Mother</div><div class="info-val"><input id="p-mother" type="text" class="inline-input" placeholder="Mother name"></div></div>
+        <div class="info-row"><div class="info-key">Mother phone</div><div class="info-val"><input id="p-mother-phone" type="tel" class="inline-input" placeholder="Phone number"></div></div>
+        <div class="info-row"><div class="info-key">Father</div><div class="info-val"><input id="p-father" type="text" class="inline-input" placeholder="Father name"></div></div>
+        <div class="info-row"><div class="info-key">Father phone</div><div class="info-val"><input id="p-father-phone" type="tel" class="inline-input" placeholder="Phone number"></div></div>
+        <div class="info-row"><div class="info-key">Siblings</div><div class="info-val"><input id="p-siblings" type="text" class="inline-input" placeholder="–"></div></div>
+        <div class="info-row"><div class="info-key">Location</div><div class="info-val"><input id="p-location" type="text" class="inline-input" placeholder="Area"></div></div>
+        <div class="info-row"><div class="info-key">Language</div><div class="info-val"><select id="p-language" class="inline-input"><option value="">–</option><option>Arabic</option><option>English</option><option>Urdu</option><option>Hindi</option><option>Tagalog</option><option>English/Urdu</option><option>Other</option></select></div></div>
+        <div class="info-row"><div class="info-key">Food box</div><div class="info-val"><select id="p-foodbox" class="inline-input"><option>Active</option><option>Inactive</option></select></div></div>
       </div>
     </div>
     <div class="info-card" id="p-health-card">
       <div class="info-card-header"><div class="info-card-title">🔒 Parental health <span style="font-size:10px;background:var(--coral-light);color:var(--coral);padding:2px 7px;border-radius:100px;margin-left:4px;font-weight:700;">Admin only</span></div></div>
       <div class="info-rows">
-        <div class="info-row"><div class="info-key">Mother health</div><div class="info-val" id="p-mhealth" contenteditable="true" onblur="saveField('family','mother_health',this.textContent)" style="outline:none;border-bottom:1px dashed var(--border);">–</div></div>
-        <div class="info-row"><div class="info-key">Father health</div><div class="info-val" id="p-fhealth" contenteditable="true" onblur="saveField('family','father_health',this.textContent)" style="outline:none;border-bottom:1px dashed var(--border);">–</div></div>
-        <div class="info-row"><div class="info-key">Postnatal</div><div class="info-val" id="p-postnatal" contenteditable="true" onblur="saveField('family','postnatal_notes',this.textContent)" style="outline:none;border-bottom:1px dashed var(--border);">–</div></div>
+        <div class="info-row"><div class="info-key">Mother health</div><div class="info-val"><input id="p-mhealth" type="text" class="inline-input" placeholder="None noted"></div></div>
+        <div class="info-row"><div class="info-key">Father health</div><div class="info-val"><input id="p-fhealth" type="text" class="inline-input" placeholder="None noted"></div></div>
+        <div class="info-row"><div class="info-key">Postnatal</div><div class="info-val"><input id="p-postnatal" type="text" class="inline-input" placeholder="–"></div></div>
       </div>
     </div>
     <div class="info-card">
@@ -1407,19 +1410,19 @@ async function openProfile(familyId) {
   // Store baby ID for saves
   currentBabyId = baby ? baby.id : null;
   // Baby fields
-  (function(){const el=document.getElementById('p-bname');if(el)el.textContent=baby&&baby.baby_name||'–';})();
+  (function(){const el=document.getElementById('p-bname');if(el)el.value=baby&&baby.baby_name||'';})();
   (function(){const el=document.getElementById('p-dob');if(el){el.value=baby&&baby.dob?baby.dob:'';el.setAttribute('data-display',baby&&baby.dob?formatDate(baby.dob):'–');}})();
-  (function(){const el=document.getElementById('p-weight');if(el)el.textContent=baby&&baby.birth_weight||'–';})();
+  (function(){const el=document.getElementById('p-weight');if(el)el.value=baby&&baby.birth_weight||'';})();
   (function(){const el=document.getElementById('p-feeding');if(el&&el.options){const v=baby&&baby.feeding_method||'Breastfeeding';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
-  (function(){const el=document.getElementById('p-medical');if(el)el.textContent=baby&&baby.medical_conditions||'None noted';})();
+  (function(){const el=document.getElementById('p-medical');if(el)el.value=baby&&baby.medical_conditions||'';})();
   (function(){const el=document.getElementById('p-gender');if(el&&el.options){const v=baby&&baby.gender||'';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
-  document.getElementById('p-mother').textContent=f.mother_name||'–';
+  (function(){const el=document.getElementById('p-mother');if(el)el.value=f.mother_name||'';})();
   (function(){ const el=document.getElementById('p-mother-phone'); if(el) el.innerHTML=f.mother_phone?`<a href="tel:${f.mother_phone}" style="color:var(--green);font-weight:600;">${f.mother_phone}</a>`:"–"; })();
-  document.getElementById('p-father').textContent=f.father_name||'–';
+  (function(){const el=document.getElementById('p-father');if(el)el.value=f.father_name||'';})();
   (function(){ const el=document.getElementById('p-father-phone'); if(el) el.innerHTML=f.father_phone?`<a href="tel:${f.father_phone}" style="color:var(--green);font-weight:600;">${f.father_phone}</a>`:"–"; })();
 
   document.getElementById('p-siblings').textContent=f.siblings||'–';
-  (function(){const el=document.getElementById('p-location');if(el)el.textContent=f.location||'–';})();
+  (function(){const el=document.getElementById('p-location');if(el)el.value=f.location||'';})();
   (function(){const el=document.getElementById('p-language');if(el&&el.options){const v=f.language||'English';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
   (function(){const el=document.getElementById('p-foodbox');if(el&&el.options){const v=f.food_box_active?'Active':'Inactive';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
   (function(){const el=document.getElementById('p-status');if(el&&el.options){const v=f.status||'active';Array.from(el.options).forEach(o=>o.selected=o.value===v);}})();
@@ -1427,9 +1430,9 @@ async function openProfile(familyId) {
   const hCard=document.getElementById('p-health-card');
   if (currentRole==='super'||currentRole==='admin') {
     hCard.style.display='block';
-    document.getElementById('p-mhealth').textContent=f.mother_health||'None noted';
-    document.getElementById('p-fhealth').textContent=f.father_health||'None noted';
-    document.getElementById('p-postnatal').textContent=f.postnatal_notes||'–';
+    (function(){const el=document.getElementById('p-mhealth');if(el)el.value=f.mother_health||'';})();
+    (function(){const el=document.getElementById('p-fhealth');if(el)el.value=f.father_health||'';})();
+    (function(){const el=document.getElementById('p-postnatal');if(el)el.value=f.postnatal_notes||'';})();
   } else { hCard.style.display='none'; }
   // Milestones from DB
   const {data:ms} = await sb.from('milestones').select('*').eq('family_id',familyId).order('due_date');
@@ -1509,6 +1512,19 @@ async function openProfile(familyId) {
 }
 
 async function toggleMs(id,familyId,completed,milestoneName) {
+  // Auto-log milestone completion in activity log
+  if (!completed && milestoneName && !milestoneName.toLowerCase().includes('box')) {
+    await sb.from('milestones').update({completed:true,completed_at:new Date().toISOString()}).eq('id',id);
+    await sb.from('activity_log').insert([{
+      family_id: familyId,
+      log_type: 'Milestone',
+      note: 'Completed: ' + milestoneName,
+      logged_by: document.getElementById('menu-name').textContent
+    }]);
+    showToast('✅ ' + milestoneName);
+    openProfile(familyId);
+    return;
+  }
   if (!completed && milestoneName && milestoneName.toLowerCase().includes('box')) {
     // Ask for box number before marking done
     pendingMilestoneId = id;
@@ -1574,7 +1590,7 @@ function renderReminders() {
   const overdue=src.filter(m=>!m.completed&&new Date(m.due_date)<=today);
   const week=src.filter(m=>{const d=new Date(m.due_date);return !m.completed&&d>today&&d<=in7;});
   const upcoming=src.filter(m=>{const d=new Date(m.due_date);return !m.completed&&d>in7&&d<=in30;});
-  const remHTML=(m,cls,label)=>`<div class="reminder-card"><div class="reminder-icon ri-amber">📅</div><div style="flex:1;"><div class="reminder-title">${m.families&&m.families.mother_name||'Family'} — ${m.milestone_name}</div><div class="reminder-due ${cls}">${label} ${formatDate(m.due_date)}</div></div></div>`;
+  const remHTML=(m,cls,label)=>`<div class="reminder-card" onclick="openProfile('${m.family_id}')" style="cursor:pointer;"><div class="reminder-icon ri-amber">📅</div><div style="flex:1;"><div class="reminder-title">${m.families&&m.families.mother_name||'Family'} — ${m.milestone_name}</div><div class="reminder-due ${cls}">${label} ${formatDate(m.due_date)}</div></div></div>`;
   document.getElementById('rem-today').innerHTML=overdue.length?overdue.map(m=>remHTML(m,'due-soon','⚠ Overdue')).join(''):'<div style="padding:0 20px;font-size:13px;color:var(--muted);">None overdue ✓</div>';
   document.getElementById('rem-week').innerHTML=week.length?week.map(m=>remHTML(m,'due-upcoming','📅')).join(''):'<div style="padding:0 20px;font-size:13px;color:var(--muted);">Nothing this week.</div>';
   document.getElementById('rem-upcoming').innerHTML=upcoming.length?upcoming.map(m=>remHTML(m,'due-ok','📅')).join(''):'<div style="padding:0 20px;font-size:13px;color:var(--muted);">Nothing upcoming.</div>';
@@ -1706,7 +1722,9 @@ function renderNeeds() {
   document.getElementById('donations-list').innerHTML=allDonations.map(d=>`
     <div class="need-card">
       <div style="display:flex;gap:12px;">
-        <div style="width:64px;height:64px;border-radius:12px;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">📦</div>
+        <div style="width:64px;height:64px;border-radius:12px;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;overflow:hidden;">
+            ${d.photo_url ? `<img src="${d.photo_url.split(',')[0]}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;" onerror="this.parentElement.innerHTML='📦'">` : '📦'}
+          </div>
         <div style="flex:1;">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;">
             <div class="need-title">${d.item}</div>
@@ -2251,7 +2269,7 @@ async function saveAllProfileFields() {
   for (const [id, [table, field]] of Object.entries(fieldMap)) {
     const el = document.getElementById(id);
     if (!el) continue;
-    let val = el.tagName === 'SELECT' ? el.value : el.textContent.trim();
+    let val = el.value !== undefined ? el.value.trim() : el.textContent.trim();
     if (!val || val === '–') continue;
     if (field === 'food_box_active') val = val === 'Active';
     if (table === 'family') familyFields[field] = val;
