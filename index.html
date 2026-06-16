@@ -108,7 +108,7 @@ function PhotoEditor({current,onSelect}){
   </div>;
 }
 
-// ── AUTH ──────────────────────────────────────────────────────────────────────
+// -- AUTH ----------------------------------------------------------------------
 function playCheer(){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const play=(f,t,d)=>{const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*1.5,t+d*0.3);g.gain.setValueAtTime(0.3,t);g.gain.exponentialRampToValueAtTime(0.001,t+d);o.start(t);o.stop(t+d);};const t=ctx.currentTime;[523,659,784,1047].forEach((f,i)=>play(f,t+i*0.12,0.15));play(1047,t+0.5,0.4);}catch(e){}}
 function Confetti({active,hours}){
   const [particles,setParticles]=React.useState([]);
@@ -289,7 +289,7 @@ function Auth({onAuth}){
   </div>;
 }
 
-// ── PROFILE EDIT SCREEN (shared) ─────────────────────────────────────────────
+// -- PROFILE EDIT SCREEN (shared) ---------------------------------------------
 function ProfileEdit({profile, onSave, onBack}){
   const [fn,setFn]=useState(profile.first_name||"");
   const [sn,setSn]=useState(profile.surname||"");
@@ -378,7 +378,7 @@ function ProfileEdit({profile, onSave, onBack}){
   </div>;
 }
 
-// ── ADMIN ─────────────────────────────────────────────────────────────────────
+// -- ADMIN ---------------------------------------------------------------------
 function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   const [profile,setProfile]=useState(initProfile);
   const [tab,setTab]=useState(isSuperAdmin?"pending":"opps");
@@ -974,7 +974,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   </div>;
 }
 
-// ── VOLUNTEER ─────────────────────────────────────────────────────────────────
+// -- VOLUNTEER -----------------------------------------------------------------
 function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   const [profile,setProfile]=useState(initProfile);
   const [view,setView]=useState("dashboard");
@@ -1314,7 +1314,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   </div>;
 }
 
-// ── APP ───────────────────────────────────────────────────────────────────────
+// -- APP -----------------------------------------------------------------------
 function App(){
   const [profile,setProfile]=useState(null);
   const [loading,setLoading]=useState(true);
