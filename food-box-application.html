@@ -914,7 +914,8 @@ function handleQIDFront(input) {
   if (qz) qz.classList.add('uploaded');
   frontUploaded = true;
   if (backUploaded) {
-    scanQID(input.files[0]);
+    var backInput = document.getElementById('qid-back');
+    scanQID(input.files[0], backInput && backInput.files[0] ? backInput.files[0] : null);
   } else {
     var s = document.getElementById('scan-status');
     if (s) {
@@ -932,10 +933,36 @@ function handleQIDBack(input) {
   if (qz) qz.classList.add('uploaded');
   backUploaded = true;
   var frontInput = document.getElementById('qid-front');
-  if (frontUploaded && frontInput && frontInput.files[0]) scanQID(frontInput.files[0]);
+  if (frontUploaded && frontInput && frontInput.files[0]) scanQID(frontInput.files[0], input.files[0]);
 }
 
-function scanQID(frontFile) {
+// Sends a single image to the scan_qid action and returns its parsed fields
+// alongside the base64 data (so callers can show the photo without re-encoding).
+function scanQIDImage(file) {
+  return fileToBase64(file).then(function(b64) {
+    return fetch(EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+      body: JSON.stringify({ action: 'scan_qid', image_base64: b64, media_type: file.type || 'image/jpeg' })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      return { parsed: data.data || {}, b64: b64 };
+    });
+  });
+}
+
+// Combines the fields read from the front and back scans. Front wins when both
+// sides report a value (it's usually the clearer photo); fields only visible on
+// the back (sponsor, sometimes the QID number) fall back to the back scan.
+function mergeQIDFields(front, back) {
+  var keys = ['full_name', 'qid_number', 'expiry_date', 'sponsor', 'nationality', 'gender', 'dob'];
+  var out = {};
+  keys.forEach(function(k) {
+    out[k] = (front && front[k]) ? front[k] : ((back && back[k]) ? back[k] : null);
+  });
+  return out;
+}
+
+function scanQID(frontFile, backFile) {
   var status = document.getElementById('scan-status');
   if (status) {
     status.querySelector('span').textContent = currentLang === 'ar' ? 'جاري قراءة الهوية…' : 'Scanning QID…';
@@ -944,13 +971,14 @@ function scanQID(frontFile) {
   var scraped = document.getElementById('qid-scraped-result');
   if (scraped) scraped.classList.remove('visible');
 
-  fileToBase64(frontFile).then(function(b64) {
-    return fetch(EDGE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
-      body: JSON.stringify({ action: 'scan_qid', image_base64: b64, media_type: frontFile.type || 'image/jpeg' })
-    }).then(function(r) { return r.json(); }).then(function(data) {
-      var parsed = data.data || {};
+  Promise.all([
+    scanQIDImage(frontFile),
+    backFile ? scanQIDImage(backFile) : Promise.resolve({ parsed: {}, b64: null })
+  ]).then(function(results) {
+      var frontResult = results[0];
+      var backResult = results[1];
+      var parsed = mergeQIDFields(frontResult.parsed, backResult.parsed);
+      var b64 = frontResult.b64;
 
       var fnEl = document.getElementById('inp-fullname');
       var qnEl = document.getElementById('inp-qidnum');
@@ -973,14 +1001,13 @@ function scanQID(frontFile) {
         if (gRad) { gRad.checked = true; handleApplicantGender(); }
       }
       var photoEl = document.getElementById('qid-photo');
-      if (photoEl) photoEl.src = 'data:' + frontFile.type + ';base64,' + b64;
+      if (photoEl && b64) photoEl.src = 'data:' + frontFile.type + ';base64,' + b64;
       var n = document.getElementById('scraped-name'); if (n) n.textContent = parsed.full_name || '–';
       var q = document.getElementById('scraped-qid'); if (q) q.textContent = parsed.qid_number || '–';
       var e = document.getElementById('scraped-expiry'); if (e) e.textContent = parsed.expiry_date || '–';
       var sp = document.getElementById('scraped-sponsor'); if (sp) sp.textContent = parsed.sponsor || '–';
       if (scraped) scraped.classList.add('visible');
       updateProgress();
-    });
   }).catch(function(e) {
     if (status) status.querySelector('span').textContent = currentLang === 'ar' ? 'تعذّرت القراءة — أدخل يدوياً.' : 'Scan failed — please fill in manually.';
   }).finally(function() {
@@ -988,22 +1015,61 @@ function scanQID(frontFile) {
   });
 }
 
-function scanMemberQID(n, input) {
+// Tracks which side(s) of each member's QID have been uploaded so we only scan
+// once both are in (mirrors the applicant flow above).
+var memberQIDState = {};
+
+function handleMemberQIDFront(n, input) {
   if (!input.files || !input.files[0]) return;
-  var file = input.files[0];
-  input.closest('.qid-zone').classList.add('uploaded');
+  var zone = document.getElementById('m' + n + '-qid-front-zone');
+  if (zone) zone.classList.add('uploaded');
+  memberQIDState[n] = memberQIDState[n] || {};
+  memberQIDState[n].front = true;
+  if (memberQIDState[n].back) {
+    scanMemberQID(n);
+  } else {
+    var statusEl = document.getElementById('m' + n + '-scan-status');
+    if (statusEl) {
+      var span = statusEl.querySelector('span');
+      if (span) span.textContent = currentLang === 'ar' ? 'ارفع الوجه الخلفي لبدء القراءة…' : 'Now upload the back to begin scanning…';
+      statusEl.classList.add('visible');
+    }
+  }
+}
+
+function handleMemberQIDBack(n, input) {
+  if (!input.files || !input.files[0]) return;
+  var zone = document.getElementById('m' + n + '-qid-back-zone');
+  if (zone) zone.classList.add('uploaded');
+  memberQIDState[n] = memberQIDState[n] || {};
+  memberQIDState[n].back = true;
+  if (memberQIDState[n].front) scanMemberQID(n);
+}
+
+function scanMemberQID(n) {
+  var frontInput = document.getElementById('m' + n + '-qid-front');
+  var backInput = document.getElementById('m' + n + '-qid-back');
+  var frontFile = frontInput && frontInput.files[0];
+  var backFile = backInput && backInput.files[0];
+  if (!frontFile) return;
+
   var statusEl = document.getElementById('m' + n + '-scan-status');
   var scrapedEl = document.getElementById('m' + n + '-scraped-result');
-  if (statusEl) statusEl.classList.add('visible');
+  if (statusEl) {
+    var span = statusEl.querySelector('span');
+    if (span) span.textContent = currentLang === 'ar' ? 'جاري المسح...' : 'Scanning...';
+    statusEl.classList.add('visible');
+  }
   if (scrapedEl) scrapedEl.classList.remove('visible');
 
-  fileToBase64(file).then(function(b64) {
-    return fetch(EDGE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
-      body: JSON.stringify({ action: 'scan_qid', image_base64: b64, media_type: file.type || 'image/jpeg' })
-    }).then(function(r) { return r.json(); }).then(function(data) {
-      var parsed = data.data || {};
+  Promise.all([
+    scanQIDImage(frontFile),
+    backFile ? scanQIDImage(backFile) : Promise.resolve({ parsed: {}, b64: null })
+  ]).then(function(results) {
+      var frontResult = results[0];
+      var backResult = results[1];
+      var parsed = mergeQIDFields(frontResult.parsed, backResult.parsed);
+      var b64 = frontResult.b64;
 
       var mNameEl = document.getElementById('m' + n + '-name');
       if (mNameEl) { mNameEl.removeAttribute('readonly'); mNameEl.style.background=''; mNameEl.style.color=''; mNameEl.style.cursor=''; }
@@ -1020,7 +1086,7 @@ function scanMemberQID(n, input) {
         if (gRad) { gRad.checked = true; handleMemberGender(n); }
       }
       var photoEl = document.getElementById('m' + n + '-photo');
-      if (photoEl) photoEl.src = 'data:' + file.type + ';base64,' + b64;
+      if (photoEl && b64) photoEl.src = 'data:' + frontFile.type + ';base64,' + b64;
       var sn = document.getElementById('m' + n + '-scraped-name'); if (sn) sn.textContent = parsed.full_name || '–';
       var sq = document.getElementById('m' + n + '-scraped-qid'); if (sq) sq.textContent = parsed.qid_number || '–';
       var se = document.getElementById('m' + n + '-scraped-expiry'); if (se) se.textContent = parsed.expiry_date || '–';
@@ -1037,7 +1103,6 @@ function scanMemberQID(n, input) {
         });
       }
       updateProgress();
-    });
   }).catch(function(e) {
     console.error('Member QID scan error:', e);
   }).finally(function() {
@@ -1168,8 +1233,8 @@ function buildMemberCard(n) {
   h += '</div>';
   h += '<div id="m' + n + '-qid-upload">';
   h += '<div class="qid-pair">';
-  h += '<div class="qid-zone" id="m' + n + '-qid-front-zone"><div class="upload-icon">📄</div><p><strong>' + (ar ? 'الوجه الأمامي' : 'Front of QID') + '</strong></p><p>' + (ar ? 'اضغط للرفع' : 'Tap to upload') + '</p><input type="file" id="m' + n + '-qid-front" accept="image/*" onchange="scanMemberQID(' + n + ',this)" style="display:none"></div>';
-  h += '<div class="qid-zone" id="m' + n + '-qid-back-zone"><div class="upload-icon">🔄</div><p><strong>' + (ar ? 'الوجه الخلفي' : 'Back of QID') + '</strong></p><p>' + (ar ? 'اضغط للرفع' : 'Tap to upload') + '</p><input type="file" id="m' + n + '-qid-back" accept="image/*" style="display:none"></div>';
+  h += '<div class="qid-zone" id="m' + n + '-qid-front-zone"><div class="upload-icon">📄</div><p><strong>' + (ar ? 'الوجه الأمامي' : 'Front of QID') + '</strong></p><p>' + (ar ? 'اضغط للرفع' : 'Tap to upload') + '</p><input type="file" id="m' + n + '-qid-front" accept="image/*" onchange="handleMemberQIDFront(' + n + ',this)" style="display:none"></div>';
+  h += '<div class="qid-zone" id="m' + n + '-qid-back-zone"><div class="upload-icon">🔄</div><p><strong>' + (ar ? 'الوجه الخلفي' : 'Back of QID') + '</strong></p><p>' + (ar ? 'اضغط للرفع' : 'Tap to upload') + '</p><input type="file" id="m' + n + '-qid-back" accept="image/*" onchange="handleMemberQIDBack(' + n + ',this)" style="display:none"></div>';
   h += '</div></div>';
   h += '<div class="qid-zone" id="m' + n + '-birth-cert-upload" style="display:none;"><div class="upload-icon">📋</div><p><strong>' + (ar ? 'شهادة الميلاد' : 'Birth certificate') + '</strong></p><p>' + (ar ? 'اضغط للرفع' : 'Tap to upload') + '</p><input type="file" id="m' + n + '-birth-cert" accept="image/*,.pdf" style="display:none"></div>';
   h += '<div class="qid-scanning" id="m' + n + '-scan-status"><div class="spinner"></div><span>' + (ar ? 'جاري المسح...' : 'Scanning...') + '</span></div>';
