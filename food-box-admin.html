@@ -332,6 +332,8 @@ const sb = supabase.createClient(SUPABASE_URL, ANON_KEY);
 var allApps = [];
 var currentFilter = 'all';
 var currentAppId = null;
+var currentMembers = [];
+var currentDocUrlMap = {};
 var myRole = 'admin';
 var myLanguages = null;
 
@@ -611,18 +613,57 @@ function viewApp(id) {
   currentAppId = id;
   var app = allApps.find(function(a){return a.id===id;});
   if (!app) return;
-  renderModal(app, []);
+  currentMembers = [];
+  currentDocUrlMap = {};
+  renderModal(app, [], {});
   // Fetch real members if not demo
   if (!id.startsWith('demo')) {
     fetch(SUPABASE_URL + '/rest/v1/food_box_members?application_id=eq.' + id + '&select=*', {
       headers: apiHeaders()
     }).then(function(r){return r.json();}).then(function(members){
-      renderModal(app, members||[]);
+      members = members || [];
+      currentMembers = members;
+      renderModal(app, members, {});
+
+      var paths = [app.qid_front_path, app.qid_back_path, app.blue_plate_path, app.salary_proof_path];
+      members.forEach(function(m) { paths.push(m.qid_front_path, m.qid_back_path, m.birth_cert_path); });
+      fetchDocumentUrls(paths).then(function(urlMap) {
+        currentDocUrlMap = urlMap;
+        if (currentAppId === id) renderModal(app, members, urlMap);
+      });
     }).catch(function(){});
   }
 }
 
-function renderModal(app, members) {
+// Documents live in a private bucket — admins need a signed URL per file, and
+// getting one requires the admin's real logged-in session, not the public
+// anon key (the edge function checks this and rejects anon callers).
+function fetchDocumentUrls(paths) {
+  var validPaths = paths.filter(function(p){ return !!p; });
+  if (validPaths.length === 0) return Promise.resolve({});
+  return sb.auth.getSession().then(function(res) {
+    var session = res && res.data ? res.data.session : null;
+    var token = session ? session.access_token : ANON_KEY;
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ type: 'get_document_url', paths: validPaths })
+    }).then(function(r){ return r.json(); }).then(function(json){ return json.urls || {}; });
+  }).catch(function(){ return {}; });
+}
+
+// Renders one document slot: nothing on file, still resolving a signed URL, or a ready link.
+function docLink(label, path, urlMap) {
+  if (!path) return '<div class="detail-item"><div class="lbl">' + label + '</div><div class="val" style="color:var(--muted);font-size:12px;">Not provided</div></div>';
+  var url = urlMap[path];
+  var inner = url
+    ? '<a class="doc-item-link" href="' + url + '" target="_blank" rel="noopener">View \u2197</a>'
+    : '<span style="font-size:12px;color:var(--muted);">Loading\u2026</span>';
+  return '<div class="detail-item"><div class="lbl">' + label + '</div><div class="val">' + inner + '</div></div>';
+}
+
+function renderModal(app, members, urlMap) {
+  urlMap = urlMap || {};
   var name = app.full_name_en || app.full_name || '–';
   var disp = (app.monthly_salary||0) - (app.monthly_rent||0);
   var date = app.created_at ? new Date(app.created_at).toLocaleString('en-GB') : '–';
@@ -681,6 +722,14 @@ function renderModal(app, members) {
   body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{monthly_salary:\'ef-monthly_salary|num\',monthly_rent:\'ef-monthly_rent|num\',household_size:\'ef-household_size|num\',boxes_received:\'ef-boxes_received|num\',max_boxes:\'ef-max_boxes|num\'})">Save financial</button>';
   body += '</div>';
 
+  // ── SUBMITTED DOCUMENTS (uploaded by the applicant during the application) ──
+  body += '<div class="detail-section"><h3>Submitted Documents</h3><div class="detail-grid">';
+  body += docLink('QID — front', app.qid_front_path, urlMap);
+  body += docLink('QID — back', app.qid_back_path, urlMap);
+  body += docLink('Blue address plate', app.blue_plate_path, urlMap);
+  body += docLink('Salary / rent proof', app.salary_proof_path, urlMap);
+  body += '</div></div>';
+
   // ── HOUSEHOLD MEMBERS ──
   body += '<div class="detail-section"><h3>Household Members'+(members&&members.length?' ('+members.length+')':'')+'</h3>';
   if (members && members.length > 0) {
@@ -696,6 +745,12 @@ function renderModal(app, members) {
       body += di('WhatsApp',m.whatsapp||'–');
       body += di('Diaper size',m.diaper_size||'–');
       if (m.is_pregnant) body += di('Pregnant','🤰 Yes');
+      if (m.doc_type === 'birth-cert') {
+        body += docLink('Birth certificate', m.birth_cert_path, urlMap);
+      } else {
+        body += docLink('QID — front', m.qid_front_path, urlMap);
+        body += docLink('QID — back', m.qid_back_path, urlMap);
+      }
       body += '</div></div>';
     });
   } else {
@@ -798,14 +853,14 @@ function addComment(id) {
   var notesJson = JSON.stringify(comments);
   if (id.startsWith('demo')) {
     app.admin_notes = notesJson;
-    renderModal(app, []); return;
+    renderModal(app, currentMembers, currentDocUrlMap); return;
   }
   fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
     method: 'PATCH', headers: apiHeaders(),
     body: JSON.stringify({ admin_notes: notesJson })
   }).then(function(){
     app.admin_notes = notesJson;
-    renderModal(app, []);
+    renderModal(app, currentMembers, currentDocUrlMap);
   }).catch(function(e){ alert('Save failed: ' + e.message); });
 }
 
