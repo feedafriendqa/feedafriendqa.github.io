@@ -753,6 +753,7 @@ var ZONE_AREA = {
 };
 
 var EDGE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder';
+var SCAN_QID_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/scan-qid';
 var SUPABASE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
 
@@ -936,30 +937,56 @@ function handleQIDBack(input) {
   if (frontUploaded && frontInput && frontInput.files[0]) scanQID(frontInput.files[0], input.files[0]);
 }
 
-// Sends a single image to the scan_qid action and returns its parsed fields
-// alongside the base64 data (so callers can show the photo without re-encoding).
-function scanQIDImage(file) {
-  return fileToBase64(file).then(function(b64) {
-    return fetch(EDGE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
-      body: JSON.stringify({ action: 'scan_qid', image_base64: b64, media_type: file.type || 'image/jpeg' })
-    }).then(function(r) { return r.json(); }).then(function(data) {
-      return { parsed: data.data || {}, b64: b64 };
-    });
-  });
+// Converts the scan-qid function's DD/MM/YYYY dates into the YYYY-MM-DD format
+// that <input type="date"> requires. Returns null (rather than a bad value) on
+// anything unparseable so we don't silently set an invalid date.
+function qidDateToISO(d) {
+  if (!d || typeof d !== 'string') return null;
+  var parts = d.split('/');
+  if (parts.length !== 3) return null;
+  var dd = parts[0].padStart(2, '0');
+  var mm = parts[1].padStart(2, '0');
+  var yyyy = parts[2];
+  if (yyyy.length !== 4 || isNaN(dd) || isNaN(mm) || isNaN(yyyy)) return null;
+  return yyyy + '-' + mm + '-' + dd;
 }
 
-// Combines the fields read from the front and back scans. Front wins when both
-// sides report a value (it's usually the clearer photo); fields only visible on
-// the back (sponsor, sometimes the QID number) fall back to the back scan.
-function mergeQIDFields(front, back) {
-  var keys = ['full_name', 'qid_number', 'expiry_date', 'sponsor', 'nationality', 'gender', 'dob'];
-  var out = {};
-  keys.forEach(function(k) {
-    out[k] = (front && front[k]) ? front[k] : ((back && back[k]) ? back[k] : null);
+// Sends front + back together in one call to the dedicated scan-qid function
+// (NOT clever-responder — that endpoint never implemented this action) and
+// normalizes its response into the field names the rest of this file expects.
+function scanQIDPair(frontFile, backFile) {
+  var encode = function(file) {
+    return file ? fileToBase64(file).then(function(b64) {
+      return { type: file.type || 'image/jpeg', data: b64 };
+    }) : Promise.resolve(null);
+  };
+
+  return Promise.all([encode(frontFile), encode(backFile)]).then(function(imgs) {
+    var frontImg = imgs[0], backImg = imgs[1];
+    var body = { images: {} };
+    if (frontImg) body.images.front = frontImg;
+    if (backImg) body.images.back = backImg;
+
+    return fetch(SCAN_QID_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+      body: JSON.stringify(body)
+    }).then(function(r) { return r.json(); }).then(function(raw) {
+      if (raw.error) throw new Error(raw.error);
+      return {
+        parsed: {
+          full_name: raw.name || null,
+          qid_number: raw.qid_number || null,
+          expiry_date: qidDateToISO(raw.expiry),
+          sponsor: raw.sponsor || null,
+          nationality: raw.nationality || null,
+          gender: raw.gender || null,
+          dob: qidDateToISO(raw.dob)
+        },
+        frontB64: frontImg ? frontImg.data : null
+      };
+    });
   });
-  return out;
 }
 
 function scanQID(frontFile, backFile) {
@@ -971,14 +998,9 @@ function scanQID(frontFile, backFile) {
   var scraped = document.getElementById('qid-scraped-result');
   if (scraped) scraped.classList.remove('visible');
 
-  Promise.all([
-    scanQIDImage(frontFile),
-    backFile ? scanQIDImage(backFile) : Promise.resolve({ parsed: {}, b64: null })
-  ]).then(function(results) {
-      var frontResult = results[0];
-      var backResult = results[1];
-      var parsed = mergeQIDFields(frontResult.parsed, backResult.parsed);
-      var b64 = frontResult.b64;
+  scanQIDPair(frontFile, backFile).then(function(result) {
+      var parsed = result.parsed;
+      var b64 = result.frontB64;
 
       var fnEl = document.getElementById('inp-fullname');
       var qnEl = document.getElementById('inp-qidnum');
@@ -997,7 +1019,7 @@ function scanQID(frontFile, backFile) {
         }
       }
       if (parsed.gender) {
-        var gRad = document.querySelector('input[name="applicant-gender"][value="' + parsed.gender + '"]');
+        var gRad = document.querySelector('input[name="applicant-gender"][value="' + parsed.gender.toLowerCase() + '"]');
         if (gRad) { gRad.checked = true; handleApplicantGender(); }
       }
       var photoEl = document.getElementById('qid-photo');
@@ -1062,14 +1084,9 @@ function scanMemberQID(n) {
   }
   if (scrapedEl) scrapedEl.classList.remove('visible');
 
-  Promise.all([
-    scanQIDImage(frontFile),
-    backFile ? scanQIDImage(backFile) : Promise.resolve({ parsed: {}, b64: null })
-  ]).then(function(results) {
-      var frontResult = results[0];
-      var backResult = results[1];
-      var parsed = mergeQIDFields(frontResult.parsed, backResult.parsed);
-      var b64 = frontResult.b64;
+  scanQIDPair(frontFile, backFile).then(function(result) {
+      var parsed = result.parsed;
+      var b64 = result.frontB64;
 
       var mNameEl = document.getElementById('m' + n + '-name');
       if (mNameEl) { mNameEl.removeAttribute('readonly'); mNameEl.style.background=''; mNameEl.style.color=''; mNameEl.style.cursor=''; }
@@ -1082,7 +1099,7 @@ function scanMemberQID(n) {
       if (expEl && parsed.expiry_date) expEl.value = parsed.expiry_date;
       if (dobEl && parsed.dob) { dobEl.value = parsed.dob; handleMemberDOB(n); }
       if (parsed.gender) {
-        var gRad = document.querySelector('input[name="m' + n + '-gender"][value="' + parsed.gender + '"]');
+        var gRad = document.querySelector('input[name="m' + n + '-gender"][value="' + parsed.gender.toLowerCase() + '"]');
         if (gRad) { gRad.checked = true; handleMemberGender(n); }
       }
       var photoEl = document.getElementById('m' + n + '-photo');
@@ -1555,7 +1572,7 @@ function submitApplication() {
   fetch(EDGE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
-    body: JSON.stringify({ action: 'submit_application', application: application, members: members, submission_lang: currentLang })
+    body: JSON.stringify({ type: 'submit_application', application: application, members: members, submission_lang: currentLang })
   }).then(function(r) { return r.json(); }).then(function(data) {
     if (data.ok) {
       btn.textContent = currentLang === 'ar'
