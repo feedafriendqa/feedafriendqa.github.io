@@ -712,7 +712,7 @@ function checkDuplicateQID(qidNumber, name, context) {
   return fetch(EDGE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
-    body: JSON.stringify({ action: 'check_qid', qid_number: qidNumber })
+    body: JSON.stringify({ type: 'check_qid', qid_number: qidNumber })
   }).then(function(r) { return r.json(); }).then(function(data) {
     if (data.exists) {
       var ar = currentLang === 'ar';
@@ -1139,7 +1139,7 @@ function scanBluePlate(input) {
     return fetch(EDGE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
-      body: JSON.stringify({ action: 'scan_plate', image_base64: b64, media_type: file.type || 'image/jpeg' })
+      body: JSON.stringify({ type: 'scan_plate', image_base64: b64, media_type: file.type || 'image/jpeg' })
     }).then(function(r) { return r.json(); }).then(function(data) {
       var parsed = data.data || {};
       if (parsed.zone) document.getElementById('inp-zone').value = parsed.zone;
