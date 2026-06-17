@@ -11,36 +11,29 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log("1. Parsing request JSON...");
-    const { images } = await req.json();
-    console.log("2. Images received:", images ? "yes" : "no");
-
-    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-    console.log("3. API Key loaded:", apiKey ? "yes" : "no");
-
-    if (!apiKey) {
-      console.error("ERROR: ANTHROPIC_API_KEY not set");
-      return new Response(
-        JSON.stringify({ error: "Server configuration error: missing ANTHROPIC_API_KEY" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const body = await req.json();
+    const { images } = body;
 
     if (!images || (!images.front && !images.back)) {
-      console.error("ERROR: No images provided");
       return new Response(
-        JSON.stringify({ error: "No images provided" }),
+        JSON.stringify({ error: "No images provided in request body" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("4. Creating Anthropic client...");
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ error: "ANTHROPIC_API_KEY environment variable not set" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const client = new Anthropic({ apiKey });
 
     const content = [];
 
     if (images.front) {
-      console.log("5a. Adding front image (size: " + images.front.data.length + " bytes)");
       content.push({
         type: "image",
         source: {
@@ -53,7 +46,6 @@ Deno.serve(async (req) => {
     }
 
     if (images.back) {
-      console.log("5b. Adding back image (size: " + images.back.data.length + " bytes)");
       content.push({
         type: "image",
         source: {
@@ -72,41 +64,36 @@ Deno.serve(async (req) => {
 Return only the JSON object, no markdown, no explanation.`,
     });
 
-    console.log("6. Calling Claude API with", content.length, "content items...");
     const message = await client.messages.create({
       model: "claude-3-5-sonnet-20241022",
       max_tokens: 400,
       messages: [{ role: "user", content }],
     });
 
-    console.log("7. Claude responded with", message.content.length, "content blocks");
-    console.log("8. First block type:", message.content[0]?.type);
-
     if (!message.content[0] || message.content[0].type !== "text") {
-      console.error("ERROR: Unexpected response format from Claude");
       return new Response(
-        JSON.stringify({ error: "Invalid response from Claude" }),
+        JSON.stringify({ error: "Claude did not return text response" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const raw = message.content[0].text;
-    console.log("9. Raw text response:", raw.substring(0, 200) + "...");
-
     const clean = raw.replace(/```json|```/g, "").trim();
-    console.log("10. Cleaned text:", clean.substring(0, 200) + "...");
-
     const data = JSON.parse(clean);
-    console.log("11. Successfully parsed JSON:", Object.keys(data).join(", "));
 
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("CATCH ERROR:", error.message);
-    console.error("Stack:", error.stack);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : "";
+    
     return new Response(
-      JSON.stringify({ error: error.message || "Unknown error", details: String(error) }),
+      JSON.stringify({ 
+        error: errorMsg,
+        stack: errorStack,
+        type: error?.constructor?.name || "Unknown"
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
