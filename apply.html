@@ -74,6 +74,19 @@ body.ar{direction:rtl;}
 .err-msg{background:var(--red-light);border:1.5px solid #f5b8b8;border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;font-weight:700;color:var(--red);margin-bottom:14px;display:none;}
 .err-msg.show{display:block;}
 
+.alt-link{text-align:center;font-size:12.5px;color:var(--muted);margin:-6px 0 18px;cursor:pointer;}
+.alt-link strong{color:var(--green);font-weight:800;}
+.alt-link:hover strong{text-decoration:underline;}
+
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius-sm);padding:28px 16px;text-align:center;cursor:pointer;background:var(--off-white);transition:border-color 0.2s,background 0.2s;}
+.upload-zone:hover{border-color:var(--green);background:var(--green-light);}
+.upload-zone .upload-icon{font-size:32px;margin-bottom:8px;}
+.upload-zone p{font-size:13px;font-weight:700;color:var(--muted);}
+.capture-scanning{text-align:center;padding:24px 0;font-size:14px;font-weight:700;color:var(--green-dark);}
+.capture-confirm{text-align:center;padding:8px 0 4px;}
+.capture-confirm p{font-size:13px;color:var(--muted);margin-bottom:6px;}
+.capture-name{font-size:19px;font-weight:900;color:var(--text);margin-bottom:18px;}
+
 /* STATUS CARD */
 .status-card{border-radius:var(--radius-sm);padding:18px;margin-bottom:18px;display:flex;align-items:flex-start;gap:14px;}
 .status-card.new{background:var(--off-white);border:1.5px solid var(--border);}
@@ -177,7 +190,7 @@ body.ar{direction:rtl;}
     <div class="screen-title" id="s-verify-title">Check your status</div>
     <div class="screen-sub" id="s-verify-sub">Enter your QID and the WhatsApp number you registered with us.</div>
     <div class="err-msg" id="verify-err"></div>
-    <div class="field">
+    <div class="field" id="field-qid">
       <label id="lbl-qid">QID Number</label>
       <input type="text" id="inp-qid" inputmode="numeric" placeholder="28xxxxxxxxx" maxlength="11" autocomplete="off">
     </div>
@@ -185,10 +198,34 @@ body.ar{direction:rtl;}
       <label id="lbl-wa">WhatsApp Number</label>
       <input type="tel" id="inp-wa" inputmode="tel" placeholder="+974 5xxx xxxx">
     </div>
+    <div class="field" id="field-password" style="display:none;">
+      <label id="lbl-password">Verification Password</label>
+      <input type="text" id="inp-password" placeholder="Ask our team if you don't have this" autocomplete="off">
+    </div>
+    <div class="alt-link" id="legacy-toggle" onclick="toggleLegacyMode()"></div>
     <button class="btn btn-green" id="verify-btn" onclick="doVerify()">
       <span id="verify-btn-text">Check my status →</span>
     </button>
     <button class="btn btn-back" onclick="showScreen('screen-home')" id="back-home-btn">← Back</button>
+  </div>
+
+  <!-- CAPTURE QID (legacy applicants with no QID on file) -->
+  <div class="screen" id="screen-capture-qid">
+    <div class="screen-title" id="s-capture-title">Almost done!</div>
+    <div class="screen-sub" id="s-capture-sub">We don't have a QID on file for you yet. Please upload a photo of your QID so we can verify you going forward.</div>
+    <div class="err-msg" id="capture-err"></div>
+    <div class="upload-zone" id="capture-qid-zone" onclick="document.getElementById('capture-qid-input').click()">
+      <div class="upload-icon">📷</div>
+      <p id="capture-qid-label">Tap to upload your QID</p>
+      <input type="file" id="capture-qid-input" accept="image/*" style="display:none" onchange="handleCaptureQID(this)">
+    </div>
+    <div class="capture-scanning" id="capture-scanning" style="display:none;"><span id="capture-scanning-text">⏳ Reading your QID…</span></div>
+    <div class="capture-confirm" id="capture-confirm" style="display:none;">
+      <p id="capture-confirm-label">Is this you?</p>
+      <div class="capture-name" id="capture-parsed-name"></div>
+      <button class="btn btn-green" id="capture-confirm-btn" onclick="confirmCaptureQID()">Yes, that's me →</button>
+    </div>
+    <button class="btn btn-back" onclick="showScreen('screen-verify')" id="capture-back-btn">← Back</button>
   </div>
 
   <!-- STATUS VIEW -->
@@ -258,6 +295,8 @@ body.ar{direction:rtl;}
 const SB_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
 const sb = supabase.createClient(SB_URL, SB_KEY);
+const EDGE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder';
+const SCAN_QID_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/scan-qid';
 
 var currentLang = 'en';
 var currentApp = null;
@@ -367,6 +406,7 @@ function setLang(lang) {
   });
   document.getElementById('inp-qid').placeholder = lang === 'ar' ? '٢٨xxxxxxxxx' : '28xxxxxxxxx';
   document.getElementById('inp-wa').placeholder = lang === 'ar' ? '+٩٧٤ ٥xxx xxxx' : '+974 5xxx xxxx';
+  refreshLegacyToggleText();
 }
 
 function showScreen(id) {
@@ -376,7 +416,26 @@ function showScreen(id) {
 }
 
 // ── VERIFY ────────────────────────────────────────────────────────
+var legacyMode = false;
+
+function toggleLegacyMode() {
+  legacyMode = !legacyMode;
+  document.getElementById('field-qid').style.display = legacyMode ? 'none' : 'block';
+  document.getElementById('field-password').style.display = legacyMode ? 'block' : 'none';
+  document.getElementById('verify-err').classList.remove('show');
+  refreshLegacyToggleText();
+}
+
+function refreshLegacyToggleText() {
+  var ar = currentLang === 'ar';
+  document.getElementById('legacy-toggle').innerHTML = legacyMode
+    ? (ar ? 'تملك رقم الهوية؟ <strong>استخدمه بدلاً من ذلك ←</strong>' : 'Have your QID number? <strong>Use it instead →</strong>')
+    : (ar ? 'لا تملك رقم الهوية؟ <strong>استخدم رقم الهاتف بدلاً من ذلك ←</strong>' : "Don't have your QID number? <strong>Use phone number instead →</strong>");
+  document.getElementById('lbl-password').textContent = ar ? 'كلمة التحقق' : 'Verification Password';
+}
+
 async function doVerify() {
+  if (legacyMode) return doVerifyLegacy();
   var qid = document.getElementById('inp-qid').value.trim().replace(/[٠-٩]/g, function(d) { return d.charCodeAt(0) - 0x0660; });
   var wa = document.getElementById('inp-wa').value.trim();
   var errEl = document.getElementById('verify-err');
@@ -434,6 +493,173 @@ async function doVerify() {
     document.getElementById('verify-btn-text').textContent = ar ? 'تحقق من حالتي ←' : 'Check my status →';
   }
 }
+
+async function doVerifyLegacy() {
+  var wa = document.getElementById('inp-wa').value.trim();
+  var pw = document.getElementById('inp-password').value.trim();
+  var errEl = document.getElementById('verify-err');
+  var btn = document.getElementById('verify-btn');
+  var ar = currentLang === 'ar';
+  errEl.classList.remove('show');
+
+  if (!wa) {
+    errEl.textContent = ar ? 'يرجى إدخال رقم الواتساب.' : 'Please enter your WhatsApp number.';
+    errEl.classList.add('show'); return;
+  }
+  if (!pw) {
+    errEl.textContent = ar ? 'يرجى إدخال كلمة التحقق.' : 'Please enter the verification password.';
+    errEl.classList.add('show'); return;
+  }
+
+  btn.disabled = true;
+  document.getElementById('verify-btn-text').textContent = ar ? 'جاري التحقق...' : 'Checking...';
+
+  try {
+    var res = await fetch(EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+      body: JSON.stringify({ type: 'check_reapply_legacy', whatsapp: wa, password: pw })
+    });
+    var data = await res.json();
+
+    if (!data) {
+      errEl.textContent = ar ? 'حدث خطأ. يرجى المحاولة مرة أخرى.' : 'Something went wrong. Please try again.';
+      errEl.classList.add('show'); return;
+    }
+    if (data.error === 'wrong_password') {
+      errEl.textContent = ar ? 'كلمة التحقق غير صحيحة.' : 'That verification password is incorrect.';
+      errEl.classList.add('show'); return;
+    }
+    if (data.error === 'not_found') {
+      errEl.textContent = ar ? 'لم يتم العثور على سجل بهذا رقم الهاتف.' : 'No record found with that phone number.';
+      errEl.classList.add('show'); return;
+    }
+    if (data.error === 'multiple_matches') {
+      errEl.textContent = ar
+        ? 'تم العثور على أكثر من سجل بهذا الرقم. يرجى التواصل معنا مباشرة على واتساب للتحقق.'
+        : "We found more than one record with that number. Please message us directly on WhatsApp so we can verify it's you.";
+      errEl.classList.add('show'); return;
+    }
+
+    currentApp = data;
+    if (data.needs_qid) {
+      document.getElementById('s-capture-title').textContent = ar ? 'خطوة أخيرة!' : 'Almost done!';
+      document.getElementById('s-capture-sub').textContent = ar
+        ? 'لا يوجد رقم هوية مسجل لديك بعد. يرجى رفع صورة هويتك للتحقق مستقبلاً.'
+        : "We don't have a QID on file for you yet. Please upload a photo of your QID so we can verify you going forward.";
+      document.getElementById('capture-qid-label').textContent = ar ? 'اضغط لرفع صورة هويتك' : 'Tap to upload your QID';
+      showScreen('screen-capture-qid');
+    } else if (data.ok) {
+      showStatusScreen(data.status || 'approved', data, data.status === 'approved');
+    } else {
+      showStatusScreen(data.status || (data.error || '').replace('status_', ''), data, false);
+    }
+  } catch(e) {
+    errEl.textContent = ar ? 'خطأ في الاتصال. يرجى المحاولة مرة أخرى.' : 'Connection error. Please try again.';
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('verify-btn-text').textContent = ar ? 'تحقق من حالتي ←' : 'Check my status →';
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function() { resolve(reader.result.split(',')[1]); };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function qidDateToISO(d) {
+  if (!d || typeof d !== 'string') return null;
+  var parts = d.split('/');
+  if (parts.length !== 3) return null;
+  var dd = parts[0].padStart(2, '0');
+  var mm = parts[1].padStart(2, '0');
+  var yyyy = parts[2];
+  if (yyyy.length !== 4 || isNaN(dd) || isNaN(mm) || isNaN(yyyy)) return null;
+  return yyyy + '-' + mm + '-' + dd;
+}
+
+var capturedQIDFile = null;
+var capturedQIDParsed = null;
+
+function handleCaptureQID(input) {
+  if (!input.files || !input.files[0]) return;
+  capturedQIDFile = input.files[0];
+  var ar = currentLang === 'ar';
+  document.getElementById('capture-qid-zone').style.display = 'none';
+  document.getElementById('capture-scanning-text').textContent = ar ? '⏳ جاري قراءة هويتك…' : '⏳ Reading your QID…';
+  document.getElementById('capture-scanning').style.display = 'block';
+  document.getElementById('capture-err').classList.remove('show');
+
+  fileToBase64(capturedQIDFile).then(function(b64) {
+    return fetch(SCAN_QID_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+      body: JSON.stringify({ images: { front: { type: capturedQIDFile.type || 'image/jpeg', data: b64 } } })
+    });
+  }).then(function(r) { return r.json(); }).then(function(raw) {
+    document.getElementById('capture-scanning').style.display = 'none';
+    if (raw.error || !raw.qid_number) {
+      document.getElementById('capture-err').textContent = ar
+        ? 'تعذّرت قراءة الصورة بوضوح. يرجى تجربة صورة أوضح.'
+        : "Couldn't read that clearly. Please try a clearer photo.";
+      document.getElementById('capture-err').classList.add('show');
+      document.getElementById('capture-qid-zone').style.display = 'block';
+      return;
+    }
+    capturedQIDParsed = raw;
+    document.getElementById('capture-confirm-label').textContent = ar ? 'هل هذا أنت؟' : 'Is this you?';
+    document.getElementById('capture-parsed-name').textContent = raw.name || '';
+    document.getElementById('capture-confirm-btn').textContent = ar ? 'نعم، هذا أنا ←' : "Yes, that's me →";
+    document.getElementById('capture-confirm').style.display = 'block';
+  }).catch(function() {
+    document.getElementById('capture-scanning').style.display = 'none';
+    document.getElementById('capture-err').textContent = ar ? 'حدث خطأ. يرجى المحاولة مرة أخرى.' : 'Something went wrong. Please try again.';
+    document.getElementById('capture-err').classList.add('show');
+    document.getElementById('capture-qid-zone').style.display = 'block';
+  });
+}
+
+function confirmCaptureQID() {
+  if (!currentApp || !currentApp.id || !capturedQIDParsed) return;
+  var btn = document.getElementById('capture-confirm-btn');
+  var ar = currentLang === 'ar';
+  btn.disabled = true;
+
+  fetch(EDGE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+    body: JSON.stringify({
+      type: 'attach_qid_to_application',
+      application_id: currentApp.id,
+      qid_number: capturedQIDParsed.qid_number,
+      full_name: capturedQIDParsed.name,
+      qid_expiry: qidDateToISO(capturedQIDParsed.expiry)
+    })
+  }).then(function(r) { return r.json(); }).then(function() {
+    return fileToBase64(capturedQIDFile).then(function(b64) {
+      return fetch(EDGE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+        body: JSON.stringify({ type: 'upload_document', application_id: currentApp.id, doc_key: 'qid_front', file_base64: b64, media_type: capturedQIDFile.type || 'image/jpeg' })
+      });
+    });
+  }).then(function() {
+    currentApp.qid_number = capturedQIDParsed.qid_number;
+    currentApp.name = currentApp.name || capturedQIDParsed.name;
+    showStatusScreen(currentApp.status || 'approved', currentApp, currentApp.status === 'approved');
+  }).catch(function() {
+    document.getElementById('capture-err').textContent = ar ? 'تعذّر الحفظ. يرجى المحاولة مرة أخرى.' : 'Could not save. Please try again.';
+    document.getElementById('capture-err').classList.add('show');
+  }).finally(function() {
+    btn.disabled = false;
+  });
+}
+
 
 function showStatusScreen(status, data, canReapply) {
   var ar = currentLang === 'ar';
@@ -545,6 +771,8 @@ document.addEventListener('input', function(e) {
     e.target.value = e.target.value.replace(/[٠-٩]/g, function(d) { return d.charCodeAt(0) - 0x0660; });
   }
 });
+
+refreshLegacyToggleText();
 </script>
 </body>
 </html>

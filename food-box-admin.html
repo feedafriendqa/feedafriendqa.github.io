@@ -26,9 +26,18 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 .topbar-logo img{width:62px;height:62px;object-fit:contain;}
 .topbar-titles h1{font-size:14px;font-weight:900;color:white;line-height:1.2;white-space:nowrap;}
 .topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.topbar-greeting{text-align:right;min-width:0;}
-.topbar-greeting .g-name{font-size:12px;font-weight:800;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
-.topbar-greeting .g-scope{font-size:10px;color:rgba(255,255,255,0.7);white-space:nowrap;}
+.welcome-banner{margin-bottom:18px;}
+.welcome-banner .welcome-name{font-size:28px;font-weight:900;color:var(--green-dark);line-height:1.25;}
+.welcome-banner .welcome-scope{font-size:13px;font-weight:700;color:var(--muted);margin-top:2px;}
+.allowance-banner{background:var(--green-light);border:1.5px solid #b2d9b8;border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.allowance-banner.allowance-banner-inactive{background:var(--off-white);border-color:var(--border);}
+.allowance-label{font-size:13px;font-weight:800;color:var(--green-dark);}
+.allowance-banner-inactive .allowance-label{color:var(--muted);}
+.allowance-value{font-size:26px;font-weight:900;color:var(--green-dark);}
+.allowance-banner-inactive .allowance-value{font-size:18px;color:var(--muted);}
+.allowance-of{font-size:15px;font-weight:700;color:var(--muted);margin:0 2px;}
+.allowance-infinity{font-size:14px;font-weight:800;color:var(--orange);margin-left:8px;}
+.allowance-pill{display:inline-block;padding:4px 14px;border-radius:20px;font-size:16px;font-weight:900;background:var(--green-light);color:var(--green-dark);border:1.5px solid #b2d9b8;}
 .login-btn{background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);color:white;padding:5px 12px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;}
 .login-btn:hover{background:rgba(255,255,255,0.25);}
 
@@ -236,16 +245,16 @@ select.edit-field{cursor:pointer;}
       </div>
     </div>
     <div class="topbar-right">
-      <div class="topbar-greeting">
-        <div class="g-name" id="admin-greeting"></div>
-        <div class="g-scope" id="admin-scope"></div>
-      </div>
       <button class="login-btn" onclick="openChangePassword()">🔑</button>
       <button class="login-btn" onclick="doLogout()">Sign out</button>
     </div>
   </div>
 
   <div class="main">
+    <div class="welcome-banner">
+      <div class="welcome-name" id="admin-greeting"></div>
+      <div class="welcome-scope" id="admin-scope"></div>
+    </div>
     <div class="stats">
       <div class="stat-card sc-total" onclick="setFilterFromTile('all')"><div class="num" id="stat-total">–</div><div class="lbl">Total</div></div>
       <div class="stat-card sc-new" onclick="setFilterFromTile('new')"><div class="num" id="stat-new">–</div><div class="lbl">New</div></div>
@@ -545,7 +554,7 @@ function renderTable(apps) {
       '<td style="font-size:12px;color:var(--muted);">' + date + '</td>' +
       '<td>' + langTag + '</td>' +
       '<td>' + statusBadge + '</td>' +
-      '<td style="font-size:12px;font-weight:800;color:var(--green);">' + boxesDisplay + '</td>' +
+      '<td>' + (boxesDisplay !== '–' ? '<span class="allowance-pill">' + boxesDisplay + '</span>' : '<span style="color:var(--muted);font-size:12px;">–</span>') + '</td>' +
       '<td>' + assignedPill + '</td>' +
       '<td><button class="action-btn btn-view" onclick="event.stopPropagation();viewApp(\'' + app.id + '\')">View</button>' +
       (status === 'pending' || status === 'new' ? '<button class="action-btn btn-approve" onclick="event.stopPropagation();quickApprove(\'' + app.id + '\')">✓</button>' : '') + '</td>';
@@ -673,6 +682,26 @@ function renderModal(app, members, urlMap) {
   var tags = Array.isArray(app.tags) ? app.tags : (app.tags ? (() => { try { return JSON.parse(app.tags); } catch(e) { return []; } })() : []);
   var isLongTerm = tags.indexOf('long_term') !== -1;
   var body = '';
+
+  // ── FOOD BOX ALLOWANCE (front and center, per request) ──
+  var isActiveCase = status === 'approved' || status === 'active';
+  var receivedSoFar = app.boxes_received != null ? app.boxes_received : 0;
+  var allowanceValueHtml, allowanceLabelText;
+  if (!isActiveCase) {
+    allowanceLabelText = '🥗 Food Box Allowance';
+    allowanceValueHtml = 'Not active yet';
+  } else if (isLongTerm) {
+    allowanceLabelText = '🥗 Food Box Allowance';
+    allowanceValueHtml = receivedSoFar + ' received <span class="allowance-infinity">♾ Long Term</span>';
+  } else {
+    allowanceLabelText = '🥗 Food Box Allowance — taken so far';
+    allowanceValueHtml = receivedSoFar + '<span class="allowance-of">of</span>' + (app.max_boxes != null ? app.max_boxes : '–');
+  }
+  body += '<div class="allowance-banner' + (isActiveCase ? '' : ' allowance-banner-inactive') + '">' +
+    '<div class="allowance-label">' + allowanceLabelText + '</div>' +
+    '<div class="allowance-value">' + allowanceValueHtml + '</div>' +
+    '</div>';
+
   if (app.translation_pending) body += '<div class="translation-alert">🌐 Submitted in Arabic — translation needs review before approving.</div>';
 
   // ── APPLICANT (editable) ──
