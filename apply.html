@@ -80,6 +80,7 @@ body.ar{direction:rtl;}
 
 .upload-zone{border:2px dashed var(--border);border-radius:var(--radius-sm);padding:28px 16px;text-align:center;cursor:pointer;background:var(--off-white);transition:border-color 0.2s,background 0.2s;}
 .upload-zone:hover{border-color:var(--green);background:var(--green-light);}
+.upload-zone.uploaded{border-color:var(--green);border-style:solid;background:var(--green-light);}
 .upload-zone .upload-icon{font-size:32px;margin-bottom:8px;}
 .upload-zone p{font-size:13px;font-weight:700;color:var(--muted);}
 .capture-scanning{text-align:center;padding:24px 0;font-size:14px;font-weight:700;color:var(--green-dark);}
@@ -212,12 +213,17 @@ body.ar{direction:rtl;}
   <!-- CAPTURE QID (legacy applicants with no QID on file) -->
   <div class="screen" id="screen-capture-qid">
     <div class="screen-title" id="s-capture-title">Almost done!</div>
-    <div class="screen-sub" id="s-capture-sub">We don't have a QID on file for you yet. Please upload a photo of your QID so we can verify you going forward.</div>
+    <div class="screen-sub" id="s-capture-sub">We don't have a QID on file for you yet. Please upload both sides of your QID so we can verify you going forward.</div>
     <div class="err-msg" id="capture-err"></div>
-    <div class="upload-zone" id="capture-qid-zone" onclick="document.getElementById('capture-qid-input').click()">
+    <div class="upload-zone" id="capture-qid-front-zone" style="margin-bottom:12px;" onclick="document.getElementById('capture-qid-front-input').click()">
       <div class="upload-icon">📷</div>
-      <p id="capture-qid-label">Tap to upload your QID</p>
-      <input type="file" id="capture-qid-input" accept="image/*" style="display:none" onchange="handleCaptureQID(this)">
+      <p id="capture-qid-front-label">Tap to upload the front of your QID</p>
+      <input type="file" id="capture-qid-front-input" accept="image/*" style="display:none" onchange="handleCaptureQIDFront(this)">
+    </div>
+    <div class="upload-zone" id="capture-qid-back-zone" onclick="document.getElementById('capture-qid-back-input').click()">
+      <div class="upload-icon">🔄</div>
+      <p id="capture-qid-back-label">Tap to upload the back of your QID</p>
+      <input type="file" id="capture-qid-back-input" accept="image/*" style="display:none" onchange="handleCaptureQIDBack(this)">
     </div>
     <div class="capture-scanning" id="capture-scanning" style="display:none;"><span id="capture-scanning-text">⏳ Reading your QID…</span></div>
     <div class="capture-confirm" id="capture-confirm" style="display:none;">
@@ -545,9 +551,11 @@ async function doVerifyLegacy() {
     if (data.needs_qid) {
       document.getElementById('s-capture-title').textContent = ar ? 'خطوة أخيرة!' : 'Almost done!';
       document.getElementById('s-capture-sub').textContent = ar
-        ? 'لا يوجد رقم هوية مسجل لديك بعد. يرجى رفع صورة هويتك للتحقق مستقبلاً.'
-        : "We don't have a QID on file for you yet. Please upload a photo of your QID so we can verify you going forward.";
-      document.getElementById('capture-qid-label').textContent = ar ? 'اضغط لرفع صورة هويتك' : 'Tap to upload your QID';
+        ? 'لا يوجد رقم هوية مسجل لديك بعد. يرجى رفع وجهي هويتك للتحقق مستقبلاً.'
+        : "We don't have a QID on file for you yet. Please upload both sides of your QID so we can verify you going forward.";
+      document.getElementById('capture-qid-front-label').textContent = ar ? 'اضغط لرفع الوجه الأمامي للهوية' : 'Tap to upload the front of your QID';
+      document.getElementById('capture-qid-back-label').textContent = ar ? 'اضغط لرفع الوجه الخلفي للهوية' : 'Tap to upload the back of your QID';
+      resetCaptureScreen();
       showScreen('screen-capture-qid');
     } else if (data.ok) {
       showStatusScreen(data.status || 'approved', data, data.status === 'approved');
@@ -583,32 +591,68 @@ function qidDateToISO(d) {
   return yyyy + '-' + mm + '-' + dd;
 }
 
-var capturedQIDFile = null;
+var captureQIDFrontFile = null;
+var captureQIDBackFile = null;
 var capturedQIDParsed = null;
 
-function handleCaptureQID(input) {
+function resetCaptureScreen() {
+  captureQIDFrontFile = null;
+  captureQIDBackFile = null;
+  capturedQIDParsed = null;
+  ['capture-qid-front-zone', 'capture-qid-back-zone'].forEach(function(id) {
+    var el = document.getElementById(id);
+    el.style.display = 'block';
+    el.classList.remove('uploaded');
+  });
+  document.getElementById('capture-qid-front-input').value = '';
+  document.getElementById('capture-qid-back-input').value = '';
+  document.getElementById('capture-scanning').style.display = 'none';
+  document.getElementById('capture-confirm').style.display = 'none';
+  document.getElementById('capture-err').classList.remove('show');
+}
+
+function handleCaptureQIDFront(input) {
   if (!input.files || !input.files[0]) return;
-  capturedQIDFile = input.files[0];
+  captureQIDFrontFile = input.files[0];
+  document.getElementById('capture-qid-front-zone').classList.add('uploaded');
+  if (captureQIDBackFile) scanCapturedQID();
+}
+
+function handleCaptureQIDBack(input) {
+  if (!input.files || !input.files[0]) return;
+  captureQIDBackFile = input.files[0];
+  document.getElementById('capture-qid-back-zone').classList.add('uploaded');
+  if (captureQIDFrontFile) scanCapturedQID();
+}
+
+function scanCapturedQID() {
   var ar = currentLang === 'ar';
-  document.getElementById('capture-qid-zone').style.display = 'none';
+  document.getElementById('capture-qid-front-zone').style.display = 'none';
+  document.getElementById('capture-qid-back-zone').style.display = 'none';
   document.getElementById('capture-scanning-text').textContent = ar ? '⏳ جاري قراءة هويتك…' : '⏳ Reading your QID…';
   document.getElementById('capture-scanning').style.display = 'block';
   document.getElementById('capture-err').classList.remove('show');
 
-  fileToBase64(capturedQIDFile).then(function(b64) {
+  Promise.all([fileToBase64(captureQIDFrontFile), fileToBase64(captureQIDBackFile)]).then(function(b64s) {
     return fetch(SCAN_QID_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
-      body: JSON.stringify({ images: { front: { type: capturedQIDFile.type || 'image/jpeg', data: b64 } } })
+      body: JSON.stringify({
+        images: {
+          front: { type: captureQIDFrontFile.type || 'image/jpeg', data: b64s[0] },
+          back: { type: captureQIDBackFile.type || 'image/jpeg', data: b64s[1] }
+        }
+      })
     });
   }).then(function(r) { return r.json(); }).then(function(raw) {
     document.getElementById('capture-scanning').style.display = 'none';
     if (raw.error || !raw.qid_number) {
       document.getElementById('capture-err').textContent = ar
         ? 'تعذّرت قراءة الصورة بوضوح. يرجى تجربة صورة أوضح.'
-        : "Couldn't read that clearly. Please try a clearer photo.";
+        : "Couldn't read that clearly. Please try clearer photos.";
       document.getElementById('capture-err').classList.add('show');
-      document.getElementById('capture-qid-zone').style.display = 'block';
+      document.getElementById('capture-qid-front-zone').style.display = 'block';
+      document.getElementById('capture-qid-back-zone').style.display = 'block';
       return;
     }
     capturedQIDParsed = raw;
@@ -620,7 +664,8 @@ function handleCaptureQID(input) {
     document.getElementById('capture-scanning').style.display = 'none';
     document.getElementById('capture-err').textContent = ar ? 'حدث خطأ. يرجى المحاولة مرة أخرى.' : 'Something went wrong. Please try again.';
     document.getElementById('capture-err').classList.add('show');
-    document.getElementById('capture-qid-zone').style.display = 'block';
+    document.getElementById('capture-qid-front-zone').style.display = 'block';
+    document.getElementById('capture-qid-back-zone').style.display = 'block';
   });
 }
 
@@ -638,16 +683,26 @@ function confirmCaptureQID() {
       application_id: currentApp.id,
       qid_number: capturedQIDParsed.qid_number,
       full_name: capturedQIDParsed.name,
-      qid_expiry: qidDateToISO(capturedQIDParsed.expiry)
+      qid_expiry: qidDateToISO(capturedQIDParsed.expiry),
+      nationality: capturedQIDParsed.nationality
     })
   }).then(function(r) { return r.json(); }).then(function() {
-    return fileToBase64(capturedQIDFile).then(function(b64) {
-      return fetch(EDGE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
-        body: JSON.stringify({ type: 'upload_document', application_id: currentApp.id, doc_key: 'qid_front', file_base64: b64, media_type: capturedQIDFile.type || 'image/jpeg' })
-      });
-    });
+    return Promise.all([
+      fileToBase64(captureQIDFrontFile).then(function(b64) {
+        return fetch(EDGE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+          body: JSON.stringify({ type: 'upload_document', application_id: currentApp.id, doc_key: 'qid_front', file_base64: b64, media_type: captureQIDFrontFile.type || 'image/jpeg' })
+        });
+      }),
+      fileToBase64(captureQIDBackFile).then(function(b64) {
+        return fetch(EDGE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+          body: JSON.stringify({ type: 'upload_document', application_id: currentApp.id, doc_key: 'qid_back', file_base64: b64, media_type: captureQIDBackFile.type || 'image/jpeg' })
+        });
+      })
+    ]);
   }).then(function() {
     currentApp.qid_number = capturedQIDParsed.qid_number;
     currentApp.name = currentApp.name || capturedQIDParsed.name;
