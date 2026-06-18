@@ -78,6 +78,16 @@ body.ar{direction:rtl;}
 .alt-link strong{color:var(--green);font-weight:800;}
 .alt-link:hover strong{text-decoration:underline;}
 
+.loc-choice{display:flex;gap:10px;}
+.loc-btn{flex:1;padding:13px 10px;border:2px solid var(--border);border-radius:var(--radius-sm);background:var(--off-white);color:var(--text);font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all 0.2s;}
+.loc-btn:hover{border-color:var(--green);}
+.loc-btn.selected{background:var(--green);border-color:var(--green);color:white;}
+.loc-btn.selected.moved{background:var(--yellow);border-color:var(--yellow);color:var(--text);}
+
+.diaper-pills{display:flex;flex-wrap:wrap;gap:8px;}
+.diaper-pill{padding:9px 18px;border:1.5px solid var(--border);border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;background:var(--yellow-light);color:var(--green-dark);transition:all 0.15s;user-select:none;}
+.diaper-pill.selected{border-color:var(--green);background:var(--green-light);color:var(--green);}
+
 .upload-zone{border:2px dashed var(--border);border-radius:var(--radius-sm);padding:28px 16px;text-align:center;cursor:pointer;background:var(--off-white);transition:border-color 0.2s,background 0.2s;}
 .upload-zone:hover{border-color:var(--green);background:var(--green-light);}
 .upload-zone.uploaded{border-color:var(--green);border-style:solid;background:var(--green-light);}
@@ -262,10 +272,56 @@ body.ar{direction:rtl;}
         <div class="addr-label" id="lbl-delivery-addr">Delivery address</div>
         <div class="addr-val" id="status-address"></div>
       </div>
-      <div class="check-item">
-        <input type="checkbox" id="chk-details" onchange="updateReapplyBtn()">
-        <label for="chk-details" id="lbl-chk-details">My address and household details are still correct.</label>
+      <div class="addr-box" id="household-size-box" style="display:none;">
+        <div class="addr-label" id="lbl-household-size">Household members</div>
+        <div class="addr-val" id="status-household-size"></div>
       </div>
+
+      <div class="field">
+        <label id="lbl-still-here">Are you still living at this address?</label>
+        <div class="loc-choice">
+          <button type="button" class="loc-btn" id="loc-yes-btn" onclick="chooseStillHere(true)">Yes, still here</button>
+          <button type="button" class="loc-btn" id="loc-no-btn" onclick="chooseStillHere(false)">No, I've moved</button>
+        </div>
+      </div>
+
+      <div id="address-update-block" style="display:none;">
+        <div class="upload-zone" id="reapply-plate-zone" onclick="document.getElementById('reapply-plate-input').click()">
+          <div class="upload-icon">🪧</div>
+          <p id="reapply-plate-label">Tap to upload your new blue address plate</p>
+          <input type="file" id="reapply-plate-input" accept="image/*" style="display:none" onchange="handleReapplyPlate(this)">
+        </div>
+        <div class="capture-scanning" id="reapply-plate-scanning" style="display:none;"><span id="reapply-plate-scanning-text">⏳ Reading your address…</span></div>
+        <div class="addr-box" id="reapply-plate-confirm" style="display:none;">
+          <div class="addr-label" id="lbl-new-addr">New address</div>
+          <div class="addr-val" id="reapply-plate-parsed"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label id="lbl-needs-diapers">Does anyone in your household currently need diapers?</label>
+        <div class="loc-choice">
+          <button type="button" class="loc-btn" id="diaper-yes-btn" onclick="chooseNeedsDiapers(true)">Yes</button>
+          <button type="button" class="loc-btn" id="diaper-no-btn" onclick="chooseNeedsDiapers(false)">No</button>
+        </div>
+      </div>
+      <div class="field" id="diaper-size-block" style="display:none;">
+        <label id="lbl-diaper-size">What size?</label>
+        <div class="diaper-pills" id="reapply-diaper-pills"></div>
+      </div>
+
+      <div class="field">
+        <label id="lbl-needs-formula">Is there a baby aged 1 or under who needs formula?</label>
+        <div class="loc-choice">
+          <button type="button" class="loc-btn" id="formula-yes-btn" onclick="chooseNeedsFormula(true)">Yes</button>
+          <button type="button" class="loc-btn" id="formula-no-btn" onclick="chooseNeedsFormula(false)">No</button>
+        </div>
+      </div>
+      <div class="field" id="formula-brand-block" style="display:none;">
+        <label id="lbl-formula-brand">Any particular brand preference?</label>
+        <input type="text" id="inp-formula-brand" placeholder="e.g. Similac">
+      </div>
+
       <div class="check-item">
         <input type="checkbox" id="chk-need" onchange="updateReapplyBtn()">
         <label for="chk-need" id="lbl-chk-need">I confirm I still need food support and cannot purchase sufficient food for my household.</label>
@@ -327,7 +383,6 @@ var T = {
     'back-home-btn': '← Back',
     'lbl-boxes': 'Boxes received',
     'lbl-delivery-addr': 'Delivery address',
-    'lbl-chk-details': 'My address and household details are still correct.',
     'lbl-chk-need': 'I confirm I still need food support and cannot purchase sufficient food for my household.',
     'reapply-btn-text': 'Request my food box →',
     'status-back-btn': '← Back',
@@ -354,7 +409,6 @@ var T = {
     'back-home-btn': '→ رجوع',
     'lbl-boxes': 'الصناديق المستلمة',
     'lbl-delivery-addr': 'عنوان التوصيل',
-    'lbl-chk-details': 'عنواني وتفاصيل أسرتي لا تزال صحيحة.',
     'lbl-chk-need': 'أؤكد أنني لا أزال بحاجة إلى دعم غذائي وغير قادر على شراء طعام كافٍ لأسرتي.',
     'reapply-btn-text': 'طلب صندوق الطعام ←',
     'status-back-btn': '→ رجوع',
@@ -381,6 +435,11 @@ var STATUS_CONTENT = {
     icon: '✅',
     en: { title: "You're approved!", msg: "Your household is approved for the food box programme. Confirm your details below to request your next box." },
     ar: { title: "تمت الموافقة عليك!", msg: "أسرتك معتمدة في برنامج صندوق الطعام. أكّد بياناتك أدناه لطلب صندوقك القادم." }
+  },
+  long_term: {
+    icon: '💚',
+    en: { title: "You're part of our long-term support", msg: "Your household is on our long-term support list with no limit on boxes. Confirm your details below to request your next box." },
+    ar: { title: "أنت ضمن برنامج الدعم طويل الأمد", msg: "أسرتك مسجلة في قائمة الدعم طويل الأمد بدون حد لعدد الصناديق. أكّد بياناتك أدناه لطلب صندوقك القادم." }
   },
   confirmed: {
     icon: '📦',
@@ -558,7 +617,7 @@ async function doVerifyLegacy() {
       resetCaptureScreen();
       showScreen('screen-capture-qid');
     } else if (data.ok) {
-      showStatusScreen(data.status || 'approved', data, data.status === 'approved');
+      showStatusScreen(data.status || 'approved', data, true);
     } else {
       showStatusScreen(data.status || (data.error || '').replace('status_', ''), data, false);
     }
@@ -706,7 +765,7 @@ function confirmCaptureQID() {
   }).then(function() {
     currentApp.qid_number = capturedQIDParsed.qid_number;
     currentApp.name = currentApp.name || capturedQIDParsed.name;
-    showStatusScreen(currentApp.status || 'approved', currentApp, currentApp.status === 'approved');
+    showStatusScreen(currentApp.status || 'approved', currentApp, !!currentApp.ok);
   }).catch(function() {
     document.getElementById('capture-err').textContent = ar ? 'تعذّر الحفظ. يرجى المحاولة مرة أخرى.' : 'Could not save. Please try again.';
     document.getElementById('capture-err').classList.add('show');
@@ -757,9 +816,32 @@ function showStatusScreen(status, data, canReapply) {
       data.zone ? (ar ? 'م.' : 'Zone ') + data.zone : null].filter(Boolean);
     document.getElementById('status-address').textContent = parts.join(', ') || (ar ? 'كما هو مسجل' : 'As registered');
     document.getElementById('lbl-delivery-addr').textContent = ar ? 'عنوان التوصيل' : 'Delivery address';
-    document.getElementById('lbl-chk-details').textContent = ar ? 'عنواني وتفاصيل أسرتي لا تزال صحيحة.' : 'My address and household details are still correct.';
+
+    var hhBox = document.getElementById('household-size-box');
+    if (data.household_size) {
+      hhBox.style.display = 'block';
+      document.getElementById('lbl-household-size').textContent = ar ? 'عدد أفراد الأسرة' : 'Household members';
+      document.getElementById('status-household-size').textContent = data.household_size;
+    } else {
+      hhBox.style.display = 'none';
+    }
+
+    document.getElementById('lbl-still-here').textContent = ar ? 'هل ما زلت تعيش في هذا العنوان؟' : 'Are you still living at this address?';
+    document.getElementById('loc-yes-btn').textContent = ar ? 'نعم، ما زلت هنا' : 'Yes, still here';
+    document.getElementById('loc-no-btn').textContent = ar ? 'لا، انتقلت' : "No, I've moved";
+    document.getElementById('reapply-plate-label').textContent = ar ? 'اضغط لرفع لوحة عنوانك الجديدة' : 'Tap to upload your new blue address plate';
+    document.getElementById('lbl-new-addr').textContent = ar ? 'العنوان الجديد' : 'New address';
+    document.getElementById('lbl-needs-diapers').textContent = ar ? 'هل يحتاج أي فرد في أسرتك إلى حفاضات حالياً؟' : 'Does anyone in your household currently need diapers?';
+    document.getElementById('diaper-yes-btn').textContent = ar ? 'نعم' : 'Yes';
+    document.getElementById('diaper-no-btn').textContent = ar ? 'لا' : 'No';
+    document.getElementById('lbl-diaper-size').textContent = ar ? 'ما هو المقاس؟' : 'What size?';
+    document.getElementById('lbl-needs-formula').textContent = ar ? 'هل يوجد طفل بعمر سنة أو أقل يحتاج إلى حليب أطفال؟' : 'Is there a baby aged 1 or under who needs formula?';
+    document.getElementById('formula-yes-btn').textContent = ar ? 'نعم' : 'Yes';
+    document.getElementById('formula-no-btn').textContent = ar ? 'لا' : 'No';
+    document.getElementById('lbl-formula-brand').textContent = ar ? 'هل لديك تفضيل لنوع معين؟' : 'Any particular brand preference?';
     document.getElementById('lbl-chk-need').textContent = ar ? 'أؤكد أنني لا أزال بحاجة إلى دعم غذائي.' : 'I confirm I still need food support.';
-    document.getElementById('chk-details').checked = false;
+    resetLocationChoice();
+    resetDiaperFormulaChoice(data.diaper_size, data.formula);
     document.getElementById('chk-need').checked = false;
     document.getElementById('reapply-btn').disabled = true;
     document.getElementById('reapply-btn-text').textContent = ar ? 'طلب صندوق الطعام ←' : 'Request my food box →';
@@ -772,8 +854,158 @@ function showStatusScreen(status, data, canReapply) {
   showScreen('screen-status');
 }
 
+var locationChoice = null; // 'here' | 'moved' | null
+var movedAddressConfirmed = false;
+var reapplyPlateFile = null;
+var diaperChoice = null; // 'yes' | 'no' | null
+var diaperSizeVal = null;
+var formulaChoice = null; // 'yes' | 'no' | null
+
+var DIAPER_SIZES = ['NB (Newborn)', 'S (Size 1)', 'M (Size 2)', 'L (Size 3)', 'XL (Size 4)', 'XXL (Size 5)'];
+
+function resetLocationChoice() {
+  locationChoice = null;
+  movedAddressConfirmed = false;
+  reapplyPlateFile = null;
+  document.getElementById('loc-yes-btn').classList.remove('selected');
+  document.getElementById('loc-no-btn').classList.remove('selected', 'moved');
+  document.getElementById('address-update-block').style.display = 'none';
+  document.getElementById('reapply-plate-zone').style.display = 'block';
+  document.getElementById('reapply-plate-confirm').style.display = 'none';
+  document.getElementById('reapply-plate-scanning').style.display = 'none';
+  document.getElementById('reapply-plate-input').value = '';
+}
+
+function resetDiaperFormulaChoice(existingDiaperSize, existingFormula) {
+  diaperChoice = null;
+  diaperSizeVal = null;
+  formulaChoice = null;
+  document.getElementById('diaper-yes-btn').classList.remove('selected');
+  document.getElementById('diaper-no-btn').classList.remove('selected');
+  document.getElementById('diaper-size-block').style.display = 'none';
+  document.getElementById('formula-yes-btn').classList.remove('selected');
+  document.getElementById('formula-no-btn').classList.remove('selected');
+  document.getElementById('formula-brand-block').style.display = 'none';
+  document.getElementById('inp-formula-brand').value = '';
+
+  var pillsContainer = document.getElementById('reapply-diaper-pills');
+  pillsContainer.innerHTML = '';
+  DIAPER_SIZES.forEach(function(s) {
+    var pill = document.createElement('div');
+    pill.className = 'diaper-pill';
+    pill.dataset.val = s;
+    pill.textContent = s;
+    pill.onclick = function() { selectReapplyDiaper(pill); };
+    if (s === existingDiaperSize) pill.classList.add('selected');
+    pillsContainer.appendChild(pill);
+  });
+  if (existingDiaperSize && DIAPER_SIZES.indexOf(existingDiaperSize) !== -1) {
+    diaperSizeVal = existingDiaperSize;
+  }
+  // Pre-fill from whatever's already on file as a starting point — they can change it.
+  if (existingFormula && existingFormula !== 'Not needed') {
+    document.getElementById('inp-formula-brand').value = existingFormula;
+  }
+}
+
+function selectReapplyDiaper(pill) {
+  document.querySelectorAll('#reapply-diaper-pills .diaper-pill').forEach(function(p) { p.classList.remove('selected'); });
+  pill.classList.add('selected');
+  diaperSizeVal = pill.dataset.val;
+  updateReapplyBtn();
+}
+
+function chooseNeedsDiapers(isYes) {
+  diaperChoice = isYes ? 'yes' : 'no';
+  document.getElementById('diaper-yes-btn').classList.toggle('selected', isYes);
+  document.getElementById('diaper-no-btn').classList.toggle('selected', !isYes);
+  document.getElementById('diaper-size-block').style.display = isYes ? 'block' : 'none';
+  if (!isYes) diaperSizeVal = null;
+  updateReapplyBtn();
+}
+
+function chooseNeedsFormula(isYes) {
+  formulaChoice = isYes ? 'yes' : 'no';
+  document.getElementById('formula-yes-btn').classList.toggle('selected', isYes);
+  document.getElementById('formula-no-btn').classList.toggle('selected', !isYes);
+  document.getElementById('formula-brand-block').style.display = isYes ? 'block' : 'none';
+  updateReapplyBtn();
+}
+
+function chooseStillHere(isHere) {
+  locationChoice = isHere ? 'here' : 'moved';
+  movedAddressConfirmed = false;
+  document.getElementById('loc-yes-btn').classList.toggle('selected', isHere);
+  document.getElementById('loc-no-btn').classList.toggle('selected', !isHere);
+  document.getElementById('loc-no-btn').classList.toggle('moved', !isHere);
+  document.getElementById('address-update-block').style.display = isHere ? 'none' : 'block';
+  if (isHere) {
+    document.getElementById('reapply-plate-zone').style.display = 'block';
+    document.getElementById('reapply-plate-confirm').style.display = 'none';
+  }
+  updateReapplyBtn();
+}
+
+function handleReapplyPlate(input) {
+  if (!input.files || !input.files[0]) return;
+  reapplyPlateFile = input.files[0];
+  var ar = currentLang === 'ar';
+  document.getElementById('reapply-plate-zone').style.display = 'none';
+  document.getElementById('reapply-plate-scanning-text').textContent = ar ? '⏳ جاري قراءة عنوانك…' : '⏳ Reading your address…';
+  document.getElementById('reapply-plate-scanning').style.display = 'block';
+
+  fileToBase64(reapplyPlateFile).then(function(b64) {
+    return fetch(EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+      body: JSON.stringify({ type: 'scan_plate', image_base64: b64, media_type: reapplyPlateFile.type || 'image/jpeg' })
+    });
+  }).then(function(r) { return r.json(); }).then(function(raw) {
+    document.getElementById('reapply-plate-scanning').style.display = 'none';
+    var parsed = raw.data || {};
+    if (!parsed.zone && !parsed.street && !parsed.building) {
+      document.getElementById('reapply-err').textContent = ar
+        ? 'تعذّرت قراءة اللوحة بوضوح. يرجى تجربة صورة أوضح.'
+        : "Couldn't read that plate clearly. Please try a clearer photo.";
+      document.getElementById('reapply-err').classList.add('show');
+      document.getElementById('reapply-plate-zone').style.display = 'block';
+      return;
+    }
+    document.getElementById('reapply-err').classList.remove('show');
+
+    return fetch(EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+      body: JSON.stringify({
+        type: 'update_application_address',
+        application_id: currentApp.id,
+        zone: parsed.zone, street: parsed.street, building: parsed.building, unit: parsed.unit
+      })
+    }).then(function(r) { return r.json(); }).then(function() {
+      currentApp.zone = parsed.zone; currentApp.street = parsed.street;
+      currentApp.building = parsed.building; currentApp.unit = parsed.unit;
+      var newParts = [parsed.building, parsed.unit ? (ar ? 'وحدة ' : 'Unit ') + parsed.unit : null,
+        parsed.street ? (ar ? 'ش.' : 'St.') + parsed.street : null,
+        parsed.zone ? (ar ? 'م.' : 'Zone ') + parsed.zone : null].filter(Boolean);
+      document.getElementById('reapply-plate-parsed').textContent = newParts.join(', ');
+      document.getElementById('status-address').textContent = newParts.join(', ');
+      document.getElementById('reapply-plate-confirm').style.display = 'block';
+      movedAddressConfirmed = true;
+      updateReapplyBtn();
+    });
+  }).catch(function() {
+    document.getElementById('reapply-plate-scanning').style.display = 'none';
+    document.getElementById('reapply-err').textContent = ar ? 'حدث خطأ. يرجى المحاولة مرة أخرى.' : 'Something went wrong. Please try again.';
+    document.getElementById('reapply-err').classList.add('show');
+    document.getElementById('reapply-plate-zone').style.display = 'block';
+  });
+}
+
 function updateReapplyBtn() {
-  var ok = document.getElementById('chk-details').checked && document.getElementById('chk-need').checked;
+  var locationOk = locationChoice === 'here' || (locationChoice === 'moved' && movedAddressConfirmed);
+  var diaperOk = diaperChoice === 'no' || (diaperChoice === 'yes' && !!diaperSizeVal);
+  var formulaOk = formulaChoice === 'yes' || formulaChoice === 'no';
+  var ok = locationOk && diaperOk && formulaOk && document.getElementById('chk-need').checked;
   document.getElementById('reapply-btn').disabled = !ok;
 }
 
@@ -785,6 +1017,20 @@ async function doReapply() {
   btn.disabled = true;
   document.getElementById('reapply-btn-text').textContent = ar ? 'جاري التأكيد...' : 'Confirming...';
   errEl.classList.remove('show');
+
+  // Fire-and-forget: this is supplementary info, not eligibility-critical,
+  // so it shouldn't block or risk the actual box confirmation below.
+  var formulaBrand = document.getElementById('inp-formula-brand').value.trim();
+  fetch(EDGE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+    body: JSON.stringify({
+      type: 'update_reapply_extras',
+      application_id: currentApp.id,
+      diaper_size: diaperChoice === 'yes' ? diaperSizeVal : null,
+      formula: formulaChoice === 'yes' ? (formulaBrand || 'Yes') : 'Not needed'
+    })
+  }).catch(function() {});
 
   try {
     var result = await sb.rpc('do_reapply', { p_application_id: currentApp.id });
@@ -805,10 +1051,16 @@ async function doReapply() {
     document.getElementById('s-success-sub').textContent = ar
       ? 'سيقوم فريقنا بالتوصيل إلى عنوانك. ستتلقى رسالة واتساب قبل التسليم.'
       : 'Our team will deliver to your registered address. You will receive a WhatsApp message before delivery.';
-    var remaining = (currentApp.max_boxes || 3) - (currentApp.boxes_received || 0) - 1;
-    document.getElementById('remaining-tag').textContent = ar
-      ? 'الصناديق المتبقية في رصيدك: ' + remaining
-      : 'Boxes remaining in your allowance: ' + remaining;
+    if (currentApp.status === 'long_term' || currentApp.max_boxes == null) {
+      document.getElementById('remaining-tag').textContent = ar
+        ? 'أنت ضمن برنامج الدعم طويل الأمد — بلا حد لعدد الصناديق'
+        : "You're on long-term support — no limit on boxes";
+    } else {
+      var remaining = (currentApp.max_boxes || 3) - (currentApp.boxes_received || 0) - 1;
+      document.getElementById('remaining-tag').textContent = ar
+        ? 'الصناديق المتبقية في رصيدك: ' + remaining
+        : 'Boxes remaining in your allowance: ' + remaining;
+    }
     document.getElementById('success-back-btn').textContent = ar ? '→ الرئيسية' : '← Home';
     showScreen('screen-success');
 
