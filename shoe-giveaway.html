@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shoe Size Sign-up – Feed a Friend</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #2d7a3a;
+  --green-dark: #1e5528;
+  --green-light: #eaf5ec;
+  --yellow: #f0c24b;
+  --yellow-dark: #c79a2c;
+  --purple: #9b6fd1;
+  --purple-dark: #6f4aa3;
+  --teal: #4cada0;
+  --teal-dark: #347d73;
+  --coral: #e2604e;
+  --coral-dark: #b8483a;
+  --off-white: #f7f9f7;
+  --text: #1a2e1d;
+  --muted: #5a7060;
+  --radius: 20px;
+  --radius-sm: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Nunito', 'Segoe UI', sans-serif; background: var(--off-white); color: var(--text); min-height: 100vh; }
+body.ar { direction: rtl; }
+body.ar input::placeholder { direction: rtl; font-family: inherit; }
+h1, h2, .fun-font { font-family: 'Baloo 2', 'Nunito', sans-serif; }
+
+.lang-bar { background: var(--green-dark); display: flex; justify-content: flex-end; padding: 7px 20px; gap: 8px; }
+.lang-btn { background: transparent; border: 1.5px solid rgba(255,255,255,0.4); color: white; padding: 4px 16px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 700; font-family: 'Nunito', sans-serif; }
+.lang-btn.active { background: white; color: var(--green-dark); border-color: white; }
+
+/* ── HEADER: plain, like the homepage hero ── */
+.header { background: white; padding: 28px 20px 22px; text-align: center; }
+.header h1 { color: var(--green); font-size: 30px; font-weight: 800; margin-bottom: 8px; line-height: 1.2; }
+.header p { color: var(--muted); font-size: 14px; font-weight: 700; max-width: 360px; margin: 0 auto; line-height: 1.5; }
+
+.main { max-width: 600px; margin: 0 auto; padding: 6px 16px 48px; }
+
+/* small progress bar above step 2 */
+.step-bar { background: var(--green); color: white; text-align: center; padding: 12px 16px; font-size: 13px; font-weight: 800; font-family: 'Baloo 2', sans-serif; }
+
+/* ── colorful section cards, matching the homepage tile look ── */
+.card { border-radius: var(--radius); padding: 20px; margin-bottom: 14px; color: white; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+.card.c-purple { background: var(--purple); }
+.card.c-teal { background: var(--teal); }
+.card.c-yellow { background: var(--yellow); }
+.card.c-coral { background: var(--coral); }
+.card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.card-icon { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.35); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.card-title { font-size: 16px; font-weight: 700; font-family: 'Baloo 2', sans-serif; }
+.card-sub { font-size: 12px; opacity: 0.92; margin: 6px 0 14px; line-height: 1.5; font-weight: 600; }
+
+.field { margin-bottom: 0; }
+.field label { display: block; font-size: 11.5px; font-weight: 800; margin-bottom: 6px; opacity: 0.9; }
+.field input { width: 100%; border: none; border-radius: 12px; padding: 13px 14px; font-family: 'Nunito', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); outline: none; background: white; }
+.field input::placeholder { color: #b9c4ba; font-weight: 600; }
+
+/* phone status box */
+.status-box { display: none; border-radius: 10px; padding: 9px 12px; margin-top: 10px; font-size: 12.5px; font-weight: 800; }
+.status-box.visible { display: block; }
+.status-checking { background: rgba(255,255,255,0.22); }
+.status-ok { background: rgba(255,255,255,0.9); color: var(--purple-dark); }
+.status-notfound { background: rgba(255,255,255,0.22); }
+
+/* QID required section */
+.qid-pair { display: flex; gap: 10px; margin-bottom: 10px; }
+.qid-zone { flex: 1; border: 2px dashed rgba(255,255,255,0.65); border-radius: 12px; padding: 16px 8px; text-align: center; cursor: pointer; background: rgba(255,255,255,0.12); }
+.qid-zone.uploaded { border-style: solid; background: rgba(255,255,255,0.25); }
+.qid-zone .icon { font-size: 19px; margin-bottom: 2px; }
+.qid-zone strong { display: block; font-size: 11.5px; font-weight: 800; }
+.qid-zone input[type="file"] { display: none; }
+.scan-status { font-size: 12px; opacity: 0.9; padding: 6px 0; display: none; align-items: center; gap: 8px; font-weight: 700; }
+.scan-status.visible { display: flex; }
+.spinner { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.5); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.qid-name-row { margin-top: 10px; }
+
+/* shoe size grid */
+.size-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 4px; }
+.size-chip { padding: 14px 0; text-align: center; border-radius: 12px; font-size: 15px; font-weight: 800; color: white; cursor: pointer; background: rgba(255,255,255,0.25); border: 2px solid transparent; }
+.size-chip.selected { background: white; color: var(--yellow-dark); border-color: white; }
+.size-chip.notsure { grid-column: span 2; font-size: 11.5px; }
+
+/* checkbox confirm */
+.confirm-row { display: flex; align-items: flex-start; gap: 10px; background: rgba(255,255,255,0.18); border-radius: 12px; padding: 12px 14px; }
+.confirm-row input { width: 19px; height: 19px; margin-top: 1px; accent-color: white; flex-shrink: 0; }
+.confirm-row span { font-size: 12.5px; font-weight: 700; line-height: 1.5; }
+
+.btn-primary { width: 100%; background: var(--green); color: white; border: none; border-radius: 16px; padding: 17px; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 4px; box-shadow: 0 6px 18px rgba(45,122,58,0.3); }
+.btn-primary:active { background: var(--green-dark); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-row { display: flex; gap: 10px; }
+.btn-back { flex: 0 0 90px; background: white; color: var(--green-dark); border: 2px solid var(--green); border-radius: 16px; padding: 15px 0; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; }
+
+.footnote { font-size: 11.5px; color: var(--muted); text-align: center; line-height: 1.6; margin-top: 12px; padding: 0 10px; }
+
+#success-view { display: none; min-height: 80vh; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; }
+#success-view .icon { font-size: 54px; margin-bottom: 14px; }
+#success-view h2 { font-size: 22px; color: var(--green-dark); margin-bottom: 10px; font-weight: 800; }
+#success-view p { font-size: 13.5px; color: var(--muted); max-width: 340px; line-height: 1.65; font-weight: 600; }
+
+#step2-view { display: none; }
+</style>
+</head>
+<body>
+
+<div class="lang-bar">
+  <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+  <button class="lang-btn" id="btn-ar" onclick="setLang('ar')">عربي</button>
+</div>
+
+<div id="step1-view">
+  <div class="header">
+    <h1 id="hdr-title">Let's Find Your Fit 👟</h1>
+    <p id="hdr-sub">Tell us your shoe size. We will call you if we find a match.</p>
+  </div>
+
+  <div class="main">
+
+    <div class="card c-purple">
+      <div class="card-head"><div class="card-icon">📱</div><div class="card-title" id="lbl-phone-title">Your Phone Number</div></div>
+      <div class="card-sub" id="lbl-phone-sub">We use this number to contact you. Please make sure it is correct.</div>
+      <div class="field">
+        <label id="lbl-phone">Phone Number</label>
+        <input type="tel" id="inp-phone" placeholder="+974 5xxx xxxx" data-en="+974 5xxx xxxx" data-ar="+٩٧٤ ٥xxx xxxx" onblur="checkPhoneRegistered()">
+      </div>
+      <div class="status-box" id="status-phone"></div>
+    </div>
+
+    <div class="card c-yellow">
+      <div class="card-head"><div class="card-icon">👟</div><div class="card-title" id="lbl-size-title">What Is Your Shoe Size?</div></div>
+      <div class="card-sub" id="lbl-size-sub">Choose the closest size if you are not sure.</div>
+      <div class="size-grid" id="size-grid"></div>
+    </div>
+
+    <div class="card c-coral">
+      <div class="card-head"><div class="card-icon">🤝</div><div class="card-title" id="lbl-confirm-title">Please Confirm</div></div>
+      <div class="confirm-row">
+        <input type="checkbox" id="chk-confirm">
+        <span id="lbl-confirm">This sign-up is for adult men only. I confirm I am an adult man.</span>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="btn-continue" onclick="goToStep2()">Continue</button>
+    <div class="footnote" id="lbl-footnote">One more step. We will ask for your QID next to confirm your details.</div>
+  </div>
+</div>
+
+<div id="step2-view">
+  <div class="step-bar" id="lbl-stepbar">Step 2 of 2 — Confirm Your ID</div>
+  <div class="main">
+
+    <div class="card c-teal">
+      <div class="card-head"><div class="card-icon">🪪</div><div class="card-title" id="lbl-qid-title">Upload Your QID</div></div>
+      <div class="card-sub" id="lbl-qid-sub">Please upload the front and back. This is required to finish.</div>
+
+      <div class="qid-pair">
+        <div class="qid-zone" id="qz-front" onclick="document.getElementById('qid-front').click()">
+          <div class="icon">📇</div>
+          <strong id="lbl-qid-front">Front</strong>
+          <input type="file" id="qid-front" accept="image/*" onchange="handleQIDFile()">
+        </div>
+        <div class="qid-zone" id="qz-back" onclick="document.getElementById('qid-back').click()">
+          <div class="icon">📇</div>
+          <strong id="lbl-qid-back">Back</strong>
+          <input type="file" id="qid-back" accept="image/*" onchange="handleQIDFile()">
+        </div>
+      </div>
+      <div class="scan-status" id="scan-status"><div class="spinner"></div><span id="scan-msg">Reading your QID…</span></div>
+      <div class="qid-name-row">
+        <div class="field">
+          <label id="lbl-qidnum">QID Number</label>
+          <input type="text" id="inp-qidnum" placeholder="Auto-filled, or type it in" data-en="Auto-filled, or type it in" data-ar="يُملأ تلقائياً أو اكتبه" maxlength="11" oninput="updateStep2SubmitState()">
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-back" onclick="goToStep1()" id="lbl-back">Back</button>
+      <button class="btn-primary" id="btn-submit" onclick="submitForm()" disabled>Submit</button>
+    </div>
+  </div>
+</div>
+
+<div id="success-view">
+  <div class="icon">👟</div>
+  <h2 id="lbl-success-title">Thank You!</h2>
+  <p id="lbl-success-sub">We saved your details. We will call you if we find your size.</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ── CONFIG (same project as the rest of feedafriendqa.github.io) ──────────
+var SUPABASE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
+var SCAN_QID_URL = SUPABASE_URL + '/functions/v1/scan-qid';
+// NOTE: this is a new function — see the chat reply for the code to deploy,
+// and tell Claude which table holds the registered phone numbers so the
+// placeholder table name inside it can be set correctly.
+var CHECK_PHONE_URL = SUPABASE_URL + '/functions/v1/check-phone';
+var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+var currentLang = 'en';
+var scannedName = null;
+var scannedGender = null;
+var scannedDob = null;
+var selectedSize;
+var phoneRegistered = null; // true / false / null (not checked yet)
+var SIZES = [38, 39, 40, 41, 42, 43, 44, 45, 46];
+
+var T = {
+  en: {
+    'hdr-title': "Let's Find Your Fit 👟",
+    'hdr-sub': 'Tell us your shoe size. We will call you if we find a match.',
+    'lbl-phone-title': 'Your Phone Number',
+    'lbl-phone-sub': 'We use this number to contact you. Please make sure it is correct.',
+    'lbl-phone': 'Phone Number',
+    'lbl-size-title': 'What Is Your Shoe Size?',
+    'lbl-size-sub': 'Choose the closest size if you are not sure.',
+    'lbl-confirm-title': 'Please Confirm',
+    'lbl-confirm': 'This sign-up is for adult men only. I confirm I am an adult man.',
+    'btn-continue': 'Continue',
+    'lbl-footnote': 'One more step. We will ask for your QID next to confirm your details.',
+    'lbl-stepbar': 'Step 2 of 2 — Confirm Your ID',
+    'lbl-qid-title': 'Upload Your QID',
+    'lbl-qid-sub': 'Please upload the front and back. This is required to finish.',
+    'lbl-qid-front': 'Front', 'lbl-qid-back': 'Back',
+    'lbl-qidnum': 'QID Number',
+    'lbl-back': 'Back',
+    'btn-submit': 'Submit',
+    'lbl-success-title': 'Thank You!',
+    'lbl-success-sub': 'We saved your details. We will call you if we find your size.',
+    'status-checking': 'Checking…',
+    'status-ok': '✓ We found you in our system.',
+    'status-notfound': 'We could not find this number. You can still continue.'
+  },
+  ar: {
+    'hdr-title': 'لنجد مقاسك المناسب 👟',
+    'hdr-sub': 'أخبرنا بمقاس حذائك. سنتصل بك إذا توفر مقاسك.',
+    'lbl-phone-title': 'رقم هاتفك',
+    'lbl-phone-sub': 'سنستخدم هذا الرقم للتواصل معك. تأكد أنه صحيح.',
+    'lbl-phone': 'رقم الهاتف',
+    'lbl-size-title': 'ما هو مقاس حذائك؟',
+    'lbl-size-sub': 'اختر أقرب مقاس إذا لم تكن متأكداً.',
+    'lbl-confirm-title': 'يرجى التأكيد',
+    'lbl-confirm': 'هذا التسجيل للرجال البالغين فقط. أؤكد أنني رجل بالغ.',
+    'btn-continue': 'استمرار',
+    'lbl-footnote': 'خطوة أخيرة. سنطلب هويتك القطرية لتأكيد بياناتك.',
+    'lbl-stepbar': 'الخطوة ٢ من ٢ — تأكيد الهوية',
+    'lbl-qid-title': 'ارفع بطاقتك الشخصية',
+    'lbl-qid-sub': 'يرجى رفع الوجه الأمامي والخلفي. هذا مطلوب لإكمال التسجيل.',
+    'lbl-qid-front': 'الوجه الأمامي', 'lbl-qid-back': 'الوجه الخلفي',
+    'lbl-qidnum': 'رقم الهوية القطرية',
+    'lbl-back': 'رجوع',
+    'btn-submit': 'إرسال',
+    'lbl-success-title': 'شكراً لك!',
+    'lbl-success-sub': 'تم حفظ بياناتك. سنتصل بك إذا توفر مقاسك.',
+    'status-checking': 'جاري التحقق…',
+    'status-ok': '✓ وجدنا رقمك في نظامنا.',
+    'status-notfound': 'لم نجد هذا الرقم. يمكنك الاستمرار.'
+  }
+};
+
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.getElementById('btn-ar').classList.toggle('active', lang === 'ar');
+  document.body.classList.toggle('ar', lang === 'ar');
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  var dict = T[lang];
+  Object.keys(dict).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = dict[id];
+  });
+  document.getElementById('btn-continue').textContent = dict['btn-continue'];
+  document.getElementById('btn-submit').textContent = phoneRegisteredButtonLabel();
+  var allInputs = document.querySelectorAll('input[data-en]');
+  allInputs.forEach(function(inp) {
+    inp.placeholder = lang === 'ar' ? (inp.dataset.ar || inp.placeholder) : (inp.dataset.en || inp.placeholder);
+  });
+  buildSizeGrid();
+  refreshPhoneStatusText();
+}
+function phoneRegisteredButtonLabel() { return T[currentLang]['btn-submit']; }
+
+// ── SIZE GRID ───────────────────────────────────────────────────────────────
+function buildSizeGrid() {
+  var prevSelected = selectedSize;
+  var grid = document.getElementById('size-grid');
+  grid.innerHTML = '';
+  SIZES.forEach(function(s) {
+    var chip = document.createElement('div');
+    chip.className = 'size-chip' + (prevSelected === s ? ' selected' : '');
+    chip.textContent = s;
+    chip.onclick = function() { selectSize(s, chip); };
+    grid.appendChild(chip);
+  });
+  var notSure = document.createElement('div');
+  notSure.className = 'size-chip notsure' + (prevSelected === null ? ' selected' : '');
+  notSure.textContent = currentLang === 'ar' ? 'غير متأكد' : 'Not sure';
+  notSure.onclick = function() { selectSize(null, notSure); };
+  grid.appendChild(notSure);
+}
+function selectSize(s, chipEl) {
+  selectedSize = s;
+  document.querySelectorAll('.size-chip').forEach(function(c) { c.classList.remove('selected'); });
+  chipEl.classList.add('selected');
+}
+buildSizeGrid();
+
+// ── LIVE PHONE CHECK ─────────────────────────────────────────────────────
+function normalizePhone(p) {
+  return (p || '').replace(/[^\d+]/g, '');
+}
+
+function checkPhoneRegistered() {
+  var raw = document.getElementById('inp-phone').value.trim();
+  if (!raw) return;
+  var box = document.getElementById('status-phone');
+  phoneRegistered = null;
+  box.className = 'status-box visible status-checking';
+  box.textContent = T[currentLang]['status-checking'];
+
+  fetch(CHECK_PHONE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+    body: JSON.stringify({ phone: normalizePhone(raw) })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    phoneRegistered = !!data.exists;
+    refreshPhoneStatusText();
+  }).catch(function() {
+    phoneRegistered = null;
+    box.classList.remove('visible');
+  });
+}
+
+function refreshPhoneStatusText() {
+  var box = document.getElementById('status-phone');
+  if (phoneRegistered === null) { box.classList.remove('visible'); return; }
+  box.className = 'status-box visible ' + (phoneRegistered ? 'status-ok' : 'status-notfound');
+  box.textContent = T[currentLang][phoneRegistered ? 'status-ok' : 'status-notfound'];
+}
+
+// ── STEP NAVIGATION ─────────────────────────────────────────────────────
+function goToStep2() {
+  var ar = currentLang === 'ar';
+  var phone = document.getElementById('inp-phone').value.trim();
+  var confirmed = document.getElementById('chk-confirm').checked;
+
+  if (!phone) { alert(ar ? 'يرجى إدخال رقم الهاتف.' : 'Please enter your phone number.'); return; }
+  if (typeof selectedSize === 'undefined') { alert(ar ? 'يرجى اختيار المقاس.' : 'Please choose a shoe size (or "Not sure").'); return; }
+  if (!confirmed) { alert(ar ? 'يرجى تأكيد الشرط أعلاه.' : 'Please check the confirm box above.'); return; }
+
+  document.getElementById('step1-view').style.display = 'none';
+  document.getElementById('step2-view').style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+function goToStep1() {
+  document.getElementById('step2-view').style.display = 'none';
+  document.getElementById('step1-view').style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+// ── QID UPLOAD (required) ─────────────────────────────────────────────────
+function fileToBase64(file) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function() { resolve(reader.result.split(',')[1]); };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function handleQIDFile() {
+  var frontInput = document.getElementById('qid-front');
+  var backInput = document.getElementById('qid-back');
+  if (frontInput.files[0]) document.getElementById('qz-front').classList.add('uploaded');
+  if (backInput.files[0]) document.getElementById('qz-back').classList.add('uploaded');
+  if (frontInput.files[0] && backInput.files[0]) {
+    scanQID(frontInput.files[0], backInput.files[0]);
+  } else if (frontInput.files[0] || backInput.files[0]) {
+    var s = document.getElementById('scan-status');
+    s.querySelector('span').textContent = currentLang === 'ar' ? 'ارفع الوجه الآخر لإكمال القراءة…' : 'Now add the other side…';
+    s.classList.add('visible');
+  }
+  updateStep2SubmitState();
+}
+
+function qidDateToISO(d) {
+  if (!d || typeof d !== 'string') return null;
+  var parts = d.split('/');
+  if (parts.length !== 3) return null;
+  var dd = parts[0].padStart(2, '0');
+  var mm = parts[1].padStart(2, '0');
+  var yyyy = parts[2];
+  if (yyyy.length !== 4 || isNaN(dd) || isNaN(mm) || isNaN(yyyy)) return null;
+  return yyyy + '-' + mm + '-' + dd;
+}
+
+function scanQID(frontFile, backFile) {
+  var status = document.getElementById('scan-status');
+  status.querySelector('span').textContent = currentLang === 'ar' ? 'جاري قراءة الهوية…' : 'Reading your QID…';
+  status.classList.add('visible');
+
+  var encode = function(file) {
+    return file ? fileToBase64(file).then(function(b64) { return { type: file.type || 'image/jpeg', data: b64 }; }) : Promise.resolve(null);
+  };
+
+  Promise.all([encode(frontFile), encode(backFile)]).then(function(imgs) {
+    var body = { images: {} };
+    if (imgs[0]) body.images.front = imgs[0];
+    if (imgs[1]) body.images.back = imgs[1];
+    return fetch(SCAN_QID_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+      body: JSON.stringify(body)
+    });
+  }).then(function(r) { return r.json(); }).then(function(raw) {
+    if (raw.error) throw new Error(raw.error);
+    var qnEl = document.getElementById('inp-qidnum');
+    if (raw.name) scannedName = raw.name;
+    if (raw.qid_number) qnEl.value = raw.qid_number;
+    scannedGender = raw.gender ? raw.gender.toLowerCase() : null;
+    scannedDob = qidDateToISO(raw.dob);
+    updateStep2SubmitState();
+  }).catch(function() {
+    status.querySelector('span').textContent = currentLang === 'ar' ? 'تعذّرت القراءة — يمكنك كتابة رقم الهوية يدوياً.' : "Could not read it. Please type the QID number below.";
+  }).finally(function() {
+    setTimeout(function() { status.classList.remove('visible'); }, 1800);
+  });
+}
+
+function updateStep2SubmitState() {
+  var frontFile = document.getElementById('qid-front').files[0];
+  var backFile = document.getElementById('qid-back').files[0];
+  var qidNumber = document.getElementById('inp-qidnum').value.trim();
+  var ready = !!frontFile && !!backFile && !!qidNumber;
+  document.getElementById('btn-submit').disabled = !ready;
+}
+
+// ── FINAL SUBMIT ────────────────────────────────────────────────────────
+function submitForm() {
+  var ar = currentLang === 'ar';
+  var phone = document.getElementById('inp-phone').value.trim();
+  var qidNumber = document.getElementById('inp-qidnum').value.trim();
+
+  if (!qidNumber || !document.getElementById('qid-front').files[0] || !document.getElementById('qid-back').files[0]) {
+    alert(ar ? 'يرجى رفع صورتي الهوية وإدخال رقمها.' : 'Please upload both QID photos and enter the QID number.');
+    return;
+  }
+
+  var btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = ar ? 'جاري الإرسال…' : 'Submitting…';
+
+  sb.from('shoe_requests').insert([{
+    phone: phone,
+    full_name: scannedName,
+    qid_number: qidNumber,
+    gender: scannedGender,
+    dob: scannedDob,
+    shoe_size_eu: selectedSize,
+    phone_registered: phoneRegistered,
+    matched: false
+  }]).then(function(res) {
+    if (res.error) throw res.error;
+    document.getElementById('step2-view').style.display = 'none';
+    document.getElementById('success-view').style.display = 'flex';
+    window.scrollTo(0, 0);
+  }).catch(function(err) {
+    console.error('Submit error:', err);
+    alert((ar ? 'حدث خطأ: ' : 'Something went wrong: ') + (err.message || String(err)));
+    btn.disabled = false;
+    btn.textContent = T[currentLang]['btn-submit'];
+  });
+}
+</script>
+</body>
+</html>

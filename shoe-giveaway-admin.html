@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shoe Giveaway – Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #2d7a3a; --green-dark: #1e5528; --green-light: #eaf5ec; --green-mid: #4a9e58;
+  --red: #c0392b; --red-light: #fdeaea; --amber: #b9860a; --amber-light: #fdf3e0;
+  --border: #d0e4d3; --text: #1a2e1d; --muted: #5a7060; --radius: 14px; --radius-sm: 9px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Nunito', sans-serif; background: #f7f9f7; color: var(--text); min-height: 100vh; }
+
+/* ── LOGIN ── */
+.login-page { min-height: 100vh; background: var(--green-dark); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.login-card { background: white; border-radius: 20px; overflow: hidden; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+.login-hero { background: var(--green); padding: 30px 24px 24px; text-align: center; }
+.login-hero .icon { font-size: 36px; margin-bottom: 8px; }
+.login-hero h1 { color: white; font-size: 18px; font-weight: 900; margin-bottom: 4px; }
+.login-hero p { color: rgba(255,255,255,0.75); font-size: 13px; }
+.login-body { padding: 24px; }
+.login-body label { display: block; font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.login-body input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; font-family: 'Nunito', sans-serif; outline: none; margin-bottom: 14px; background: #f7f9f7; }
+.login-body input:focus { border-color: var(--green); background: white; }
+.login-body button { width: 100%; padding: 14px; background: var(--green); color: white; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 900; font-family: 'Nunito', sans-serif; cursor: pointer; }
+.login-err { color: var(--red); font-size: 13px; margin-bottom: 12px; display: none; background: var(--red-light); padding: 10px 12px; border-radius: var(--radius-sm); font-weight: 700; }
+
+/* ── ADMIN ── */
+.topbar { background: var(--green); padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; color: white; }
+.topbar h1 { font-size: 15px; font-weight: 900; }
+.topbar .sub { font-size: 11px; opacity: 0.75; }
+.logout-btn { background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.3); color: white; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 700; font-family: 'Nunito', sans-serif; }
+
+.main { max-width: 800px; margin: 0 auto; padding: 16px; }
+.stats { display: flex; gap: 10px; margin-bottom: 14px; }
+.stat { flex: 1; background: white; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px; text-align: center; }
+.stat .num { font-size: 20px; font-weight: 900; color: var(--green-dark); }
+.stat .label { font-size: 11px; color: var(--muted); font-weight: 700; }
+
+.filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.filter-chip { padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: white; font-size: 12px; font-weight: 700; color: var(--text); cursor: pointer; }
+.filter-chip.active { background: var(--green); color: white; border-color: var(--green); }
+
+.row-card { background: white; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+.row-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.row-name { font-size: 14px; font-weight: 800; color: var(--text); }
+.row-qid { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.row-size { background: var(--green-light); color: var(--green-dark); font-weight: 900; font-size: 14px; border-radius: 10px; padding: 6px 12px; flex-shrink: 0; }
+.row-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tag { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+.tag-ok { background: var(--green-light); color: var(--green-dark); }
+.tag-warn { background: var(--amber-light); color: var(--amber); }
+.tag-matched { background: #e0eef7; color: #2a5d8f; }
+.row-notes { font-size: 12px; color: var(--muted); margin-top: 8px; font-style: italic; }
+.row-actions { margin-top: 10px; display: flex; gap: 8px; }
+.btn-match { flex: 1; padding: 9px; border-radius: 10px; border: 1.5px solid var(--green); background: white; color: var(--green-dark); font-weight: 800; font-size: 12px; cursor: pointer; font-family: 'Nunito', sans-serif; }
+.btn-match.is-matched { background: var(--green); color: white; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div id="login-screen" class="login-page" style="display:flex;">
+  <div class="login-card">
+    <div class="login-hero">
+      <div class="icon">👞</div>
+      <h1>Shoe Giveaway</h1>
+      <p>Admin Portal</p>
+    </div>
+    <div class="login-body">
+      <p id="login-err" class="login-err"></p>
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" placeholder="you@feedafriend.org" autocomplete="email">
+      <label for="login-password">Password</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+      <button onclick="doLogin()" id="login-btn">Sign in →</button>
+    </div>
+  </div>
+</div>
+
+<div id="admin-app" style="display:none;">
+  <div class="topbar">
+    <div>
+      <h1>👞 Shoe Giveaway</h1>
+      <div class="sub" id="welcome-msg">Admin</div>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">Sign out</button>
+  </div>
+
+  <div class="main">
+    <div class="stats">
+      <div class="stat"><div class="num" id="stat-total">0</div><div class="label">Total</div></div>
+      <div class="stat"><div class="num" id="stat-unmatched">0</div><div class="label">Unmatched</div></div>
+      <div class="stat"><div class="num" id="stat-noqid">0</div><div class="label">Missing QID</div></div>
+    </div>
+
+    <div class="filters">
+      <div class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</div>
+      <div class="filter-chip" data-filter="unmatched" onclick="setFilter('unmatched')">Unmatched</div>
+      <div class="filter-chip" data-filter="matched" onclick="setFilter('matched')">Matched</div>
+      <div class="filter-chip" data-filter="missing-qid" onclick="setFilter('missing-qid')">Missing QID</div>
+    </div>
+
+    <div id="rows"></div>
+    <div class="empty-state" id="empty-state" style="display:none;">No requests yet.</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var SUPABASE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co';
+var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
+var sb = supabase.createClient(SUPABASE_URL, ANON_KEY);
+
+var allRows = [];
+var currentFilter = 'all';
+
+// ── AUTH (same staff accounts as the other Feed a Friend admin portals) ────
+async function doLogin() {
+  var email = document.getElementById('login-email').value.trim();
+  var password = document.getElementById('login-password').value;
+  var errEl = document.getElementById('login-err');
+  var btn = document.getElementById('login-btn');
+  errEl.style.display = 'none';
+  if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; errEl.style.display = 'block'; return; }
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+  var result = await sb.auth.signInWithPassword({ email: email, password: password });
+  if (result.error) {
+    errEl.textContent = '⚠️ ' + result.error.message;
+    errEl.style.display = 'block';
+    btn.textContent = 'Sign in →'; btn.disabled = false;
+  }
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('admin-app').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+  var sessionResult = await sb.auth.getSession();
+  var session = sessionResult.data.session;
+  if (session) await handleAdminSession(session);
+  sb.auth.onAuthStateChange(async function(event, session) {
+    if (session) { await handleAdminSession(session); }
+    else { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('admin-app').style.display = 'none'; }
+  });
+  var pwField = document.getElementById('login-password');
+  if (pwField) pwField.addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+});
+
+async function handleAdminSession(session) {
+  var rawFallback = session.user.email.split('@')[0];
+  var fallbackName = rawFallback.charAt(0).toUpperCase() + rawFallback.slice(1);
+  document.getElementById('welcome-msg').textContent = 'Signed in as ' + fallbackName;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-app').style.display = 'block';
+  await loadRows();
+}
+
+// ── DATA ─────────────────────────────────────────────────────────────────
+async function loadRows() {
+  var result = await sb.from('shoe_requests').select('*').order('created_at', { ascending: false });
+  if (result.error) { console.error(result.error); return; }
+  allRows = result.data || [];
+  renderStats();
+  renderRows();
+}
+
+function renderStats() {
+  document.getElementById('stat-total').textContent = allRows.length;
+  document.getElementById('stat-unmatched').textContent = allRows.filter(function(r) { return !r.matched; }).length;
+  document.getElementById('stat-noqid').textContent = allRows.filter(function(r) { return !r.qid_number; }).length;
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(function(c) { c.classList.toggle('active', c.dataset.filter === f); });
+  renderRows();
+}
+
+function renderRows() {
+  var container = document.getElementById('rows');
+  var rows = allRows.filter(function(r) {
+    if (currentFilter === 'unmatched') return !r.matched;
+    if (currentFilter === 'matched') return !!r.matched;
+    if (currentFilter === 'missing-qid') return !r.qid_number;
+    return true;
+  });
+  document.getElementById('empty-state').style.display = rows.length ? 'none' : 'block';
+  container.innerHTML = rows.map(function(r) {
+    var tags = '';
+    if (r.phone_registered === true) tags += '<span class="tag tag-ok">📱 Phone registered</span>';
+    else if (r.phone_registered === false) tags += '<span class="tag tag-warn">📱 Phone not found</span>';
+    tags += r.qid_number ? '<span class="tag tag-ok">🪪 QID on file</span>' : '<span class="tag tag-warn">No QID yet</span>';
+    if (r.matched) tags += '<span class="tag tag-matched">Matched</span>';
+    var notesHtml = r.notes ? '<div class="row-notes">"' + escapeHtml(r.notes) + '"</div>' : '';
+    var sizeLabel = r.shoe_size_eu ? ('EU ' + r.shoe_size_eu) : 'Not sure';
+    var subLine = r.full_name ? (escapeHtml(r.full_name) + ' · ' + escapeHtml(r.qid_number || '')) : (escapeHtml(r.qid_number || 'No QID'));
+    return '' +
+      '<div class="row-card">' +
+        '<div class="row-top">' +
+          '<div>' +
+            '<div class="row-name">' + escapeHtml(r.phone || 'No phone') + '</div>' +
+            '<div class="row-qid">' + subLine + '</div>' +
+          '</div>' +
+          '<div class="row-size">' + sizeLabel + '</div>' +
+        '</div>' +
+        '<div class="row-meta">' + tags + '</div>' +
+        notesHtml +
+        '<div class="row-actions">' +
+          '<button class="btn-match' + (r.matched ? ' is-matched' : '') + '" onclick="toggleMatched(\'' + r.id + '\', ' + (!r.matched) + ')">' +
+            (r.matched ? '✓ Matched — undo' : 'Mark as matched') +
+          '</button>' +
+        '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function escapeHtml(s) {
+  var div = document.createElement('div');
+  div.textContent = s || '';
+  return div.innerHTML;
+}
+
+async function toggleMatched(id, value) {
+  var result = await sb.from('shoe_requests').update({ matched: value }).eq('id', id);
+  if (result.error) { alert('Could not update: ' + result.error.message); return; }
+  await loadRows();
+}
+</script>
+</body>
+</html>
