@@ -36,6 +36,18 @@ body { font-family: 'Nunito', sans-serif; background: #f7f9f7; color: var(--text
 
 .main { max-width: 800px; margin: 0 auto; padding: 16px; }
 .stats { display: flex; gap: 10px; margin-bottom: 14px; }
+
+.inventory-panel { background: white; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+.inventory-title { font-size: 13px; font-weight: 900; color: var(--green-dark); margin-bottom: 10px; }
+.inv-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--off-white); }
+.inv-row:last-child { border-bottom: none; }
+.inv-size { font-size: 14px; font-weight: 900; color: var(--text); width: 56px; flex-shrink: 0; }
+.inv-stock-input { width: 56px; padding: 7px 8px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: 800; text-align: center; font-family: 'Nunito', sans-serif; color: var(--text); }
+.inv-label { font-size: 10.5px; color: var(--muted); font-weight: 700; margin-left: -4px; }
+.inv-remaining { margin-left: auto; font-size: 12px; font-weight: 900; padding: 5px 12px; border-radius: 20px; flex-shrink: 0; }
+.inv-remaining.ok { background: var(--green-light); color: var(--green-dark); }
+.inv-remaining.low { background: var(--amber-light); color: var(--amber); }
+.inv-remaining.out { background: var(--red-light); color: var(--red); }
 .stat { flex: 1; background: white; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px; text-align: center; }
 .stat .num { font-size: 20px; font-weight: 900; color: var(--green-dark); }
 .stat .label { font-size: 11px; color: var(--muted); font-weight: 700; }
@@ -97,6 +109,11 @@ body { font-family: 'Nunito', sans-serif; background: #f7f9f7; color: var(--text
       <div class="stat"><div class="num" id="stat-noqid">0</div><div class="label">Missing QID</div></div>
     </div>
 
+    <div class="inventory-panel">
+      <div class="inventory-title">👟 Stock by Size</div>
+      <div id="inventory-rows"></div>
+    </div>
+
     <div class="filters">
       <div class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</div>
       <div class="filter-chip" data-filter="unmatched" onclick="setFilter('unmatched')">Unmatched</div>
@@ -116,6 +133,7 @@ var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 var sb = supabase.createClient(SUPABASE_URL, ANON_KEY);
 
 var allRows = [];
+var inventory = {}; // size -> stock count
 var currentFilter = 'all';
 
 // ── AUTH (same staff accounts as the other Feed a Friend admin portals) ────
@@ -159,16 +177,56 @@ async function handleAdminSession(session) {
   document.getElementById('welcome-msg').textContent = 'Signed in as ' + fallbackName;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('admin-app').style.display = 'block';
+  await loadInventory();
   await loadRows();
 }
 
 // ── DATA ─────────────────────────────────────────────────────────────────
+async function loadInventory() {
+  var result = await sb.from('shoe_inventory').select('*').order('size');
+  if (result.error) { console.error(result.error); return; }
+  inventory = {};
+  (result.data || []).forEach(function(row) { inventory[row.size] = row.stock; });
+}
+
 async function loadRows() {
   var result = await sb.from('shoe_requests').select('*').order('created_at', { ascending: false });
   if (result.error) { console.error(result.error); return; }
   allRows = result.data || [];
   renderStats();
+  renderInventory();
   renderRows();
+}
+
+function matchedCountForSize(size) {
+  return allRows.filter(function(r) { return r.shoe_size_eu === size && r.matched; }).length;
+}
+
+function renderInventory() {
+  var container = document.getElementById('inventory-rows');
+  var sizes = Object.keys(inventory).map(Number).sort(function(a, b) { return a - b; });
+  if (!sizes.length) { container.innerHTML = '<div class="row-notes">No stock added yet.</div>'; return; }
+  container.innerHTML = sizes.map(function(size) {
+    var stock = inventory[size] || 0;
+    var matchedCount = matchedCountForSize(size);
+    var remaining = stock - matchedCount;
+    var cls = remaining <= 0 ? 'out' : (remaining <= 3 ? 'low' : 'ok');
+    return '' +
+      '<div class="inv-row">' +
+        '<div class="inv-size">EU ' + size + '</div>' +
+        '<input type="number" class="inv-stock-input" value="' + stock + '" min="0" onchange="updateStock(' + size + ', this.value)">' +
+        '<div class="inv-label">in stock</div>' +
+        '<div class="inv-remaining ' + cls + '">' + remaining + ' left</div>' +
+      '</div>';
+  }).join('');
+}
+
+async function updateStock(size, value) {
+  var stock = parseInt(value, 10) || 0;
+  var result = await sb.from('shoe_inventory').upsert({ size: size, stock: stock });
+  if (result.error) { alert('Could not update stock: ' + result.error.message); return; }
+  inventory[size] = stock;
+  renderInventory();
 }
 
 function renderStats() {
@@ -198,6 +256,10 @@ function renderRows() {
     else if (r.phone_registered === false) tags += '<span class="tag tag-warn">📱 Phone not found</span>';
     tags += r.qid_number ? '<span class="tag tag-ok">🪪 QID on file</span>' : '<span class="tag tag-warn">No QID yet</span>';
     if (r.matched) tags += '<span class="tag tag-matched">Matched</span>';
+    if (r.shoe_size_eu && !r.matched && inventory[r.shoe_size_eu] !== undefined) {
+      var remainingForSize = inventory[r.shoe_size_eu] - matchedCountForSize(r.shoe_size_eu);
+      if (remainingForSize <= 0) tags += '<span class="tag tag-warn">⚠ Size out of stock</span>';
+    }
     var notesHtml = r.notes ? '<div class="row-notes">"' + escapeHtml(r.notes) + '"</div>' : '';
     var sizeLabel = r.shoe_size_eu ? ('EU ' + r.shoe_size_eu) : 'Not sure';
     var subLine = r.full_name ? (escapeHtml(r.full_name) + ' · ' + escapeHtml(r.qid_number || '')) : (escapeHtml(r.qid_number || 'No QID'));
