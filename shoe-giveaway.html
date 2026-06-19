@@ -65,8 +65,10 @@ h1, h2, .fun-font { font-family: 'Baloo 2', 'Nunito', sans-serif; }
 .status-box { display: none; border-radius: 10px; padding: 9px 12px; margin-top: 10px; font-size: 12.5px; font-weight: 800; }
 .status-box.visible { display: block; }
 .status-checking { background: rgba(255,255,255,0.22); }
-.status-ok { background: rgba(255,255,255,0.9); color: var(--purple-dark); }
-.status-notfound { background: rgba(255,255,255,0.22); }
+.status-ok { background: rgba(255,255,255,0.95); color: var(--purple-dark); }
+.status-blocked { background: rgba(255,255,255,0.95); color: var(--coral-dark); }
+.status-error { background: rgba(255,255,255,0.95); color: var(--yellow-dark); }
+.card.locked { opacity: 0.4; pointer-events: none; transition: opacity 0.2s; }
 
 /* QID required section */
 .qid-pair { display: flex; gap: 10px; margin-bottom: 10px; }
@@ -129,26 +131,26 @@ h1, h2, .fun-font { font-family: 'Baloo 2', 'Nunito', sans-serif; }
       <div class="card-sub" id="lbl-phone-sub">We use this number to contact you. Please make sure it is correct.</div>
       <div class="field">
         <label id="lbl-phone">Phone Number</label>
-        <input type="tel" id="inp-phone" placeholder="+974 5xxx xxxx" data-en="+974 5xxx xxxx" data-ar="+٩٧٤ ٥xxx xxxx" onblur="checkPhoneRegistered()">
+        <input type="tel" id="inp-phone" placeholder="+974 5xxx xxxx" data-en="+974 5xxx xxxx" data-ar="+٩٧٤ ٥xxx xxxx" oninput="onPhoneInput()" onblur="checkPhoneRegistered()">
       </div>
       <div class="status-box" id="status-phone"></div>
     </div>
 
-    <div class="card c-yellow">
+    <div class="card c-yellow" id="size-card">
       <div class="card-head"><div class="card-icon">👟</div><div class="card-title" id="lbl-size-title">What Is Your Shoe Size?</div></div>
       <div class="card-sub" id="lbl-size-sub">Choose the closest size if you are not sure.</div>
       <div class="size-grid" id="size-grid"></div>
     </div>
 
-    <div class="card c-coral">
+    <div class="card c-coral" id="confirm-card">
       <div class="card-head"><div class="card-icon">🤝</div><div class="card-title" id="lbl-confirm-title">Please Confirm</div></div>
       <div class="confirm-row">
-        <input type="checkbox" id="chk-confirm">
+        <input type="checkbox" id="chk-confirm" onchange="updateStep1ContinueState()">
         <span id="lbl-confirm">This sign-up is for adult men only. I confirm I am an adult man.</span>
       </div>
     </div>
 
-    <button class="btn-primary" id="btn-continue" onclick="goToStep2()">Continue</button>
+    <button class="btn-primary" id="btn-continue" onclick="goToStep2()" disabled>Continue</button>
     <div class="footnote" id="lbl-footnote">One more step. We will ask for your QID next to confirm your details.</div>
   </div>
 </div>
@@ -239,8 +241,9 @@ var T = {
     'lbl-success-title': 'Thank You!',
     'lbl-success-sub': 'We saved your details. We will call you if we find your size.',
     'status-checking': 'Checking…',
-    'status-ok': '✓ We found you in our system.',
-    'status-notfound': 'We could not find this number. You can still continue.'
+    'status-ok': '✓ We found you in our system. You can continue.',
+    'status-blocked': "We couldn't find this number in our system. This sign-up is only for people already registered with Feed a Friend. Please contact our team first.",
+    'status-error': "We couldn't check this number right now. Please check your connection and try again."
   },
   ar: {
     'hdr-title': 'لنجد مقاسك المناسب 👟',
@@ -264,8 +267,9 @@ var T = {
     'lbl-success-title': 'شكراً لك!',
     'lbl-success-sub': 'تم حفظ بياناتك. سنتصل بك إذا توفر مقاسك.',
     'status-checking': 'جاري التحقق…',
-    'status-ok': '✓ وجدنا رقمك في نظامنا.',
-    'status-notfound': 'لم نجد هذا الرقم. يمكنك الاستمرار.'
+    'status-ok': '✓ وجدنا رقمك في نظامنا. يمكنك الاستمرار.',
+    'status-blocked': 'لم نجد هذا الرقم في نظامنا. هذا التسجيل مخصص فقط للمسجلين لدى Feed a Friend. يرجى التواصل مع فريقنا أولاً.',
+    'status-error': 'تعذّر التحقق من الرقم الآن. تحقق من اتصالك وحاول مرة أخرى.'
   }
 };
 
@@ -318,19 +322,36 @@ function selectSize(s, chipEl) {
   selectedSize = s;
   document.querySelectorAll('.size-chip').forEach(function(c) { c.classList.remove('selected'); });
   chipEl.classList.add('selected');
+  updateStep1ContinueState();
 }
 buildSizeGrid();
+setLocked(true);
 
 // ── LIVE PHONE CHECK ─────────────────────────────────────────────────────
 function normalizePhone(p) {
   return (p || '').replace(/[^\d+]/g, '');
 }
 
+function onPhoneInput() {
+  // Any edit invalidates the previous check — re-lock until we verify again.
+  phoneRegistered = null;
+  document.getElementById('status-phone').classList.remove('visible');
+  setLocked(true);
+}
+
+function setLocked(isLocked) {
+  document.getElementById('size-card').classList.toggle('locked', isLocked);
+  document.getElementById('confirm-card').classList.toggle('locked', isLocked);
+  updateStep1ContinueState();
+}
+
 function checkPhoneRegistered() {
   var raw = document.getElementById('inp-phone').value.trim();
-  if (!raw) return;
   var box = document.getElementById('status-phone');
+  if (!raw) { phoneRegistered = null; box.classList.remove('visible'); setLocked(true); return; }
+
   phoneRegistered = null;
+  setLocked(true);
   box.className = 'status-box visible status-checking';
   box.textContent = T[currentLang]['status-checking'];
 
@@ -338,20 +359,34 @@ function checkPhoneRegistered() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
     body: JSON.stringify({ phone: normalizePhone(raw) })
-  }).then(function(r) { return r.json(); }).then(function(data) {
+  }).then(function(r) {
+    if (!r.ok) throw new Error('check-phone returned ' + r.status);
+    return r.json();
+  }).then(function(data) {
     phoneRegistered = !!data.exists;
+    setLocked(!phoneRegistered);
     refreshPhoneStatusText();
-  }).catch(function() {
+  }).catch(function(err) {
+    console.error('Phone check failed:', err);
     phoneRegistered = null;
-    box.classList.remove('visible');
+    setLocked(true);
+    box.className = 'status-box visible status-error';
+    box.textContent = T[currentLang]['status-error'];
   });
 }
 
 function refreshPhoneStatusText() {
   var box = document.getElementById('status-phone');
-  if (phoneRegistered === null) { box.classList.remove('visible'); return; }
-  box.className = 'status-box visible ' + (phoneRegistered ? 'status-ok' : 'status-notfound');
-  box.textContent = T[currentLang][phoneRegistered ? 'status-ok' : 'status-notfound'];
+  if (phoneRegistered === null) return;
+  box.className = 'status-box visible ' + (phoneRegistered ? 'status-ok' : 'status-blocked');
+  box.textContent = T[currentLang][phoneRegistered ? 'status-ok' : 'status-blocked'];
+}
+
+function updateStep1ContinueState() {
+  var phone = document.getElementById('inp-phone').value.trim();
+  var confirmed = document.getElementById('chk-confirm').checked;
+  var ready = !!phone && phoneRegistered === true && typeof selectedSize !== 'undefined' && confirmed;
+  document.getElementById('btn-continue').disabled = !ready;
 }
 
 // ── STEP NAVIGATION ─────────────────────────────────────────────────────
