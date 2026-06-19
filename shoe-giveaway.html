@@ -207,6 +207,9 @@ var SCAN_QID_URL = SUPABASE_URL + '/functions/v1/scan-qid';
 // and tell Claude which table holds the registered phone numbers so the
 // placeholder table name inside it can be set correctly.
 var CHECK_PHONE_URL = SUPABASE_URL + '/functions/v1/check-phone';
+// New function — see chat reply for the code to deploy. Fills in any QID
+// details that are missing on the matching food_box_applications record.
+var BACKFILL_QID_URL = SUPABASE_URL + '/functions/v1/backfill-qid';
 var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ── STATE ───────────────────────────────────────────────────────────────────
@@ -214,8 +217,12 @@ var currentLang = 'en';
 var scannedName = null;
 var scannedGender = null;
 var scannedDob = null;
+var scannedNationality = null;
+var scannedSponsor = null;
+var scannedExpiry = null;
 var selectedSize;
 var phoneRegistered = null; // true / false / null (not checked yet)
+var phoneAlreadyUsed = null; // true if this phone already submitted a request
 var SIZES = [38, 39, 40, 41, 42, 43, 44, 45, 46];
 
 var T = {
@@ -243,6 +250,7 @@ var T = {
     'status-checking': 'Checking…',
     'status-ok': '✓ We found you in our system. You can continue.',
     'status-blocked': "We couldn't find this number in our system. This sign-up is only for people already registered with Feed a Friend. Please contact our team first.",
+    'status-duplicate': "This phone number has already signed up. Only one sign-up per phone number is allowed.",
     'status-error': "We couldn't check this number right now. Please check your connection and try again."
   },
   ar: {
@@ -269,6 +277,7 @@ var T = {
     'status-checking': 'جاري التحقق…',
     'status-ok': '✓ وجدنا رقمك في نظامنا. يمكنك الاستمرار.',
     'status-blocked': 'لم نجد هذا الرقم في نظامنا. هذا التسجيل مخصص فقط للمسجلين لدى Feed a Friend. يرجى التواصل مع فريقنا أولاً.',
+    'status-duplicate': 'تم استخدام هذا الرقم للتسجيل من قبل. التسجيل مرة واحدة فقط لكل رقم هاتف.',
     'status-error': 'تعذّر التحقق من الرقم الآن. تحقق من اتصالك وحاول مرة أخرى.'
   }
 };
@@ -335,6 +344,7 @@ function normalizePhone(p) {
 function onPhoneInput() {
   // Any edit invalidates the previous check — re-lock until we verify again.
   phoneRegistered = null;
+  phoneAlreadyUsed = null;
   document.getElementById('status-phone').classList.remove('visible');
   setLocked(true);
 }
@@ -348,9 +358,10 @@ function setLocked(isLocked) {
 function checkPhoneRegistered() {
   var raw = document.getElementById('inp-phone').value.trim();
   var box = document.getElementById('status-phone');
-  if (!raw) { phoneRegistered = null; box.classList.remove('visible'); setLocked(true); return; }
+  if (!raw) { phoneRegistered = null; phoneAlreadyUsed = null; box.classList.remove('visible'); setLocked(true); return; }
 
   phoneRegistered = null;
+  phoneAlreadyUsed = null;
   setLocked(true);
   box.className = 'status-box visible status-checking';
   box.textContent = T[currentLang]['status-checking'];
@@ -364,11 +375,13 @@ function checkPhoneRegistered() {
     return r.json();
   }).then(function(data) {
     phoneRegistered = !!data.exists;
-    setLocked(!phoneRegistered);
+    phoneAlreadyUsed = !!data.alreadySubmitted;
+    setLocked(!phoneRegistered || phoneAlreadyUsed);
     refreshPhoneStatusText();
   }).catch(function(err) {
     console.error('Phone check failed:', err);
     phoneRegistered = null;
+    phoneAlreadyUsed = null;
     setLocked(true);
     box.className = 'status-box visible status-error';
     box.textContent = T[currentLang]['status-error'];
@@ -378,6 +391,11 @@ function checkPhoneRegistered() {
 function refreshPhoneStatusText() {
   var box = document.getElementById('status-phone');
   if (phoneRegistered === null) return;
+  if (phoneAlreadyUsed) {
+    box.className = 'status-box visible status-blocked';
+    box.textContent = T[currentLang]['status-duplicate'];
+    return;
+  }
   box.className = 'status-box visible ' + (phoneRegistered ? 'status-ok' : 'status-blocked');
   box.textContent = T[currentLang][phoneRegistered ? 'status-ok' : 'status-blocked'];
 }
@@ -385,7 +403,7 @@ function refreshPhoneStatusText() {
 function updateStep1ContinueState() {
   var phone = document.getElementById('inp-phone').value.trim();
   var confirmed = document.getElementById('chk-confirm').checked;
-  var ready = !!phone && phoneRegistered === true && typeof selectedSize !== 'undefined' && confirmed;
+  var ready = !!phone && phoneRegistered === true && !phoneAlreadyUsed && typeof selectedSize !== 'undefined' && confirmed;
   document.getElementById('btn-continue').disabled = !ready;
 }
 
@@ -471,6 +489,9 @@ function scanQID(frontFile, backFile) {
     if (raw.qid_number) qnEl.value = raw.qid_number;
     scannedGender = raw.gender ? raw.gender.toLowerCase() : null;
     scannedDob = qidDateToISO(raw.dob);
+    scannedNationality = raw.nationality || null;
+    scannedSponsor = raw.sponsor || null;
+    scannedExpiry = qidDateToISO(raw.expiry);
     updateStep2SubmitState();
   }).catch(function() {
     status.querySelector('span').textContent = currentLang === 'ar' ? 'تعذّرت القراءة — يمكنك كتابة رقم الهوية يدوياً.' : "Could not read it. Please type the QID number below.";
@@ -508,11 +529,31 @@ function submitForm() {
     qid_number: qidNumber,
     gender: scannedGender,
     dob: scannedDob,
+    nationality: scannedNationality,
+    sponsor: scannedSponsor,
+    qid_expiry: scannedExpiry,
     shoe_size_eu: selectedSize,
     phone_registered: phoneRegistered,
     matched: false
   }]).then(function(res) {
     if (res.error) throw res.error;
+
+    // Best-effort: fill in any QID details missing on the matching food box
+    // record. This should never block the success screen if it fails.
+    fetch(BACKFILL_QID_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+      body: JSON.stringify({
+        phone: phone,
+        qid_number: qidNumber,
+        full_name: scannedName,
+        gender: scannedGender,
+        nationality: scannedNationality,
+        sponsor: scannedSponsor,
+        qid_expiry: scannedExpiry
+      })
+    }).catch(function(err) { console.error('Backfill skipped:', err); });
+
     document.getElementById('step2-view').style.display = 'none';
     document.getElementById('success-view').style.display = 'flex';
     window.scrollTo(0, 0);
