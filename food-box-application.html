@@ -229,6 +229,7 @@ body.ar input::placeholder { direction: rtl; font-family: inherit; }
   display: flex; align-items: center; justify-content: center; gap: 6px;
 }
 .add-member-btn:hover { border-color: var(--green); background: var(--green-light); }
+.err-msg { color: var(--red); font-size: 13px; font-weight: 700; }
 
 /* ── PROOF UPLOAD ── */
 .proof-row { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -273,10 +274,13 @@ body.ar input::placeholder { direction: rtl; font-family: inherit; }
 /* ── DIAPER PILLS ── */
 .diaper-pills { display: flex; flex-wrap: wrap; gap: 8px; }
 .diaper-pill {
-  padding: 7px 15px; border: 1.5px solid var(--border-yellow);
-  border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 700;
+  padding: 7px 13px; border: 1.5px solid var(--border-yellow);
+  border-radius: 14px; cursor: pointer;
   background: var(--yellow-light); color: var(--green-dark); transition: all 0.15s; user-select: none;
+  text-align: center; min-width: 60px;
 }
+.diaper-pill .dp-size { display: block; font-size: 13px; font-weight: 700; line-height: 1.3; }
+.diaper-pill .dp-weight { display: block; font-size: 10px; font-weight: 600; opacity: 0.75; line-height: 1.3; }
 .diaper-pill.selected { border-color: var(--green); background: var(--green-light); color: var(--green); }
 
 /* ── BADGE ── */
@@ -527,9 +531,10 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
 <div class="section">
   <div class="section-title"><div class="s-icon">👨‍👩‍👧</div><span id="sec2-title">Household members</span></div>
   <div class="section-body">
-    <p style="font-size:13px;color:var(--muted);line-height:1.5;" id="members-intro">Add every person in your household who needs food support. Everyone aged 1 and over needs a valid QID. Babies under 1 year may use a Qatar birth certificate.</p>
+    <p style="font-size:13px;color:var(--muted);line-height:1.5;" id="members-intro">This application is for your whole household, not just yourself. Add every other person who needs food support — <strong>at least 1 more person (2 total including you)</strong> is required. Everyone aged 1 and over needs a valid QID. Babies under 1 year may use a Qatar birth certificate.</p>
     <div id="members-list"></div>
     <button type="button" class="add-member-btn" id="add-member-btn" onclick="addMember()">＋ <span id="btn-add-member">Add household member</span></button>
+    <div class="err-msg" id="members-min-warning" style="display:none;margin-top:8px;" data-en="Please add at least 1 more household member — applications need to cover your entire household, not just you." data-ar="يرجى إضافة فرد واحد على الأقل من أفراد أسرتك — يجب أن يشمل الطلب أسرتك بالكامل، وليس أنت فقط."></div>
   </div>
 </div>
 
@@ -1221,12 +1226,28 @@ function addMember() {
   // Populate diaper pills safely (avoids nested template literals)
   var pillsContainer = document.getElementById('m' + n + '-diaper-pills');
   if (pillsContainer) {
-    var sizes = ['NB (Newborn)', 'S (Size 1)', 'M (Size 2)', 'L (Size 3)', 'XL (Size 4)', 'XXL (Size 5)'];
+    var sizes = [
+      { val: 'Newborn', label: 'Newborn', weight: 'up to 4.5kg' },
+      { val: '1', label: 'Size 1', weight: '4–6kg' },
+      { val: '2', label: 'Size 2', weight: '5–10kg' },
+      { val: '3', label: 'Size 3', weight: '6–12kg' },
+      { val: '4', label: 'Size 4', weight: '7–15kg' },
+      { val: '5', label: 'Size 5', weight: '9–17kg' },
+      { val: '6', label: 'Size 6', weight: '10–20kg' },
+      { val: '7', label: 'Size 7', weight: '12–23kg' }
+    ];
     sizes.forEach(function(s) {
       var pill = document.createElement('div');
       pill.className = 'diaper-pill';
-      pill.dataset.val = s;
-      pill.textContent = s;
+      pill.dataset.val = s.val;
+      var sizeEl = document.createElement('span');
+      sizeEl.className = 'dp-size';
+      sizeEl.textContent = s.label;
+      var weightEl = document.createElement('span');
+      weightEl.className = 'dp-weight';
+      weightEl.textContent = s.weight;
+      pill.appendChild(sizeEl);
+      pill.appendChild(weightEl);
       pill.onclick = function() { selectDiaper(n, pill); };
       pillsContainer.appendChild(pill);
     });
@@ -1490,6 +1511,7 @@ function updateProgress() {
   var label = document.getElementById('prog-pct');
   if (fill) fill.style.width = pct + '%';
   if (label) label.textContent = pct + '%';
+  updateSubmitBtn();
 }
 
 // ── SUBMIT ────────────────────────────────────────────────────────────────────
@@ -1498,7 +1520,13 @@ function updateSubmitBtn() {
   var c2 = document.getElementById('consent2');
   var c3 = document.getElementById('consent3');
   var btn = document.getElementById('submit-btn');
-  if (btn) btn.disabled = !(c1 && c1.checked && c2 && c2.checked && c3 && c3.checked);
+  var warning = document.getElementById('members-min-warning');
+  var hasMinMembers = collectMembers().members.length >= 1;
+  if (warning) {
+    warning.style.display = hasMinMembers ? 'none' : 'block';
+    warning.textContent = warning.getAttribute('data-' + (currentLang === 'ar' ? 'ar' : 'en'));
+  }
+  if (btn) btn.disabled = !(hasMinMembers && c1 && c1.checked && c2 && c2.checked && c3 && c3.checked);
 }
 
 function collectMembers() {
@@ -1553,6 +1581,21 @@ function triggerLittleLearnersReferrals(data) {
 function submitApplication() {
   var btn = document.getElementById('submit-btn');
   if (!btn) return;
+
+  var collected = collectMembers();
+  var members = collected.members;
+  var memberFormIndices = collected.formIndices;
+
+  if (members.length < 1) {
+    var warning = document.getElementById('members-min-warning');
+    if (warning) {
+      warning.style.display = 'block';
+      warning.textContent = warning.getAttribute('data-' + (currentLang === 'ar' ? 'ar' : 'en'));
+      warning.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return;
+  }
+
   btn.textContent = currentLang === 'ar' ? '⏳ جاري الإرسال…' : '⏳ Submitting…';
   btn.disabled = true;
 
@@ -1584,10 +1627,6 @@ function submitApplication() {
     monthly_salary: toNum('inp-salary'),
     monthly_rent: toNum('inp-rent')
   };
-
-  var collected = collectMembers();
-  var members = collected.members;
-  var memberFormIndices = collected.formIndices;
 
   fetch(EDGE_URL, {
     method: 'POST',
