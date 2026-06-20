@@ -76,7 +76,8 @@ body{font-family:"Nunito Sans",sans-serif;background:#f0f0ec;color:#111;min-heig
 .surprise-card button{margin-top:10px;padding:9px 18px;border-radius:30px;border:2px solid #1D7A47;background:#fff;color:#1D7A47;font-family:"Nunito",sans-serif;font-size:12px;font-weight:900;cursor:pointer}
 
 .cta-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid #eee;padding:14px 20px;margin-top:10px}
-.cta-btn{width:100%;padding:15px;border-radius:50px;border:none;font-family:"Nunito",sans-serif;font-size:14px;font-weight:900;cursor:pointer;background:#1D7A47;color:#F5C330;display:flex;align-items:center;justify-content:center;gap:8px}
+.cta-btn{width:100%;padding:15px;border-radius:50px;border:none;font-family:"Nunito",sans-serif;font-size:14px;font-weight:900;cursor:not-allowed;background:#e8e8e0;color:#bbb;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,color .15s;-webkit-tap-highlight-color:transparent}
+.cta-btn.is-ready{background:#1D7A47;color:#F5C330;cursor:pointer}
 .cta-btn:disabled{background:#e8e8e0;color:#bbb;cursor:not-allowed}
 .cta-hint{text-align:center;font-size:11px;color:#bbb;font-weight:700;margin-top:8px}
 
@@ -280,6 +281,8 @@ function checkReady(){
   var picked = totalPicked();
   var ready = selectedIds.length > 0 && picked >= targetBoxes;
   btn.disabled = !ready;
+  btn.classList.toggle("is-ready", ready);
+  void btn.offsetWidth; // force reflow — works around iOS Safari disabled-state repaint bug
   if(selectedIds.length === 0){
     hint.textContent = "Select families to cover your box count";
   } else if(picked < targetBoxes){

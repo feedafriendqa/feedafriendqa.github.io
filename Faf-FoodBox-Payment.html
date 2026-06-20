@@ -66,7 +66,8 @@ body{font-family:"Nunito Sans",sans-serif;background:#f0f0ec;color:#111;min-heig
 .confirm-check-label{font-size:12px;color:#666;font-weight:600;line-height:1.5}
 
 .cta-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid #eee;padding:14px 20px;margin-top:20px}
-.cta-btn{width:100%;padding:15px;border-radius:50px;border:none;font-family:"Nunito",sans-serif;font-size:14px;font-weight:900;cursor:pointer;background:#1D7A47;color:#F5C330;display:flex;align-items:center;justify-content:center;gap:8px}
+.cta-btn{width:100%;padding:15px;border-radius:50px;border:none;font-family:"Nunito",sans-serif;font-size:14px;font-weight:900;cursor:not-allowed;background:#e8e8e0;color:#bbb;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,color .15s;-webkit-tap-highlight-color:transparent}
+.cta-btn.is-ready{background:#1D7A47;color:#F5C330;cursor:pointer}
 .cta-btn:disabled{background:#e8e8e0;color:#bbb;cursor:not-allowed}
 .cta-hint{text-align:center;font-size:11px;color:#bbb;font-weight:700;margin-top:8px}
 
@@ -247,6 +248,11 @@ function checkReady(){
   var hint = document.getElementById("cta-hint");
   var ready = name.length > 1 && wa.length > 5 && confirmed;
   btn.disabled = !ready;
+  btn.classList.toggle("is-ready", ready);
+  // Force a reflow — works around an iOS Safari repaint bug where toggling
+  // the disabled property via JS doesn't always visually update the button
+  // until something else triggers layout (scroll, rotate, etc).
+  void btn.offsetWidth;
   if(!name || !wa){
     hint.textContent = "Fill in your name and WhatsApp number";
   } else if(!confirmed){
@@ -300,7 +306,7 @@ async function submitSponsorship(){
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            action: "submit_sponsorship",
+            type: "submit_sponsorship",
             sponsor_name: name,
             whatsapp: wa,
             email: email || null,

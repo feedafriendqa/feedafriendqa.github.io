@@ -95,7 +95,8 @@ body{font-family:"Nunito Sans",sans-serif;background:#f0f0ec;color:#111;min-heig
 .sub-card.sel .radio::after{content:"";position:absolute;inset:5px;border-radius:50%;background:#1D7A47}
 
 .cta-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid #eee;padding:14px 20px;margin-top:24px}
-.cta-btn{width:100%;padding:15px;border-radius:50px;border:none;font-family:"Nunito",sans-serif;font-size:14px;font-weight:900;cursor:pointer;background:#1D7A47;color:#F5C330;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s}
+.cta-btn{width:100%;padding:15px;border-radius:50px;border:none;font-family:"Nunito",sans-serif;font-size:14px;font-weight:900;cursor:not-allowed;background:#e8e8e0;color:#bbb;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,color .15s;-webkit-tap-highlight-color:transparent}
+.cta-btn.is-ready{background:#1D7A47;color:#F5C330;cursor:pointer}
 .cta-btn:disabled{background:#e8e8e0;color:#bbb;cursor:not-allowed}
 .cta-hint{text-align:center;font-size:11px;color:#bbb;font-weight:700;margin-top:8px}
 
@@ -376,6 +377,8 @@ function checkReady(){
   var locOk = deliveryMethod === "vol" || (deliveryMethod === "self" && selectedAreas.length > 0);
   var ready = deliveryMethod && subType && locOk;
   btn.disabled = !ready;
+  btn.classList.toggle("is-ready", ready);
+  void btn.offsetWidth; // force reflow — works around iOS Safari disabled-state repaint bug
   if(ready){
     hint.textContent = "You're all set — let's find a family";
   } else if(!deliveryMethod){
