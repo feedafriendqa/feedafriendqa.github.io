@@ -984,8 +984,29 @@ function updateStatus(id, status) {
     body: JSON.stringify({ status: status })
   }).then(function(){
     var idx = allApps.findIndex(function(a){return a.id===id;});
-    if (idx !== -1) allApps[idx].status = status;
+    var app = idx !== -1 ? allApps[idx] : null;
+    if (app) app.status = status;
     updateStats(); filterApps(); closeModal();
+
+    // Pregnant + just approved -> create a Welcome Baby follow-up case.
+    if (status === 'approved' && app && app.is_pregnant && !app.wbb_case_created) {
+      sb.auth.getSession().then(function(res) {
+        var session = res && res.data ? res.data.session : null;
+        var token = session ? session.access_token : ANON_KEY;
+        return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ type: 'notify_welcome_baby', application_id: id })
+        });
+      }).then(function(r){ return r.json(); }).then(function(res) {
+        if (res.ok) {
+          app.wbb_case_created = true;
+          alert('💚 A Welcome Baby follow-up case was created' + (res.assigned_fairy ? ', assigned to ' + res.assigned_fairy : ' (unassigned — check fairy names in Welcome Baby)') + '.');
+        } else if (res.error) {
+          console.error('Welcome Baby case not created:', res.error);
+        }
+      }).catch(function(e){ console.error('Welcome Baby case creation failed:', e.message); });
+    }
   }).catch(function(e){ alert('Update failed: ' + e.message); });
 }
 
@@ -1103,6 +1124,7 @@ function renderAddMemberPanel(appId) {
   h += '<div><label>QID expiry</label><input type="date" id="' + s + '-expiry"></div>';
   h += '<div><label>Gender</label><select id="' + s + '-gender"><option value="">–</option><option value="male">Male</option><option value="female">Female</option></select></div>';
   h += '<div><label>Relationship to applicant *</label><select id="' + s + '-role"><option value="">–</option><option value="husband">Husband</option><option value="wife">Wife</option><option value="child">Child</option><option value="other-relative">Other relative</option><option value="roommate">Roommate</option></select></div>';
+  h += '<div><label>Attending school?</label><select id="' + s + '-school"><option value="">–</option><option value="yes">Yes</option><option value="no">No — out of school</option><option value="na">Not school-age</option></select></div>';
   h += '</div>';
 
   h += '<div class="err-msg" id="' + s + '-err" style="display:none;color:var(--red);font-size:12px;margin-top:8px;"></div>';
@@ -1223,7 +1245,8 @@ function saveNewMember(appId) {
     qid_expiry: document.getElementById(s + '-expiry').value || null,
     gender: document.getElementById(s + '-gender').value || null,
     role: role,
-    doc_type: state.docType || 'qid'
+    doc_type: state.docType || 'qid',
+    is_attending_school: document.getElementById(s + '-school').value || null
   };
 
   sb.auth.getSession().then(function(res) {
