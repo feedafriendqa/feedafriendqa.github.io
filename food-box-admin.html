@@ -130,15 +130,39 @@ select.edit-field{cursor:pointer;}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:1000;padding:16px;}
 .modal-overlay.visible{display:flex;}
 .modal{background:white;border-radius:var(--radius);max-width:640px;width:100%;max-height:90vh;overflow-y:auto;}
-.modal-header{background:var(--green);color:white;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1;}
-.modal-title-row{display:flex;align-items:center;gap:12px;}
-.profile-pic{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid rgba(255,255,255,0.5);}
-.profile-pic img{width:260%;height:260%;object-fit:cover;object-position:22% 48%;}
-.modal-header h2{font-size:15px;font-weight:900;}
+.modal-header{background:var(--green);color:white;padding:10px 16px;display:flex;justify-content:flex-end;align-items:center;position:sticky;top:0;z-index:2;}
+.modal-title-row{display:none;}
+.modal-header h2{display:none;}
 .modal-close{background:none;border:none;color:white;font-size:24px;cursor:pointer;line-height:1;padding:0;}
-.modal-body{padding:20px;}
-.detail-section{margin-bottom:20px;}
-.detail-section h3{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.modal-body{padding:0;}
+
+.profile-block{display:flex;flex-direction:column;align-items:center;padding:8px 20px 16px;}
+.profile-pic{width:88px;height:88px;border-radius:50%;background:var(--off-white);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:36px;border:1.5px solid var(--border);position:relative;margin-bottom:10px;}
+.profile-pic img{width:260%;height:260%;object-fit:cover;object-position:22% 48%;}
+.profile-pic-wrap{position:relative;width:88px;height:88px;}
+.profile-pic-edit{position:absolute;bottom:0;right:0;width:28px;height:28px;border-radius:50%;background:white;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;padding:0;}
+.profile-name{font-size:17px;font-weight:900;text-align:center;margin-bottom:2px;}
+.profile-sub{font-size:12px;color:var(--muted);text-align:center;}
+
+.stat-band{display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+.stat-band-item{flex:1;text-align:center;padding:10px 6px;border-right:1px solid var(--border);}
+.stat-band-item:last-child{border-right:none;}
+.stat-band-lbl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:2px;}
+.stat-band-val{font-size:13px;font-weight:800;}
+
+.accordion-section{border-bottom:1px solid var(--border);}
+.accordion-head{display:flex;align-items:center;justify-content:space-between;padding:13px 20px;cursor:pointer;user-select:none;}
+.accordion-head:active{background:var(--off-white);}
+.accordion-head-left{display:flex;align-items:center;gap:8px;}
+.accordion-head-left h3{font-size:14px;font-weight:800;color:var(--text);text-transform:none;letter-spacing:0;margin:0;padding:0;border:none;}
+.accordion-count{font-size:11px;padding:1px 7px;border-radius:10px;background:var(--off-white);color:var(--muted);font-weight:700;}
+.accordion-chevron{font-size:12px;color:var(--muted);transition:transform 0.15s;}
+.accordion-section.open .accordion-chevron{transform:rotate(180deg);}
+.accordion-content{display:none;padding:0 20px 18px;}
+.accordion-section.open .accordion-content{display:block;}
+
+.detail-section{margin-bottom:0;}
+.detail-section h3{display:none;}
 .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .detail-item .lbl{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:2px;}
 .detail-item .val{font-size:13px;font-weight:700;}
@@ -333,10 +357,6 @@ select.edit-field{cursor:pointer;}
 <div class="modal-overlay" id="modal">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title-row">
-        <div class="profile-pic" id="modal-profile-pic">👤</div>
-        <h2 id="modal-title">Application</h2>
-      </div>
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
     <div class="modal-body" id="modal-body"></div>
@@ -819,44 +839,66 @@ function renderModal(app, members, urlMap) {
   var date = app.created_at ? new Date(app.created_at).toLocaleString('en-GB') : '–';
   var dispColor = disp <= 1500 ? 'color:var(--green)' : 'color:var(--red)';
   var status = resolveStatus(app);
-  document.getElementById('modal-title').textContent = name;
-  var profilePicEl = document.getElementById('modal-profile-pic');
   var qidFrontUrl = app.qid_front_path ? urlMap[app.qid_front_path] : null;
-  // Approximate crop, not real face detection: Qatar ID cards place the
-  // photo on the left side of the card, so we zoom + offset toward that
-  // region via CSS rather than trying to extract just the face.
-  profilePicEl.innerHTML = qidFrontUrl ? '<img src="' + qidFrontUrl + '" alt="">' : '👤';
   var tags = Array.isArray(app.tags) ? app.tags : (app.tags ? (() => { try { return JSON.parse(app.tags); } catch(e) { return []; } })() : []);
   var isLongTerm = tags.indexOf('long_term') !== -1;
   var body = '';
 
-  // ── FOOD BOX ALLOWANCE (front and center, per request) ──
+  // ── PROFILE BLOCK (photo, name, subtitle) ──
+  // Approximate crop, not real face detection: Qatar ID cards place the
+  // photo on the left side of the card, so we zoom + offset toward that
+  // region via CSS rather than trying to extract just the face. The crop
+  // position/zoom is adjustable per-applicant via the edit button below.
+  var profilePicInner = qidFrontUrl
+    ? '<img src="' + qidFrontUrl + '" alt="" style="' + (app.profile_crop || '') + '">'
+    : '👤';
+  body += '<div class="profile-block">';
+  body += '<div class="profile-pic-wrap">';
+  body += '<div class="profile-pic" id="modal-profile-pic">' + profilePicInner + '</div>';
+  if (qidFrontUrl) body += '<button class="profile-pic-edit" onclick="openCropEditor(\''+app.id+'\')" aria-label="Adjust photo">✏️</button>';
+  body += '</div>';
+  body += '<div class="profile-name">' + name + '</div>';
+  body += '<div class="profile-sub">' + (app.nationality || '–') + (app.qid_number ? ' &middot; QID ' + app.qid_number : '') + '</div>';
+  body += '</div>';
+
+  // ── STAT BAND (status / boxes / household) ──
   var isActiveCase = status === 'approved' || status === 'active';
   var receivedSoFar = app.boxes_received != null ? app.boxes_received : 0;
-  var allowanceValueHtml, allowanceLabelText;
-  if (!isActiveCase) {
-    allowanceLabelText = '🥗 Food Box Allowance';
-    allowanceValueHtml = 'Not active yet';
-  } else if (isLongTerm) {
-    allowanceLabelText = '🥗 Food Box Allowance';
-    allowanceValueHtml = receivedSoFar + ' received <span class="allowance-infinity">♾ Long Term</span>';
-  } else {
-    allowanceLabelText = '🥗 Food Box Allowance — taken so far';
-    allowanceValueHtml = receivedSoFar + '<span class="allowance-of">of</span>' + (app.max_boxes != null ? app.max_boxes : '–');
-  }
-  body += '<div class="allowance-banner' + (isActiveCase ? '' : ' allowance-banner-inactive') + '">' +
-    '<div class="allowance-label">' + allowanceLabelText + '</div>' +
-    '<div class="allowance-value">' + allowanceValueHtml + '</div>' +
-    '</div>';
+  var boxesValText;
+  if (!isActiveCase) boxesValText = '–';
+  else if (isLongTerm) boxesValText = receivedSoFar + ' &middot; ♾';
+  else boxesValText = receivedSoFar + ' / ' + (app.max_boxes != null ? app.max_boxes : '–');
+  var statusLbl = status === 'active' ? 'Confirmed' : (status.charAt(0).toUpperCase() + status.slice(1));
+  var householdCount = 1 + (members ? members.length : 0);
+  body += '<div class="stat-band">';
+  body += '<div class="stat-band-item"><div class="stat-band-lbl">Status</div><div class="stat-band-val">' + statusLbl + '</div></div>';
+  body += '<div class="stat-band-item"><div class="stat-band-lbl">Boxes</div><div class="stat-band-val">' + boxesValText + '</div></div>';
+  body += '<div class="stat-band-item"><div class="stat-band-lbl">Household</div><div class="stat-band-val">' + householdCount + '</div></div>';
+  body += '</div>';
 
-  if (app.translation_pending) body += '<div class="translation-alert">🌐 Submitted in Arabic — translation needs review before approving.</div>';
+  if (app.translation_pending) body += '<div class="translation-alert" style="margin:14px 20px 0;">🌐 Submitted in Arabic — translation needs review before approving.</div>';
 
   if (status === 'duplicate') {
     var original = app.duplicate_of ? allApps.find(function(a){ return a.id === app.duplicate_of; }) : null;
     var originalName = original ? (original.full_name_en || original.full_name) : 'an application not currently loaded';
-    body += '<div class="duplicate-of-banner"><span>🔗 Marked as a duplicate of <strong>' + originalName + '</strong></span>' +
+    body += '<div class="duplicate-of-banner" style="margin:14px 20px 0;"><span>🔗 Marked as a duplicate of <strong>' + originalName + '</strong></span>' +
       (original ? '<a onclick="viewApp(\'' + original.id + '\')">View original →</a>' : '') + '</div>';
   }
+
+  // ── ACCORDION SECTION HELPER ──
+  // key: stable id used for the open/closed CSS class and localStorage-free
+  // in-memory toggle. openByDefault: sections worth seeing immediately.
+  var openSections = (window.__accordionOpen = window.__accordionOpen || {'applicant':true,'members':true});
+  var accStart = function(key, title, countHtml) {
+    var isOpen = openSections[key];
+    return '<div class="accordion-section' + (isOpen ? ' open' : '') + '" id="acc-' + key + '">' +
+      '<div class="accordion-head" onclick="toggleAccordion(\'' + key + '\')">' +
+        '<div class="accordion-head-left"><h3>' + title + '</h3>' + (countHtml || '') + '</div>' +
+        '<div class="accordion-chevron">▾</div>' +
+      '</div>' +
+      '<div class="accordion-content">';
+  };
+  var accEnd = '</div></div>';
 
   // ── APPLICANT (editable) ──
   var sf = function(id,v){ return '<input class="edit-field" id="'+id+'" value="'+(v||'').toString().replace(/"/g,'&quot;')+'">'; };
@@ -864,7 +906,7 @@ function renderModal(app, members, urlMap) {
   var sn = function(id,v){ return '<input class="edit-field" type="number" id="'+id+'" value="'+(v!=null&&v!==''?v:'')+'">'; };
   var di = function(lbl,html){ return '<div class="detail-item"><div class="lbl">'+lbl+'</div><div class="val">'+html+'</div></div>'; };
   var dif = function(lbl,id,v){ return '<div class="detail-item"><div class="lbl">'+lbl+'</div>'+sf(id,v)+'</div>'; };
-  body += '<div class="detail-section"><h3>Applicant</h3>';
+  body += accStart('applicant', 'Applicant details');
   // ── TEMP: main-applicant QID scanner — remove this block once the spreadsheet migration is finished ──
   body += renderMainQidScanPanel(app.id);
   body += '<div class="detail-grid">';
@@ -882,9 +924,9 @@ function renderModal(app, members, urlMap) {
   body += '<div class="detail-item"><div class="lbl">Due date</div>'+sd('ef-due_date',app.due_date)+'</div>';
   body += '</div>';
   body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',full_name:\'ef-full_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\'})">Save applicant</button>';
-  body += '</div>';
+  body += accEnd;
   // ── ADDRESS (editable) ──
-  body += '<div class="detail-section"><h3>Address</h3><div class="detail-grid">';
+  body += accStart('address', 'Address') + '<div class="detail-grid">';
   body += dif('Zone','ef-zone',app.zone);
   body += dif('Area','ef-area',app.area);
   body += dif('Street','ef-street',app.street);
@@ -893,10 +935,10 @@ function renderModal(app, members, urlMap) {
   body += dif('Flat','ef-flat',app.flat);
   body += '</div>';
   body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{zone:\'ef-zone\',area:\'ef-area\',street:\'ef-street\',building:\'ef-building\',unit:\'ef-unit\',flat:\'ef-flat\'})">Save address</button>';
-  body += '</div>';
+  body += accEnd;
 
   // ── FINANCIAL (editable) ──
-  body += '<div class="detail-section"><h3>Financial</h3><div class="detail-grid">';
+  body += accStart('financial', 'Financial') + '<div class="detail-grid">';
   body += '<div class="detail-item"><div class="lbl">Household monthly salary (QAR)</div>'+sn('ef-monthly_salary',app.monthly_salary)+'</div>';
   body += '<div class="detail-item"><div class="lbl">Monthly rent (QAR)</div>'+sn('ef-monthly_rent',app.monthly_rent)+'</div>';
   body += '<div class="detail-item"><div class="lbl">Household size</div>'+sn('ef-household_size',app.household_size)+'</div>';
@@ -905,18 +947,18 @@ function renderModal(app, members, urlMap) {
   body += '<div class="detail-item"><div class="lbl">Max boxes'+(isLongTerm?' <span style="font-size:10px;color:var(--orange);">♾ Long Term</span>':'')+'</div>'+sn('ef-max_boxes',app.max_boxes)+'</div>';
   body += '</div>';
   body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{monthly_salary:\'ef-monthly_salary|num\',monthly_rent:\'ef-monthly_rent|num\',household_size:\'ef-household_size|num\',boxes_received:\'ef-boxes_received|num\',max_boxes:\'ef-max_boxes|num\'})">Save financial</button>';
-  body += '</div>';
+  body += accEnd;
 
   // ── SUBMITTED DOCUMENTS (uploaded by the applicant during the application) ──
-  body += '<div class="detail-section"><h3>Submitted Documents</h3><div class="detail-grid">';
+  body += accStart('documents', 'Submitted documents') + '<div class="detail-grid">';
   body += docLink('QID — front', app.qid_front_path, urlMap);
   body += docLink('QID — back', app.qid_back_path, urlMap);
   body += docLink('Blue address plate', app.blue_plate_path, urlMap);
   body += docLink('Salary / rent proof', app.salary_proof_path, urlMap);
-  body += '</div></div>';
+  body += '</div>' + accEnd;
 
   // ── HOUSEHOLD MEMBERS ──
-  body += '<div class="detail-section"><h3>Household Members'+(members&&members.length?' ('+members.length+')':'')+'</h3>';
+  body += accStart('members', 'Household members', members && members.length ? '<span class="accordion-count">'+members.length+'</span>' : '');
   if (members && members.length > 0) {
     members.forEach(function(m, idx) {
       body += '<div class="member-card">';
@@ -952,10 +994,10 @@ function renderModal(app, members, urlMap) {
   }
   body += '<button class="btn-comment" style="margin-top:8px;" onclick="showAddMemberPanel(\''+app.id+'\')">＋ Add household member</button>';
   body += renderAddMemberPanel(app.id);
-  body += '</div>';
+  body += accEnd;
 
   // ── DOCUMENTS ──
-  body += '<div class="detail-section"><h3>Documents</h3>';
+  body += accStart('admin_docs', 'Documents');
   body += '<div class="doc-list" id="doc-list-'+app.id+'">';
   var adminDocs = Array.isArray(app.admin_documents) ? app.admin_documents : [];
   if (adminDocs.length === 0) {
@@ -974,23 +1016,23 @@ function renderModal(app, members, urlMap) {
   body += '<div style="font-size:24px;">📎</div><p>Tap to upload a document</p>';
   body += '<p style="font-size:11px;">PDF, JPG, PNG accepted</p>';
   body += '<input type="file" id="doc-file-'+app.id+'" accept="image/*,.pdf" style="display:none;" onchange="uploadDoc(\''+app.id+'\',this)">';
-  body += '</div></div>';
+  body += '</div>' + accEnd;
 
   // ── TAGS ──
-  body += '<div class="detail-section"><h3>Tags</h3><div class="tag-checkboxes">';
+  body += accStart('tags', 'Tags') + '<div class="tag-checkboxes">';
   [{key:'long_term',label:'♾ Long Term',hint:'No box cap — ongoing support'},{key:'wbb',label:'🍼 Welcome Baby',hint:'Enrolled in Welcome Baby'},{key:'ll',label:'📚 Little Learners',hint:'Enrolled in Little Learners'}].forEach(function(t) {
     var checked = tags.indexOf(t.key) !== -1 ? ' checked' : '';
     body += '<label class="tag-check-label" title="'+t.hint+'"><input type="checkbox" id="tag-'+t.key+'"'+checked+'> '+t.label+'</label>';
   });
-  body += '</div><button class="btn-comment" style="margin-top:10px;" onclick="saveTags(\''+app.id+'\')">Save tags</button></div>';
+  body += '</div><button class="btn-comment" style="margin-top:10px;" onclick="saveTags(\''+app.id+'\')">Save tags</button>' + accEnd;
 
   // ── COMMENT LOG ──
-  body += '<div class="detail-section"><h3>Comments & activity</h3>';
   var comments = [];
   try { comments = JSON.parse(app.admin_notes || '[]'); if (!Array.isArray(comments)) throw 0; } catch(e) {
     if (app.admin_notes) comments = [{type:'note',text:app.admin_notes,ts:app.created_at||new Date().toISOString(),author:'Admin'}];
     else comments = [];
   }
+  body += accStart('comments', 'Comments & activity', comments.length ? '<span class="accordion-count">'+comments.length+'</span>' : '');
   body += '<div class="comment-log" id="comment-log">';
   if (comments.length === 0) body += '<div style="font-size:12px;color:var(--muted);padding:6px 0;">No comments yet.</div>';
   comments.forEach(function(c) {
@@ -1002,16 +1044,19 @@ function renderModal(app, members, urlMap) {
   body += '</div>';
   body += '<div class="comment-input-row"><select class="comment-type-select" id="comment-type"><option value="note">📝 Note</option><option value="whatsapp">💬 WhatsApp</option><option value="call">📞 Call</option></select>';
   body += '<textarea class="comment-textarea" id="comment-text" placeholder="Add a comment…"></textarea>';
-  body += '<button class="btn-comment" onclick="addComment(\''+app.id+'\')">Add</button></div></div>';
+  body += '<button class="btn-comment" onclick="addComment(\''+app.id+'\')">Add</button></div>' + accEnd;
 
   // ── CASE OWNER ──
   var currentAssignee = app.assigned_to || autoAssign(app);
-  body += '<div class="detail-section"><h3>Case owner</h3><div style="display:flex;align-items:center;gap:10px;">';
+  body += accStart('owner', 'Case owner') + '<div style="display:flex;align-items:center;gap:10px;">';
   body += '<select id="modal-assignee" style="border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:7px 12px;font-family:Nunito,sans-serif;font-size:13px;font-weight:700;color:var(--text);background:white;cursor:pointer;">';
   CASE_OWNERS.forEach(function(o){ body += '<option value="'+o+'"'+(o===currentAssignee?' selected':'')+'>'+o+'</option>'; });
-  body += '</select><button class="btn-comment" onclick="saveAssignment(\''+app.id+'\')">Reassign</button></div></div>';
-  body += '<div style="font-size:11px;color:var(--muted);margin-top:8px;">Submitted: '+date+' · Lang: '+(app.submission_lang||'en').toUpperCase()+' · Status: '+status+'</div>';
-  body += '<div class="detail-section" style="margin-top:14px;"><h3>Status</h3>';
+  body += '</select><button class="btn-comment" onclick="saveAssignment(\''+app.id+'\')">Reassign</button></div>' + accEnd;
+  body += '<div style="font-size:11px;color:var(--muted);padding:10px 20px 0;">Submitted: '+date+' · Lang: '+(app.submission_lang||'en').toUpperCase()+'</div>';
+
+  // ── STATUS (always visible — primary action, not tucked behind an accordion) ──
+  body += '<div style="padding:14px 20px 18px;border-top:1px solid var(--border);margin-top:10px;">';
+  body += '<div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Status</div>';
   body += '<div style="display:flex;gap:8px;align-items:center;">';
   body += '<select class="edit-field" id="status-dropdown" style="max-width:220px;">';
   STATUS_OPTIONS.forEach(function(opt){
@@ -1041,6 +1086,62 @@ function renderModal(app, members, urlMap) {
 }
 
 function closeModal() { document.getElementById('modal').classList.remove('visible'); currentAppId = null; }
+
+// Remembers open/closed per section across re-renders within the same
+// session (e.g. after a save refreshes the modal) — not persisted to the
+// database, resets on page reload.
+function toggleAccordion(key) {
+  window.__accordionOpen = window.__accordionOpen || {};
+  window.__accordionOpen[key] = !window.__accordionOpen[key];
+  var el = document.getElementById('acc-' + key);
+  if (el) el.classList.toggle('open', window.__accordionOpen[key]);
+}
+
+// Lets an admin nudge the QID-photo crop so the person's actual photo (not
+// a random part of the card) sits in the circle. Stores a plain CSS
+// object-position/scale string per-applicant in profile_crop. This is a
+// simple slider-based version — drag-to-reposition can replace it later
+// without changing how profile_crop is read/displayed.
+function openCropEditor(appId) {
+  var app = allApps.find(function(a){ return a.id === appId; });
+  if (!app) return;
+  var current = app.profile_crop || '';
+  var zoom = (current.match(/scale\(([\d.]+)\)/) || [])[1] || '2.6';
+  var posX = (current.match(/object-position:\s*([\d.]+)%/) || [])[1] || '22';
+  var posY = (current.match(/object-position:\s*[\d.]+%\s+([\d.]+)%/) || [])[1] || '48';
+
+  var newZoom = prompt('Zoom level (1 = no zoom, 3 = max zoom):', zoom);
+  if (newZoom === null) return;
+  var newPosX = prompt('Horizontal position (0 = left, 100 = right):', posX);
+  if (newPosX === null) return;
+  var newPosY = prompt('Vertical position (0 = top, 100 = bottom):', posY);
+  if (newPosY === null) return;
+
+  var z = Math.max(1, Math.min(3, parseFloat(newZoom) || 2.6));
+  var x = Math.max(0, Math.min(100, parseFloat(newPosX) || 22));
+  var y = Math.max(0, Math.min(100, parseFloat(newPosY) || 48));
+  var cropStyle = 'width:' + (z*100) + '%;height:' + (z*100) + '%;object-position:' + x + '% ' + y + '%;';
+
+  if (appId.startsWith('demo')) {
+    app.profile_crop = cropStyle;
+    renderModal(app, currentMembers, currentDocUrlMap);
+    return;
+  }
+
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + appId, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ profile_crop: cropStyle })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies, or the profile_crop column may not exist yet.');
+    app.profile_crop = cropStyle;
+    renderModal(app, currentMembers, currentDocUrlMap);
+  }).catch(function(e) { alert('Could not save photo position: ' + e.message); });
+}
 document.getElementById('modal').addEventListener('click', function(e){ if (e.target===this) closeModal(); });
 document.getElementById('duplicate-picker').addEventListener('click', function(e){ if (e.target===this) closeDuplicatePicker(); });
 
