@@ -524,8 +524,30 @@ async function handleAdminSession(session) {
 }
 
 // ── LOAD DATA ─────────────────────────────────────────────────────
+// IMPORTANT: this used to always send ANON_KEY as the bearer token, even
+// for logged-in admins. That meant every write through apiHeaders() hit
+// Supabase as the bare 'anon' role instead of 'authenticated' — which is
+// why edits could silently no-op on any table whose RLS only grants INSERT/
+// SELECT to anon (food_box_members had exactly this gap: no UPDATE policy
+// for anon, but ALL for authenticated). Now we look up the real session
+// token first and only fall back to the anon key if there isn't one.
+//
+// Callers that need this for a real write should use apiHeadersAsync()
+// instead and await it. apiHeaders() (sync) still exists for call sites
+// that haven't been migrated yet, but it is anon-only and should be
+// treated as legacy.
 function apiHeaders() {
   return { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json' };
+}
+
+async function apiHeadersAsync() {
+  var token = ANON_KEY;
+  try {
+    var res = await sb.auth.getSession();
+    var session = res && res.data ? res.data.session : null;
+    if (session && session.access_token) token = session.access_token;
+  } catch (e) { /* fall back to anon key */ }
+  return { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
 }
 
 function loadApps() {
@@ -560,11 +582,13 @@ function loadApps() {
     });
     // Save assignments back to Supabase in background
     if (toSave.length > 0) {
-      toSave.forEach(function(upd) {
-        fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + upd.id, {
-          method: 'PATCH', headers: apiHeaders(),
-          body: JSON.stringify({ assigned_to: upd.assigned_to, status: upd.status })
-        }).catch(function(){});
+      apiHeadersAsync().then(function(headers) {
+        toSave.forEach(function(upd) {
+          fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + upd.id, {
+            method: 'PATCH', headers: headers,
+            body: JSON.stringify({ assigned_to: upd.assigned_to, status: upd.status })
+          }).catch(function(){});
+        });
       });
     }
     allApps = apps;
@@ -1019,11 +1043,17 @@ document.getElementById('duplicate-picker').addEventListener('click', function(e
 
 function updateStatus(id, status) {
   if (id.startsWith('demo')) { alert('This is demo data — connect to Supabase to save changes.'); return; }
-  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
-    method: 'PATCH',
-    headers: Object.assign({'Prefer':'return=representation'}, apiHeaders()),
-    body: JSON.stringify({ status: status })
-  }).then(function(){
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ status: status })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on food_box_applications.');
     var idx = allApps.findIndex(function(a){return a.id===id;});
     var app = idx !== -1 ? allApps[idx] : null;
     if (app) app.status = status;
@@ -1069,10 +1099,16 @@ function addComment(id) {
     app.admin_notes = notesJson;
     renderModal(app, currentMembers, currentDocUrlMap); return;
   }
-  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
-    method: 'PATCH', headers: apiHeaders(),
-    body: JSON.stringify({ admin_notes: notesJson })
-  }).then(function(){
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ admin_notes: notesJson })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
     app.admin_notes = notesJson;
     renderModal(app, currentMembers, currentDocUrlMap);
   }).catch(function(e){ alert('Save failed: ' + e.message); });
@@ -1093,10 +1129,16 @@ function saveTags(id) {
     if (btn) { btn.textContent='✓ Saved'; setTimeout(function(){btn.textContent='Save tags';},2000); }
     filterApps(); return;
   }
-  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
-    method: 'PATCH', headers: apiHeaders(),
-    body: JSON.stringify({ tags: JSON.stringify(tags) })
-  }).then(function(){
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ tags: JSON.stringify(tags) })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
     var btn = document.querySelector('[onclick*="saveTags"]');
     if (btn) { btn.textContent='✓ Saved'; setTimeout(function(){btn.textContent='Save tags';},2000); }
     filterApps();
@@ -1125,9 +1167,15 @@ function saveSection(id, fieldMap) {
   }
   var btn = event && event.target;
   if (btn) { var t = btn.textContent; btn.textContent = 'Saving…'; btn.disabled = true; }
-  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
-    method: 'PATCH', headers: apiHeaders(), body: JSON.stringify(payload)
-  }).then(function(){
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers), body: JSON.stringify(payload)
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
     if (btn) { btn.textContent = '✓ Saved'; btn.classList.add('saved'); btn.disabled = false; setTimeout(function(){btn.textContent=t;btn.classList.remove('saved');},2500); }
     filterApps();
   }).catch(function(e){ if (btn){btn.textContent=t;btn.disabled=false;} alert('Save failed: ' + e.message); });
@@ -1428,12 +1476,22 @@ function saveEditedMember(appId, memberId) {
     baby_gender: pregnancyDetailsVisible ? (document.getElementById(s + '-babygender').value || null) : null
   };
 
-  fetch(SUPABASE_URL + '/rest/v1/food_box_members?id=eq.' + memberId, {
-    method: 'PATCH',
-    headers: Object.assign({'Prefer':'return=representation'}, apiHeaders()),
-    body: JSON.stringify(payload)
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_members?id=eq.' + memberId, {
+      method: 'PATCH',
+      headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify(payload)
+    });
   }).then(function(r) {
     if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    // PostgREST returns 200 with an empty array if RLS silently blocked the
+    // update (no rows matched what the current role is allowed to touch).
+    // That looks like success unless we explicitly check for it.
+    if (!Array.isArray(rows) || rows.length === 0) {
+      throw new Error('No row was updated — this usually means a database permission (RLS) policy is blocking updates to food_box_members. Ask your developer to add an UPDATE policy for this table.');
+    }
     var idx = (currentMembers || []).findIndex(function(m){ return m.id === memberId; });
     if (idx !== -1) Object.assign(currentMembers[idx], payload);
     var app = allApps.find(function(a){ return a.id === appId; });
@@ -1477,7 +1535,7 @@ function renderAddMemberPanel(appId) {
   h += '<div><label>QID expiry</label><input id="' + s + '-expiry" type="date"></div>';
   h += '<div><label>Gender</label><select id="' + s + '-gender" onchange="updateAddMemberPregnancyFields(\'' + appId + '\')"><option value="">–</option><option value="male">Male</option><option value="female">Female</option></select></div>';
   h += '<div><label>Relationship to applicant *</label><select id="' + s + '-role"><option value="">–</option><option value="husband">Husband</option><option value="wife">Wife</option><option value="child">Child</option><option value="other-relative">Other relative</option><option value="roommate">Roommate</option></select></div>';
-  h += '<div><label>Attending school?</label><select id="' + s + '-school"><option value="">–</option><option value="yes">Yes</option><option value="no">No — out of school</option><option value="na">Not school-age</option></select></div>';
+  h += '<div id="' + s + '-school-field" style="display:none;"><label>Attending school?</label><select id="' + s + '-school"><option value="">–</option><option value="yes">Yes</option><option value="no">No — out of school</option><option value="na">Not school-age</option></select></div>';
   h += '<div id="' + s + '-diaper-field" style="display:none;"><label>Diaper size</label><select id="' + s + '-diaper"><option value="">–</option>' +
     [0,1,2,3,4,5,6,7].map(function(n){ return '<option value="'+n+'">Size '+n+'</option>'; }).join('') + '</select></div>';
   h += '<div id="' + s + '-formula-field" style="display:none;"><label>Needs formula?</label><select id="' + s + '-formula"><option value="">–</option><option value="yes">Yes</option><option value="no">No</option></select></div>';
@@ -1506,9 +1564,11 @@ function updateAddMemberAgeFields(appId) {
   var age = ageInYears(dob);
   var diaperField = document.getElementById(s + '-diaper-field');
   var formulaField = document.getElementById(s + '-formula-field');
+  var schoolField = document.getElementById(s + '-school-field');
 
   var showDiaper = age !== null && age < 4;
   var showFormula = age !== null && age < 1;
+  var showSchool = age !== null && age < 16;
 
   if (diaperField) {
     diaperField.style.display = showDiaper ? 'block' : 'none';
@@ -1517,6 +1577,10 @@ function updateAddMemberAgeFields(appId) {
   if (formulaField) {
     formulaField.style.display = showFormula ? 'block' : 'none';
     if (!showFormula) document.getElementById(s + '-formula').value = '';
+  }
+  if (schoolField) {
+    schoolField.style.display = showSchool ? 'block' : 'none';
+    if (!showSchool) document.getElementById(s + '-school').value = '';
   }
 }
 
@@ -1650,8 +1714,10 @@ function saveNewMember(appId) {
 
   var diaperField = document.getElementById(s + '-diaper-field');
   var formulaField = document.getElementById(s + '-formula-field');
+  var schoolField = document.getElementById(s + '-school-field');
   var diaperVisible = diaperField && diaperField.style.display !== 'none';
   var formulaVisible = formulaField && formulaField.style.display !== 'none';
+  var schoolVisible = schoolField && schoolField.style.display !== 'none';
 
   var pregnantField = document.getElementById(s + '-pregnant-field');
   var dueDateField = document.getElementById(s + '-duedate-field');
@@ -1669,7 +1735,7 @@ function saveNewMember(appId) {
     gender: document.getElementById(s + '-gender').value || null,
     role: role,
     doc_type: state.docType || 'qid',
-    is_attending_school: document.getElementById(s + '-school').value || null,
+    is_attending_school: schoolVisible ? (document.getElementById(s + '-school').value || null) : null,
     diaper_size: diaperVisible ? (document.getElementById(s + '-diaper').value || null) : null,
     needs_formula: formulaVisible ? (document.getElementById(s + '-formula').value || null) : null,
     is_pregnant: pregnantVisible ? (document.getElementById(s + '-pregnant').value === 'yes') : null,
@@ -1765,11 +1831,17 @@ function confirmDuplicate(originalId) {
     updateStats(); filterApps(); closeModal();
     return;
   }
-  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + dupId, {
-    method: 'PATCH',
-    headers: Object.assign({'Prefer':'return=representation'}, apiHeaders()),
-    body: JSON.stringify({ status: 'duplicate', duplicate_of: originalId })
-  }).then(function() {
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + dupId, {
+      method: 'PATCH',
+      headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ status: 'duplicate', duplicate_of: originalId })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
     var idx = allApps.findIndex(function(a){ return a.id === dupId; });
     if (idx !== -1) { allApps[idx].status = 'duplicate'; allApps[idx].duplicate_of = originalId; }
     updateStats(); filterApps(); closeModal();
@@ -1849,10 +1921,16 @@ function saveAssignment(id) {
     if (btn) { btn.textContent='✓ Reassigned'; setTimeout(function(){btn.textContent='Reassign';},2000); }
     filterApps(); return;
   }
-  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
-    method: 'PATCH', headers: apiHeaders(),
-    body: JSON.stringify({ assigned_to: assignee })
-  }).then(function(){
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ assigned_to: assignee })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
     var idx = allApps.findIndex(function(a){return a.id===id;});
     if (idx !== -1) allApps[idx].assigned_to = assignee;
     var btn = sel.nextElementSibling;
