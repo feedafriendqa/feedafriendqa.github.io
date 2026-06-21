@@ -660,6 +660,30 @@ function updateStats() {
 var LANG_TAGS = {ar:'🇶🇦 AR',bn:'🇧🇩 BN',hi:'🇮🇳 HI',ur:'🇵🇰 UR',tl:'🇵🇭 TL',en:'🇬🇧 EN'};
 var STATUS_OPTIONS = ['new','pending','approved','active','rejected','duplicate','archived'];
 
+// Same zone-to-area lookup used on the public application form
+// (food-box-application.html), kept identical so a zone scanned here
+// resolves to the same area name there.
+var ZONE_AREA = {
+  1:'Al Bidda',2:'Al Bidda',3:'Musheirib',4:'Musheirib',5:'Al Najada',
+  6:'Old Al Ghanim',7:'Al Souq',10:'Wadi Al Sail',11:'Rumeilah',12:'Al Bidda',
+  13:'Musheirib',14:'Fereej Abdel Aziz',15:'Doha al Jadidah',16:'Old Al Ghanim',
+  17:'Al Rumaila',18:'New Salata',19:'Doha Port',20:'Wadi Al Sail',21:'Rumeilah',
+  22:'Bin Mahmoud',23:'Bin Mahmoud',24:'Rawdat Al Khail',25:'Al Mansoura',
+  26:'Najma',27:'Umm Ghuwailina',28:'Al Khulaifat',30:'Duhail',31:'Umm Lekhba',
+  32:'Madinat Khalifa North',33:'Al Markhiya',34:'Madinat Khalifa South',
+  35:'Fereej Kulaib',36:'Messila',37:'Bin Omran',38:'Al Sadd',39:'Al Nasr',
+  40:'New Salata',41:'Nuaija',42:'Hilal',43:'Nuaija',44:'Nuaija',
+  45:'Old Airport',46:'Thumama',47:'Thumama',48:'Old Airport',49:'Ras Abu Aboud',
+  50:'Thumama',57:'Industrial Area',58:'Al Waab',61:'Al Dafna',63:'Onaiza',
+  64:'Onaiza',65:'Onaiza',66:'Onaiza',67:'Al Markhiya',68:'Al Markhiya',
+  51:'Al Gharafa',52:'Al Kharaitiyat',53:'Al Waab',54:'Muraikh',55:'Al Waab',
+  56:'Abu Hamour',81:'Al Gharafa',83:'Al Kharaitiyat',96:'Al Egla',97:'Al Egla',
+  69:'Lusail',70:'Al Kheesa',71:'Umm Salal Mohammed',72:'Shahaniya',73:'Shahaniya',
+  74:'Al Khor',75:'Al Khor',76:'Al Khor',77:'Al Khor',78:'Al Khor',79:'Al Khor',
+  80:'Shahaniya',82:'Shahaniya',84:'Shahaniya',85:'Shahaniya',86:'Shahaniya',
+  90:'Wakrah',91:'Wakrah',92:'Wakrah',93:'Wakrah',94:'Wakrah',95:'Wakrah',98:'Wakrah'
+};
+
 function renderTable(apps) {
   var tbody = document.getElementById('apps-tbody');
   var table = document.getElementById('apps-table');
@@ -936,7 +960,15 @@ function renderModal(app, members, urlMap) {
   body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',full_name:\'ef-full_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\'})">Save applicant</button>';
   body += accEnd;
   // ── ADDRESS (editable) ──
-  body += accStart('address', 'Address') + '<div class="detail-grid">';
+  body += accStart('address', 'Address');
+  body += '<div class="add-member-panel" style="margin-bottom:14px;">';
+  body += '<div style="font-size:12px;font-weight:700;color:var(--green-dark);margin-bottom:8px;">🔵 Scan blue address plate</div>';
+  body += '<div class="add-member-upload-row">';
+  body += '<div class="add-member-upload-zone" id="plate-zone-'+app.id+'" onclick="document.getElementById(\'plate-input-'+app.id+'\').click()">📷 Blue plate<input type="file" id="plate-input-'+app.id+'" accept="image/*" style="display:none;" onchange="scanBluePlateAdmin(\''+app.id+'\',this)"></div>';
+  body += '</div>';
+  body += '<div class="add-member-scan-status" id="plate-scan-status-'+app.id+'">⏳ Reading address plate…</div>';
+  body += '</div>';
+  body += '<div class="detail-grid">';
   body += dif('Zone','ef-zone',app.zone);
   body += dif('Area','ef-area',app.area);
   body += dif('Street','ef-street',app.street);
@@ -1107,6 +1139,47 @@ function updateMaxBoxesFromFamilyType(appId) {
   if (current === '' || current === '6' || current === '3') {
     maxBoxesField.value = isFamily ? '6' : '3';
   }
+}
+
+// Mirrors scanBluePlate() from food-box-application.html — same
+// clever-responder action (type: 'scan_plate'), same response shape
+// ({ data: { zone, street, building, unit, area } }). The admin tool's
+// Area field is a plain text input rather than a <select>, so the
+// zone->area resolution just sets the value directly instead of
+// searching through <option> elements.
+function scanBluePlateAdmin(appId, input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var zoneEl = document.getElementById('plate-zone-' + appId);
+  var statusEl = document.getElementById('plate-scan-status-' + appId);
+  if (zoneEl) zoneEl.classList.add('has-file');
+  if (statusEl) statusEl.classList.add('visible');
+
+  fileToBase64(file).then(function(b64) {
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ANON_KEY },
+      body: JSON.stringify({ type: 'scan_plate', image_base64: b64, media_type: file.type || 'image/jpeg' })
+    });
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    var parsed = data.data || {};
+    if (parsed.zone) document.getElementById('ef-zone').value = parsed.zone;
+    if (parsed.street) document.getElementById('ef-street').value = parsed.street;
+    if (parsed.building) document.getElementById('ef-building').value = parsed.building;
+    if (parsed.unit) document.getElementById('ef-unit').value = parsed.unit;
+    if (parsed.zone) {
+      var areaFromZone = ZONE_AREA[parseInt(parsed.zone)];
+      if (areaFromZone) document.getElementById('ef-area').value = areaFromZone;
+    } else if (parsed.area) {
+      document.getElementById('ef-area').value = parsed.area;
+    }
+    if (statusEl) statusEl.textContent = '✓ Scanned — check the fields below, then Save address';
+  }).catch(function(e) {
+    console.error('Blue plate scan error:', e);
+    if (statusEl) statusEl.textContent = 'Scan failed — please fill in the fields manually.';
+  }).finally(function() {
+    setTimeout(function() { if (statusEl) statusEl.classList.remove('visible'); }, 3000);
+  });
 }
 
 function closeModal() { document.getElementById('modal').classList.remove('visible'); currentAppId = null; }
