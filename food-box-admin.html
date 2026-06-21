@@ -678,10 +678,10 @@ function renderTable(apps) {
     // Tags
     var tags = Array.isArray(app.tags) ? app.tags : (app.tags ? JSON.parse(app.tags) : []);
     var tagHtml = '';
-    if (tags.indexOf('long_term') !== -1) tagHtml += '<span class="tag-pill tag-lt">♾ Long Term</span>';
+    if (tags.indexOf('long_term') !== -1 || app.is_long_term) tagHtml += '<span class="tag-pill tag-lt">♾ Long Term</span>';
     if (tags.indexOf('wbb') !== -1) tagHtml += '<span class="tag-pill tag-wbb">🍼 WBB</span>';
     if (tags.indexOf('ll') !== -1) tagHtml += '<span class="tag-pill tag-ll">📚 LL</span>';
-    var isLongTerm = tags.indexOf('long_term') !== -1;
+    var isLongTerm = tags.indexOf('long_term') !== -1 || !!app.is_long_term;
     var boxesDisplay = '–';
     if (['approved','active'].indexOf(status) !== -1 && app.boxes_received != null) {
       boxesDisplay = app.boxes_received + (isLongTerm ? ' / ∞' : (app.max_boxes ? ' / ' + app.max_boxes : ''));
@@ -850,7 +850,7 @@ function renderModal(app, members, urlMap) {
   var status = resolveStatus(app);
   var qidFrontUrl = app.qid_front_path ? urlMap[app.qid_front_path] : null;
   var tags = Array.isArray(app.tags) ? app.tags : (app.tags ? (() => { try { return JSON.parse(app.tags); } catch(e) { return []; } })() : []);
-  var isLongTerm = tags.indexOf('long_term') !== -1;
+  var isLongTerm = tags.indexOf('long_term') !== -1 || !!app.is_long_term;
   var body = '';
 
   // ── PROFILE BLOCK (photo, name, subtitle) ──
