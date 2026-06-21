@@ -926,13 +926,14 @@ function renderModal(app, members, urlMap) {
   body += '<div class="detail-item"><div class="lbl">Gender</div><select class="edit-field" id="ef-gender"><option value="male"'+(app.gender==='male'?' selected':'')+'>Male</option><option value="female"'+(app.gender==='female'?' selected':'')+'>Female</option></select></div>';
   body += dif('Nationality','ef-nationality',app.nationality);
   body += dif('WhatsApp','ef-whatsapp',app.whatsapp);
+  body += '<div class="detail-item"><div class="lbl">Preferred language</div><select class="edit-field" id="ef-preferred_lang"><option value="Arabic"'+(app.preferred_lang==='Arabic'?' selected':'')+'>Arabic</option><option value="English"'+(!app.preferred_lang||app.preferred_lang==='English'?' selected':'')+'>English</option><option value="Urdu"'+(app.preferred_lang==='Urdu'?' selected':'')+'>Urdu</option><option value="Bengali"'+(app.preferred_lang==='Bengali'?' selected':'')+'>Bengali</option><option value="Hindi"'+(app.preferred_lang==='Hindi'?' selected':'')+'>Hindi</option><option value="Tagalog"'+(app.preferred_lang==='Tagalog'?' selected':'')+'>Tagalog</option><option value="Other"'+(app.preferred_lang==='Other'?' selected':'')+'>Other</option></select></div>';
   body += dif('Sponsor / employer','ef-sponsor',app.sponsor);
   body += '<div class="detail-item"><div class="lbl">Working?</div><select class="edit-field" id="ef-is_working"><option value="true"'+(app.is_working?' selected':'')+'>Yes</option><option value="false"'+(!app.is_working?' selected':'')+'>No</option></select></div>';
   body += '<div class="detail-item"><div class="lbl">Muslim?</div><select class="edit-field" id="ef-is_muslim"><option value="true"'+(app.is_muslim?' selected':'')+'>Yes</option><option value="false"'+(!app.is_muslim?' selected':'')+'>No</option></select></div>';
   body += '<div class="detail-item"><div class="lbl">Pregnant?</div><select class="edit-field" id="ef-is_pregnant"><option value="true"'+(app.is_pregnant?' selected':'')+'>Yes</option><option value="false"'+(!app.is_pregnant?' selected':'')+'>No</option></select></div>';
   body += '<div class="detail-item"><div class="lbl">Due date</div>'+sd('ef-due_date',app.due_date)+'</div>';
   body += '</div>';
-  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',full_name:\'ef-full_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\'})">Save applicant</button>';
+  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',full_name:\'ef-full_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\'})">Save applicant</button>';
   body += accEnd;
   // ── ADDRESS (editable) ──
   body += accStart('address', 'Address') + '<div class="detail-grid">';
@@ -951,11 +952,12 @@ function renderModal(app, members, urlMap) {
   body += '<div class="detail-item"><div class="lbl">Household monthly salary (QAR)</div>'+sn('ef-monthly_salary',app.monthly_salary)+'</div>';
   body += '<div class="detail-item"><div class="lbl">Monthly rent (QAR)</div>'+sn('ef-monthly_rent',app.monthly_rent)+'</div>';
   body += '<div class="detail-item"><div class="lbl">Household size</div>'+sn('ef-household_size',app.household_size)+'</div>';
+  body += '<div class="detail-item"><div class="lbl">Household type</div><select class="edit-field" id="ef-is_family" onchange="updateMaxBoxesFromFamilyType(\''+app.id+'\')"><option value="true"'+(app.is_family!==false?' selected':'')+'>Family (up to 6 boxes)</option><option value="false"'+(app.is_family===false?' selected':'')+'>Bachelor (up to 3 boxes)</option></select></div>';
   body += di('Disposable income','<span style="font-weight:900;'+dispColor+'">QAR '+Math.round(disp).toLocaleString()+'</span>');
   body += '<div class="detail-item"><div class="lbl">Boxes received</div>'+sn('ef-boxes_received',app.boxes_received)+'</div>';
-  body += '<div class="detail-item"><div class="lbl">Max boxes'+(isLongTerm?' <span style="font-size:10px;color:var(--orange);">♾ Long Term</span>':'')+'</div>'+sn('ef-max_boxes',app.max_boxes)+'</div>';
+  body += '<div class="detail-item"><div class="lbl">Max boxes'+(isLongTerm?' <span style="font-size:10px;color:var(--orange);">♾ Long Term</span>':' <span style="font-size:10px;color:var(--muted);">(auto-set by household type, editable)</span>')+'</div>'+sn('ef-max_boxes',app.max_boxes)+'</div>';
   body += '</div>';
-  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{monthly_salary:\'ef-monthly_salary|num\',monthly_rent:\'ef-monthly_rent|num\',household_size:\'ef-household_size|num\',boxes_received:\'ef-boxes_received|num\',max_boxes:\'ef-max_boxes|num\'})">Save financial</button>';
+  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{monthly_salary:\'ef-monthly_salary|num\',monthly_rent:\'ef-monthly_rent|num\',household_size:\'ef-household_size|num\',is_family:\'ef-is_family|bool\',boxes_received:\'ef-boxes_received|num\',max_boxes:\'ef-max_boxes|num\'})">Save financial</button>';
   body += accEnd;
 
   // ── SUBMITTED DOCUMENTS (uploaded by the applicant during the application) ──
@@ -1092,6 +1094,19 @@ function renderModal(app, members, urlMap) {
   }
   document.getElementById('modal-actions').innerHTML = actions;
   document.getElementById('modal').classList.add('visible');
+}
+
+// Families get up to 6 boxes, bachelors up to 3 — this only updates the
+// Max boxes field if it currently matches one of those two standard
+// values (or is empty), so it won't silently overwrite a number an
+// admin has deliberately customized for a specific case.
+function updateMaxBoxesFromFamilyType(appId) {
+  var isFamily = document.getElementById('ef-is_family').value === 'true';
+  var maxBoxesField = document.getElementById('ef-max_boxes');
+  var current = maxBoxesField.value;
+  if (current === '' || current === '6' || current === '3') {
+    maxBoxesField.value = isFamily ? '6' : '3';
+  }
 }
 
 function closeModal() { document.getElementById('modal').classList.remove('visible'); currentAppId = null; }
