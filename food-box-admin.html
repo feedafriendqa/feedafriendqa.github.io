@@ -51,6 +51,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 .stat-card.sc-pending{background:linear-gradient(135deg,#e88c1a,#f5b942);}
 .stat-card.sc-approved{background:linear-gradient(135deg,#00a896,#00c9b5);}
 .stat-card.sc-active{background:linear-gradient(135deg,#0ea5c9,#38c9f0);}
+.stat-card.sc-boxes{background:linear-gradient(135deg,#7c5cbf,#a78bdb);}
 .stat-card.sc-archived{background:linear-gradient(135deg,#546e7a,#90a4ae);}
 .stat-card.sc-review{background:linear-gradient(135deg,#7b5ea7,#a07fd4);}
 .stat-card .num{font-size:28px;font-weight:900;color:white;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,0.15);}
@@ -309,6 +310,7 @@ select.edit-field{cursor:pointer;}
       <div class="stat-card sc-pending" onclick="setFilterFromTile('pending')"><div class="num" id="stat-pending">–</div><div class="lbl">Pending</div></div>
       <div class="stat-card sc-approved" onclick="setFilterFromTile('approved')"><div class="num" id="stat-approved">–</div><div class="lbl">Approved</div></div>
       <div class="stat-card sc-active" onclick="setFilterFromTile('active')"><div class="num" id="stat-active">–</div><div class="lbl">Confirmed</div></div>
+      <div class="stat-card sc-boxes" onclick="setFilterFromTile('active')"><div class="num" id="stat-boxes-needed">–</div><div class="lbl">Boxes needed</div></div>
       <div class="stat-card sc-archived" onclick="setFilterFromTile('archived')"><div class="num" id="stat-archived">–</div><div class="lbl">Archived</div></div>
       <div class="stat-card sc-review" onclick="setFilterFromTile('review')"><div class="num" id="stat-translation">–</div><div class="lbl">Needs review</div></div>
     </div>
@@ -644,6 +646,13 @@ function updateStats() {
   document.getElementById('stat-pending').textContent = scoped.filter(function(a){return resolveStatus(a)==='pending';}).length;
   document.getElementById('stat-approved').textContent = scoped.filter(function(a){return resolveStatus(a)==='approved';}).length;
   document.getElementById('stat-active').textContent = scoped.filter(function(a){return resolveStatus(a)==='active';}).length;
+  // 1 box feeds 3-4 people, so a household needs ceil(size / 4) boxes at
+  // each delivery. Only Confirmed cases count here, since those are the
+  // ones actually due a box at the next distribution.
+  var boxesNeeded = scoped
+    .filter(function(a){ return resolveStatus(a) === 'active'; })
+    .reduce(function(sum, a){ return sum + Math.ceil((a.household_size || 1) / 4); }, 0);
+  document.getElementById('stat-boxes-needed').textContent = boxesNeeded;
   document.getElementById('stat-archived').textContent = scoped.filter(function(a){return resolveStatus(a)==='archived';}).length;
   document.getElementById('stat-translation').textContent = scoped.filter(function(a){return a.translation_pending;}).length;
 }
