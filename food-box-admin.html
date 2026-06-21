@@ -51,6 +51,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 .stat-card.sc-pending{background:linear-gradient(135deg,#e88c1a,#f5b942);}
 .stat-card.sc-approved{background:linear-gradient(135deg,#00a896,#00c9b5);}
 .stat-card.sc-active{background:linear-gradient(135deg,#0ea5c9,#38c9f0);}
+.stat-card.sc-archived{background:linear-gradient(135deg,#546e7a,#90a4ae);}
 .stat-card.sc-review{background:linear-gradient(135deg,#7b5ea7,#a07fd4);}
 .stat-card .num{font-size:28px;font-weight:900;color:white;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,0.15);}
 .stat-card .lbl{font-size:12px;color:rgba(255,255,255,0.88);font-weight:700;margin-top:4px;}
@@ -284,6 +285,7 @@ select.edit-field{cursor:pointer;}
       <div class="stat-card sc-pending" onclick="setFilterFromTile('pending')"><div class="num" id="stat-pending">–</div><div class="lbl">Pending</div></div>
       <div class="stat-card sc-approved" onclick="setFilterFromTile('approved')"><div class="num" id="stat-approved">–</div><div class="lbl">Approved</div></div>
       <div class="stat-card sc-active" onclick="setFilterFromTile('active')"><div class="num" id="stat-active">–</div><div class="lbl">Confirmed</div></div>
+      <div class="stat-card sc-archived" onclick="setFilterFromTile('archived')"><div class="num" id="stat-archived">–</div><div class="lbl">Archived</div></div>
       <div class="stat-card sc-review" onclick="setFilterFromTile('review')"><div class="num" id="stat-translation">–</div><div class="lbl">Needs review</div></div>
     </div>
 
@@ -298,6 +300,7 @@ select.edit-field{cursor:pointer;}
       <button class="filter-btn" data-status="approved" onclick="setFilter('approved',this)">Approved</button>
       <button class="filter-btn" data-status="active" onclick="setFilter('active',this)">Confirmed</button>
       <button class="filter-btn" data-status="rejected" onclick="setFilter('rejected',this)">Rejected</button>
+      <button class="filter-btn" data-status="archived" onclick="setFilter('archived',this)">Archived</button>
       <button class="filter-btn" id="my-cases-toggle" style="display:none;" onclick="toggleMyCases(this)">My cases only</button>
     </div>
 
@@ -583,10 +586,12 @@ function updateStats() {
   document.getElementById('stat-pending').textContent = scoped.filter(function(a){return resolveStatus(a)==='pending';}).length;
   document.getElementById('stat-approved').textContent = scoped.filter(function(a){return resolveStatus(a)==='approved';}).length;
   document.getElementById('stat-active').textContent = scoped.filter(function(a){return resolveStatus(a)==='active';}).length;
+  document.getElementById('stat-archived').textContent = scoped.filter(function(a){return resolveStatus(a)==='archived';}).length;
   document.getElementById('stat-translation').textContent = scoped.filter(function(a){return a.translation_pending;}).length;
 }
 
 var LANG_TAGS = {ar:'🇶🇦 AR',bn:'🇧🇩 BN',hi:'🇮🇳 HI',ur:'🇵🇰 UR',tl:'🇵🇭 TL',en:'🇬🇧 EN'};
+var STATUS_OPTIONS = ['new','pending','approved','active','rejected','duplicate','archived'];
 
 function renderTable(apps) {
   var tbody = document.getElementById('apps-tbody');
@@ -959,6 +964,16 @@ function renderModal(app, members, urlMap) {
   CASE_OWNERS.forEach(function(o){ body += '<option value="'+o+'"'+(o===currentAssignee?' selected':'')+'>'+o+'</option>'; });
   body += '</select><button class="btn-comment" onclick="saveAssignment(\''+app.id+'\')">Reassign</button></div></div>';
   body += '<div style="font-size:11px;color:var(--muted);margin-top:8px;">Submitted: '+date+' · Lang: '+(app.submission_lang||'en').toUpperCase()+' · Status: '+status+'</div>';
+  body += '<div class="detail-section" style="margin-top:14px;"><h3>Status</h3>';
+  body += '<div style="display:flex;gap:8px;align-items:center;">';
+  body += '<select class="edit-field" id="status-dropdown" style="max-width:220px;">';
+  STATUS_OPTIONS.forEach(function(opt){
+    var lbl = opt === 'active' ? 'Confirmed' : (opt.charAt(0).toUpperCase() + opt.slice(1));
+    body += '<option value="'+opt+'"'+(opt===status?' selected':'')+'>'+lbl+'</option>';
+  });
+  body += '</select>';
+  body += '<button class="btn-comment" onclick="updateStatus(\''+app.id+'\', document.getElementById(\'status-dropdown\').value)">Update status</button>';
+  body += '</div></div>';
   document.getElementById('modal-body').innerHTML = body;
 
   // ── ACTIONS per status ──
