@@ -1314,6 +1314,8 @@ function toggleEditMemberPanel(appId, memberId) {
   h += '<div><label>QID number</label><input id="' + s + '-qidnum" value="'+(member.qid_number||'').toString().replace(/"/g,'&quot;')+'"></div>';
   h += '<div><label>Date of birth</label><input type="date" id="' + s + '-dob" value="'+(member.dob||'')+'" onchange="updateEditMemberAgeFields(\''+memberId+'\')"></div>';
   h += '<div><label>QID expiry</label><input type="date" id="' + s + '-expiry" value="'+(member.qid_expiry||'')+'"></div>';
+  var memberPhoneRequired = ageInYears(member.dob) !== null && ageInYears(member.dob) >= 18;
+  h += '<div><label id="' + s + '-whatsapp-label">'+(memberPhoneRequired?'WhatsApp *':'WhatsApp')+'</label><input id="' + s + '-whatsapp" value="'+(member.whatsapp||'').toString().replace(/"/g,'&quot;')+'"></div>';
   h += '<div><label>Gender</label><select id="' + s + '-gender" onchange="updateEditMemberPregnancyFields(\''+memberId+'\')"><option value="">–</option><option value="male"'+(member.gender==='male'?' selected':'')+'>Male</option><option value="female"'+(member.gender==='female'?' selected':'')+'>Female</option></select></div>';
   h += '<div><label>Relationship to applicant *</label><select id="' + s + '-role" onchange="onEditMemberRoleChange(\''+memberId+'\')"><option value="">–</option><option value="husband"'+(member.role==='husband'?' selected':'')+'>Husband</option><option value="wife"'+(member.role==='wife'?' selected':'')+'>Wife</option><option value="child"'+(member.role==='child'?' selected':'')+'>Child</option><option value="other-relative"'+(member.role==='other-relative'?' selected':'')+'>Other relative</option><option value="roommate"'+(member.role==='roommate'?' selected':'')+'>Roommate</option></select></div>';
   h += '<div><label>Sponsor / employer</label><input id="' + s + '-sponsor" value="'+(member.sponsor||'').toString().replace(/"/g,'&quot;')+'"></div>';
@@ -1412,9 +1414,11 @@ function updateEditMemberAgeFields(memberId) {
   var age = ageInYears(dob);
   var diaperField = document.getElementById(s + '-diaper-field');
   var formulaField = document.getElementById(s + '-formula-field');
+  var whatsappLabel = document.getElementById(s + '-whatsapp-label');
 
   var showDiaper = age !== null && age < 4;
   var showFormula = age !== null && age < 1;
+  var phoneRequired = age !== null && age >= 18;
 
   if (diaperField) {
     diaperField.style.display = showDiaper ? 'block' : 'none';
@@ -1423,6 +1427,9 @@ function updateEditMemberAgeFields(memberId) {
   if (formulaField) {
     formulaField.style.display = showFormula ? 'block' : 'none';
     if (!showFormula) document.getElementById(s + '-formula').value = '';
+  }
+  if (whatsappLabel) {
+    whatsappLabel.textContent = phoneRequired ? 'WhatsApp *' : 'WhatsApp';
   }
 }
 
@@ -1468,9 +1475,13 @@ function saveEditedMember(appId, memberId) {
   var errEl = document.getElementById(s + '-err');
   var name = document.getElementById(s + '-name').value.trim();
   var role = document.getElementById(s + '-role').value;
+  var dob = document.getElementById(s + '-dob').value;
+  var whatsapp = document.getElementById(s + '-whatsapp').value.trim();
+  var age = ageInYears(dob);
   errEl.style.display = 'none';
   if (!name) { errEl.textContent = 'Full name is required.'; errEl.style.display = 'block'; return; }
   if (!role) { errEl.textContent = 'Relationship to the main applicant is required.'; errEl.style.display = 'block'; return; }
+  if (age !== null && age >= 18 && !whatsapp) { errEl.textContent = 'A WhatsApp/phone number is required for household members 18 or older.'; errEl.style.display = 'block'; return; }
 
   if (memberId.toString().startsWith('demo')) { alert('This is demo data — connect to Supabase to save changes.'); return; }
 
@@ -1494,6 +1505,7 @@ function saveEditedMember(appId, memberId) {
     qid_expiry: document.getElementById(s + '-expiry').value || null,
     gender: document.getElementById(s + '-gender').value || null,
     role: role,
+    whatsapp: document.getElementById(s + '-whatsapp').value.trim() || null,
     sponsor: document.getElementById(s + '-sponsor').value.trim() || null,
     diaper_size: diaperVisible ? (document.getElementById(s + '-diaper').value || null) : null,
     needs_formula: formulaVisible ? (document.getElementById(s + '-formula').value || null) : null,
@@ -1559,6 +1571,7 @@ function renderAddMemberPanel(appId) {
   h += '<div><label>QID number</label><input id="' + s + '-qidnum"></div>';
   h += '<div><label>Date of birth</label><input type="date" id="' + s + '-dob" onchange="updateAddMemberAgeFields(\'' + appId + '\')"></div>';
   h += '<div><label>QID expiry</label><input id="' + s + '-expiry" type="date"></div>';
+  h += '<div><label id="' + s + '-whatsapp-label">WhatsApp</label><input id="' + s + '-whatsapp"></div>';
   h += '<div><label>Gender</label><select id="' + s + '-gender" onchange="updateAddMemberPregnancyFields(\'' + appId + '\')"><option value="">–</option><option value="male">Male</option><option value="female">Female</option></select></div>';
   h += '<div><label>Relationship to applicant *</label><select id="' + s + '-role" onchange="onAddMemberRoleChange(\'' + appId + '\')"><option value="">–</option><option value="husband">Husband</option><option value="wife">Wife</option><option value="child">Child</option><option value="other-relative">Other relative</option><option value="roommate">Roommate</option></select></div>';
   h += '<div><label>Sponsor / employer</label><input id="' + s + '-sponsor"></div>';
@@ -1592,10 +1605,12 @@ function updateAddMemberAgeFields(appId) {
   var diaperField = document.getElementById(s + '-diaper-field');
   var formulaField = document.getElementById(s + '-formula-field');
   var schoolField = document.getElementById(s + '-school-field');
+  var whatsappLabel = document.getElementById(s + '-whatsapp-label');
 
   var showDiaper = age !== null && age < 4;
   var showFormula = age !== null && age < 1;
   var showSchool = age !== null && age < 16;
+  var phoneRequired = age !== null && age >= 18;
 
   if (diaperField) {
     diaperField.style.display = showDiaper ? 'block' : 'none';
@@ -1608,6 +1623,9 @@ function updateAddMemberAgeFields(appId) {
   if (schoolField) {
     schoolField.style.display = showSchool ? 'block' : 'none';
     if (!showSchool) document.getElementById(s + '-school').value = '';
+  }
+  if (whatsappLabel) {
+    whatsappLabel.textContent = phoneRequired ? 'WhatsApp *' : 'WhatsApp';
   }
 }
 
@@ -1744,10 +1762,52 @@ function saveNewMember(appId) {
   var errEl = document.getElementById(s + '-err');
   var name = document.getElementById(s + '-name').value.trim();
   var role = document.getElementById(s + '-role').value;
+  var qidNumber = document.getElementById(s + '-qidnum').value.trim();
+  var dob = document.getElementById(s + '-dob').value;
+  var whatsapp = document.getElementById(s + '-whatsapp').value.trim();
+  var age = ageInYears(dob);
   errEl.style.display = 'none';
   if (!name) { errEl.textContent = 'Full name is required.'; errEl.style.display = 'block'; return; }
   if (!role) { errEl.textContent = 'Relationship to the main applicant is required.'; errEl.style.display = 'block'; return; }
+  if (age !== null && age >= 18 && !whatsapp) { errEl.textContent = 'A WhatsApp/phone number is required for household members 18 or older.'; errEl.style.display = 'block'; return; }
 
+  var saveBtn = document.getElementById(s + '-save-btn');
+  saveBtn.textContent = 'Checking…'; saveBtn.disabled = true;
+
+  checkMemberQidDuplicate(qidNumber).then(function(dup) {
+    if (dup) {
+      saveBtn.textContent = 'Save member'; saveBtn.disabled = false;
+      errEl.textContent = 'This QID (' + qidNumber + ') is already registered — as ' + dup.full_name + ', a household member on another application. They cannot be added again.';
+      errEl.style.display = 'block';
+      return;
+    }
+    proceedSaveNewMember(appId, name, role);
+  }).catch(function(e) {
+    saveBtn.textContent = 'Save member'; saveBtn.disabled = false;
+    errEl.textContent = 'Could not check for duplicates: ' + e.message + ' — please try again.';
+    errEl.style.display = 'block';
+  });
+}
+
+// Looks for an existing household member (on any application) with this
+// QID number. Returns the matching row if found, or null if the field is
+// empty (members without a QID, e.g. babies on a birth certificate, skip
+// the check entirely) or no match exists.
+function checkMemberQidDuplicate(qidNumber) {
+  if (!qidNumber) return Promise.resolve(null);
+  return fetch(SUPABASE_URL + '/rest/v1/food_box_members?qid_number=eq.' + encodeURIComponent(qidNumber) + '&select=id,full_name,application_id&limit=1', {
+    headers: apiHeaders()
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Lookup failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    return (Array.isArray(rows) && rows.length > 0) ? rows[0] : null;
+  });
+}
+
+function proceedSaveNewMember(appId, name, role) {
+  var s = 'add-member-' + appId;
+  var errEl = document.getElementById(s + '-err');
   var state = addMemberState[appId] || {};
   var saveBtn = document.getElementById(s + '-save-btn');
   saveBtn.textContent = 'Saving…'; saveBtn.disabled = true;
@@ -1774,6 +1834,7 @@ function saveNewMember(appId) {
     qid_expiry: document.getElementById(s + '-expiry').value || null,
     gender: document.getElementById(s + '-gender').value || null,
     role: role,
+    whatsapp: document.getElementById(s + '-whatsapp').value.trim() || null,
     sponsor: document.getElementById(s + '-sponsor').value.trim() || null,
     doc_type: state.docType || 'qid',
     is_attending_school: schoolVisible ? (document.getElementById(s + '-school').value || null) : null,
