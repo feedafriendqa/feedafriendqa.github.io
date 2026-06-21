@@ -956,8 +956,10 @@ function renderModal(app, members, urlMap) {
   body += '<div class="detail-item"><div class="lbl">Muslim?</div><select class="edit-field" id="ef-is_muslim"><option value="true"'+(app.is_muslim?' selected':'')+'>Yes</option><option value="false"'+(!app.is_muslim?' selected':'')+'>No</option></select></div>';
   body += '<div class="detail-item"><div class="lbl">Pregnant?</div><select class="edit-field" id="ef-is_pregnant"><option value="true"'+(app.is_pregnant?' selected':'')+'>Yes</option><option value="false"'+(!app.is_pregnant?' selected':'')+'>No</option></select></div>';
   body += '<div class="detail-item"><div class="lbl">Due date</div>'+sd('ef-due_date',app.due_date)+'</div>';
+  body += dif('Diaper size','ef-diaper_size',app.diaper_size);
+  body += dif('Formula needed','ef-formula',app.formula);
   body += '</div>';
-  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',full_name:\'ef-full_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\'})">Save applicant</button>';
+  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',full_name:\'ef-full_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\',diaper_size:\'ef-diaper_size\',formula:\'ef-formula\'})">Save applicant</button>';
   body += accEnd;
   // ── ADDRESS (editable) ──
   body += accStart('address', 'Address');
