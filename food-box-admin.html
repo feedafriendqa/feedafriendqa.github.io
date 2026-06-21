@@ -429,6 +429,31 @@ function ageInYears(dob) {
   if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age--;
   return age;
 }
+
+// Age in whole months — used for under-2s, where "0 years old" tells you
+// nothing about whether a baby is 2 months or 11 months.
+function ageInMonths(dob) {
+  if (!dob) return null;
+  var birth = new Date(dob);
+  if (isNaN(birth.getTime())) return null;
+  var now = new Date();
+  var months = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
+  if (now.getDate() < birth.getDate()) months--;
+  return Math.max(0, months);
+}
+
+// Human-readable age for a member card: months for under-2s (matches how
+// the diaper/formula age rules are phrased), years for everyone older.
+function displayAge(dob) {
+  if (!dob) return null;
+  var months = ageInMonths(dob);
+  if (months === null) return null;
+  if (months < 24) {
+    return months + (months === 1 ? ' month old' : ' months old');
+  }
+  var years = ageInYears(dob);
+  return years + (years === 1 ? ' year old' : ' years old');
+}
 const sb = supabase.createClient(SUPABASE_URL, ANON_KEY);
 
 var allApps = [];
@@ -1007,11 +1032,12 @@ function renderModal(app, members, urlMap) {
   if (members && members.length > 0) {
     members.forEach(function(m, idx) {
       body += '<div class="member-card">';
-      body += '<div class="member-card-header">👤 '+(m.full_name||'Member '+(idx+1))+' <span style="font-size:11px;font-weight:400;color:var(--muted);">· '+(m.role||'')+' · '+(m.gender||'')+'</span></div>';
+      var ageStr = displayAge(m.dob);
+      body += '<div class="member-card-header">👤 '+(m.full_name||'Member '+(idx+1))+' <span style="font-size:11px;font-weight:400;color:var(--muted);">· '+(m.role||'')+(ageStr?' · '+ageStr:'')+' · '+(m.gender||'')+'</span></div>';
       body += '<div class="member-card-grid">';
       body += di('Full name',m.full_name||'–');
       body += di('QID number',m.qid_number||'–');
-      body += di('Date of birth',m.dob||'–');
+      body += di('Date of birth', m.dob ? (m.dob + (displayAge(m.dob) ? ' <span style="color:var(--muted);font-weight:600;">(' + displayAge(m.dob) + ')</span>' : '')) : '–');
       body += di('Role',m.role||'–');
       body += di('Gender',m.gender||'–');
       body += di('WhatsApp',m.whatsapp||'–');
