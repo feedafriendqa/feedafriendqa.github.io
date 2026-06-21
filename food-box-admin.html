@@ -928,6 +928,7 @@ function renderModal(app, members, urlMap) {
       body += di('Role',m.role||'–');
       body += di('Gender',m.gender||'–');
       body += di('WhatsApp',m.whatsapp||'–');
+      body += di('Sponsor / employer',m.sponsor||'–');
       body += di('Diaper size',(m.diaper_size!=null&&m.diaper_size!=='')?('Size '+m.diaper_size):'–');
       if (m.needs_formula) body += di('Needs formula',m.needs_formula==='yes'?'🍼 Yes':'No');
       if (m.is_pregnant) {
@@ -1025,12 +1026,14 @@ function renderModal(app, members, urlMap) {
   // ── ACTIONS per status ──
   var actions = '';
   if (status === 'new' || status === 'pending') {
-    actions += '<button class="modal-actions btn-approve-full" onclick="updateStatus(\''+app.id+'\',\'approved\')">✓ Approve</button>';
-    actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\''+app.id+'\',\'active\')">⚡ Confirm</button>';
+    actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\''+app.id+'\',\'active\')">✓ Approve and Confirm</button>';
     actions += '<button class="modal-actions btn-reject-full" onclick="updateStatus(\''+app.id+'\',\'rejected\')">Reject</button>';
     actions += '<button class="modal-actions btn-duplicate" onclick="openDuplicatePicker(\''+app.id+'\')">Duplicate</button>';
-  } else if (status === 'approved' || status === 'active') {
-    actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\''+app.id+'\',\'active\')">⚡ Mark Confirmed</button>';
+  } else if (status === 'approved') {
+    actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\''+app.id+'\',\'active\')">⚡ Confirm — sending another box</button>';
+    actions += '<button class="modal-actions btn-archive" onclick="updateStatus(\''+app.id+'\',\'archived\')">Archive</button>';
+  } else if (status === 'active') {
+    actions += '<button class="modal-actions btn-approve-full" onclick="updateStatus(\''+app.id+'\',\'approved\')">📦 Box delivered</button>';
     actions += '<button class="modal-actions btn-archive" onclick="updateStatus(\''+app.id+'\',\'archived\')">Archive</button>';
   }
   document.getElementById('modal-actions').innerHTML = actions;
@@ -1058,26 +1061,6 @@ function updateStatus(id, status) {
     var app = idx !== -1 ? allApps[idx] : null;
     if (app) app.status = status;
     updateStats(); filterApps(); closeModal();
-
-    // Pregnant + just approved -> create a Welcome Baby follow-up case.
-    if (status === 'approved' && app && app.is_pregnant && !app.wbb_case_created) {
-      sb.auth.getSession().then(function(res) {
-        var session = res && res.data ? res.data.session : null;
-        var token = session ? session.access_token : ANON_KEY;
-        return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ type: 'notify_welcome_baby', application_id: id })
-        });
-      }).then(function(r){ return r.json(); }).then(function(res) {
-        if (res.ok) {
-          app.wbb_case_created = true;
-          alert('💚 A Welcome Baby follow-up case was created' + (res.assigned_fairy ? ', assigned to ' + res.assigned_fairy : ' (unassigned — check fairy names in Welcome Baby)') + '.');
-        } else if (res.error) {
-          console.error('Welcome Baby case not created:', res.error);
-        }
-      }).catch(function(e){ console.error('Welcome Baby case creation failed:', e.message); });
-    }
   }).catch(function(e){ alert('Update failed: ' + e.message); });
 }
 
@@ -1123,6 +1106,8 @@ function saveTags(id) {
   });
   var app = allApps.find(function(a){return a.id===id;});
   if (!app) return;
+  var oldTags = Array.isArray(app.tags) ? app.tags : [];
+  var wbbJustTicked = tags.indexOf('wbb') !== -1 && oldTags.indexOf('wbb') === -1;
   app.tags = tags;
   if (id.startsWith('demo')) {
     var btn = document.querySelector('[onclick*="saveTags"]');
@@ -1142,6 +1127,33 @@ function saveTags(id) {
     var btn = document.querySelector('[onclick*="saveTags"]');
     if (btn) { btn.textContent='✓ Saved'; setTimeout(function(){btn.textContent='Save tags';},2000); }
     filterApps();
+
+    // Welcome Baby case creation fires only when the admin manually ticks
+    // the WBB box — covers both a brand-new pregnant applicant being
+    // enrolled at intake, and an existing approved case where the person
+    // becomes pregnant later and the admin ticks the box at that point.
+    // It does NOT fire automatically off is_pregnant or any status change.
+    if (wbbJustTicked) {
+      sb.auth.getSession().then(function(res) {
+        var session = res && res.data ? res.data.session : null;
+        var token = session ? session.access_token : ANON_KEY;
+        return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ type: 'notify_welcome_baby', application_id: id })
+        });
+      }).then(function(r){ return r.json(); }).then(function(res) {
+        if (res.ok) {
+          alert('💚 A Welcome Baby follow-up case was created' + (res.assigned_fairy ? ', assigned to ' + res.assigned_fairy : ' (unassigned — check fairy names in Welcome Baby)') + '.');
+        } else if (res.error) {
+          console.error('Welcome Baby case not created:', res.error);
+          alert('Tags saved, but the Welcome Baby case could not be created: ' + res.error);
+        }
+      }).catch(function(e){
+        console.error('Welcome Baby case creation failed:', e.message);
+        alert('Tags saved, but the Welcome Baby case could not be created: ' + e.message);
+      });
+    }
   }).catch(function(e){ alert('Save failed: ' + e.message); });
 }
 
@@ -1302,7 +1314,8 @@ function toggleEditMemberPanel(appId, memberId) {
   h += '<div><label>Date of birth</label><input type="date" id="' + s + '-dob" value="'+(member.dob||'')+'" onchange="updateEditMemberAgeFields(\''+memberId+'\')"></div>';
   h += '<div><label>QID expiry</label><input type="date" id="' + s + '-expiry" value="'+(member.qid_expiry||'')+'"></div>';
   h += '<div><label>Gender</label><select id="' + s + '-gender" onchange="updateEditMemberPregnancyFields(\''+memberId+'\')"><option value="">–</option><option value="male"'+(member.gender==='male'?' selected':'')+'>Male</option><option value="female"'+(member.gender==='female'?' selected':'')+'>Female</option></select></div>';
-  h += '<div><label>Relationship to applicant *</label><select id="' + s + '-role"><option value="">–</option><option value="husband"'+(member.role==='husband'?' selected':'')+'>Husband</option><option value="wife"'+(member.role==='wife'?' selected':'')+'>Wife</option><option value="child"'+(member.role==='child'?' selected':'')+'>Child</option><option value="other-relative"'+(member.role==='other-relative'?' selected':'')+'>Other relative</option><option value="roommate"'+(member.role==='roommate'?' selected':'')+'>Roommate</option></select></div>';
+  h += '<div><label>Relationship to applicant *</label><select id="' + s + '-role" onchange="onEditMemberRoleChange(\''+memberId+'\')"><option value="">–</option><option value="husband"'+(member.role==='husband'?' selected':'')+'>Husband</option><option value="wife"'+(member.role==='wife'?' selected':'')+'>Wife</option><option value="child"'+(member.role==='child'?' selected':'')+'>Child</option><option value="other-relative"'+(member.role==='other-relative'?' selected':'')+'>Other relative</option><option value="roommate"'+(member.role==='roommate'?' selected':'')+'>Roommate</option></select></div>';
+  h += '<div><label>Sponsor / employer</label><input id="' + s + '-sponsor" value="'+(member.sponsor||'').toString().replace(/"/g,'&quot;')+'"></div>';
   var memberAge = ageInYears(member.dob);
   var showMemberDiaper = memberAge !== null && memberAge < 4;
   var showMemberFormula = memberAge !== null && memberAge < 1;
@@ -1310,7 +1323,7 @@ function toggleEditMemberPanel(appId, memberId) {
     '<option value="">–</option>' + [0,1,2,3,4,5,6,7].map(function(n){ return '<option value="'+n+'"'+(String(member.diaper_size)===String(n)?' selected':'')+'>Size '+n+'</option>'; }).join('') + '</select></div>';
   h += '<div id="' + s + '-formula-field" style="'+(showMemberFormula?'':'display:none;')+'"><label>Needs formula?</label><select id="' + s + '-formula">' +
     '<option value="">–</option><option value="yes"'+(member.needs_formula==='yes'?' selected':'')+'>Yes</option><option value="no"'+(member.needs_formula==='no'?' selected':'')+'>No</option></select></div>';
-  var showMemberPregnant = member.gender === 'female';
+  var showMemberPregnant = member.gender === 'female' || member.role === 'wife';
   var showMemberPregnancyDetails = showMemberPregnant && member.is_pregnant === true;
   h += '<div id="' + s + '-pregnant-field" style="'+(showMemberPregnant?'':'display:none;')+'"><label>Pregnant?</label><select id="' + s + '-pregnant" onchange="updateEditMemberPregnancyFields(\''+memberId+'\')">' +
     '<option value="">–</option><option value="yes"'+(member.is_pregnant===true?' selected':'')+'>Yes</option><option value="no"'+(member.is_pregnant===false?' selected':'')+'>No</option></select></div>';
@@ -1376,6 +1389,7 @@ function scanEditMemberQID(memberId) {
     updateEditMemberAgeFields(memberId);
     var expiry = qidDateToISO(raw.expiry);
     if (expiry) document.getElementById(s + '-expiry').value = expiry;
+    if (raw.sponsor) document.getElementById(s + '-sponsor').value = raw.sponsor;
     if (raw.gender) {
       var gSel = document.getElementById(s + '-gender');
       var g = raw.gender.toLowerCase();
@@ -1413,6 +1427,16 @@ function updateEditMemberAgeFields(memberId) {
 
 // Same logic as updateAddMemberPregnancyFields, scoped to the edit-member
 // panel's element IDs.
+// Same auto-set as onAddMemberRoleChange, scoped to the edit-member panel.
+function onEditMemberRoleChange(memberId) {
+  var s = 'edit-member-' + memberId;
+  var role = document.getElementById(s + '-role').value;
+  var genderEl = document.getElementById(s + '-gender');
+  if (role === 'wife' && !genderEl.value) genderEl.value = 'female';
+  else if (role === 'husband' && !genderEl.value) genderEl.value = 'male';
+  updateEditMemberPregnancyFields(memberId);
+}
+
 function updateEditMemberPregnancyFields(memberId) {
   var s = 'edit-member-' + memberId;
   var gender = document.getElementById(s + '-gender').value;
@@ -1469,6 +1493,7 @@ function saveEditedMember(appId, memberId) {
     qid_expiry: document.getElementById(s + '-expiry').value || null,
     gender: document.getElementById(s + '-gender').value || null,
     role: role,
+    sponsor: document.getElementById(s + '-sponsor').value.trim() || null,
     diaper_size: diaperVisible ? (document.getElementById(s + '-diaper').value || null) : null,
     needs_formula: formulaVisible ? (document.getElementById(s + '-formula').value || null) : null,
     is_pregnant: pregnantVisible ? (document.getElementById(s + '-pregnant').value === 'yes') : null,
@@ -1534,7 +1559,8 @@ function renderAddMemberPanel(appId) {
   h += '<div><label>Date of birth</label><input type="date" id="' + s + '-dob" onchange="updateAddMemberAgeFields(\'' + appId + '\')"></div>';
   h += '<div><label>QID expiry</label><input id="' + s + '-expiry" type="date"></div>';
   h += '<div><label>Gender</label><select id="' + s + '-gender" onchange="updateAddMemberPregnancyFields(\'' + appId + '\')"><option value="">–</option><option value="male">Male</option><option value="female">Female</option></select></div>';
-  h += '<div><label>Relationship to applicant *</label><select id="' + s + '-role"><option value="">–</option><option value="husband">Husband</option><option value="wife">Wife</option><option value="child">Child</option><option value="other-relative">Other relative</option><option value="roommate">Roommate</option></select></div>';
+  h += '<div><label>Relationship to applicant *</label><select id="' + s + '-role" onchange="onAddMemberRoleChange(\'' + appId + '\')"><option value="">–</option><option value="husband">Husband</option><option value="wife">Wife</option><option value="child">Child</option><option value="other-relative">Other relative</option><option value="roommate">Roommate</option></select></div>';
+  h += '<div><label>Sponsor / employer</label><input id="' + s + '-sponsor"></div>';
   h += '<div id="' + s + '-school-field" style="display:none;"><label>Attending school?</label><select id="' + s + '-school"><option value="">–</option><option value="yes">Yes</option><option value="no">No — out of school</option><option value="na">Not school-age</option></select></div>';
   h += '<div id="' + s + '-diaper-field" style="display:none;"><label>Diaper size</label><select id="' + s + '-diaper"><option value="">–</option>' +
     [0,1,2,3,4,5,6,7].map(function(n){ return '<option value="'+n+'">Size '+n+'</option>'; }).join('') + '</select></div>';
@@ -1587,6 +1613,18 @@ function updateAddMemberAgeFields(appId) {
 // Shows the pregnant/due-date/expected-baby-gender fields when the member's
 // gender is female. Due date and baby gender only appear once "Pregnant" is
 // answered Yes, since asking for a due date before that is confusing.
+// Wife/husband implies gender, but the gender field is separate and easy to
+// skip — without this, picking "Wife" alone never reveals the pregnancy
+// question, since that's gated on gender, not role.
+function onAddMemberRoleChange(appId) {
+  var s = 'add-member-' + appId;
+  var role = document.getElementById(s + '-role').value;
+  var genderEl = document.getElementById(s + '-gender');
+  if (role === 'wife' && !genderEl.value) genderEl.value = 'female';
+  else if (role === 'husband' && !genderEl.value) genderEl.value = 'male';
+  updateAddMemberPregnancyFields(appId);
+}
+
 function updateAddMemberPregnancyFields(appId) {
   var s = 'add-member-' + appId;
   var gender = document.getElementById(s + '-gender').value;
@@ -1686,6 +1724,7 @@ function scanAddMemberQID(appId) {
     updateAddMemberAgeFields(appId);
     var expiry = qidDateToISO(raw.expiry);
     if (expiry) document.getElementById(s + '-expiry').value = expiry;
+    if (raw.sponsor) document.getElementById(s + '-sponsor').value = raw.sponsor;
     if (raw.gender) {
       var gSel = document.getElementById(s + '-gender');
       var g = raw.gender.toLowerCase();
@@ -1734,6 +1773,7 @@ function saveNewMember(appId) {
     qid_expiry: document.getElementById(s + '-expiry').value || null,
     gender: document.getElementById(s + '-gender').value || null,
     role: role,
+    sponsor: document.getElementById(s + '-sponsor').value.trim() || null,
     doc_type: state.docType || 'qid',
     is_attending_school: schoolVisible ? (document.getElementById(s + '-school').value || null) : null,
     diaper_size: diaperVisible ? (document.getElementById(s + '-diaper').value || null) : null,
@@ -1939,7 +1979,7 @@ function saveAssignment(id) {
   }).catch(function(e){ alert('Reassign failed: ' + e.message); });
 }
 
-function quickApprove(id) { updateStatus(id, 'approved'); }
+function quickApprove(id) { updateStatus(id, 'active'); }
 
 
 // ── CHANGE PASSWORD ───────────────────────────────────────────────
