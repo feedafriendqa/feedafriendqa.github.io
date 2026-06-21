@@ -393,6 +393,20 @@ function qidDateToISO(d) {
   if (yyyy.length !== 4 || isNaN(dd) || isNaN(mm) || isNaN(yyyy)) return null;
   return yyyy + '-' + mm + '-' + dd;
 }
+
+// Age in whole years from a YYYY-MM-DD date of birth. Returns null if dob
+// is missing or unparseable, so callers can treat "unknown age" distinctly
+// from "age 0".
+function ageInYears(dob) {
+  if (!dob) return null;
+  var birth = new Date(dob);
+  if (isNaN(birth.getTime())) return null;
+  var now = new Date();
+  var age = now.getFullYear() - birth.getFullYear();
+  var monthDiff = now.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age--;
+  return age;
+}
 const sb = supabase.createClient(SUPABASE_URL, ANON_KEY);
 
 var allApps = [];
@@ -890,8 +904,13 @@ function renderModal(app, members, urlMap) {
       body += di('Role',m.role||'–');
       body += di('Gender',m.gender||'–');
       body += di('WhatsApp',m.whatsapp||'–');
-      body += di('Diaper size',m.diaper_size||'–');
-      if (m.is_pregnant) body += di('Pregnant','🤰 Yes');
+      body += di('Diaper size',(m.diaper_size!=null&&m.diaper_size!=='')?('Size '+m.diaper_size):'–');
+      if (m.needs_formula) body += di('Needs formula',m.needs_formula==='yes'?'🍼 Yes':'No');
+      if (m.is_pregnant) {
+        body += di('Pregnant','🤰 Yes');
+        if (m.due_date) body += di('Due date', m.due_date);
+        if (m.baby_gender) body += di('Expected baby gender', m.baby_gender === 'unknown' ? 'Not yet known' : (m.baby_gender.charAt(0).toUpperCase()+m.baby_gender.slice(1)));
+      }
       if (m.doc_type === 'birth-cert') {
         body += docLink('Birth certificate', m.birth_cert_path, urlMap);
       } else {
@@ -1232,10 +1251,23 @@ function toggleEditMemberPanel(appId, memberId) {
   h += '<div class="add-member-field-grid">';
   h += '<div><label>Full name *</label><input id="' + s + '-name" value="'+(member.full_name||'').toString().replace(/"/g,'&quot;')+'"></div>';
   h += '<div><label>QID number</label><input id="' + s + '-qidnum" value="'+(member.qid_number||'').toString().replace(/"/g,'&quot;')+'"></div>';
-  h += '<div><label>Date of birth</label><input type="date" id="' + s + '-dob" value="'+(member.dob||'')+'"></div>';
+  h += '<div><label>Date of birth</label><input type="date" id="' + s + '-dob" value="'+(member.dob||'')+'" onchange="updateEditMemberAgeFields(\''+memberId+'\')"></div>';
   h += '<div><label>QID expiry</label><input type="date" id="' + s + '-expiry" value="'+(member.qid_expiry||'')+'"></div>';
-  h += '<div><label>Gender</label><select id="' + s + '-gender"><option value="">–</option><option value="male"'+(member.gender==='male'?' selected':'')+'>Male</option><option value="female"'+(member.gender==='female'?' selected':'')+'>Female</option></select></div>';
+  h += '<div><label>Gender</label><select id="' + s + '-gender" onchange="updateEditMemberPregnancyFields(\''+memberId+'\')"><option value="">–</option><option value="male"'+(member.gender==='male'?' selected':'')+'>Male</option><option value="female"'+(member.gender==='female'?' selected':'')+'>Female</option></select></div>';
   h += '<div><label>Relationship to applicant *</label><select id="' + s + '-role"><option value="">–</option><option value="husband"'+(member.role==='husband'?' selected':'')+'>Husband</option><option value="wife"'+(member.role==='wife'?' selected':'')+'>Wife</option><option value="child"'+(member.role==='child'?' selected':'')+'>Child</option><option value="other-relative"'+(member.role==='other-relative'?' selected':'')+'>Other relative</option><option value="roommate"'+(member.role==='roommate'?' selected':'')+'>Roommate</option></select></div>';
+  var memberAge = ageInYears(member.dob);
+  var showMemberDiaper = memberAge !== null && memberAge < 4;
+  var showMemberFormula = memberAge !== null && memberAge < 1;
+  h += '<div id="' + s + '-diaper-field" style="'+(showMemberDiaper?'':'display:none;')+'"><label>Diaper size</label><select id="' + s + '-diaper">' +
+    '<option value="">–</option>' + [0,1,2,3,4,5,6,7].map(function(n){ return '<option value="'+n+'"'+(String(member.diaper_size)===String(n)?' selected':'')+'>Size '+n+'</option>'; }).join('') + '</select></div>';
+  h += '<div id="' + s + '-formula-field" style="'+(showMemberFormula?'':'display:none;')+'"><label>Needs formula?</label><select id="' + s + '-formula">' +
+    '<option value="">–</option><option value="yes"'+(member.needs_formula==='yes'?' selected':'')+'>Yes</option><option value="no"'+(member.needs_formula==='no'?' selected':'')+'>No</option></select></div>';
+  var showMemberPregnant = member.gender === 'female';
+  var showMemberPregnancyDetails = showMemberPregnant && member.is_pregnant === true;
+  h += '<div id="' + s + '-pregnant-field" style="'+(showMemberPregnant?'':'display:none;')+'"><label>Pregnant?</label><select id="' + s + '-pregnant" onchange="updateEditMemberPregnancyFields(\''+memberId+'\')">' +
+    '<option value="">–</option><option value="yes"'+(member.is_pregnant===true?' selected':'')+'>Yes</option><option value="no"'+(member.is_pregnant===false?' selected':'')+'>No</option></select></div>';
+  h += '<div id="' + s + '-duedate-field" style="'+(showMemberPregnancyDetails?'':'display:none;')+'"><label>Due date</label><input type="date" id="' + s + '-duedate" value="'+(member.due_date||'')+'"></div>';
+  h += '<div id="' + s + '-babygender-field" style="'+(showMemberPregnancyDetails?'':'display:none;')+'"><label>Expected baby gender</label><select id="' + s + '-babygender"><option value="">–</option><option value="male"'+(member.baby_gender==='male'?' selected':'')+'>Male</option><option value="female"'+(member.baby_gender==='female'?' selected':'')+'>Female</option><option value="unknown"'+(member.baby_gender==='unknown'?' selected':'')+'>Not yet known</option></select></div>';
   h += '</div>';
 
   h += '<div class="err-msg" id="' + s + '-err" style="display:none;color:var(--red);font-size:12px;margin-top:8px;"></div>';
@@ -1293,6 +1325,7 @@ function scanEditMemberQID(memberId) {
     if (raw.qid_number) document.getElementById(s + '-qidnum').value = raw.qid_number;
     var dob = qidDateToISO(raw.dob);
     if (dob) document.getElementById(s + '-dob').value = dob;
+    updateEditMemberAgeFields(memberId);
     var expiry = qidDateToISO(raw.expiry);
     if (expiry) document.getElementById(s + '-expiry').value = expiry;
     if (raw.gender) {
@@ -1306,6 +1339,55 @@ function scanEditMemberQID(memberId) {
   }).finally(function() {
     setTimeout(function() { if (statusEl) statusEl.classList.remove('visible'); }, 3000);
   });
+}
+
+// Same show/clear logic as updateAddMemberAgeFields, scoped to the
+// edit-member panel's element IDs.
+function updateEditMemberAgeFields(memberId) {
+  var s = 'edit-member-' + memberId;
+  var dob = document.getElementById(s + '-dob').value;
+  var age = ageInYears(dob);
+  var diaperField = document.getElementById(s + '-diaper-field');
+  var formulaField = document.getElementById(s + '-formula-field');
+
+  var showDiaper = age !== null && age < 4;
+  var showFormula = age !== null && age < 1;
+
+  if (diaperField) {
+    diaperField.style.display = showDiaper ? 'block' : 'none';
+    if (!showDiaper) document.getElementById(s + '-diaper').value = '';
+  }
+  if (formulaField) {
+    formulaField.style.display = showFormula ? 'block' : 'none';
+    if (!showFormula) document.getElementById(s + '-formula').value = '';
+  }
+}
+
+// Same logic as updateAddMemberPregnancyFields, scoped to the edit-member
+// panel's element IDs.
+function updateEditMemberPregnancyFields(memberId) {
+  var s = 'edit-member-' + memberId;
+  var gender = document.getElementById(s + '-gender').value;
+  var pregnantField = document.getElementById(s + '-pregnant-field');
+  var dueDateField = document.getElementById(s + '-duedate-field');
+  var babyGenderField = document.getElementById(s + '-babygender-field');
+
+  var showPregnantQuestion = gender === 'female';
+  if (pregnantField) {
+    pregnantField.style.display = showPregnantQuestion ? 'block' : 'none';
+    if (!showPregnantQuestion) document.getElementById(s + '-pregnant').value = '';
+  }
+
+  var pregnantAnswer = showPregnantQuestion ? document.getElementById(s + '-pregnant').value : '';
+  var showPregnancyDetails = pregnantAnswer === 'yes';
+  if (dueDateField) {
+    dueDateField.style.display = showPregnancyDetails ? 'block' : 'none';
+    if (!showPregnancyDetails) document.getElementById(s + '-duedate').value = '';
+  }
+  if (babyGenderField) {
+    babyGenderField.style.display = showPregnancyDetails ? 'block' : 'none';
+    if (!showPregnancyDetails) document.getElementById(s + '-babygender').value = '';
+  }
 }
 
 function saveEditedMember(appId, memberId) {
@@ -1322,13 +1404,28 @@ function saveEditedMember(appId, memberId) {
   var saveBtn = document.getElementById(s + '-save-btn');
   saveBtn.textContent = 'Saving…'; saveBtn.disabled = true;
 
+  var diaperField = document.getElementById(s + '-diaper-field');
+  var formulaField = document.getElementById(s + '-formula-field');
+  var diaperVisible = diaperField && diaperField.style.display !== 'none';
+  var formulaVisible = formulaField && formulaField.style.display !== 'none';
+
+  var pregnantField = document.getElementById(s + '-pregnant-field');
+  var dueDateField = document.getElementById(s + '-duedate-field');
+  var pregnantVisible = pregnantField && pregnantField.style.display !== 'none';
+  var pregnancyDetailsVisible = dueDateField && dueDateField.style.display !== 'none';
+
   var payload = {
     full_name: name,
     qid_number: document.getElementById(s + '-qidnum').value.trim() || null,
     dob: document.getElementById(s + '-dob').value || null,
     qid_expiry: document.getElementById(s + '-expiry').value || null,
     gender: document.getElementById(s + '-gender').value || null,
-    role: role
+    role: role,
+    diaper_size: diaperVisible ? (document.getElementById(s + '-diaper').value || null) : null,
+    needs_formula: formulaVisible ? (document.getElementById(s + '-formula').value || null) : null,
+    is_pregnant: pregnantVisible ? (document.getElementById(s + '-pregnant').value === 'yes') : null,
+    due_date: pregnancyDetailsVisible ? (document.getElementById(s + '-duedate').value || null) : null,
+    baby_gender: pregnancyDetailsVisible ? (document.getElementById(s + '-babygender').value || null) : null
   };
 
   fetch(SUPABASE_URL + '/rest/v1/food_box_members?id=eq.' + memberId, {
@@ -1376,11 +1473,17 @@ function renderAddMemberPanel(appId) {
   h += '<div class="add-member-field-grid">';
   h += '<div><label>Full name *</label><input id="' + s + '-name"></div>';
   h += '<div><label>QID number</label><input id="' + s + '-qidnum"></div>';
-  h += '<div><label>Date of birth</label><input type="date" id="' + s + '-dob"></div>';
-  h += '<div><label>QID expiry</label><input type="date" id="' + s + '-expiry"></div>';
-  h += '<div><label>Gender</label><select id="' + s + '-gender"><option value="">–</option><option value="male">Male</option><option value="female">Female</option></select></div>';
+  h += '<div><label>Date of birth</label><input type="date" id="' + s + '-dob" onchange="updateAddMemberAgeFields(\'' + appId + '\')"></div>';
+  h += '<div><label>QID expiry</label><input id="' + s + '-expiry" type="date"></div>';
+  h += '<div><label>Gender</label><select id="' + s + '-gender" onchange="updateAddMemberPregnancyFields(\'' + appId + '\')"><option value="">–</option><option value="male">Male</option><option value="female">Female</option></select></div>';
   h += '<div><label>Relationship to applicant *</label><select id="' + s + '-role"><option value="">–</option><option value="husband">Husband</option><option value="wife">Wife</option><option value="child">Child</option><option value="other-relative">Other relative</option><option value="roommate">Roommate</option></select></div>';
   h += '<div><label>Attending school?</label><select id="' + s + '-school"><option value="">–</option><option value="yes">Yes</option><option value="no">No — out of school</option><option value="na">Not school-age</option></select></div>';
+  h += '<div id="' + s + '-diaper-field" style="display:none;"><label>Diaper size</label><select id="' + s + '-diaper"><option value="">–</option>' +
+    [0,1,2,3,4,5,6,7].map(function(n){ return '<option value="'+n+'">Size '+n+'</option>'; }).join('') + '</select></div>';
+  h += '<div id="' + s + '-formula-field" style="display:none;"><label>Needs formula?</label><select id="' + s + '-formula"><option value="">–</option><option value="yes">Yes</option><option value="no">No</option></select></div>';
+  h += '<div id="' + s + '-pregnant-field" style="display:none;"><label>Pregnant?</label><select id="' + s + '-pregnant" onchange="updateAddMemberPregnancyFields(\'' + appId + '\')"><option value="">–</option><option value="yes">Yes</option><option value="no">No</option></select></div>';
+  h += '<div id="' + s + '-duedate-field" style="display:none;"><label>Due date</label><input type="date" id="' + s + '-duedate"></div>';
+  h += '<div id="' + s + '-babygender-field" style="display:none;"><label>Expected baby gender</label><select id="' + s + '-babygender"><option value="">–</option><option value="male">Male</option><option value="female">Female</option><option value="unknown">Not yet known</option></select></div>';
   h += '</div>';
 
   h += '<div class="err-msg" id="' + s + '-err" style="display:none;color:var(--red);font-size:12px;margin-top:8px;"></div>';
@@ -1391,6 +1494,58 @@ function renderAddMemberPanel(appId) {
 
   h += '</div>';
   return h;
+}
+
+// Shows the diaper-size field for children under 4 (not including 4), and
+// the formula field for children under 1, based on the DOB field. Clears
+// out the hidden fields' values so a stale selection can't be saved if the
+// case handler changes the DOB after picking a diaper size, for instance.
+function updateAddMemberAgeFields(appId) {
+  var s = 'add-member-' + appId;
+  var dob = document.getElementById(s + '-dob').value;
+  var age = ageInYears(dob);
+  var diaperField = document.getElementById(s + '-diaper-field');
+  var formulaField = document.getElementById(s + '-formula-field');
+
+  var showDiaper = age !== null && age < 4;
+  var showFormula = age !== null && age < 1;
+
+  if (diaperField) {
+    diaperField.style.display = showDiaper ? 'block' : 'none';
+    if (!showDiaper) document.getElementById(s + '-diaper').value = '';
+  }
+  if (formulaField) {
+    formulaField.style.display = showFormula ? 'block' : 'none';
+    if (!showFormula) document.getElementById(s + '-formula').value = '';
+  }
+}
+
+// Shows the pregnant/due-date/expected-baby-gender fields when the member's
+// gender is female. Due date and baby gender only appear once "Pregnant" is
+// answered Yes, since asking for a due date before that is confusing.
+function updateAddMemberPregnancyFields(appId) {
+  var s = 'add-member-' + appId;
+  var gender = document.getElementById(s + '-gender').value;
+  var pregnantField = document.getElementById(s + '-pregnant-field');
+  var dueDateField = document.getElementById(s + '-duedate-field');
+  var babyGenderField = document.getElementById(s + '-babygender-field');
+
+  var showPregnantQuestion = gender === 'female';
+  if (pregnantField) {
+    pregnantField.style.display = showPregnantQuestion ? 'block' : 'none';
+    if (!showPregnantQuestion) document.getElementById(s + '-pregnant').value = '';
+  }
+
+  var pregnantAnswer = showPregnantQuestion ? document.getElementById(s + '-pregnant').value : '';
+  var showPregnancyDetails = pregnantAnswer === 'yes';
+  if (dueDateField) {
+    dueDateField.style.display = showPregnancyDetails ? 'block' : 'none';
+    if (!showPregnancyDetails) document.getElementById(s + '-duedate').value = '';
+  }
+  if (babyGenderField) {
+    babyGenderField.style.display = showPregnancyDetails ? 'block' : 'none';
+    if (!showPregnancyDetails) document.getElementById(s + '-babygender').value = '';
+  }
 }
 
 function showAddMemberPanel(appId) {
@@ -1464,6 +1619,7 @@ function scanAddMemberQID(appId) {
     if (raw.qid_number) document.getElementById(s + '-qidnum').value = raw.qid_number;
     var dob = qidDateToISO(raw.dob);
     if (dob) document.getElementById(s + '-dob').value = dob;
+    updateAddMemberAgeFields(appId);
     var expiry = qidDateToISO(raw.expiry);
     if (expiry) document.getElementById(s + '-expiry').value = expiry;
     if (raw.gender) {
@@ -1492,6 +1648,17 @@ function saveNewMember(appId) {
   var saveBtn = document.getElementById(s + '-save-btn');
   saveBtn.textContent = 'Saving…'; saveBtn.disabled = true;
 
+  var diaperField = document.getElementById(s + '-diaper-field');
+  var formulaField = document.getElementById(s + '-formula-field');
+  var diaperVisible = diaperField && diaperField.style.display !== 'none';
+  var formulaVisible = formulaField && formulaField.style.display !== 'none';
+
+  var pregnantField = document.getElementById(s + '-pregnant-field');
+  var dueDateField = document.getElementById(s + '-duedate-field');
+  var babyGenderField = document.getElementById(s + '-babygender-field');
+  var pregnantVisible = pregnantField && pregnantField.style.display !== 'none';
+  var pregnancyDetailsVisible = dueDateField && dueDateField.style.display !== 'none';
+
   var payload = {
     type: 'admin_add_member',
     application_id: appId,
@@ -1502,7 +1669,12 @@ function saveNewMember(appId) {
     gender: document.getElementById(s + '-gender').value || null,
     role: role,
     doc_type: state.docType || 'qid',
-    is_attending_school: document.getElementById(s + '-school').value || null
+    is_attending_school: document.getElementById(s + '-school').value || null,
+    diaper_size: diaperVisible ? (document.getElementById(s + '-diaper').value || null) : null,
+    needs_formula: formulaVisible ? (document.getElementById(s + '-formula').value || null) : null,
+    is_pregnant: pregnantVisible ? (document.getElementById(s + '-pregnant').value === 'yes') : null,
+    due_date: pregnancyDetailsVisible ? (document.getElementById(s + '-duedate').value || null) : null,
+    baby_gender: pregnancyDetailsVisible ? (document.getElementById(s + '-babygender').value || null) : null
   };
 
   sb.auth.getSession().then(function(res) {
