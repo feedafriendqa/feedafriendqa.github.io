@@ -37,7 +37,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 .allowance-banner-inactive .allowance-value{font-size:18px;color:var(--muted);}
 .allowance-of{font-size:15px;font-weight:700;color:var(--muted);margin:0 2px;}
 .allowance-infinity{font-size:14px;font-weight:800;color:var(--orange);margin-left:8px;}
-.allowance-pill{display:inline-block;padding:4px 14px;border-radius:20px;font-size:16px;font-weight:900;background:var(--green-light);color:var(--green-dark);border:1.5px solid #b2d9b8;}
+.allowance-pill{display:inline-block;padding:4px 14px;border-radius:20px;font-size:16px;font-weight:900;background:var(--green-light);color:var(--green-dark);border:1.5px solid #b2d9b8;white-space:nowrap;}
 .login-btn{background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);color:white;padding:5px 12px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;}
 .login-btn:hover{background:rgba(255,255,255,0.25);}
 
@@ -62,12 +62,12 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 .search-box:focus{border-color:var(--green);}
 
 .table-wrap{background:white;border:1.5px solid var(--border);border-radius:var(--radius);overflow-x:auto;-webkit-overflow-scrolling:touch;}
-table{width:100%;min-width:960px;border-collapse:collapse;font-size:13px;}
+table{width:100%;min-width:1080px;border-collapse:collapse;font-size:13px;}
 th{background:var(--green-light);padding:10px 12px;text-align:left;font-weight:800;font-size:11px;color:var(--green-dark);text-transform:uppercase;letter-spacing:0.4px;border-bottom:1.5px solid var(--border);white-space:nowrap;}
 td{padding:10px 12px;border-bottom:1px solid #f0f4f0;vertical-align:middle;}
 tr:last-child td{border-bottom:none;}
 tr:hover td{background:#fafcfa;cursor:pointer;}
-.name-cell{font-weight:700;}
+.name-cell{font-weight:700;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .sub-cell{font-size:11px;color:var(--muted);margin-top:2px;}
 .boxes-big{font-size:20px;font-weight:900;color:var(--green);line-height:1.1;}
 .boxes-cap{font-size:10px;color:var(--muted);font-weight:700;}
@@ -307,6 +307,7 @@ select.edit-field{cursor:pointer;}
         <thead>
           <tr>
             <th>Applicant</th>
+            <th>WhatsApp</th>
             <th>Area</th>
             <th>Household</th>
             <th>Disposable income</th>
@@ -621,13 +622,14 @@ function renderTable(apps) {
     var tr = document.createElement('tr');
     tr.onclick = function() { viewApp(app.id); };
     tr.innerHTML = '<td><div class="name-cell">' + name + '</div><div class="sub-cell">' + qid + '</div>' + (tagHtml ? '<div style="margin-top:4px;">' + tagHtml + '</div>' : '') + '</td>' +
+      '<td style="white-space:nowrap;font-size:12px;">' + (app.whatsapp || '–') + '</td>' +
       '<td>' + (app.area||'–') + '</td>' +
       '<td>' + (app.household_size||1) + ' people</td>' +
       '<td><span style="font-weight:800;font-size:13px;' + dispColor + '">QAR ' + Math.round(disp).toLocaleString() + '</span></td>' +
       '<td style="font-size:12px;color:var(--muted);">' + date + '</td>' +
       '<td>' + langTag + '</td>' +
       '<td>' + statusBadge + '</td>' +
-      '<td>' + (boxesDisplay !== '–' ? '<span class="allowance-pill">' + boxesDisplay + '</span>' : '<span style="color:var(--muted);font-size:12px;">–</span>') + '</td>' +
+      '<td style="white-space:nowrap;">' + (boxesDisplay !== '–' ? '<span class="allowance-pill">' + boxesDisplay + '</span>' : '<span style="color:var(--muted);font-size:12px;">–</span>') + '</td>' +
       '<td>' + assignedPill + '</td>' +
       '<td><button class="action-btn btn-view" onclick="event.stopPropagation();viewApp(\'' + app.id + '\')">View</button>' +
       (status === 'pending' || status === 'new' ? '<button class="action-btn btn-approve" onclick="event.stopPropagation();quickApprove(\'' + app.id + '\')">✓</button>' : '') + '</td>';
@@ -819,7 +821,10 @@ function renderModal(app, members, urlMap) {
   var sn = function(id,v){ return '<input class="edit-field" type="number" id="'+id+'" value="'+(v!=null&&v!==''?v:'')+'">'; };
   var di = function(lbl,html){ return '<div class="detail-item"><div class="lbl">'+lbl+'</div><div class="val">'+html+'</div></div>'; };
   var dif = function(lbl,id,v){ return '<div class="detail-item"><div class="lbl">'+lbl+'</div>'+sf(id,v)+'</div>'; };
-  body += '<div class="detail-section"><h3>Applicant</h3><div class="detail-grid">';
+  body += '<div class="detail-section"><h3>Applicant</h3>';
+  // ── TEMP: main-applicant QID scanner — remove this block once the spreadsheet migration is finished ──
+  body += renderMainQidScanPanel(app.id);
+  body += '<div class="detail-grid">';
   body += dif('Full name (EN)','ef-full_name_en',app.full_name_en);
   body += dif('Original name','ef-full_name',app.full_name);
   body += dif('QID number','ef-qid_number',app.qid_number);
@@ -835,7 +840,6 @@ function renderModal(app, members, urlMap) {
   body += '</div>';
   body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',full_name:\'ef-full_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date\'})">Save applicant</button>';
   body += '</div>';
-
   // ── ADDRESS (editable) ──
   body += '<div class="detail-section"><h3>Address</h3><div class="detail-grid">';
   body += dif('Zone','ef-zone',app.zone);
@@ -1091,6 +1095,96 @@ function saveSection(id, fieldMap) {
     filterApps();
   }).catch(function(e){ if (btn){btn.textContent=t;btn.disabled=false;} alert('Save failed: ' + e.message); });
 }
+
+// ── TEMP: MAIN APPLICANT QID SCANNER ────────────────────────────────────
+// Used only during the legacy spreadsheet migration, where imported cases
+// have name/phone/area but no QID, DOB, expiry, gender, etc. Lets a case
+// handler snap the applicant's own QID and auto-fill the ef-* fields above
+// instead of typing everything by hand. Remove this whole block (and the
+// renderMainQidScanPanel(app.id) call in viewApp) once migration is done.
+var mainQidState = {}; // keyed by application id -> { frontFile, backFile }
+
+function renderMainQidScanPanel(appId) {
+  var s = 'main-qid-' + appId;
+  var h = '<div class="add-member-panel" id="' + s + '" style="display:block;margin-bottom:14px;">';
+  h += '<div style="font-size:12px;font-weight:700;color:var(--green-dark);margin-bottom:8px;">📷 Scan applicant\'s QID (migration helper)</div>';
+  h += '<div class="add-member-upload-row">';
+  h += '<div class="add-member-upload-zone" id="' + s + '-front-zone" onclick="document.getElementById(\'' + s + '-front-input\').click()">📷 QID front<input type="file" id="' + s + '-front-input" accept="image/*" style="display:none;" onchange="handleMainQidFile(\'' + appId + '\',\'front\',this)"></div>';
+  h += '<div class="add-member-upload-zone" id="' + s + '-back-zone" onclick="document.getElementById(\'' + s + '-back-input\').click()">📷 QID back<input type="file" id="' + s + '-back-input" accept="image/*" style="display:none;" onchange="handleMainQidFile(\'' + appId + '\',\'back\',this)"></div>';
+  h += '</div>';
+  h += '<div class="add-member-scan-status" id="' + s + '-scan-status">⏳ Reading QID…</div>';
+  h += '</div>';
+  return h;
+}
+
+function handleMainQidFile(appId, which, input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var s = 'main-qid-' + appId;
+  if (!mainQidState[appId]) mainQidState[appId] = {};
+  if (which === 'front') {
+    mainQidState[appId].frontFile = file;
+    document.getElementById(s + '-front-zone').classList.add('has-file');
+    document.getElementById(s + '-front-zone').textContent = '✓ ' + file.name;
+    scanMainQid(appId); // scan as soon as the front is available — back is optional extra context
+  } else if (which === 'back') {
+    mainQidState[appId].backFile = file;
+    document.getElementById(s + '-back-zone').classList.add('has-file');
+    document.getElementById(s + '-back-zone').textContent = '✓ ' + file.name;
+  }
+}
+
+// Same scan-qid function and response shape as scanAddMemberQID, but fills
+// the main applicant's ef-* fields directly.
+function scanMainQid(appId) {
+  var s = 'main-qid-' + appId;
+  var state = mainQidState[appId] || {};
+  var statusEl = document.getElementById(s + '-scan-status');
+  if (statusEl) statusEl.classList.add('visible');
+
+  var encode = function(file) {
+    return file ? fileToBase64(file).then(function(b64) { return { type: file.type || 'image/jpeg', data: b64 }; }) : Promise.resolve(null);
+  };
+
+  Promise.all([encode(state.frontFile), encode(state.backFile)]).then(function(imgs) {
+    var reqBody = { images: {} };
+    if (imgs[0]) reqBody.images.front = imgs[0];
+    if (imgs[1]) reqBody.images.back = imgs[1];
+    return fetch(SCAN_QID_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ANON_KEY },
+      body: JSON.stringify(reqBody)
+    });
+  }).then(function(r) { return r.json(); }).then(function(raw) {
+    if (raw.error) throw new Error(raw.error);
+    if (raw.name) {
+      var nameEl = document.getElementById('ef-full_name');
+      if (nameEl && !nameEl.value) nameEl.value = raw.name;
+    }
+    if (raw.qid_number) document.getElementById('ef-qid_number').value = raw.qid_number;
+    var expiry = qidDateToISO(raw.expiry);
+    if (expiry) document.getElementById('ef-qid_expiry').value = expiry;
+    if (raw.nationality) {
+      var natEl = document.getElementById('ef-nationality');
+      if (natEl && !natEl.value) natEl.value = raw.nationality;
+    }
+    if (raw.sponsor) {
+      var spEl = document.getElementById('ef-sponsor');
+      if (spEl && !spEl.value) spEl.value = raw.sponsor;
+    }
+    if (raw.gender) {
+      var gSel = document.getElementById('ef-gender');
+      var g = raw.gender.toLowerCase();
+      if (gSel && (g === 'male' || g === 'female')) gSel.value = g;
+    }
+    if (statusEl) statusEl.textContent = '✓ Scanned — check the fields below, then Save applicant';
+  }).catch(function() {
+    if (statusEl) statusEl.textContent = 'Scan failed — please fill in the fields manually.';
+  }).finally(function() {
+    setTimeout(function() { if (statusEl) statusEl.classList.remove('visible'); }, 3000);
+  });
+}
+// ── END TEMP: MAIN APPLICANT QID SCANNER ────────────────────────────────
 
 // ── ADD HOUSEHOLD MEMBER (case handlers adding someone the original ────────
 // application missed, or that legacy data recovery couldn't capture) ──────
