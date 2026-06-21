@@ -898,7 +898,10 @@ function renderModal(app, members, urlMap) {
         body += docLink('QID — front', m.qid_front_path, urlMap);
         body += docLink('QID — back', m.qid_back_path, urlMap);
       }
-      body += '</div></div>';
+      body += '</div>';
+      body += '<button class="btn-comment" style="margin-top:8px;font-size:12px;padding:6px 12px;" onclick="toggleEditMemberPanel(\''+app.id+'\',\''+m.id+'\')">📷 Edit / rescan QID</button>';
+      body += '<div id="edit-member-' + m.id + '"></div>';
+      body += '</div>';
     });
   } else {
     body += '<div style="font-size:12px;color:var(--muted);padding:6px 0;">No household members on record.</div>';
@@ -1172,20 +1175,23 @@ function scanMainQid(appId) {
     });
   }).then(function(r) { return r.json(); }).then(function(raw) {
     if (raw.error) throw new Error(raw.error);
+    // Scanned QID data overwrites whatever is currently in the field —
+    // imported/legacy names are often wrong or transliterated differently,
+    // so the QID is treated as the source of truth here.
     if (raw.name) {
       var nameEl = document.getElementById('ef-full_name');
-      if (nameEl && !nameEl.value) nameEl.value = raw.name;
+      if (nameEl) nameEl.value = raw.name;
     }
     if (raw.qid_number) document.getElementById('ef-qid_number').value = raw.qid_number;
     var expiry = qidDateToISO(raw.expiry);
     if (expiry) document.getElementById('ef-qid_expiry').value = expiry;
     if (raw.nationality) {
       var natEl = document.getElementById('ef-nationality');
-      if (natEl && !natEl.value) natEl.value = raw.nationality;
+      if (natEl) natEl.value = raw.nationality;
     }
     if (raw.sponsor) {
       var spEl = document.getElementById('ef-sponsor');
-      if (spEl && !spEl.value) spEl.value = raw.sponsor;
+      if (spEl) spEl.value = raw.sponsor;
     }
     if (raw.gender) {
       var gSel = document.getElementById('ef-gender');
@@ -1200,6 +1206,147 @@ function scanMainQid(appId) {
   });
 }
 // ── END TEMP: MAIN APPLICANT QID SCANNER ────────────────────────────────
+
+// ── EDIT / RESCAN AN EXISTING HOUSEHOLD MEMBER ──────────────────────────
+// Many household members were added by hand before the QID scanner existed
+// (or during the spreadsheet migration), so their name/QID/DOB are often
+// missing or wrong. This lets a case handler open an existing member, scan
+// their QID, and overwrite whatever is currently on file for them.
+var editMemberState = {}; // keyed by member id -> { frontFile, backFile }
+
+function toggleEditMemberPanel(appId, memberId) {
+  var container = document.getElementById('edit-member-' + memberId);
+  if (!container) return;
+  if (container.innerHTML) { container.innerHTML = ''; return; }
+
+  var member = (currentMembers || []).find(function(m){ return m.id === memberId; }) || {};
+  var s = 'edit-member-' + memberId;
+  var h = '<div class="add-member-panel" style="display:block;margin-top:10px;">';
+  h += '<div style="font-size:12px;font-weight:700;color:var(--green-dark);margin-bottom:8px;">📷 Rescan this member\'s QID</div>';
+  h += '<div class="add-member-upload-row">';
+  h += '<div class="add-member-upload-zone" id="' + s + '-front-zone" onclick="document.getElementById(\'' + s + '-front-input\').click()">📷 QID front<input type="file" id="' + s + '-front-input" accept="image/*" style="display:none;" onchange="handleEditMemberFile(\'' + memberId + '\',\'front\',this)"></div>';
+  h += '<div class="add-member-upload-zone" id="' + s + '-back-zone" onclick="document.getElementById(\'' + s + '-back-input\').click()">📷 QID back<input type="file" id="' + s + '-back-input" accept="image/*" style="display:none;" onchange="handleEditMemberFile(\'' + memberId + '\',\'back\',this)"></div>';
+  h += '</div>';
+  h += '<div class="add-member-scan-status" id="' + s + '-scan-status">⏳ Reading QID…</div>';
+
+  h += '<div class="add-member-field-grid">';
+  h += '<div><label>Full name *</label><input id="' + s + '-name" value="'+(member.full_name||'').toString().replace(/"/g,'&quot;')+'"></div>';
+  h += '<div><label>QID number</label><input id="' + s + '-qidnum" value="'+(member.qid_number||'').toString().replace(/"/g,'&quot;')+'"></div>';
+  h += '<div><label>Date of birth</label><input type="date" id="' + s + '-dob" value="'+(member.dob||'')+'"></div>';
+  h += '<div><label>QID expiry</label><input type="date" id="' + s + '-expiry" value="'+(member.qid_expiry||'')+'"></div>';
+  h += '<div><label>Gender</label><select id="' + s + '-gender"><option value="">–</option><option value="male"'+(member.gender==='male'?' selected':'')+'>Male</option><option value="female"'+(member.gender==='female'?' selected':'')+'>Female</option></select></div>';
+  h += '<div><label>Relationship to applicant *</label><select id="' + s + '-role"><option value="">–</option><option value="husband"'+(member.role==='husband'?' selected':'')+'>Husband</option><option value="wife"'+(member.role==='wife'?' selected':'')+'>Wife</option><option value="child"'+(member.role==='child'?' selected':'')+'>Child</option><option value="other-relative"'+(member.role==='other-relative'?' selected':'')+'>Other relative</option><option value="roommate"'+(member.role==='roommate'?' selected':'')+'>Roommate</option></select></div>';
+  h += '</div>';
+
+  h += '<div class="err-msg" id="' + s + '-err" style="display:none;color:var(--red);font-size:12px;margin-top:8px;"></div>';
+  h += '<div style="display:flex;gap:8px;margin-top:10px;">';
+  h += '<button class="btn-comment" id="' + s + '-save-btn" onclick="saveEditedMember(\''+appId+'\',\''+memberId+'\')">Save changes</button>';
+  h += '<button class="btn-comment" style="background:white;color:var(--text);" onclick="toggleEditMemberPanel(\''+appId+'\',\''+memberId+'\')">Cancel</button>';
+  h += '</div>';
+  h += '</div>';
+
+  container.innerHTML = h;
+}
+
+function handleEditMemberFile(memberId, which, input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var s = 'edit-member-' + memberId;
+  if (!editMemberState[memberId]) editMemberState[memberId] = {};
+  if (which === 'front') {
+    editMemberState[memberId].frontFile = file;
+    document.getElementById(s + '-front-zone').classList.add('has-file');
+    document.getElementById(s + '-front-zone').textContent = '✓ ' + file.name;
+    scanEditMemberQID(memberId);
+  } else if (which === 'back') {
+    editMemberState[memberId].backFile = file;
+    document.getElementById(s + '-back-zone').classList.add('has-file');
+    document.getElementById(s + '-back-zone').textContent = '✓ ' + file.name;
+  }
+}
+
+// Same scan-qid call as the new-member and main-applicant scanners, but the
+// scanned data always overwrites the existing field values — the QID is
+// treated as the source of truth when re-scanning an existing member.
+function scanEditMemberQID(memberId) {
+  var s = 'edit-member-' + memberId;
+  var state = editMemberState[memberId] || {};
+  var statusEl = document.getElementById(s + '-scan-status');
+  if (statusEl) statusEl.classList.add('visible');
+
+  var encode = function(file) {
+    return file ? fileToBase64(file).then(function(b64) { return { type: file.type || 'image/jpeg', data: b64 }; }) : Promise.resolve(null);
+  };
+
+  Promise.all([encode(state.frontFile), encode(state.backFile)]).then(function(imgs) {
+    var reqBody = { images: {} };
+    if (imgs[0]) reqBody.images.front = imgs[0];
+    if (imgs[1]) reqBody.images.back = imgs[1];
+    return fetch(SCAN_QID_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ANON_KEY },
+      body: JSON.stringify(reqBody)
+    });
+  }).then(function(r) { return r.json(); }).then(function(raw) {
+    if (raw.error) throw new Error(raw.error);
+    if (raw.name) document.getElementById(s + '-name').value = raw.name;
+    if (raw.qid_number) document.getElementById(s + '-qidnum').value = raw.qid_number;
+    var dob = qidDateToISO(raw.dob);
+    if (dob) document.getElementById(s + '-dob').value = dob;
+    var expiry = qidDateToISO(raw.expiry);
+    if (expiry) document.getElementById(s + '-expiry').value = expiry;
+    if (raw.gender) {
+      var gSel = document.getElementById(s + '-gender');
+      var g = raw.gender.toLowerCase();
+      if (g === 'male' || g === 'female') gSel.value = g;
+    }
+    if (statusEl) statusEl.textContent = '✓ Scanned — check the fields below, then Save changes';
+  }).catch(function() {
+    if (statusEl) statusEl.textContent = 'Scan failed — please fill in the fields manually.';
+  }).finally(function() {
+    setTimeout(function() { if (statusEl) statusEl.classList.remove('visible'); }, 3000);
+  });
+}
+
+function saveEditedMember(appId, memberId) {
+  var s = 'edit-member-' + memberId;
+  var errEl = document.getElementById(s + '-err');
+  var name = document.getElementById(s + '-name').value.trim();
+  var role = document.getElementById(s + '-role').value;
+  errEl.style.display = 'none';
+  if (!name) { errEl.textContent = 'Full name is required.'; errEl.style.display = 'block'; return; }
+  if (!role) { errEl.textContent = 'Relationship to the main applicant is required.'; errEl.style.display = 'block'; return; }
+
+  if (memberId.toString().startsWith('demo')) { alert('This is demo data — connect to Supabase to save changes.'); return; }
+
+  var saveBtn = document.getElementById(s + '-save-btn');
+  saveBtn.textContent = 'Saving…'; saveBtn.disabled = true;
+
+  var payload = {
+    full_name: name,
+    qid_number: document.getElementById(s + '-qidnum').value.trim() || null,
+    dob: document.getElementById(s + '-dob').value || null,
+    qid_expiry: document.getElementById(s + '-expiry').value || null,
+    gender: document.getElementById(s + '-gender').value || null,
+    role: role
+  };
+
+  fetch(SUPABASE_URL + '/rest/v1/food_box_members?id=eq.' + memberId, {
+    method: 'PATCH',
+    headers: Object.assign({'Prefer':'return=representation'}, apiHeaders()),
+    body: JSON.stringify(payload)
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    var idx = (currentMembers || []).findIndex(function(m){ return m.id === memberId; });
+    if (idx !== -1) Object.assign(currentMembers[idx], payload);
+    var app = allApps.find(function(a){ return a.id === appId; });
+    if (app) renderModal(app, currentMembers, currentDocUrlMap);
+  }).catch(function(e) {
+    if (saveBtn) { saveBtn.textContent = 'Save changes'; saveBtn.disabled = false; }
+    errEl.textContent = 'Save failed: ' + e.message; errEl.style.display = 'block';
+  });
+}
+// ── END EDIT / RESCAN EXISTING MEMBER ───────────────────────────────────
 
 // ── ADD HOUSEHOLD MEMBER (case handlers adding someone the original ────────
 // application missed, or that legacy data recovery couldn't capture) ──────
