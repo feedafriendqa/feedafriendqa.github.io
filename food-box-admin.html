@@ -279,6 +279,8 @@ select.edit-field{cursor:pointer;}
       <label for="login-password">Password</label>
       <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
       <button onclick="doLogin()" id="login-btn">Sign in →</button>
+      <p id="login-reset-msg" class="login-err" style="color:var(--green);display:none;"></p>
+      <a href="#" onclick="doForgotPassword();return false;" style="display:block;text-align:center;margin-top:10px;font-size:13px;color:var(--muted);text-decoration:underline;">Forgot password?</a>
     </div>
     <div class="login-footer">Together for Good · feedafriend.org</div>
   </div>
@@ -511,6 +513,29 @@ async function doLogin() {
     errEl.textContent = '⚠️ ' + result.error.message;
     errEl.style.display = 'block';
     btn.textContent = 'Sign in →'; btn.disabled = false;
+  }
+}
+
+// Sends a standard Supabase password-reset email to whatever address is
+// typed in the email field. The redirectTo here matters — without it,
+// Supabase falls back to the project's default Site URL, which may point
+// at a different Feed a Friend portal (this is why reset links were
+// landing on the volunteer app instead of this one).
+async function doForgotPassword() {
+  var email = document.getElementById('login-email').value.trim();
+  var errEl = document.getElementById('login-err');
+  var msgEl = document.getElementById('login-reset-msg');
+  errEl.style.display = 'none'; msgEl.style.display = 'none';
+  if (!email) { errEl.textContent = 'Enter your email above first, then click "Forgot password?".'; errEl.style.display = 'block'; return; }
+  var result = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://feedafriendqa.github.io/food-box-admin.html'
+  });
+  if (result.error) {
+    errEl.textContent = '⚠️ ' + result.error.message;
+    errEl.style.display = 'block';
+  } else {
+    msgEl.textContent = '✓ If that email is registered, a reset link has been sent. Check your inbox (and spam folder).';
+    msgEl.style.display = 'block';
   }
 }
 
