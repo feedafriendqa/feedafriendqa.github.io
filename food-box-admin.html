@@ -330,6 +330,10 @@ select.edit-field{cursor:pointer;}
       <button class="filter-btn" id="my-cases-toggle" style="display:none;" onclick="toggleMyCases(this)">My cases only</button>
     </div>
 
+    <div style="margin-bottom:14px;">
+      <button class="btn-comment" style="background:var(--green);" onclick="exportConfirmedCSV()">⬇ Export Confirmed (CSV)</button>
+    </div>
+
     <div class="table-wrap">
       <div id="table-loading" class="loading"><div class="spinner-lg"></div>Loading applications…</div>
       <table id="apps-table" style="display:none;">
@@ -1057,6 +1061,7 @@ function renderModal(app, members, urlMap) {
       }
       body += '</div>';
       body += '<button class="btn-comment" style="margin-top:8px;font-size:12px;padding:6px 12px;" onclick="toggleEditMemberPanel(\''+app.id+'\',\''+m.id+'\')">📷 Edit / rescan QID</button>';
+      body += '<button class="btn-comment" style="margin-top:8px;margin-left:6px;font-size:12px;padding:6px 12px;background:white;color:var(--red);border:1.5px solid var(--red);" onclick="removeMember(\''+app.id+'\',\''+m.id+'\',\''+(m.full_name||'this person').toString().replace(/'/g,"\\'")+'\')">🗑 Remove</button>';
       body += '<div id="edit-member-' + m.id + '"></div>';
       body += '</div>';
     });
@@ -1208,6 +1213,52 @@ function scanBluePlateAdmin(appId, input) {
   }).finally(function() {
     setTimeout(function() { if (statusEl) statusEl.classList.remove('visible'); }, 3000);
   });
+}
+
+// Backup export for the sponsor portal — if that's ever unavailable,
+// this gives a plain CSV of everyone currently Confirmed with the
+// fields a sponsor/delivery volunteer would need. Boxes needed uses
+// the same 1-box-per-3-4-people rule as the "Boxes needed" stat tile.
+var LANG_NAMES = {ar:'Arabic',bn:'Bengali',hi:'Hindi',ur:'Urdu',tl:'Tagalog',en:'English'};
+
+function csvEscape(val) {
+  if (val === null || val === undefined) return '';
+  var s = String(val);
+  if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function exportConfirmedCSV() {
+  var confirmed = allApps.filter(function(a) { return resolveStatus(a) === 'active'; });
+  if (confirmed.length === 0) { alert('No Confirmed cases to export right now.'); return; }
+
+  var headers = ['Name', 'Phone', 'Location', 'Nationality', 'Language', 'Household size', 'Boxes needed', 'Diaper size', 'Formula'];
+  var lines = [headers.join(',')];
+
+  confirmed.forEach(function(a) {
+    var name = a.full_name_en || a.full_name || '';
+    var lang = LANG_NAMES[a.submission_lang] || a.submission_lang || '';
+    var boxesNeeded = Math.ceil((a.household_size || 1) / 4);
+    var row = [
+      name, a.whatsapp, a.area, a.nationality, lang,
+      a.household_size, boxesNeeded, a.diaper_size, a.formula
+    ].map(csvEscape);
+    lines.push(row.join(','));
+  });
+
+  var csv = lines.join('\n');
+  var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var dateStr = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = 'confirmed-cases-' + dateStr + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function closeModal() { document.getElementById('modal').classList.remove('visible'); currentAppId = null; }
@@ -1766,6 +1817,40 @@ function saveEditedMember(appId, memberId) {
   });
 }
 // ── END EDIT / RESCAN EXISTING MEMBER ───────────────────────────────────
+
+// ── REMOVE HOUSEHOLD MEMBER ──────────────────────────────────────────────
+// For correcting mistakes (someone added in error, a duplicate entry,
+// or a family member who's no longer part of the household). This is
+// permanent — there's no undo, so it asks for confirmation by name
+// before doing anything.
+function removeMember(appId, memberId, memberName) {
+  if (!confirm('Remove ' + memberName + ' from this household? This cannot be undone.')) return;
+
+  if (memberId.toString().startsWith('demo')) {
+    currentMembers = (currentMembers || []).filter(function(m){ return m.id !== memberId; });
+    var demoApp = allApps.find(function(a){ return a.id === appId; });
+    if (demoApp) renderModal(demoApp, currentMembers, currentDocUrlMap);
+    return;
+  }
+
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_members?id=eq.' + memberId, {
+      method: 'DELETE',
+      headers: Object.assign({'Prefer':'return=representation'}, headers)
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Delete failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was deleted — check RLS policies on food_box_members.');
+    currentMembers = (currentMembers || []).filter(function(m){ return m.id !== memberId; });
+    var app = allApps.find(function(a){ return a.id === appId; });
+    if (app) renderModal(app, currentMembers, currentDocUrlMap);
+  }).catch(function(e) {
+    alert('Could not remove ' + memberName + ': ' + e.message);
+  });
+}
+// ── END REMOVE HOUSEHOLD MEMBER ──────────────────────────────────────────
 
 // ── ADD HOUSEHOLD MEMBER (case handlers adding someone the original ────────
 // application missed, or that legacy data recovery couldn't capture) ──────
