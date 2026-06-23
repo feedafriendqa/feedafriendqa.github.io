@@ -372,19 +372,41 @@ function renderRecap(){
 }
 
 // Showing every eligible family in the pool at once was overwhelming for a
-// sponsor who only wants to fund 1-3 boxes. Instead: shuffle the pool (same
-// "lucky" approach as Surprise Me, so it's not always the same families up
-// top), then keep adding families until covering the sponsor's target PLUS
-// 5 extra boxes' worth — enough real choice without an endless scroll.
+// sponsor who only wants to fund 1-3 boxes — so this caps the list. But
+// which families make that cut now actually matters: prioritize area match
+// first (closest to the sponsor's chosen districts), then how well a
+// family's box-need fits the sponsor's overall pledge (a 10-box sponsor is
+// better served by a few 3-4-box households than by ten separate 1-box
+// ones; a 1-box sponsor needs an exact 1-box match, not an overshoot).
+// Random jitter only breaks ties between otherwise-equal candidates — it's
+// not the primary driver anymore, unlike the original "Lucky picker" pass.
 function pickVisibleFamilies(pool){
   if(!pool.length) return [];
-  var shuffled = pool.slice().sort(function(){ return Math.random() - 0.5; });
+  var hasAreaPref = prefs.delivery === "self" && prefs.areas && prefs.areas.length;
+  // Ideal household size for this pledge, clamped to the realistic range
+  // boxesNeeded actually takes (1-4, since it's ceil(household_size/4)).
+  var idealSize = Math.min(4, Math.max(1, Math.round(targetBoxes / 3)));
+
+  var ranked = pool.map(function(f){
+    return {
+      f: f,
+      areaRank: hasAreaPref ? prefAreaRank(f.area) : 0,
+      sizeDiff: Math.abs(f.boxesNeeded - idealSize),
+      jitter: Math.random()
+    };
+  });
+  ranked.sort(function(a, b){
+    if(a.areaRank !== b.areaRank) return a.areaRank - b.areaRank;
+    if(a.sizeDiff !== b.sizeDiff) return a.sizeDiff - b.sizeDiff;
+    return a.jitter - b.jitter;
+  });
+
   var capBoxes = targetBoxes + 5;
   var picked = [];
   var sum = 0;
-  for(var i = 0; i < shuffled.length; i++){
-    picked.push(shuffled[i]);
-    sum += shuffled[i].boxesNeeded;
+  for(var i = 0; i < ranked.length; i++){
+    picked.push(ranked[i].f);
+    sum += ranked[i].f.boxesNeeded;
     if(sum >= capBoxes) break;
   }
   return picked;
@@ -414,12 +436,10 @@ function renderFamilies(){
     return;
   }
 
+  // No re-sort needed here — pickVisibleFamilies() already ordered this by
+  // area match then box-size fit when the pool was loaded. Re-sorting on
+  // every render (e.g. on language toggle) would've fought that ordering.
   var list = visibleFamilies;
-  if(prefs.delivery === "self" && prefs.areas && prefs.areas.length){
-    list = visibleFamilies.slice().sort(function(a,b){
-      return prefAreaRank(a.area) - prefAreaRank(b.area);
-    });
-  }
 
   document.getElementById("match-count").textContent = isAr
     ? list.length + " عائلة"
