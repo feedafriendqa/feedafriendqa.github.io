@@ -371,6 +371,11 @@ select.edit-field{cursor:pointer;}
         <div class="welcome-name">Sponsorships</div>
         <div class="welcome-scope">Every confirmed case matched to a sponsor, with payment status.</div>
       </div>
+      <div class="filters">
+        <label style="font-size:13px;font-weight:700;color:var(--muted);">Distribution:</label>
+        <select id="distribution-filter" class="filter-btn" style="padding:8px 12px;" onchange="renderSponsorshipsTable()"></select>
+        <button class="btn-comment" style="background:white;color:var(--red);border:1.5px solid var(--red);" onclick="clearDistribution()">🗑 Clear this distribution</button>
+      </div>
       <div class="table-wrap">
         <div id="sponsorships-loading" class="loading"><div class="spinner-lg"></div>Loading sponsorships…</div>
         <table id="sponsorships-table" style="display:none;">
@@ -384,6 +389,7 @@ select.edit-field{cursor:pointer;}
               <th>Amount</th>
               <th>Payment method</th>
               <th>Status</th>
+              <th>Proof</th>
               <th>Matched family</th>
               <th>Submitted</th>
               <th>Actions</th>
@@ -393,6 +399,16 @@ select.edit-field{cursor:pointer;}
         </table>
         <div id="sponsorships-empty" class="empty" style="display:none;">No sponsorships yet.</div>
       </div>
+    </div>
+  </div>
+
+  <!-- SPONSORSHIP EDIT MODAL -->
+  <div class="modal-overlay" id="sp-edit-modal">
+    <div class="modal" style="max-width:480px;">
+      <div class="modal-header">
+        <button class="modal-close" onclick="closeSpEditModal()">×</button>
+      </div>
+      <div class="modal-body" id="sp-edit-body" style="padding:20px;"></div>
     </div>
   </div>
 </div>
@@ -505,6 +521,10 @@ var currentMembers = [];
 var currentDocUrlMap = {};
 var currentSponsorship = null;
 var allSponsorships = [];
+// Single source of truth for "which distribution are we on" — bump this
+// when the next cycle starts. New sponsorships created by the public
+// funnel are tagged with this same value (see Faf-FoodBox-Payment.html).
+var CURRENT_DISTRIBUTION = 'July 2026 Distribution';
 var myRole = 'admin';
 var myLanguages = null;
 var myName = null;
@@ -1581,10 +1601,32 @@ function loadSponsorshipsView() {
     return r.json();
   }).then(function(rows) {
     allSponsorships = rows || [];
+    populateDistributionFilter();
     renderSponsorshipsTable();
   }).catch(function(e) {
     loadingEl.textContent = 'Could not load sponsorships: ' + e.message;
   });
+}
+
+// Builds the dropdown from whatever distribution_event values actually
+// exist in the data, always including CURRENT_DISTRIBUTION even if no
+// sponsorship has landed there yet, plus an "All" option for browsing
+// history. Defaults to CURRENT_DISTRIBUTION on first load only — once the
+// admin picks something else, re-renders (e.g. after Confirm/Release)
+// shouldn't silently snap the filter back.
+function populateDistributionFilter() {
+  var sel = document.getElementById('distribution-filter');
+  var prevValue = sel.options.length ? sel.value : CURRENT_DISTRIBUTION;
+  var events = [];
+  allSponsorships.forEach(function(sp) {
+    var ev = sp.distribution_event || CURRENT_DISTRIBUTION;
+    if (events.indexOf(ev) === -1) events.push(ev);
+  });
+  if (events.indexOf(CURRENT_DISTRIBUTION) === -1) events.unshift(CURRENT_DISTRIBUTION);
+  sel.innerHTML = events.map(function(ev) {
+    return '<option value="' + ev.replace(/"/g,'&quot;') + '">' + ev + '</option>';
+  }).join('') + '<option value="__all__">All distributions</option>';
+  sel.value = events.indexOf(prevValue) !== -1 ? prevValue : CURRENT_DISTRIBUTION;
 }
 
 // Matches each sponsorship to its case(s) via food_box_applications.sponsorship_id,
@@ -1592,14 +1634,18 @@ function loadSponsorshipsView() {
 function renderSponsorshipsTable() {
   document.getElementById('sponsorships-loading').style.display = 'none';
   var tbody = document.getElementById('sponsorships-tbody');
-  if (!allSponsorships.length) {
+  var filterVal = document.getElementById('distribution-filter').value;
+  var visible = filterVal === '__all__'
+    ? allSponsorships
+    : allSponsorships.filter(function(sp){ return (sp.distribution_event || CURRENT_DISTRIBUTION) === filterVal; });
+  if (!visible.length) {
     document.getElementById('sponsorships-table').style.display = 'none';
     document.getElementById('sponsorships-empty').style.display = '';
     return;
   }
   document.getElementById('sponsorships-table').style.display = '';
   document.getElementById('sponsorships-empty').style.display = 'none';
-  tbody.innerHTML = allSponsorships.map(function(sp) {
+  tbody.innerHTML = visible.map(function(sp) {
     var linkedApps = allApps.filter(function(a){ return a.sponsorship_id === sp.id; });
     var familyHtml = linkedApps.length
       ? linkedApps.map(function(a){
@@ -1618,17 +1664,22 @@ function renderSponsorshipsTable() {
       statusBadge = '<span class="accordion-count" style="background:var(--orange);color:white;">⏳ ' + (sp.payment_status ? sp.payment_status.replace(/_/g,' ') : 'pending payment') + '</span>';
     }
     var primaryApp = linkedApps[0];
-    var actionsHtml = '<span style="color:var(--muted);font-size:12px;">–</span>';
+    var actionsHtml = '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
     if (primaryApp) {
       if (primaryApp.is_sponsored) {
-        actionsHtml = '<button class="btn-comment" style="background:white;color:var(--orange);border:1.5px solid var(--orange);padding:6px 10px;font-size:12px;" onclick="undoSponsorshipConfirmation(\'' + primaryApp.id + '\')">↩ Undo</button>';
+        actionsHtml += '<button class="btn-comment" style="background:white;color:var(--orange);border:1.5px solid var(--orange);padding:6px 10px;font-size:12px;" onclick="undoSponsorshipConfirmation(\'' + primaryApp.id + '\')">↩ Undo</button>';
       } else {
-        actionsHtml = '<div style="display:flex;gap:6px;">' +
-          '<button class="btn-comment" style="background:var(--green);color:white;padding:6px 10px;font-size:12px;" onclick="confirmSponsorshipPayment(\'' + primaryApp.id + '\')">✅ Confirm</button>' +
-          '<button class="btn-comment" style="background:white;color:var(--red);border:1.5px solid var(--red);padding:6px 10px;font-size:12px;" onclick="releaseSponsorship(\'' + primaryApp.id + '\')">✖ Release</button>' +
-        '</div>';
+        actionsHtml += '<button class="btn-comment" style="background:var(--green);color:white;padding:6px 10px;font-size:12px;" onclick="confirmSponsorshipPayment(\'' + primaryApp.id + '\')">✅ Confirm</button>' +
+          '<button class="btn-comment" style="background:white;color:var(--red);border:1.5px solid var(--red);padding:6px 10px;font-size:12px;" onclick="releaseSponsorship(\'' + primaryApp.id + '\')">✖ Release</button>';
       }
     }
+    actionsHtml += '<button class="btn-comment" style="background:white;color:var(--green-dark);border:1.5px solid var(--green-dark);padding:6px 10px;font-size:12px;" onclick="openSpEditModal(\'' + sp.id + '\')">✏️ Edit</button>';
+    actionsHtml += '</div>';
+
+    var proofHtml = sp.proof_path
+      ? '<a onclick="viewSponsorshipProof(\'' + sp.proof_path.replace(/'/g,"\\'") + '\')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;font-size:12px;">📎 View</a>'
+      : '<span style="color:var(--muted);font-size:12px;">Not uploaded</span>';
+
     return '<tr>' +
       '<td>' + (sp.ref_no || '–') + '</td>' +
       '<td>' + (sp.sponsor_name || '–') + '</td>' +
@@ -1638,11 +1689,187 @@ function renderSponsorshipsTable() {
       '<td>' + (sp.amount != null ? ('QAR ' + Number(sp.amount).toLocaleString()) : '–') + '</td>' +
       '<td>' + (sp.payment_method || '–') + '</td>' +
       '<td>' + statusBadge + '</td>' +
+      '<td>' + proofHtml + '</td>' +
       '<td>' + familyHtml + '</td>' +
       '<td>' + (sp.created_at ? new Date(sp.created_at).toLocaleString('en-GB') : '–') + '</td>' +
       '<td>' + actionsHtml + '</td>' +
     '</tr>';
   }).join('');
+}
+
+// ── SPONSORSHIP EDIT MODAL ──
+// Lets the admin change ANY field, including payment_status directly
+// (not just via the Confirm/Release/Undo shortcuts), upload a payment
+// proof, and re-tag which distribution this sponsorship belongs to.
+// Changing payment_status here keeps the linked case's is_sponsored flag
+// in sync, exactly like the three dedicated functions below do, so the
+// public pool and CRM stats never fall out of step with this modal.
+function openSpEditModal(spId) {
+  var sp = allSponsorships.find(function(s){ return s.id === spId; });
+  if (!sp) return;
+  var linkedApp = allApps.find(function(a){ return a.sponsorship_id === spId; });
+  var sf = function(id,v){ return '<input class="edit-field" id="'+id+'" value="'+(v||'').toString().replace(/"/g,'&quot;')+'">'; };
+  var sn = function(id,v){ return '<input class="edit-field" type="number" id="'+id+'" value="'+(v!=null&&v!==''?v:'')+'">'; };
+  var di = function(lbl,html){ return '<div class="detail-item" style="margin-bottom:10px;"><div class="lbl">'+lbl+'</div>'+html+'</div>'; };
+  var statusOptions = ['pending_payment','paid','rejected'].map(function(s){
+    return '<option value="'+s+'"'+(sp.payment_status===s?' selected':'')+'>'+s.replace(/_/g,' ')+'</option>';
+  }).join('');
+  var proofRow = sp.proof_path
+    ? '<a onclick="viewSponsorshipProof(\''+sp.proof_path.replace(/'/g,"\\'")+'\')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;">📎 View current proof</a> &nbsp;'
+    : '<span style="color:var(--muted);font-size:12px;">No proof uploaded yet</span>';
+  var body = '<h3 style="margin:0 0 14px;">Edit sponsorship</h3>';
+  body += di('Reference number', sf('spe-ref_no', sp.ref_no));
+  body += di('Distribution event', sf('spe-distribution_event', sp.distribution_event || CURRENT_DISTRIBUTION));
+  body += di('Sponsor name', sf('spe-sponsor_name', sp.sponsor_name));
+  body += di('WhatsApp', sf('spe-whatsapp', sp.whatsapp));
+  body += di('Email', sf('spe-email', sp.email));
+  body += di('Boxes pledged', sn('spe-box_count', sp.box_count));
+  body += di('Amount (QAR)', sn('spe-amount', sp.amount));
+  body += di('Payment method', sf('spe-payment_method', sp.payment_method));
+  body += di('Payment status', '<select class="edit-field" id="spe-payment_status">' + statusOptions + '</select>' +
+    (!linkedApp ? '<div style="font-size:11px;color:var(--muted);margin-top:4px;">No case currently matched — status will be saved here only.</div>' : ''));
+  body += di('Payment proof', proofRow + '<input type="file" id="spe-proof-file" accept="image/*,application/pdf" style="margin-top:8px;display:block;">');
+  body += '<div style="display:flex;gap:8px;margin-top:16px;">';
+  body += '<button class="btn-comment" style="flex:1;background:var(--green);color:white;" onclick="saveSponsorshipEdits(\''+sp.id+'\')">💾 Save changes</button>';
+  body += '</div>';
+  document.getElementById('sp-edit-body').innerHTML = body;
+  document.getElementById('sp-edit-modal').classList.add('visible');
+}
+
+function closeSpEditModal() {
+  document.getElementById('sp-edit-modal').classList.remove('visible');
+}
+
+function saveSponsorshipEdits(spId) {
+  var sp = allSponsorships.find(function(s){ return s.id === spId; });
+  if (!sp) return;
+  var val = function(id){ var el = document.getElementById(id); return el ? el.value : null; };
+  var newStatus = val('spe-payment_status');
+  var patch = {
+    ref_no: val('spe-ref_no'),
+    distribution_event: val('spe-distribution_event') || CURRENT_DISTRIBUTION,
+    sponsor_name: val('spe-sponsor_name'),
+    whatsapp: val('spe-whatsapp'),
+    email: val('spe-email'),
+    box_count: val('spe-box_count') !== '' ? Number(val('spe-box_count')) : null,
+    amount: val('spe-amount') !== '' ? Number(val('spe-amount')) : null,
+    payment_method: val('spe-payment_method'),
+    payment_status: newStatus
+  };
+  var linkedApp = allApps.find(function(a){ return a.sponsorship_id === spId; });
+  var fileInput = document.getElementById('spe-proof-file');
+  var file = fileInput && fileInput.files && fileInput.files[0];
+
+  var uploadProof = function() {
+    if (!file) return Promise.resolve(null);
+    var path = spId + '/' + Date.now() + '_' + file.name;
+    return sb.storage.from('sponsorship-proofs').upload(path, file, { upsert: true }).then(function(res) {
+      if (res.error) throw new Error('Proof upload failed: ' + res.error.message);
+      return path;
+    });
+  };
+
+  uploadProof().then(function(proofPath) {
+    if (proofPath) patch.proof_path = proofPath;
+    return apiHeadersAsync().then(function(headers) {
+      return fetch(SUPABASE_URL + '/rest/v1/sponsorships?id=eq.' + spId, {
+        method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
+        body: JSON.stringify(patch)
+      });
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on sponsorships.');
+    Object.assign(sp, rows[0]);
+    // Keep the linked case's is_sponsored flag in sync with the status
+    // chosen here, exactly like the dedicated Confirm/Release/Undo actions.
+    if (linkedApp) {
+      var casePatch = null;
+      if (newStatus === 'paid' && !linkedApp.is_sponsored) {
+        casePatch = { is_sponsored: true, sponsored_at: new Date().toISOString() };
+      } else if (newStatus === 'rejected') {
+        casePatch = { is_sponsored: false, sponsored_at: null, sponsorship_id: null, reserved_until: null, reserved_by_sponsorship_id: null };
+      } else if (newStatus === 'pending_payment' && linkedApp.is_sponsored) {
+        casePatch = { is_sponsored: false, sponsored_at: null };
+      }
+      if (casePatch) {
+        apiHeadersAsync().then(function(headers2) {
+          return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + linkedApp.id, {
+            method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers2),
+            body: JSON.stringify(casePatch)
+          });
+        }).then(function(r2){ return r2.ok ? r2.json() : null; }).then(function(rows2) {
+          if (Array.isArray(rows2) && rows2[0]) Object.assign(linkedApp, rows2[0]);
+          closeSpEditModal();
+          populateDistributionFilter();
+          renderSponsorshipsTable();
+        }).catch(function(){
+          closeSpEditModal();
+          populateDistributionFilter();
+          renderSponsorshipsTable();
+        });
+        return;
+      }
+    }
+    closeSpEditModal();
+    populateDistributionFilter();
+    renderSponsorshipsTable();
+  }).catch(function(e){ alert('Update failed: ' + e.message); });
+}
+
+// Signed URL — bucket is private, but any authenticated session (i.e. any
+// logged-in admin) can request one directly, no edge function needed.
+function viewSponsorshipProof(path) {
+  sb.storage.from('sponsorship-proofs').createSignedUrl(path, 3600).then(function(res) {
+    if (res.error || !res.data) { alert('Could not open proof: ' + (res.error ? res.error.message : 'unknown error')); return; }
+    window.open(res.data.signedUrl, '_blank');
+  });
+}
+
+// ── CLEAR A DISTRIBUTION ──
+// Deletes every sponsorship tagged with the currently-selected distribution
+// AND resets the matching food_box_applications rows back to unsponsored —
+// otherwise those cases would stay invisible to the public pool forever
+// (sponsorship_id would point at a row that no longer exists). Scoped to
+// whichever event is selected in the dropdown, never "everything ever".
+function clearDistribution() {
+  var sel = document.getElementById('distribution-filter');
+  var target = sel.value;
+  if (target === '__all__') { alert('Pick a specific distribution first — this won\'t clear "All distributions" at once.'); return; }
+  var toDelete = allSponsorships.filter(function(sp){ return (sp.distribution_event || CURRENT_DISTRIBUTION) === target; });
+  if (!toDelete.length) { alert('Nothing to clear for "' + target + '".'); return; }
+  var typed = prompt('This permanently deletes all ' + toDelete.length + ' sponsorship record(s) for "' + target + '" and frees their matched families back into the public pool. This cannot be undone.\n\nType CLEAR to confirm:');
+  if (typed !== 'CLEAR') return;
+
+  var ids = toDelete.map(function(sp){ return sp.id; });
+  var linkedAppIds = allApps.filter(function(a){ return ids.indexOf(a.sponsorship_id) !== -1; }).map(function(a){ return a.id; });
+
+  apiHeadersAsync().then(function(headers) {
+    var resetPromise = linkedAppIds.length
+      ? fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=in.(' + linkedAppIds.join(',') + ')', {
+          method: 'PATCH', headers: headers,
+          body: JSON.stringify({ is_sponsored: false, sponsored_at: null, sponsorship_id: null, reserved_until: null, reserved_by_sponsorship_id: null })
+        })
+      : Promise.resolve({ ok: true });
+    return resetPromise.then(function(r) {
+      if (!r.ok) throw new Error('Could not reset linked cases (status ' + r.status + ')');
+      return fetch(SUPABASE_URL + '/rest/v1/sponsorships?id=in.(' + ids.join(',') + ')', {
+        method: 'DELETE', headers: headers
+      });
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Delete failed (status ' + r.status + ')');
+    linkedAppIds.forEach(function(id) {
+      var a = allApps.find(function(x){ return x.id === id; });
+      if (a) { a.is_sponsored = false; a.sponsored_at = null; a.sponsorship_id = null; }
+    });
+    allSponsorships = allSponsorships.filter(function(sp){ return ids.indexOf(sp.id) === -1; });
+    populateDistributionFilter();
+    renderSponsorshipsTable();
+    alert('Cleared "' + target + '".');
+  }).catch(function(e){ alert('Clear failed: ' + e.message); });
 }
 
 // ── SPONSORSHIP CONFIRMATION (super admin only) ──

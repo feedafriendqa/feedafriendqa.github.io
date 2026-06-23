@@ -218,11 +218,16 @@ function showTab(t){
 async function startSponsorFlow(){
   // Create a lead row in Supabase right away, so even an abandoned
   // signup is captured. Store the row id for later steps to update.
+  // CURRENT_DISTRIBUTION: bump this when the next distribution cycle
+  // starts — also update the matching constant in food-box-admin.html.
+  // The DB column has the same default, but setting it explicitly here
+  // means this is the one place to change, not a silent fallback to find.
+  var CURRENT_DISTRIBUTION = "July 2026 Distribution";
   try{
     if(window.sbClient){
       var { data, error } = await window.sbClient
         .from("sponsorships")
-        .insert({ funnel_step: "started", source: "web_form" })
+        .insert({ funnel_step: "started", source: "web_form", distribution_event: CURRENT_DISTRIBUTION })
         .select()
         .single();
       if(!error && data){
