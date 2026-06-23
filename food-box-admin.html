@@ -58,6 +58,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 .stat-card .lbl{font-size:12px;color:rgba(255,255,255,0.88);font-weight:700;margin-top:4px;}
 
 .filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.view-switcher{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
 .filter-btn{padding:7px 16px;border:1.5px solid var(--border);border-radius:20px;background:white;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.15s;}
 .filter-btn.active{background:var(--green);color:white;border-color:var(--green);}
 .search-box{flex:1;min-width:200px;padding:8px 14px;border:1.5px solid var(--border);border-radius:20px;font-size:13px;font-family:'Nunito',sans-serif;outline:none;}
@@ -302,6 +303,11 @@ select.edit-field{cursor:pointer;}
   </div>
 
   <div class="main">
+    <div class="view-switcher" id="view-switcher" style="display:none;margin-bottom:16px;">
+      <button class="filter-btn active" id="view-btn-cases" onclick="showView('cases')">📋 Cases</button>
+      <button class="filter-btn" id="view-btn-sponsorships" onclick="showView('sponsorships')">💳 Sponsorships</button>
+    </div>
+    <div id="cases-view">
     <div class="welcome-banner">
       <div class="welcome-name" id="admin-greeting"></div>
       <div class="welcome-scope" id="admin-scope"></div>
@@ -357,6 +363,36 @@ select.edit-field{cursor:pointer;}
         <tbody id="apps-tbody"></tbody>
       </table>
       <div id="table-empty" class="empty" style="display:none;">No applications found.</div>
+    </div>
+    </div>
+
+    <div id="sponsorships-view" style="display:none;">
+      <div class="welcome-banner">
+        <div class="welcome-name">Sponsorships</div>
+        <div class="welcome-scope">Every confirmed case matched to a sponsor, with payment status.</div>
+      </div>
+      <div class="table-wrap">
+        <div id="sponsorships-loading" class="loading"><div class="spinner-lg"></div>Loading sponsorships…</div>
+        <table id="sponsorships-table" style="display:none;">
+          <thead>
+            <tr>
+              <th>Ref No</th>
+              <th>Sponsor</th>
+              <th>WhatsApp</th>
+              <th>Email</th>
+              <th>Boxes</th>
+              <th>Amount</th>
+              <th>Payment method</th>
+              <th>Status</th>
+              <th>Matched family</th>
+              <th>Submitted</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="sponsorships-tbody"></tbody>
+        </table>
+        <div id="sponsorships-empty" class="empty" style="display:none;">No sponsorships yet.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -468,6 +504,7 @@ var currentAppId = null;
 var currentMembers = [];
 var currentDocUrlMap = {};
 var currentSponsorship = null;
+var allSponsorships = [];
 var myRole = 'admin';
 var myLanguages = null;
 var myName = null;
@@ -592,6 +629,7 @@ async function handleAdminSession(session) {
   // Case handlers only ever see their own cases; super admins see
   // everything by default but can flip a toggle to check their own queue.
   document.getElementById('my-cases-toggle').style.display = (myRole === 'super_admin') ? 'inline-block' : 'none';
+  document.getElementById('view-switcher').style.display = (myRole === 'super_admin') ? 'flex' : 'none';
   myCasesOnly = (myRole !== 'super_admin');
 
   // Daily quote
@@ -1518,6 +1556,95 @@ function updateStatus(id, status) {
   }).catch(function(e){ alert('Update failed: ' + e.message); });
 }
 
+// ── VIEW SWITCHER (Cases / Sponsorships) ──
+// Super admin only — case handlers never need this. The modal is a
+// separate overlay regardless of which view is underneath, so viewApp()
+// works the same from either.
+function showView(view) {
+  document.getElementById('cases-view').style.display = (view === 'cases') ? '' : 'none';
+  document.getElementById('sponsorships-view').style.display = (view === 'sponsorships') ? '' : 'none';
+  document.getElementById('view-btn-cases').classList.toggle('active', view === 'cases');
+  document.getElementById('view-btn-sponsorships').classList.toggle('active', view === 'sponsorships');
+  if (view === 'sponsorships') loadSponsorshipsView();
+}
+
+function loadSponsorshipsView() {
+  var loadingEl = document.getElementById('sponsorships-loading');
+  loadingEl.style.display = '';
+  loadingEl.textContent = 'Loading sponsorships…';
+  document.getElementById('sponsorships-table').style.display = 'none';
+  document.getElementById('sponsorships-empty').style.display = 'none';
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/sponsorships?select=*&order=created_at.desc', { headers: headers });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('status ' + r.status);
+    return r.json();
+  }).then(function(rows) {
+    allSponsorships = rows || [];
+    renderSponsorshipsTable();
+  }).catch(function(e) {
+    loadingEl.textContent = 'Could not load sponsorships: ' + e.message;
+  });
+}
+
+// Matches each sponsorship to its case(s) via food_box_applications.sponsorship_id,
+// using the already-loaded allApps array rather than a second round-trip.
+function renderSponsorshipsTable() {
+  document.getElementById('sponsorships-loading').style.display = 'none';
+  var tbody = document.getElementById('sponsorships-tbody');
+  if (!allSponsorships.length) {
+    document.getElementById('sponsorships-table').style.display = 'none';
+    document.getElementById('sponsorships-empty').style.display = '';
+    return;
+  }
+  document.getElementById('sponsorships-table').style.display = '';
+  document.getElementById('sponsorships-empty').style.display = 'none';
+  tbody.innerHTML = allSponsorships.map(function(sp) {
+    var linkedApps = allApps.filter(function(a){ return a.sponsorship_id === sp.id; });
+    var familyHtml = linkedApps.length
+      ? linkedApps.map(function(a){
+          var label = a.full_name_en || a.full_name || ('Case ' + a.id.slice(0,8));
+          var areaTxt = a.area_en || a.area;
+          return '<a onclick="viewApp(\'' + a.id + '\');showView(\'cases\')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;">' +
+            label + (areaTxt ? (' · ' + areaTxt) : '') + '</a>';
+        }).join('<br>')
+      : '<span style="color:var(--muted);">No case matched</span>';
+    var statusBadge;
+    if (linkedApps.some(function(a){ return a.is_sponsored; })) {
+      statusBadge = '<span class="accordion-count" style="background:var(--green);color:white;">✅ Confirmed</span>';
+    } else if (sp.payment_status === 'rejected') {
+      statusBadge = '<span class="accordion-count" style="background:var(--red);color:white;">✖ Rejected</span>';
+    } else {
+      statusBadge = '<span class="accordion-count" style="background:var(--orange);color:white;">⏳ ' + (sp.payment_status ? sp.payment_status.replace(/_/g,' ') : 'pending payment') + '</span>';
+    }
+    var primaryApp = linkedApps[0];
+    var actionsHtml = '<span style="color:var(--muted);font-size:12px;">–</span>';
+    if (primaryApp) {
+      if (primaryApp.is_sponsored) {
+        actionsHtml = '<button class="btn-comment" style="background:white;color:var(--orange);border:1.5px solid var(--orange);padding:6px 10px;font-size:12px;" onclick="undoSponsorshipConfirmation(\'' + primaryApp.id + '\')">↩ Undo</button>';
+      } else {
+        actionsHtml = '<div style="display:flex;gap:6px;">' +
+          '<button class="btn-comment" style="background:var(--green);color:white;padding:6px 10px;font-size:12px;" onclick="confirmSponsorshipPayment(\'' + primaryApp.id + '\')">✅ Confirm</button>' +
+          '<button class="btn-comment" style="background:white;color:var(--red);border:1.5px solid var(--red);padding:6px 10px;font-size:12px;" onclick="releaseSponsorship(\'' + primaryApp.id + '\')">✖ Release</button>' +
+        '</div>';
+      }
+    }
+    return '<tr>' +
+      '<td>' + (sp.ref_no || '–') + '</td>' +
+      '<td>' + (sp.sponsor_name || '–') + '</td>' +
+      '<td>' + (sp.whatsapp || '–') + '</td>' +
+      '<td>' + (sp.email || '–') + '</td>' +
+      '<td>' + (sp.box_count != null ? sp.box_count : '–') + '</td>' +
+      '<td>' + (sp.amount != null ? ('QAR ' + Number(sp.amount).toLocaleString()) : '–') + '</td>' +
+      '<td>' + (sp.payment_method || '–') + '</td>' +
+      '<td>' + statusBadge + '</td>' +
+      '<td>' + familyHtml + '</td>' +
+      '<td>' + (sp.created_at ? new Date(sp.created_at).toLocaleString('en-GB') : '–') + '</td>' +
+      '<td>' + actionsHtml + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
 // ── SPONSORSHIP CONFIRMATION (super admin only) ──
 // These three only ever touch food_box_applications.is_sponsored/sponsored_at
 // and the matching sponsorships.payment_status — never the funnel's claim
@@ -1550,6 +1677,7 @@ function confirmSponsorshipPayment(id) {
     }).catch(function(){});
     if (currentSponsorship) currentSponsorship.payment_status = 'paid';
     renderModal(app, currentMembers, currentDocUrlMap);
+    if (document.getElementById('sponsorships-view').style.display !== 'none') renderSponsorshipsTable();
   }).catch(function(e){ alert('Update failed: ' + e.message); });
 }
 
@@ -1580,6 +1708,7 @@ function releaseSponsorship(id) {
       }).catch(function(){});
     }
     renderModal(app, currentMembers, currentDocUrlMap);
+    if (document.getElementById('sponsorships-view').style.display !== 'none') renderSponsorshipsTable();
   }).catch(function(e){ alert('Update failed: ' + e.message); });
 }
 
@@ -1609,6 +1738,7 @@ function undoSponsorshipConfirmation(id) {
       if (currentSponsorship) currentSponsorship.payment_status = 'pending_payment';
     }
     renderModal(app, currentMembers, currentDocUrlMap);
+    if (document.getElementById('sponsorships-view').style.display !== 'none') renderSponsorshipsTable();
   }).catch(function(e){ alert('Update failed: ' + e.message); });
 }
 
