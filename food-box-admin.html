@@ -1564,6 +1564,9 @@ function saveSection(id, fieldMap) {
     if (type === 'bool') val = (val === 'true');
     else if (type === 'num') val = val === '' ? null : parseFloat(val);
     else if (type === 'date') val = val === '' ? null : val;
+    else if (val === '') val = null; // plain text fields: blank -> null, not '' (qid_number has a
+                                       // UNIQUE constraint, and multiple rows with '' collide with
+                                       // each other even though multiple NULLs do not)
     payload[col] = val;
   });
   var app = allApps.find(function(a){return a.id===id;});
