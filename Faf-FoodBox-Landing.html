@@ -130,9 +130,9 @@ body.lang-ar .hero-h1,body.lang-ar .how-t,body.lang-ar .section-h{font-family:"N
   </div>
 
   <div class="stats">
-    <div class="stat"><div class="n">191</div><div class="l" data-en="Boxes<br>needed" data-ar="صناديق<br>مطلوبة">Boxes<br>needed</div></div>
+    <div class="stat"><div class="n" id="stat-boxes">191</div><div class="l" data-en="Boxes<br>needed" data-ar="صناديق<br>مطلوبة">Boxes<br>needed</div></div>
     <div class="stat"><div class="n">QAR 100</div><div class="l" data-en="Per box<br>monthly" data-ar="للصندوق<br>شهرياً">Per box<br>monthly</div></div>
-    <div class="stat"><div class="n">764</div><div class="l" data-en="Friends<br>need food" data-ar="أصدقاء<br>يحتاجون طعام">Friends<br>need food</div></div>
+    <div class="stat"><div class="n" id="stat-friends">764</div><div class="l" data-en="Friends<br>need food" data-ar="أصدقاء<br>يحتاجون طعام">Friends<br>need food</div></div>
   </div>
 
   <div class="dist-date">
@@ -244,6 +244,27 @@ async function startSponsorFlow(){
     window.sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
 })();
+
+// Live hero stats — boxes still needing a sponsor and how many families
+// that represents. Pulled from a single-row aggregate view that exposes
+// no per-family data at all. Falls back to the static placeholder numbers
+// already in the HTML if the fetch fails, rather than showing a blank.
+function loadLandingStats(){
+  if(!window.sbClient) return;
+  window.sbClient
+    .from("food_box_landing_stats")
+    .select("boxes_needed,friends_need_food")
+    .single()
+    .then(function(res){
+      if(res.error || !res.data) throw res.error || new Error("no data");
+      document.getElementById("stat-boxes").textContent = res.data.boxes_needed.toLocaleString();
+      document.getElementById("stat-friends").textContent = res.data.friends_need_food.toLocaleString();
+    })
+    .catch(function(e){
+      console.warn("Could not load live landing stats, keeping placeholder numbers", e);
+    });
+}
+loadLandingStats();
 </script>
 
 </body>
