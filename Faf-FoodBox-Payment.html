@@ -21,6 +21,7 @@ body.lang-ar .pay-detail-row{flex-direction:row-reverse}
 body.lang-ar .pdr-value{flex-direction:row-reverse}
 body.lang-ar .pay-total{flex-direction:row-reverse}
 body.lang-ar .confirm-check{flex-direction:row-reverse}
+body.lang-ar .pref-row{flex-direction:row-reverse}
 body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .success-t{font-family:"Noto Kufi Arabic",sans-serif}
 
 .lang-toggle{display:flex;border:2px solid #1D7A47;border-radius:8px;overflow:hidden;flex-shrink:0}
@@ -93,6 +94,18 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .success-t{font-family:"No
 .cta-btn:disabled{background:#e8e8e0;color:#bbb;cursor:not-allowed}
 .cta-hint{text-align:center;font-size:11px;color:#bbb;font-weight:700;margin-top:8px}
 
+/* ── PREFERENCES / ACCOUNT SECTION ── */
+.pref-card{background:#fafaf7;border:1.5px solid #e8e8e0;border-radius:16px;overflow:hidden;margin-bottom:12px}
+.pref-row{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #e8e8e0;transition:background .1s}
+.pref-row:last-child{border-bottom:none}
+.pref-row:has(input:checked){background:#EBF7F0}
+.pref-row input[type="checkbox"]{margin-top:2px;width:18px;height:18px;accent-color:#1D7A47;flex-shrink:0;cursor:pointer}
+.pref-info{display:flex;flex-direction:column;gap:3px;flex:1}
+.pref-title{font-family:"Nunito",sans-serif;font-size:13px;font-weight:800;color:#111;line-height:1.3}
+.pref-desc{font-size:11px;color:#888;font-weight:600;line-height:1.5}
+.password-wrap{background:#EBF7F0;border:1.5px solid #cdebd9;border-radius:14px;padding:14px 16px;margin-top:4px}
+.pass-hint{font-size:11px;color:#5a8a6e;font-weight:600;margin-top:6px;line-height:1.5}
+
 /* ── SUCCESS STATE ── */
 .success-wrap{display:none;padding:60px 24px;text-align:center}
 .success-wrap.show{display:block}
@@ -101,6 +114,8 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .success-t{font-family:"No
 .success-ref{display:inline-block;background:#EBF7F0;color:#1D7A47;font-family:"Nunito",sans-serif;font-size:13px;font-weight:900;padding:6px 16px;border-radius:30px;margin-bottom:14px}
 .success-d{font-size:13px;color:#888;font-weight:600;line-height:1.6;max-width:300px;margin:0 auto 24px}
 .success-btn{padding:12px 26px;border-radius:30px;border:none;background:#1D7A47;color:#F5C330;font-family:"Nunito",sans-serif;font-size:13px;font-weight:900;cursor:pointer}
+.success-btn-sec{background:#fff;color:#1D7A47;border:2px solid #1D7A47}
+.success-btn-sec{background:transparent;border:2px solid #ccc;color:#888}
 
 </style>
 </head>
@@ -217,6 +232,41 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .success-t{font-family:"No
     </label>
   </div>
 
+  <div class="section" id="account-section">
+    <div class="section-h" data-en="Stay in the loop?" data-ar="هل تريد البقاء على اطلاع؟">Stay in the loop?</div>
+    <div class="section-sub" data-en="Optional — takes 10 seconds" data-ar="اختياري — يستغرق ١٠ ثوانٍ">Optional — takes 10 seconds</div>
+
+    <div class="pref-card">
+      <label class="pref-row" for="pref-save">
+        <input type="checkbox" id="pref-save" checked>
+        <div class="pref-info">
+          <span class="pref-title" data-en="Remember my details next time" data-ar="تذكّر بياناتي في المرة القادمة">Remember my details next time</span>
+          <span class="pref-desc" data-en="Your name and email will be pre-filled so sponsoring again is one tap." data-ar="سيتم ملء اسمك وبريدك تلقائياً ليصبح التكفّل مجدداً بنقرة واحدة.">Your name and email will be pre-filled so sponsoring again is one tap.</span>
+        </div>
+      </label>
+      <label class="pref-row" for="pref-alerts">
+        <input type="checkbox" id="pref-alerts">
+        <div class="pref-info">
+          <span class="pref-title" data-en="Alert me when my box is delivered" data-ar="أبلّغني عند توصيل صندوقي">Alert me when my box is delivered</span>
+          <span class="pref-desc" data-en="We'll send a short message the moment the family receives their food box." data-ar="سنرسل رسالة قصيرة فور استلام العائلة صندوقها الغذائي.">We'll send a short message the moment the family receives their food box.</span>
+        </div>
+      </label>
+      <label class="pref-row" for="pref-register">
+        <input type="checkbox" id="pref-register" onchange="togglePasswordField(this.checked)">
+        <div class="pref-info">
+          <span class="pref-title" data-en="See what I've sponsored" data-ar="اعرف ما تكفّلت به">See what I've sponsored</span>
+          <span class="pref-desc" data-en="Create a password so you can log in and view your full sponsorship history." data-ar="أنشئ كلمة مرور لتسجيل الدخول ومطالعة تاريخ تكفّلاتك كاملاً.">Create a password so you can log in and view your full sponsorship history.</span>
+        </div>
+      </label>
+    </div>
+
+    <div class="password-wrap" id="password-wrap" style="display:none">
+      <label class="lbl" data-en="Choose a password" data-ar="اختر كلمة مرور">Choose a password</label>
+      <input class="inp" id="pay-password" type="password" data-en-placeholder="Min. 8 characters" data-ar-placeholder="٨ أحرف على الأقل" placeholder="Min. 8 characters" style="margin-top:6px">
+      <div class="pass-hint" data-en="Use this with your email to log in and track your orders anytime." data-ar="استخدمها مع بريدك لتسجيل الدخول وتتبّع طلباتك في أي وقت.">Use this with your email to log in and track your orders anytime.</div>
+    </div>
+  </div>
+
   <div class="cta-bar">
     <button class="cta-btn" id="continue-btn" disabled onclick="submitSponsorship()" data-en="Confirm Sponsorship →" data-ar="تأكيد التكفّل ←">Confirm Sponsorship →</button>
     <div class="cta-hint" id="cta-hint" data-en="Fill in your details and confirm payment to continue" data-ar="أدخل بياناتك وأكّد الدفع للمتابعة">Fill in your details and confirm payment to continue</div>
@@ -229,7 +279,8 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .success-t{font-family:"No
   <div class="success-t" data-en="You're a sponsor!" data-ar="أنت الآن متكفّل!">You're a sponsor!</div>
   <div class="success-ref" id="success-ref">Ref: SP-2026-0001</div>
   <div class="success-d" id="success-d" data-en="Thank you for feeding a friend this month. We'll confirm your match and payment by email shortly." data-ar="شكراً لك على تغذية صديق هذا الشهر. سنؤكد مطابقتك ودفعك بالبريد الإلكتروني قريباً.">Thank you for feeding a friend this month. We'll confirm your match and payment by email shortly.</div>
-  <button class="success-btn" onclick="window.location.href='Faf-FoodBox-Landing.html'" data-en="Back to home" data-ar="العودة للرئيسية">Back to home</button>
+  <button class="success-btn" id="success-account-btn" onclick="window.location.href='Faf-FoodBox-Account.html'" style="display:none;margin-bottom:10px" data-en="View my account →" data-ar="عرض حسابي ←">View my account →</button>
+  <button class="success-btn success-btn-sec" onclick="window.location.href='Faf-FoodBox-Landing.html'" data-en="Back to home" data-ar="العودة للرئيسية">Back to home</button>
 </div>
 
 <script>
@@ -243,7 +294,6 @@ function renderSummary(){
   var givingLabel = isAr ? "التكفّل" : "Giving";
   var deliveryLabel = isAr ? "التوصيل" : "Delivery";
   var boxesLabel = isAr ? "الصناديق" : "Boxes";
-  var sponsoringLabel = isAr ? "التكفّل بـ" : "Sponsoring";
   var amountLabel = isAr ? "المبلغ" : "Amount";
 
   rows.push([givingLabel, prefs.subscription === "monthly" ? (isAr ? "🔁 تعهد شهري" : "🔁 Monthly pledge") : (isAr ? "📦 مرة واحدة" : "📦 One-off")]);
@@ -253,20 +303,8 @@ function renderSummary(){
   } else {
     rows.push([deliveryLabel, isAr ? "🤝 توصيل بواسطة متطوع" : "🤝 Volunteer delivers"]);
   }
-  var friendsList = prefs.friends || (prefs.friend ? [prefs.friend] : []);
-  var familyLabel;
-  if(isAr){
-    familyLabel = friendsList.length > 1
-      ? "عائلات " + friendsList.join("، ")
-      : "عائلة " + (friendsList[0] || "—");
-  } else {
-    familyLabel = friendsList.length > 1
-      ? "Families " + friendsList.join(", ")
-      : "Family " + (friendsList[0] || "—");
-  }
   var boxCount = prefs.boxCount || 1;
   rows.push([boxesLabel, isAr ? boxCount + " صندوق" : boxCount + " box" + (boxCount === 1 ? "" : "es")]);
-  rows.push([sponsoringLabel, familyLabel]);
   rows.push([amountLabel, "QAR " + AMOUNT + (prefs.subscription === "monthly" ? (isAr ? " / شهرياً" : " / month") : "")]);
 
   document.getElementById("summary").innerHTML = rows.map(function(r){
@@ -356,6 +394,10 @@ async function submitSponsorship(){
   var name = document.getElementById("pay-name").value.trim();
   var wa = document.getElementById("pay-wa").value.trim();
   var email = document.getElementById("pay-email").value.trim();
+  var saveDetails = document.getElementById("pref-save").checked;
+  var wantAlerts = document.getElementById("pref-alerts").checked;
+  var wantAccount = document.getElementById("pref-register").checked;
+  var password = wantAccount ? (document.getElementById("pay-password").value || "") : "";
 
   var sponsorshipId = sessionStorage.getItem("faf_sponsorship_id");
   var refNo = sessionStorage.getItem("faf_ref_no") || "SP-PENDING";
@@ -371,7 +413,10 @@ async function submitSponsorship(){
           payment_method: payMethod,
           amount: AMOUNT,
           payment_status: "pending_payment",
-          funnel_step: "payment_pending"
+          funnel_step: "payment_pending",
+          pref_save_details: saveDetails,
+          pref_delivery_alerts: wantAlerts,
+          pref_wants_account: wantAccount
         })
         .eq("id", sponsorshipId)
         .select()
@@ -415,7 +460,12 @@ async function submitSponsorship(){
             box_count: prefs.boxCount || 1,
             subscription_type: prefs.subscription,
             payment_method: payMethod,
-            amount: AMOUNT
+            amount: AMOUNT,
+            pref_save_details: saveDetails,
+            pref_delivery_alerts: wantAlerts,
+            pref_wants_account: wantAccount,
+            password: password || undefined,
+            account_url: wantAccount ? (window.location.href.replace("Faf-FoodBox-Payment.html","Faf-FoodBox-Account.html")) : undefined
           })
         });
       } catch(emailErr){
@@ -427,6 +477,33 @@ async function submitSponsorship(){
   }
 
   document.getElementById("success-ref").textContent = (isArSubmit ? "المرجع: " : "Ref: ") + refNo;
+
+  // Create Supabase Auth account if user requested one
+  var accountCreated = false;
+  if(wantAccount && password && password.length >= 6 && window.sbClient){
+    try{
+      var authRes = await window.sbClient.auth.signUp({
+        email: email,
+        password: password,
+        options: { data: { sponsor_name: name } }
+      });
+      if(!authRes.error) accountCreated = true;
+    } catch(authErr){ console.warn("Auth signUp failed", authErr); }
+  }
+
+  // Save details to localStorage if requested (pre-fills next visit)
+  if(saveDetails){
+    localStorage.setItem("faf_saved_name", name);
+    localStorage.setItem("faf_saved_email", email);
+    if(wa) localStorage.setItem("faf_saved_wa", wa);
+  }
+
+  if(accountCreated){
+    var acctBtn = document.getElementById("success-account-btn");
+    acctBtn.style.display = "inline-block";
+    if(isArSubmit) acctBtn.textContent = "عرض حسابي ←";
+  }
+
   document.getElementById("main-shell").style.display = "none";
   document.getElementById("success-wrap").classList.add("show");
 
@@ -456,12 +533,27 @@ function setLang(lang){
   setPayMethod(payMethod);
 }
 
+function togglePasswordField(show){
+  document.getElementById("password-wrap").style.display = show ? "block" : "none";
+}
+
 renderSummary();
 
 // Restore saved language choice from earlier in the funnel (defaults to English)
 (function(){
   var savedLang = sessionStorage.getItem("faf_lang") || "en";
   setLang(savedLang);
+})();
+
+// Pre-fill saved contact details (written by "Remember my details" preference)
+(function(){
+  var n = localStorage.getItem("faf_saved_name");
+  var e = localStorage.getItem("faf_saved_email");
+  var w = localStorage.getItem("faf_saved_wa");
+  if(n) document.getElementById("pay-name").value = n;
+  if(e) document.getElementById("pay-email").value = e;
+  if(w) document.getElementById("pay-wa").value = w;
+  if(n || e) checkReady();
 })();
 
 // Supabase client setup — same project as the rest of Feed a Friend

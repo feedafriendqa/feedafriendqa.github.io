@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Account — Feed a Friend</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Nunito+Sans:wght@400;600;700&family=Noto+Kufi+Arabic:wght@400;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Nunito Sans",sans-serif;background:#f0f0ec;color:#111;min-height:100vh}
+body.lang-ar{font-family:"Noto Kufi Arabic","Nunito Sans",sans-serif;direction:rtl}
+body.lang-ar .nav{flex-direction:row-reverse}
+body.lang-ar .nav-back{flex-direction:row-reverse}
+body.lang-ar .spon-header{flex-direction:row-reverse}
+body.lang-ar .spon-row{flex-direction:row-reverse}
+body.lang-ar .dash-meta{flex-direction:row-reverse}
+body.lang-ar .h1,body.lang-ar .section-h{font-family:"Noto Kufi Arabic",sans-serif}
+
+.lang-toggle{display:flex;border:2px solid #1D7A47;border-radius:8px;overflow:hidden;flex-shrink:0}
+.lang-btn{padding:6px 10px;font-family:"Nunito",sans-serif;font-size:11px;font-weight:800;border:none;cursor:pointer;background:#fff;color:#1D7A47}
+.lang-btn.on{background:#1D7A47;color:#F5C330}
+
+.shell{max-width:430px;margin:0 auto;background:#fff;min-height:100vh;box-shadow:0 8px 40px rgba(0,0,0,.08)}
+
+.nav{height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#fff;border-bottom:3px solid #1D7A47}
+.nav img{height:40px}
+.nav-back{display:flex;align-items:center;gap:8px;font-family:"Nunito",sans-serif;font-size:13px;font-weight:800;color:#1D7A47;background:none;border:none;cursor:pointer;padding:6px 4px;text-decoration:none}
+
+.header{padding:24px 20px 8px}
+.h1{font-family:"Nunito",sans-serif;font-size:24px;font-weight:900;color:#111;line-height:1.05;letter-spacing:-.4px}
+.h1 em{color:#1D7A47;font-style:normal}
+.sub{font-size:13px;color:#888;font-weight:600;margin-top:6px;line-height:1.5}
+
+.section{padding:16px 20px}
+
+/* ── FORM ── */
+.field{margin-bottom:12px}
+.lbl{display:block;font-family:"Nunito",sans-serif;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#555;margin-bottom:5px}
+.inp{width:100%;padding:12px 14px;border:2px solid #e5e5dc;border-radius:12px;font-size:14px;font-family:"Nunito Sans",sans-serif;color:#111;background:#fafaf7;outline:none;transition:border-color .15s}
+.inp:focus{border-color:#1D7A47;background:#fff}
+.err-msg{font-size:12px;color:#d14747;font-weight:700;margin-top:8px;min-height:18px;line-height:1.4}
+.ok-msg{font-size:12px;color:#1D7A47;font-weight:700;margin-top:8px;min-height:18px;line-height:1.4}
+
+.forgot-link{display:block;text-align:center;font-size:12px;font-weight:700;color:#1D7A47;margin-top:16px;cursor:pointer;background:none;border:none;width:100%;font-family:"Nunito Sans",sans-serif}
+
+/* ── CTA ── */
+.cta-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid #eee;padding:14px 20px;margin-top:8px}
+.cta-btn{width:100%;padding:15px;border-radius:50px;border:none;font-family:"Nunito",sans-serif;font-size:14px;font-weight:900;cursor:pointer;background:#1D7A47;color:#F5C330;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s}
+.cta-btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ── LOADING ── */
+.loading-view{padding:80px 20px;text-align:center}
+.loading-dots{display:inline-flex;gap:6px;margin-bottom:16px}
+.loading-dots span{width:8px;height:8px;border-radius:50%;background:#1D7A47;animation:bounce .8s infinite alternate}
+.loading-dots span:nth-child(2){animation-delay:.15s}
+.loading-dots span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{from{opacity:.3;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+.loading-label{font-size:13px;color:#aaa;font-weight:600}
+
+/* ── SPONSORSHIP CARDS ── */
+.spon-list{display:flex;flex-direction:column;gap:12px}
+.spon-card{background:#fafaf7;border:1.5px solid #e8e8e0;border-radius:16px;padding:14px 16px}
+.spon-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.spon-ref{font-family:"Nunito",sans-serif;font-size:12px;font-weight:900;color:#1D7A47;background:#EBF7F0;padding:4px 10px;border-radius:20px;letter-spacing:.04em}
+.spon-date{font-size:11px;color:#aaa;font-weight:600}
+.spon-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #ececec}
+.spon-row:last-child{border-bottom:none}
+.spon-lbl{font-size:11px;color:#999;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.spon-val{font-size:13px;color:#111;font-weight:800;font-family:"Nunito",sans-serif}
+.badge{font-size:10px;font-weight:900;padding:3px 9px;border-radius:20px;font-family:"Nunito",sans-serif;letter-spacing:.02em}
+.badge-pending{background:#FFF8E6;color:#8a6300}
+.badge-confirmed{background:#EBF7F0;color:#1D7A47}
+.badge-declined{background:#FEE2E2;color:#b91c1c}
+.badge-monthly{background:#EBF7F0;color:#1D7A47}
+
+/* ── DASHBOARD META ── */
+.dash-meta{display:flex;align-items:center;justify-content:space-between;padding:0 20px 8px}
+.dash-name{font-family:"Nunito",sans-serif;font-size:13px;font-weight:800;color:#111}
+.sign-out-btn{font-family:"Nunito",sans-serif;font-size:11px;font-weight:800;color:#888;background:none;border:1.5px solid #e8e8e0;border-radius:20px;padding:5px 12px;cursor:pointer}
+.sign-out-btn:hover{border-color:#1D7A47;color:#1D7A47}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:40px 20px}
+.empty-ic{font-size:40px;margin-bottom:12px}
+.empty-t{font-family:"Nunito",sans-serif;font-size:15px;font-weight:900;color:#111;margin-bottom:6px}
+.empty-d{font-size:13px;color:#888;font-weight:600;line-height:1.5;margin-bottom:20px}
+.empty-cta{display:inline-block;padding:12px 24px;border-radius:30px;background:#1D7A47;color:#F5C330;font-family:"Nunito",sans-serif;font-size:13px;font-weight:900;text-decoration:none}
+
+/* ── RESET SENT ── */
+.reset-sent{text-align:center;padding:60px 24px}
+.reset-ic{font-size:40px;margin-bottom:16px}
+.reset-t{font-family:"Nunito",sans-serif;font-size:18px;font-weight:900;color:#111;margin-bottom:8px}
+.reset-d{font-size:13px;color:#888;font-weight:600;line-height:1.5;margin-bottom:24px}
+.reset-back{font-family:"Nunito",sans-serif;font-size:12px;font-weight:800;color:#1D7A47;background:none;border:none;cursor:pointer}
+
+/* ── PASSWORD RESET FORM (redirect from email) ── */
+.update-pw-section{padding:16px 20px}
+</style>
+</head>
+<body>
+
+<div class="shell" id="shell">
+
+  <nav class="nav">
+    <a class="nav-back" href="Faf-FoodBox-Landing.html" data-en="← Home" data-ar="الرئيسية ←">← Home</a>
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAB9AAAAWGCAIAAABYEqntAAAACXBIWXMAABpMAAAaTAEcLDmcAAAOcWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSI/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+Cjx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIFRlc3QuU05BUFNIT1QiPgogIDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+CiAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgIHhtbG5zOkF0dHJpYj0iaHR0cDovL25zLmF0dHJpYnV0aW9uLmNvbS9hZHMvMS4wLyIKICAgICAgICB4bWxuczpkYz0iaHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8iCiAgICAgICAgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIgogICAgICB4bXA6Q3JlYXRvclRvb2w9IkNhbnZhIChSZW5kZXJlcikgZG9jPURBR1lKVlNqNEw4IHVzZXI9VUFEWnp5UF8yTncgYnJhbmQ9QWxsaXlhaCBDaG91ZGh1cnkncyBUZWFtIHRlbXBsYXRlPVR1cnF1b2lzZSBXaGl0ZSBNaW5pbWFsaXN0IFNoYXBlIEJsYW5rIE5vdGUgTGFuZHNjYXBlIERvY3VtZW50Ij4KICAgICAgPEF0dHJpYjpBZHM+CiAgICAgICAgPHJkZjpTZXE+CiAgICAgICAgICA8cmRmOmxpCiAgICAgICAgICAgIEF0dHJpYjpDcmVhdGVkPSIyMDI2LTA2LTA2IgogICAgICAgICAgICBBdHRyaWI6RGF0YT0ieyZxdW90O2RvYyZxdW90OzomcXVvdDtEQUdZSlZTajRMOCZxdW90OywmcXVvdDt1c2VyJnF1b3Q7OiZxdW90O1VBRFp6eVBfMk53JnF1b3Q7LCZxdW90O2JyYW5kJnF1b3Q7OiZxdW90O0FsbGl5YWggQ2hvdWRodXJ5J3MgVGVhbSZxdW90OywmcXVvdDt0ZW1wbGF0ZSZxdW90OzomcXVvdDtUdXJxdW9pc2UgV2hpdGUgTWluaW1hbGlzdCBTaGFwZSBCbGFuayBOb3RlIExhbmRzY2FwZSBEb2N1bWVudCZxdW90O30iCiAgICAgICAgICAgIEF0dHJpYjpFeHRJZD0iNmFhZGY3ZjYtYWYxOC00NzQ0LWEwYmEtYmZkZmQzYzFlNmM3IgogICAgICAgICAgICBBdHRyaWI6RmJJZD0iNTI1MjY1OTE0MTc5NTgwIgogICAgICAgICAgICBBdHRyaWI6VG91Y2hUeXBlPSIyIi8+CiAgICAgICAgICA8cmRmOmxpCiAgICAgICAgICAgIEF0dHJpYjpGYklkPSI1MjUyNjU5MTQxNzk1ODAiCiAgICAgICAgICAgIEF0dHJpYjpDcmVhdGVkPSIyMDI2LTA2LTA2IgogICAgICAgICAgICBBdHRyaWI6VG91Y2hUeXBlPSIyIgogICAgICAgICAgICBBdHRyaWI6RXh0SWQ9IjRlYWEyZjc5LWJiNGQtNDA2Ni1hZGU4LWY4MWRlNzQ4ZTQyOSIvPgogICAgICAgIDwvcmRmOlNlcT4KICAgICAgPC9BdHRyaWI6QWRzPgogICAgPC9yZGY6RGVzY3JpcHRpb24+CiAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4K" alt="Feed a Friend">
+    <div class="lang-toggle">
+      <button class="lang-btn on" id="lang-en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" id="lang-ar" onclick="setLang('ar')">AR</button>
+    </div>
+  </nav>
+
+  <!-- ── LOADING ── -->
+  <div id="loading-view" class="loading-view">
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+    <div class="loading-label" data-en="Loading…" data-ar="جاري التحميل…">Loading…</div>
+  </div>
+
+  <!-- ── LOGIN ── -->
+  <div id="login-view" style="display:none">
+    <div class="header">
+      <div class="h1" data-en="Welcome <em>back.</em>" data-ar="مرحباً <em>بك مجدداً.</em>">Welcome <em>back.</em></div>
+      <div class="sub" data-en="Sign in to see your sponsorships and delivery updates." data-ar="سجّل الدخول لمطالعة تكفّلاتك وتحديثات التوصيل.">Sign in to see your sponsorships and delivery updates.</div>
+    </div>
+    <div class="section">
+      <div class="field">
+        <label class="lbl" data-en="Email" data-ar="البريد الإلكتروني">Email</label>
+        <input class="inp" id="acc-email" type="email" data-en-placeholder="The email you used to sponsor" data-ar-placeholder="البريد المستخدم عند التكفّل" placeholder="The email you used to sponsor" oninput="clearErr()">
+      </div>
+      <div class="field">
+        <label class="lbl" data-en="Password" data-ar="كلمة المرور">Password</label>
+        <input class="inp" id="acc-password" type="password" data-en-placeholder="Your password" data-ar-placeholder="كلمة مرورك" placeholder="Your password" oninput="clearErr()" onkeydown="if(event.key==='Enter')signIn()">
+      </div>
+      <div class="err-msg" id="login-err"></div>
+      <button class="forgot-link" onclick="forgotPassword()" data-en="Forgot password?" data-ar="نسيت كلمة المرور؟">Forgot password?</button>
+    </div>
+    <div class="cta-bar">
+      <button class="cta-btn" id="sign-in-btn" onclick="signIn()" data-en="Sign in →" data-ar="تسجيل الدخول ←">Sign in →</button>
+    </div>
+  </div>
+
+  <!-- ── RESET EMAIL SENT ── -->
+  <div id="reset-view" style="display:none">
+    <div class="reset-sent">
+      <div class="reset-ic">📬</div>
+      <div class="reset-t" data-en="Check your email" data-ar="تحقّق من بريدك">Check your email</div>
+      <div class="reset-d" data-en="We've sent a password reset link. Click it to set a new password, then come back here to sign in." data-ar="أرسلنا رابط إعادة تعيين كلمة المرور. انقر عليه لضبط كلمة مرور جديدة، ثم عد للدخول.">We've sent a password reset link. Click it to set a new password, then come back here to sign in.</div>
+      <button class="reset-back" onclick="showView('login')" data-en="← Back to sign in" data-ar="← العودة لتسجيل الدخول">← Back to sign in</button>
+    </div>
+  </div>
+
+  <!-- ── UPDATE PASSWORD (redirect from reset email) ── -->
+  <div id="update-pw-view" style="display:none">
+    <div class="header">
+      <div class="h1" data-en="Set a new <em>password.</em>" data-ar="اضبط <em>كلمة مرور.</em>">Set a new <em>password.</em></div>
+      <div class="sub" data-en="Choose something you'll remember." data-ar="اختر شيئاً لن تنساه.">Choose something you'll remember.</div>
+    </div>
+    <div class="update-pw-section">
+      <div class="field">
+        <label class="lbl" data-en="New password" data-ar="كلمة المرور الجديدة">New password</label>
+        <input class="inp" id="new-password" type="password" data-en-placeholder="Min. 8 characters" data-ar-placeholder="٨ أحرف على الأقل" placeholder="Min. 8 characters">
+      </div>
+      <div class="err-msg" id="update-pw-err"></div>
+    </div>
+    <div class="cta-bar">
+      <button class="cta-btn" onclick="updatePassword()" data-en="Update password →" data-ar="تحديث كلمة المرور ←">Update password →</button>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD ── -->
+  <div id="dashboard-view" style="display:none">
+    <div class="header">
+      <div class="h1" id="dash-title" data-en="Your <em>sponsorships.</em>" data-ar="تكفّلاتك.">Your <em>sponsorships.</em></div>
+      <div class="sub" id="dash-sub" data-en="Everything you've given, in one place." data-ar="كل ما قدّمته، في مكان واحد.">Everything you've given, in one place.</div>
+    </div>
+    <div class="dash-meta">
+      <span class="dash-name" id="dash-name"></span>
+      <button class="sign-out-btn" onclick="signOut()" data-en="Sign out" data-ar="تسجيل الخروج">Sign out</button>
+    </div>
+    <div class="section">
+      <div id="spon-loading" class="loading-view" style="padding:30px 0">
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+      </div>
+      <div class="spon-list" id="spon-list" style="display:none"></div>
+      <div class="empty-state" id="spon-empty" style="display:none">
+        <div class="empty-ic">📦</div>
+        <div class="empty-t" data-en="No sponsorships yet" data-ar="لا تكفّلات بعد">No sponsorships yet</div>
+        <div class="empty-d" data-en="Your history will appear here once you've completed your first sponsorship." data-ar="سيظهر تاريخك هنا بمجرد إتمام أول تكفّل.">Your history will appear here once you've completed your first sponsorship.</div>
+        <a class="empty-cta" href="Faf-FoodBox-Landing.html" data-en="Sponsor a box →" data-ar="تكفّل بصندوق ←">Sponsor a box →</a>
+      </div>
+    </div>
+    <div style="height:40px"></div>
+  </div>
+
+</div><!-- end shell -->
+
+<script>
+var SUPABASE_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
+var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
+var sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+var currentUser = null;
+
+// ── Views ──────────────────────────────────────────────────
+function showView(v){
+  ["loading","login","reset","update-pw","dashboard"].forEach(function(id){
+    document.getElementById(id+"-view").style.display = (id === v) ? "block" : "none";
+  });
+}
+
+// ── Init ───────────────────────────────────────────────────
+async function init(){
+  if(!sb){ showView("login"); return; }
+
+  // If this is a password-reset redirect, Supabase will fire PASSWORD_RECOVERY
+  sb.auth.onAuthStateChange(async function(event, session){
+    if(event === "PASSWORD_RECOVERY"){
+      showView("update-pw");
+    } else if(event === "SIGNED_IN" && session){
+      currentUser = session.user;
+      await showDashboard(session.user);
+    } else if(event === "SIGNED_OUT"){
+      currentUser = null;
+      showView("login");
+    }
+  });
+
+  var { data: { session } } = await sb.auth.getSession();
+  if(session){
+    currentUser = session.user;
+    await showDashboard(session.user);
+  } else {
+    showView("login");
+  }
+}
+
+// ── Sign in ────────────────────────────────────────────────
+async function signIn(){
+  var isAr = document.body.classList.contains("lang-ar");
+  var email = document.getElementById("acc-email").value.trim();
+  var password = document.getElementById("acc-password").value;
+  var btn = document.getElementById("sign-in-btn");
+  var errEl = document.getElementById("login-err");
+
+  if(!email || !password){
+    errEl.textContent = isAr ? "أدخل بريدك وكلمة مرورك." : "Please enter your email and password.";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = isAr ? "جاري الدخول…" : "Signing in…";
+  errEl.textContent = "";
+
+  var { data, error } = await sb.auth.signInWithPassword({ email: email, password: password });
+
+  if(error){
+    btn.disabled = false;
+    btn.textContent = isAr ? "تسجيل الدخول ←" : "Sign in →";
+    if(error.message.toLowerCase().includes("invalid")){
+      errEl.textContent = isAr ? "البريد أو كلمة المرور غير صحيحة." : "Incorrect email or password.";
+    } else {
+      errEl.textContent = isAr ? "حدث خطأ. حاول مجدداً." : "Something went wrong. Please try again.";
+    }
+  }
+  // Dashboard shown via onAuthStateChange
+}
+
+// ── Sign out ───────────────────────────────────────────────
+async function signOut(){
+  await sb.auth.signOut();
+  showView("login");
+}
+
+// ── Forgot password ────────────────────────────────────────
+async function forgotPassword(){
+  var isAr = document.body.classList.contains("lang-ar");
+  var email = document.getElementById("acc-email").value.trim();
+  var errEl = document.getElementById("login-err");
+
+  if(!email){
+    errEl.textContent = isAr ? "أدخل بريدك الإلكتروني أولاً." : "Enter your email first.";
+    return;
+  }
+
+  errEl.textContent = "";
+  await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.href.split("?")[0]
+  });
+  // Always show "check email" regardless — don't reveal whether email exists
+  showView("reset");
+}
+
+// ── Update password (after reset redirect) ─────────────────
+async function updatePassword(){
+  var isAr = document.body.classList.contains("lang-ar");
+  var pw = document.getElementById("new-password").value;
+  var errEl = document.getElementById("update-pw-err");
+
+  if(pw.length < 8){
+    errEl.textContent = isAr ? "كلمة المرور يجب أن تكون ٨ أحرف على الأقل." : "Password must be at least 8 characters.";
+    return;
+  }
+
+  var { error } = await sb.auth.updateUser({ password: pw });
+  if(error){
+    errEl.textContent = isAr ? "تعذّر تحديث كلمة المرور. حاول مجدداً." : "Could not update password. Please try again.";
+  } else {
+    // Session is now active — show dashboard
+    var { data: { session } } = await sb.auth.getSession();
+    if(session){
+      currentUser = session.user;
+      await showDashboard(session.user);
+    }
+  }
+}
+
+// ── Dashboard ──────────────────────────────────────────────
+async function showDashboard(user){
+  showView("dashboard");
+  var isAr = document.body.classList.contains("lang-ar");
+  var nameEl = document.getElementById("dash-name");
+  nameEl.textContent = user.user_metadata?.sponsor_name || user.email;
+
+  // Load sponsorships
+  document.getElementById("spon-loading").style.display = "block";
+  document.getElementById("spon-list").style.display = "none";
+  document.getElementById("spon-empty").style.display = "none";
+
+  // NOTE: requires RLS policy: email = auth.jwt() ->> 'email'
+  // or auth.uid() match if user_id is stored
+  var { data: sponsorships, error } = await sb
+    .from("sponsorships")
+    .select("*")
+    .eq("email", user.email)
+    .order("created_at", { ascending: false });
+
+  document.getElementById("spon-loading").style.display = "none";
+
+  if(error || !sponsorships || sponsorships.length === 0){
+    document.getElementById("spon-empty").style.display = "block";
+    applyLang(isAr ? "ar" : "en");
+    return;
+  }
+
+  document.getElementById("spon-list").style.display = "flex";
+  document.getElementById("spon-list").innerHTML = sponsorships.map(function(sp){
+    return renderCard(sp, isAr);
+  }).join("");
+}
+
+// ── Card renderer ──────────────────────────────────────────
+function renderCard(sp, isAr){
+  var date = "—";
+  if(sp.created_at){
+    try{
+      date = new Date(sp.created_at).toLocaleDateString(
+        isAr ? "ar-QA" : "en-GB",
+        { year:"numeric", month:"short", day:"numeric" }
+      );
+    }catch(e){}
+  }
+
+  var statusMap = {
+    pending_payment: { en:"⏳ Awaiting payment",    ar:"⏳ بانتظار الدفع",  cls:"badge-pending" },
+    payment_pending: { en:"⏳ Awaiting payment",    ar:"⏳ بانتظار الدفع",  cls:"badge-pending" },
+    confirmed:       { en:"✓ Confirmed",            ar:"✓ مؤكّد",           cls:"badge-confirmed" },
+    delivered:       { en:"📦 Delivered",           ar:"📦 تم التوصيل",     cls:"badge-confirmed" },
+    declined:        { en:"✗ Declined",             ar:"✗ مرفوض",           cls:"badge-declined" }
+  };
+  var st = statusMap[sp.payment_status] || statusMap["pending_payment"];
+
+  var boxes = sp.box_count || sp.amount && Math.round(sp.amount / 100) || "—";
+  var amount = sp.amount ? "QAR " + sp.amount : "—";
+  var subBadge = sp.subscription_type === "monthly"
+    ? '<div class="spon-row"><span class="spon-lbl">' + (isAr ? "النوع" : "Type") + '</span><span class="badge badge-monthly">' + (isAr ? "🔁 شهري" : "🔁 Monthly") + '</span></div>'
+    : "";
+  var delivBadge = "";
+  if(sp.delivery_status){
+    var delivMap = {
+      pending:   { en:"Pending",   ar:"قيد الانتظار" },
+      scheduled: { en:"Scheduled", ar:"مجدول" },
+      delivered: { en:"Delivered", ar:"تم التوصيل" }
+    };
+    var dl = delivMap[sp.delivery_status] || { en: sp.delivery_status, ar: sp.delivery_status };
+    delivBadge = '<div class="spon-row"><span class="spon-lbl">' + (isAr ? "التوصيل" : "Delivery") + '</span><span class="spon-val">' + (isAr ? dl.ar : dl.en) + '</span></div>';
+  }
+
+  return '<div class="spon-card">'
+    + '<div class="spon-header">'
+    +   '<span class="spon-ref">' + (sp.ref_no || "—") + '</span>'
+    +   '<span class="spon-date">' + date + '</span>'
+    + '</div>'
+    + '<div class="spon-row"><span class="spon-lbl">' + (isAr ? "الصناديق" : "Boxes") + '</span><span class="spon-val">' + boxes + '</span></div>'
+    + '<div class="spon-row"><span class="spon-lbl">' + (isAr ? "المبلغ" : "Amount") + '</span><span class="spon-val">' + amount + '</span></div>'
+    + '<div class="spon-row"><span class="spon-lbl">' + (isAr ? "الحالة" : "Status") + '</span><span class="badge ' + st.cls + '">' + (isAr ? st.ar : st.en) + '</span></div>'
+    + subBadge
+    + delivBadge
+    + '</div>';
+}
+
+// ── Helpers ────────────────────────────────────────────────
+function clearErr(){
+  document.getElementById("login-err").textContent = "";
+}
+
+// ── Language toggle ────────────────────────────────────────
+function applyLang(lang){
+  document.body.classList.toggle("lang-ar", lang === "ar");
+  document.documentElement.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
+  document.getElementById("lang-en").classList.toggle("on", lang === "en");
+  document.getElementById("lang-ar").classList.toggle("on", lang === "ar");
+  document.querySelectorAll("[data-en]").forEach(function(el){
+    var text = lang === "ar" ? el.getAttribute("data-ar") : el.getAttribute("data-en");
+    if(text !== null) el.innerHTML = text;
+  });
+  document.querySelectorAll("[data-en-placeholder]").forEach(function(el){
+    var text = lang === "ar" ? el.getAttribute("data-ar-placeholder") : el.getAttribute("data-en-placeholder");
+    if(text !== null) el.setAttribute("placeholder", text);
+  });
+  sessionStorage.setItem("faf_lang", lang);
+  // Re-render cards in new language if dashboard is showing
+  if(currentUser && document.getElementById("dashboard-view").style.display !== "none"){
+    var list = document.getElementById("spon-list");
+    if(list.style.display !== "none" && list.innerHTML){
+      showDashboard(currentUser);
+    }
+  }
+}
+
+function setLang(lang){ applyLang(lang); }
+
+// ── Boot ───────────────────────────────────────────────────
+(function(){
+  var savedLang = sessionStorage.getItem("faf_lang") || "en";
+  applyLang(savedLang);
+  init();
+})();
+</script>
+
+</body>
+</html>
