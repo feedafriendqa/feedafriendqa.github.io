@@ -1283,7 +1283,7 @@ function exportConfirmedCSV() {
       membersByApp[m.application_id].push(m);
     });
 
-    var headers = ['Name', 'Phone', 'Location', 'Nationality', 'Language', 'Household size', 'Boxes needed', 'Diaper size(s) needed', 'Formula needed'];
+    var headers = ['Name', 'Phone', 'Location', 'Nationality', 'Language', 'Household size', 'Boxes needed', 'Diaper size(s) needed', 'Formula stage / detail'];
     var lines = [headers.join(',')];
 
     confirmed.forEach(function(a) {
@@ -1303,14 +1303,60 @@ function exportConfirmedCSV() {
       var dobCounts = {};
       diaperKids.forEach(function(k) { if (k.dob) dobCounts[k.dob] = (dobCounts[k.dob] || 0) + 1; });
 
-      var diaperSummary = diaperKids.map(function(k) {
+      var diaperParts = diaperKids.map(function(k) {
         var sizeStr = 'Size ' + k.diaper_size;
         if (k.dob && dobCounts[k.dob] > 1) sizeStr += ' (twin)';
         return sizeStr;
-      }).join(', ');
+      });
 
-      var formulaSummary = formulaKids.length > 0 ? 'Yes (' + formulaKids.length + ')' : '';
-      if (formulaKids.length === 1) formulaSummary = 'Yes';
+      // formulaParts holds the real stage worked out from DOB where one
+      // exists. Legacy migrated records sometimes have a free-text brand
+      // or note (e.g. "Similac", "Adult diapers") instead of a clean
+      // number/date — those pass through as-is rather than being forced
+      // into a stage they don't fit.
+      var formulaParts = formulaKids.map(function(k) {
+        if (k.dob) {
+          var months = ageInMonths(k.dob);
+          if (months !== null) {
+            if (months < 6) return 'Stage 1 (' + months + 'mo)';
+            if (months < 12) return 'Stage 2 (' + months + 'mo)';
+            return 'Over 12mo — not eligible';
+          }
+        }
+        return 'Formula needed (no DOB on file)';
+      });
+
+      // Some households only have data on the application's own legacy
+      // diaper_size/formula fields (from the big spreadsheet migration),
+      // not a named member record. Pulled in here too so nothing is
+      // missed depending on which place it was entered.
+      if (a.diaper_size) {
+        var appDiaper = String(a.diaper_size).trim();
+        diaperParts.push(/^\d+$/.test(appDiaper) ? ('Size ' + appDiaper) : appDiaper);
+      }
+      if (a.formula) {
+        var appFormula = String(a.formula).trim();
+        var asDate = new Date(appFormula);
+        var looksLikeDate = !isNaN(asDate.getTime()) && /\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4}/.test(appFormula);
+        if (looksLikeDate) {
+          var months = ageInMonths(asDate.toISOString().slice(0,10));
+          if (months !== null) {
+            if (months < 6) formulaParts.push('Stage 1 (' + months + 'mo)');
+            else if (months < 12) formulaParts.push('Stage 2 (' + months + 'mo)');
+            else formulaParts.push('Over 12mo — not eligible');
+          } else {
+            formulaParts.push(appFormula);
+          }
+        } else {
+          // Free text like a brand name ("Similac", "Aptamil") or a note
+          // ("Adult diapers") — passed through as-is rather than forced
+          // into Yes/No or a stage it doesn't actually represent.
+          formulaParts.push(appFormula);
+        }
+      }
+
+      var diaperSummary = diaperParts.join(', ');
+      var formulaSummary = formulaParts.join(', ');
 
       lines.push(baseFields.concat([diaperSummary, formulaSummary]).map(csvEscape).join(','));
     });
