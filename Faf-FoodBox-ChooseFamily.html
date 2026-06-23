@@ -289,7 +289,12 @@ function mapPoolRowToFamily(row){
     id: row.id,
     area: row.area_en || row.area || '',
     size: row.household_size || 1,
-    boxesNeeded: row.max_boxes || 3,
+    // boxesNeeded must reflect actual per-distribution need, not the static
+    // max_boxes eligibility cap stored on the row (3 for bachelors / 6 for
+    // families, set once at import) — that cap is unrelated to household
+    // size and was showing "6 boxes" for households as small as 2 people.
+    // Same 1-box-per-4-people rule as the CRM dashboard tile and CSV export.
+    boxesNeeded: Math.max(1, Math.ceil((row.household_size || 1) / 4)),
     note: cap.en,
     noteAr: cap.ar,
     householdType: householdTypeEn,
