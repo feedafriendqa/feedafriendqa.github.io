@@ -467,6 +467,7 @@ var currentFilter = 'new_pending';
 var currentAppId = null;
 var currentMembers = [];
 var currentDocUrlMap = {};
+var currentSponsorship = null;
 var myRole = 'admin';
 var myLanguages = null;
 var myName = null;
@@ -870,6 +871,7 @@ function viewApp(id) {
   if (!app) return;
   currentMembers = [];
   currentDocUrlMap = {};
+  currentSponsorship = null;
   renderModal(app, [], {});
   // Fetch real members if not demo
   if (!id.startsWith('demo')) {
@@ -889,6 +891,20 @@ function viewApp(id) {
         if (currentAppId === id) renderModal(app, members, urlMap);
       });
     }).catch(function(){});
+
+    // Sponsorship details (super admin only feature, but harmless to fetch
+    // regardless — the section itself is gated on myRole in renderModal).
+    if (myRole === 'super_admin' && app.sponsorship_id) {
+      fetch(SUPABASE_URL + '/rest/v1/sponsorships?id=eq.' + app.sponsorship_id + '&select=*', {
+        headers: apiHeaders()
+      }).then(function(r){ return r.json(); }).then(function(rows){
+        currentSponsorship = (Array.isArray(rows) && rows[0]) ? rows[0] : {};
+        if (currentAppId === id) renderModal(app, currentMembers, currentDocUrlMap);
+      }).catch(function(){
+        currentSponsorship = {};
+        if (currentAppId === id) renderModal(app, currentMembers, currentDocUrlMap);
+      });
+    }
   }
 }
 
@@ -987,12 +1003,55 @@ function renderModal(app, members, urlMap) {
   };
   var accEnd = '</div></div>';
 
-  // ── APPLICANT (editable) ──
+  // ── shared editable-field helpers (used by Applicant, Address, Financial) ──
   var sf = function(id,v){ return '<input class="edit-field" id="'+id+'" value="'+(v||'').toString().replace(/"/g,'&quot;')+'">'; };
   var sd = function(id,v){ return '<input class="edit-field" type="date" id="'+id+'" value="'+(v||'')+'">'; };
   var sn = function(id,v){ return '<input class="edit-field" type="number" id="'+id+'" value="'+(v!=null&&v!==''?v:'')+'">'; };
   var di = function(lbl,html){ return '<div class="detail-item"><div class="lbl">'+lbl+'</div><div class="val">'+html+'</div></div>'; };
   var dif = function(lbl,id,v){ return '<div class="detail-item"><div class="lbl">'+lbl+'</div>'+sf(id,v)+'</div>'; };
+
+  // ── SPONSORSHIP (super admin only) ──
+  // food_box_applications.sponsorship_id is set the moment a public sponsor
+  // submits Payment.html (via the claim_families_for_sponsorship RPC), well
+  // before payment is actually verified. is_sponsored only flips true here,
+  // by hand, once a super admin has checked the bank/Fawran statement.
+  if (myRole === 'super_admin') {
+    var hasUnconfirmedSponsorship = !!app.sponsorship_id && !app.is_sponsored;
+    if (hasUnconfirmedSponsorship) openSections['sponsorship'] = true; // surface it without an extra click
+    var sponsorshipBadge = '';
+    if (app.is_sponsored) sponsorshipBadge = '<span class="accordion-count" style="background:var(--green);color:white;">✅ Sponsored</span>';
+    else if (app.sponsorship_id) sponsorshipBadge = '<span class="accordion-count" style="background:var(--orange);color:white;">⏳ Pending payment</span>';
+    body += accStart('sponsorship', '💳 Sponsorship', sponsorshipBadge);
+    if (!app.sponsorship_id && !app.is_sponsored) {
+      body += '<div style="font-size:12px;color:var(--muted);padding:6px 0;">Not currently matched to a sponsor.</div>';
+    } else if (currentSponsorship === null) {
+      body += '<div style="font-size:12px;color:var(--muted);padding:6px 0;">⏳ Loading sponsorship details…</div>';
+    } else {
+      var sp = currentSponsorship;
+      body += '<div class="detail-grid">';
+      body += di('Sponsor name', sp.sponsor_name || '–');
+      body += di('WhatsApp', sp.whatsapp || '–');
+      body += di('Email', sp.email || '–');
+      body += di('Boxes pledged', sp.box_count != null ? sp.box_count : '–');
+      body += di('Amount', sp.amount != null ? ('QAR ' + Number(sp.amount).toLocaleString()) : '–');
+      body += di('Payment method', sp.payment_method || '–');
+      body += di('Payment status', sp.payment_status ? sp.payment_status.replace(/_/g,' ') : '–');
+      body += di('Submitted', sp.created_at ? new Date(sp.created_at).toLocaleString('en-GB') : '–');
+      body += '</div>';
+      if (app.is_sponsored) {
+        body += '<div style="font-size:12px;color:var(--green-dark);font-weight:800;margin-top:10px;">✅ Confirmed sponsored on ' + (app.sponsored_at ? new Date(app.sponsored_at).toLocaleDateString('en-GB') : '–') + '</div>';
+        body += '<button class="btn-comment" style="margin-top:8px;background:white;color:var(--orange);border:1.5px solid var(--orange);" onclick="undoSponsorshipConfirmation(\''+app.id+'\')">↩ Undo confirmation</button>';
+      } else {
+        body += '<div style="display:flex;gap:8px;margin-top:12px;">';
+        body += '<button class="btn-comment" style="flex:1;background:var(--green);color:white;" onclick="confirmSponsorshipPayment(\''+app.id+'\')">✅ Confirm payment received</button>';
+        body += '<button class="btn-comment" style="flex:1;background:white;color:var(--red);border:1.5px solid var(--red);" onclick="releaseSponsorship(\''+app.id+'\')">✖ Release / reject</button>';
+        body += '</div>';
+      }
+    }
+    body += accEnd;
+  }
+
+  // ── APPLICANT (editable) ──
   body += accStart('applicant', 'Applicant details');
   // ── TEMP: main-applicant QID scanner — remove this block once the spreadsheet migration is finished ──
   body += renderMainQidScanPanel(app.id);
@@ -1456,6 +1515,100 @@ function updateStatus(id, status) {
     var app = idx !== -1 ? allApps[idx] : null;
     if (app) app.status = status;
     updateStats(); filterApps(); closeModal();
+  }).catch(function(e){ alert('Update failed: ' + e.message); });
+}
+
+// ── SPONSORSHIP CONFIRMATION (super admin only) ──
+// These three only ever touch food_box_applications.is_sponsored/sponsored_at
+// and the matching sponsorships.payment_status — never the funnel's claim
+// itself (sponsorship_id), except releaseSponsorship which intentionally
+// frees the family back into the public pool.
+function confirmSponsorshipPayment(id) {
+  if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
+  var app = allApps.find(function(a){return a.id===id;});
+  if (!app || !app.sponsorship_id) return;
+  if (!confirm('Confirm payment received for this sponsorship? This marks the family as sponsored.')) return;
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ is_sponsored: true, sponsored_at: new Date().toISOString() })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
+    app.is_sponsored = true;
+    app.sponsored_at = rows[0].sponsored_at;
+    // Best-effort — the family-side flag above is what actually matters for
+    // the public pool; if this second write fails we don't want to block on it.
+    apiHeadersAsync().then(function(headers2) {
+      return fetch(SUPABASE_URL + '/rest/v1/sponsorships?id=eq.' + app.sponsorship_id, {
+        method: 'PATCH', headers: headers2,
+        body: JSON.stringify({ payment_status: 'paid' })
+      });
+    }).catch(function(){});
+    if (currentSponsorship) currentSponsorship.payment_status = 'paid';
+    renderModal(app, currentMembers, currentDocUrlMap);
+  }).catch(function(e){ alert('Update failed: ' + e.message); });
+}
+
+function releaseSponsorship(id) {
+  if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
+  var app = allApps.find(function(a){return a.id===id;});
+  if (!app) return;
+  if (!confirm('Release this family back into the public sponsorship pool? Use this if payment never came through or the sponsor cancelled.')) return;
+  var sponsorshipIdToReject = app.sponsorship_id;
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ is_sponsored: false, sponsored_at: null, sponsorship_id: null, reserved_until: null, reserved_by_sponsorship_id: null })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
+    app.is_sponsored = false; app.sponsored_at = null; app.sponsorship_id = null;
+    currentSponsorship = null;
+    if (sponsorshipIdToReject) {
+      apiHeadersAsync().then(function(headers2) {
+        return fetch(SUPABASE_URL + '/rest/v1/sponsorships?id=eq.' + sponsorshipIdToReject, {
+          method: 'PATCH', headers: headers2,
+          body: JSON.stringify({ payment_status: 'rejected' })
+        });
+      }).catch(function(){});
+    }
+    renderModal(app, currentMembers, currentDocUrlMap);
+  }).catch(function(e){ alert('Update failed: ' + e.message); });
+}
+
+function undoSponsorshipConfirmation(id) {
+  if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
+  var app = allApps.find(function(a){return a.id===id;});
+  if (!app) return;
+  if (!confirm('Undo the sponsorship confirmation? The family stays matched to this sponsor but goes back to "pending payment".')) return;
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ is_sponsored: false, sponsored_at: null })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
+    app.is_sponsored = false; app.sponsored_at = null;
+    if (app.sponsorship_id) {
+      apiHeadersAsync().then(function(headers2) {
+        return fetch(SUPABASE_URL + '/rest/v1/sponsorships?id=eq.' + app.sponsorship_id, {
+          method: 'PATCH', headers: headers2,
+          body: JSON.stringify({ payment_status: 'pending_payment' })
+        });
+      }).catch(function(){});
+      if (currentSponsorship) currentSponsorship.payment_status = 'pending_payment';
+    }
+    renderModal(app, currentMembers, currentDocUrlMap);
   }).catch(function(e){ alert('Update failed: ' + e.message); });
 }
 

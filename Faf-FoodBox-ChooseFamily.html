@@ -68,6 +68,8 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .fam-id,body.lang-ar .surp
 
 /* ── FAMILY CARDS ── */
 .fam-grid{display:flex;flex-direction:column;gap:12px;padding:4px 20px 8px}
+.pool-state-msg{margin:4px 20px 8px;padding:24px 16px;text-align:center;font-size:13px;font-weight:700;color:#888;background:#fafaf7;border:2px dashed #d8d8cc;border-radius:18px;line-height:1.6}
+.pool-retry-btn{margin-top:10px;padding:9px 18px;border-radius:30px;border:2px solid #1D7A47;background:#fff;color:#1D7A47;font-family:"Nunito",sans-serif;font-size:12px;font-weight:900;cursor:pointer}
 .fam-card{border:2px solid #e8e8e0;border-radius:18px;padding:16px;cursor:pointer;transition:all .15s;position:relative;background:#fafaf7}
 .fam-card:hover{border-color:#cdebd9}
 .fam-card.sel{border-color:#1D7A47;background:#EBF7F0}
@@ -167,40 +169,161 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .fam-id,body.lang-ar .surp
 </div>
 
 <script>
-var FRIENDS = [
-  { id: "A", area: "Old Airport", size: 4, boxesNeeded: 1, note: "A mother of two. She works, but the salary runs out before the month does.", tags: ["Kids"] },
-  { id: "B", area: "Industrial", size: 3, boxesNeeded: 1, note: "A single father raising two girls alone. Quiet about it. Grateful for everything.", tags: ["Kids"] },
-  { id: "C", area: "Al Wakrah", size: 5, boxesNeeded: 2, note: "Five mouths. Three in school. The kids don\'t know — and that matters to them.", tags: ["Kids"] },
-  { id: "D", area: "Gharaffa", size: 4, boxesNeeded: 1, note: "New to Qatar, new baby, no family nearby. One box changes the whole month.", tags: ["Baby"] },
-  { id: "E", area: "Nuaija", size: 6, boxesNeeded: 2, note: "Recently lost their income. Six people. Asking for help doesn\'t come easy.", tags: [] },
-  { id: "F", area: "Other", size: 3, boxesNeeded: 1, note: "An elderly couple and their adult son. Too proud to ask, too hungry to refuse.", tags: ["Elderly"] },
-  { id: "G", area: "Old Airport", size: 9, boxesNeeded: 3, note: "Three generations under one roof. Grandparents, parents, and four little ones.", tags: ["Kids","Elderly"] },
-  { id: "H", area: "Al Wakrah", size: 12, boxesNeeded: 4, note: "A large extended family sharing one home since losing their work. Twelve people, one kitchen.", tags: ["Kids"] },
-  { id: "I", area: "Industrial", size: 7, boxesNeeded: 2, note: "A widow raising five children on her own. The eldest just started helping out.", tags: ["Kids"] },
-  { id: "J", area: "Gharaffa", size: 10, boxesNeeded: 3, note: "Two families who moved in together to make rent work. Ten people, one struggle.", tags: ["Kids"] }
-];
+var FRIENDS = []; // populated live from food_box_public_pool — see loadFamilyPool()
+var poolState = "loading"; // "loading" | "ready" | "error"
 
 var prefs = JSON.parse(sessionStorage.getItem("faf_prefs") || "{}");
 var targetBoxes = prefs.boxCount || 1;
 var selectedIds = []; // array of family ids, order = pick order
 
-// ── Arabic translations for dynamic family content ──
-var FRIENDS_AR = {
-  A: { note: "أم لطفلين. تعمل، لكن الراتب ينتهي قبل نهاية الشهر.", tags: ["أطفال"] },
-  B: { note: "أب وحيد يربي طفلتين بمفرده. هادئ بشأن ذلك. شاكر لكل شيء.", tags: ["أطفال"] },
-  C: { note: "خمسة أفواه. ثلاثة في المدرسة. الأطفال لا يعرفون — وهذا يهمهم.", tags: ["أطفال"] },
-  D: { note: "وصلوا قطر حديثاً، مولود جديد، لا عائلة قريبة. صندوق واحد يغيّر الشهر كله.", tags: ["مولود"] },
-  E: { note: "فقدوا دخلهم مؤخراً. ستة أشخاص. طلب المساعدة لم يكن سهلاً.", tags: [] },
-  F: { note: "زوجان مسنّان وابنهما البالغ. فخورون جداً ليسألوا، جائعون جداً ليرفضوا.", tags: ["مسنّون"] },
-  G: { note: "ثلاثة أجيال تحت سقف واحد. أجداد، آباء، وأربعة صغار.", tags: ["أطفال", "مسنّون"] },
-  H: { note: "عائلة ممتدة كبيرة تشارك منزلاً واحداً منذ فقدان عملها. اثنا عشر شخصاً، مطبخ واحد.", tags: ["أطفال"] },
-  I: { note: "أرملة تربي خمسة أطفال بمفردها. الابن الأكبر بدأ يساعد.", tags: ["أطفال"] },
-  J: { note: "عائلتان انتقلتا للعيش معاً لتغطية الإيجار. عشرة أشخاص، معاناة واحدة.", tags: ["أطفال"] }
+// ── Anonymized caption generator ──
+// There is no hand-written "note" column in food_box_applications, by
+// design — nothing identifying should ever reach this public page. Each
+// caption below is generated purely from structured fields already shown
+// elsewhere on the card (household size, presence of young children,
+// long-term status), and is deterministic per family (seeded by id) so
+// it doesn't change between re-renders within the same session.
+function hashId(id){
+  var h = 0;
+  for(var i=0;i<id.length;i++){ h = ((h<<5)-h+id.charCodeAt(i))|0; }
+  return Math.abs(h);
+}
+
+var CAPTION_POOLS = {
+  baby: {
+    en: [
+      "A young child in this home means every box counts double.",
+      "There's a little one here who needs more than the budget allows.",
+      "A small family, a new baby, and costs that add up fast."
+    ],
+    ar: [
+      "وجود طفل صغير هنا يجعل لكل صندوق أهمية مضاعفة.",
+      "هناك طفل صغير يحتاج أكثر مما تسمح به الميزانية.",
+      "عائلة صغيرة، مولود جديد، ونفقات تتزايد بسرعة."
+    ]
+  },
+  kids: {
+    en: [
+      "Kids growing fast, on a budget that isn't.",
+      "A household full of homework — groceries don't always keep up.",
+      "The children don't go without, but it takes everything to make sure of that."
+    ],
+    ar: [
+      "أطفال يكبرون بسرعة، وميزانية لا تكبر معهم.",
+      "منزل مليء بالواجبات المدرسية — والمؤن لا تكفي دائماً.",
+      "الأطفال لا ينقصهم شيء، لكن ذلك يتطلب كل ما تملكه الأسرة."
+    ]
+  },
+  large: {
+    en: [
+      "A full house under one roof, sharing everything — including the worry.",
+      "Many people, one kitchen, and a budget stretched thin.",
+      "Several generations living together to make ends meet."
+    ],
+    ar: [
+      "بيت مزدحم تحت سقف واحد، يتشاركون كل شيء — حتى القلق.",
+      "أشخاص كثيرون، مطبخ واحد، وميزانية محدودة.",
+      "أجيال عديدة تعيش معاً لتسديد المصاريف."
+    ]
+  },
+  small: {
+    en: [
+      "Living simply, but the month doesn't always stretch far enough.",
+      "A quiet household doing their best to make ends meet.",
+      "No extra hands to share the load — just getting by, month to month."
+    ],
+    ar: [
+      "يعيشون بكل بساطة، لكن الشهر لا يكفي دائماً.",
+      "أسرة هادئة تحاول دائماً تسديد مصاريفها.",
+      "لا أحد يشاركهم الحمل — يتدبرون أمورهم شهرياً."
+    ]
+  }
 };
+
+var LONGTERM_SUFFIX = {
+  en: "This is a family we support on an ongoing basis — steady help makes a real difference here.",
+  ar: "هذه عائلة ندعمها بشكل مستمر — الدعم الثابت يصنع فرقاً حقيقياً هنا."
+};
+
+function buildCaption(row){
+  var bucket;
+  if(row.has_children_u3) bucket = 'baby';
+  else if(row.has_children_u18) bucket = 'kids';
+  else if((row.household_size||0) >= 6) bucket = 'large';
+  else bucket = 'small';
+  var seed = hashId(row.id);
+  var en = CAPTION_POOLS[bucket].en[seed % CAPTION_POOLS[bucket].en.length];
+  var ar = CAPTION_POOLS[bucket].ar[seed % CAPTION_POOLS[bucket].ar.length];
+  if(row.is_long_term){ en += ' ' + LONGTERM_SUFFIX.en; ar += ' ' + LONGTERM_SUFFIX.ar; }
+  return { en: en, ar: ar };
+}
+
+// ── Display labels for structured flags shown as tag pills ──
+// Internal program tags (wbb/ll enrollment) are deliberately NOT surfaced
+// here — they're operational detail, not something a sponsor needs to see.
+var TAG_LABELS = {
+  kids:      { en: "Kids", ar: "أطفال" },
+  baby:      { en: "Baby", ar: "مولود" },
+  long_term: { en: "Long-term support", ar: "دعم طويل الأمد" }
+};
+
+function mapPoolRowToFamily(row){
+  var tagKeys = [];
+  if(row.has_children_u3) tagKeys.push('baby');
+  else if(row.has_children_u18) tagKeys.push('kids');
+  if(row.is_long_term) tagKeys.push('long_term');
+  var cap = buildCaption(row);
+  return {
+    id: row.id,
+    area: row.area_en || row.area || '',
+    size: row.household_size || 1,
+    boxesNeeded: row.max_boxes || 3,
+    note: cap.en,
+    noteAr: cap.ar,
+    tags: tagKeys.map(function(k){ return TAG_LABELS[k].en; }),
+    tagsAr: tagKeys.map(function(k){ return TAG_LABELS[k].ar; })
+  };
+}
+
+// Loads the live, not-yet-sponsored pool from the public-safe view (no
+// names, no QID, no document paths — see food_box_public_pool in the
+// migration). Re-runs the existing render pipeline once data arrives.
+function loadFamilyPool(){
+  poolState = "loading";
+  renderFamilies();
+  if(!window.sbClient){
+    poolState = "error";
+    renderFamilies();
+    return;
+  }
+  window.sbClient
+    .from("food_box_public_pool")
+    .select("id,area,area_en,household_size,max_boxes,has_children_u18,has_children_u3,is_long_term")
+    .then(function(res){
+      if(res.error) throw res.error;
+      FRIENDS = (res.data || []).map(mapPoolRowToFamily);
+      poolState = "ready";
+      renderRecap();
+      renderFamilies();
+      selectedIds.forEach(function(id){
+        var card = document.getElementById("fam-" + id);
+        if(card) card.classList.add("sel");
+      });
+      updateCounter();
+      checkReady();
+    })
+    .catch(function(e){
+      console.warn("Could not load family pool", e);
+      poolState = "error";
+      renderFamilies();
+    });
+}
+
 var AREA_AR = {
   "Old Airport": "المطار القديم", "Industrial": "المنطقة الصناعية", "Al Wakrah": "الوكرة",
   "Gharaffa": "الغرافة", "Nuaija": "النعيجة", "Other": "أخرى"
 };
+
 
 function renderRecap(){
   var wrap = document.getElementById("prefs-recap");
@@ -229,12 +352,31 @@ function renderRecap(){
 function renderFamilies(){
   var grid = document.getElementById("fam-grid");
   var isAr = document.body.classList.contains("lang-ar");
+
+  if(poolState === "loading"){
+    document.getElementById("match-count").textContent = "";
+    grid.innerHTML = '<div class="pool-state-msg">' + (isAr ? "⏳ جاري تحميل العائلات…" : "⏳ Loading families…") + '</div>';
+    return;
+  }
+  if(poolState === "error"){
+    document.getElementById("match-count").textContent = "";
+    grid.innerHTML = '<div class="pool-state-msg">'
+      + (isAr ? "تعذّر تحميل العائلات. يرجى المحاولة مرة أخرى." : "Couldn't load families right now. Please try again.")
+      + '<br><button class="pool-retry-btn" onclick="loadFamilyPool()">' + (isAr ? "إعادة المحاولة" : "Retry") + '</button></div>';
+    return;
+  }
+  if(FRIENDS.length === 0){
+    document.getElementById("match-count").textContent = isAr ? "٠ عائلة" : "0 families";
+    grid.innerHTML = '<div class="pool-state-msg">'
+      + (isAr ? "🎉 كل العائلات مكفولة حالياً! يرجى التحقق مرة أخرى قريباً." : "🎉 Every family is sponsored right now — please check back soon!")
+      + '</div>';
+    return;
+  }
+
   var list = FRIENDS;
   if(prefs.delivery === "self" && prefs.areas && prefs.areas.length){
     list = FRIENDS.slice().sort(function(a,b){
-      var ai = prefs.areas.indexOf(a.area); ai = ai === -1 ? 99 : ai;
-      var bi = prefs.areas.indexOf(b.area); bi = bi === -1 ? 99 : bi;
-      return ai - bi;
+      return prefAreaRank(a.area) - prefAreaRank(b.area);
     });
   }
 
@@ -242,10 +384,11 @@ function renderFamilies(){
     ? list.length + " عائلة"
     : list.length + " families";
 
-  grid.innerHTML = list.map(function(f){
-    var inPrefArea = prefs.delivery === "self" && prefs.areas && prefs.areas.indexOf(f.area) > -1;
-    var note = isAr ? (FRIENDS_AR[f.id] ? FRIENDS_AR[f.id].note : f.note) : f.note;
-    var tags = isAr ? (FRIENDS_AR[f.id] ? FRIENDS_AR[f.id].tags : f.tags) : f.tags;
+  grid.innerHTML = list.map(function(f, idx){
+    var displayNum = idx + 1; // f.id is now a real uuid — never shown directly
+    var inPrefArea = prefs.delivery === "self" && areaInPrefs(f.area, prefs.areas);
+    var note = isAr ? f.noteAr : f.note;
+    var tags = isAr ? f.tagsAr : f.tags;
     var areaName = isAr ? (AREA_AR[f.area] || f.area) : f.area;
     var preferredLabel = isAr ? " · مفضّل" : " · Preferred";
     var familyLabel = isAr ? "عائلة " : "Family ";
@@ -259,8 +402,8 @@ function renderFamilies(){
     return '<div class="fam-card" id="fam-' + f.id + '" onclick="toggleFamily(\'' + f.id + '\')">'
       + '<div class="fam-top">'
       + '<div class="fam-id-wrap">'
-      + '<div class="fam-avatar">' + f.id + '</div>'
-      + '<div><div class="fam-id">' + familyLabel + f.id + '</div>'
+      + '<div class="fam-avatar">' + displayNum + '</div>'
+      + '<div><div class="fam-id">' + familyLabel + displayNum + '</div>'
       + '<div class="fam-meta">' + f.size + peopleLabel + '</div></div>'
       + '</div>'
       + '<div class="fam-check"></div>'
@@ -269,6 +412,29 @@ function renderFamilies(){
       + '<div class="fam-tags">' + boxTag + ' ' + areaTag + tagsHtml + '</div>'
       + '</div>';
   }).join("");
+}
+
+// ── Loose area matching ──
+// prefs.areas comes from the sponsor's official Qatar district picker
+// (Preferences.html); food_box_applications.area/area_en spellings aren't
+// guaranteed to match exactly (e.g. "Al Mansoura" vs "Mansoura"). This is
+// a soft "Preferred" sort/badge only, never a hard filter — an imperfect
+// match here just means slightly less-ideal sort order, not broken data.
+function normalizeArea(s){
+  return (s || "").toString().trim().toLowerCase().replace(/^al[\s-]+/, "").replace(/\s+/g, " ");
+}
+function areaInPrefs(area, prefAreas){
+  if(!prefAreas || !prefAreas.length) return false;
+  var na = normalizeArea(area);
+  return prefAreas.some(function(p){ return normalizeArea(p) === na; });
+}
+function prefAreaRank(area){
+  if(!prefs.areas) return 99;
+  var na = normalizeArea(area);
+  for(var i = 0; i < prefs.areas.length; i++){
+    if(normalizeArea(prefs.areas[i]) === na) return i;
+  }
+  return 99;
 }
 
 function totalPicked(){
@@ -310,6 +476,7 @@ function updateCounter(){
 }
 
 function surpriseMe(){
+  if(poolState !== "ready" || FRIENDS.length === 0) return;
   // Clear current selection, then greedily fill toward targetBoxes
   selectedIds = [];
   document.querySelectorAll(".fam-card").forEach(function(c){ c.classList.remove("sel"); });
@@ -355,15 +522,56 @@ function checkReady(){
 async function confirmChoice(){
   if(selectedIds.length === 0) return;
 
-  var data = Object.assign({}, prefs, { friends: selectedIds });
-  sessionStorage.setItem("faf_prefs", JSON.stringify(data));
-
   var btn = document.getElementById("continue-btn");
   var hint = document.getElementById("cta-hint");
+  var isAr = document.body.classList.contains("lang-ar");
   btn.disabled = true;
-  hint.textContent = document.body.classList.contains("lang-ar") ? "جاري حفظ مطابقتك…" : "Saving your match…";
+  hint.textContent = isAr ? "جاري حجز اختيارك…" : "Holding your selection…";
 
   var sponsorshipId = sessionStorage.getItem("faf_sponsorship_id");
+
+  // Reserve for 5 minutes before committing — prevents two sponsors who are
+  // mid-funnel at the same time from both ending up with the same family.
+  // See reserve_families() in the migration.
+  if(window.sbClient && sponsorshipId){
+    try{
+      var reserveRes = await window.sbClient.rpc("reserve_families", {
+        p_family_ids: selectedIds,
+        p_sponsorship_id: sponsorshipId
+      });
+      if(reserveRes.error) throw reserveRes.error;
+      var reservedIds = (reserveRes.data || []).map(function(r){ return r.reserved_id; });
+      var lostIds = selectedIds.filter(function(id){ return reservedIds.indexOf(id) === -1; });
+      if(lostIds.length > 0){
+        // Someone else just claimed one of these — don't let the sponsor
+        // pay for a family that's no longer actually available.
+        lostIds.forEach(function(id){
+          var idx = selectedIds.indexOf(id);
+          if(idx > -1) selectedIds.splice(idx, 1);
+          var card = document.getElementById("fam-" + id);
+          if(card) card.classList.remove("sel");
+        });
+        btn.disabled = false;
+        hint.textContent = isAr
+          ? "عذراً، اختار شخص آخر إحدى هذه العائلات للتو. يرجى الاختيار مرة أخرى."
+          : "Sorry — someone else just picked one of these. Please choose again.";
+        updateCounter();
+        checkReady();
+        loadFamilyPool(); // refresh so the taken family disappears from the list
+        return;
+      }
+    } catch(e){
+      console.warn("Could not reserve families", e);
+      btn.disabled = false;
+      hint.textContent = isAr ? "تعذر حفظ اختيارك — حاول مرة أخرى" : "Couldn't hold your selection — please try again";
+      return;
+    }
+  }
+
+  var data = Object.assign({}, prefs, { friends: selectedIds });
+  sessionStorage.setItem("faf_prefs", JSON.stringify(data));
+  hint.textContent = isAr ? "جاري حفظ مطابقتك…" : "Saving your match…";
+
   var matchMethod = (window.lastMatchWasSurprise === true) ? "surprise_me" : "chosen";
   try{
     if(window.sbClient && sponsorshipId){
@@ -406,8 +614,18 @@ function setLang(lang){
   checkReady();
 }
 
+// Supabase client setup — same project as the rest of Feed a Friend.
+// Must exist before loadFamilyPool() runs below.
+(function(){
+  var SUPABASE_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
+  if(window.supabase){
+    window.sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+})();
+
 renderRecap();
-renderFamilies();
+renderFamilies(); // shows the "loading" state — FRIENDS is still empty at this point
 updateCounter();
 checkReady();
 
@@ -417,14 +635,7 @@ checkReady();
   setLang(savedLang);
 })();
 
-// Supabase client setup — same project as the rest of Feed a Friend
-(function(){
-  var SUPABASE_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
-  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
-  if(window.supabase){
-    window.sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }
-})();
+loadFamilyPool(); // fetches the live, not-yet-sponsored pool and re-renders
 </script>
 
 </body>

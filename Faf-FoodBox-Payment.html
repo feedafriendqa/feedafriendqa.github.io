@@ -380,6 +380,26 @@ async function submitSponsorship(){
         refNo = data.ref_no;
       }
 
+      // Convert the 5-minute hold set in ChooseFamily.html into a durable
+      // claim now that the sponsor has actually submitted. If a family
+      // became unavailable in the meantime (rare — someone else's reserve
+      // outlasted ours), send the sponsor back to re-pick rather than let
+      // them transfer money for a family that's no longer theirs.
+      var matchedIds = prefs.friends || (prefs.friend ? [prefs.friend] : []);
+      if(matchedIds.length > 0){
+        var claimRes = await window.sbClient.rpc("claim_families_for_sponsorship", { p_sponsorship_id: sponsorshipId });
+        if(claimRes.error) throw claimRes.error;
+        var claimedIds = (claimRes.data || []).map(function(r){ return r.claimed_id; });
+        var unclaimed = matchedIds.filter(function(id){ return claimedIds.indexOf(id) === -1; });
+        if(unclaimed.length > 0){
+          hint.textContent = isArSubmit
+            ? "عذراً، إحدى العائلات المختارة لم تعد متاحة. سيتم إعادتك للاختيار مرة أخرى…"
+            : "Sorry — one of your selected families is no longer available. Sending you back to re-pick…";
+          setTimeout(function(){ window.location.href = "Faf-FoodBox-ChooseFamily.html"; }, 2500);
+          return;
+        }
+      }
+
       // Trigger confirmation email via the existing clever-responder Edge Function
       try{
         await fetch("https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder", {
