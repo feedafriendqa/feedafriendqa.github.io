@@ -178,84 +178,91 @@ var selectedIds = []; // array of family ids, order = pick order
 
 // ── Anonymized caption generator ──
 // There is no hand-written "note" column in food_box_applications, by
-// design — nothing identifying should ever reach this public page. Each
-// caption below is generated purely from structured fields already shown
-// elsewhere on the card (household size, presence of young children,
-// long-term status), and is deterministic per family (seeded by id) so
-// it doesn't change between re-renders within the same session.
+// design — and the internal case-handler comment log (admin_notes) is
+// deliberately NOT pulled in here either: that log was written for case
+// management, not public reading, and can contain specifics never meant
+// for a stranger browsing this page. Everything below comes only from
+// structured profile fields. Deterministic per family (seeded by id) so
+// the same family doesn't get a different blurb on every re-render.
 function hashId(id){
   var h = 0;
   for(var i=0;i<id.length;i++){ h = ((h<<5)-h+id.charCodeAt(i))|0; }
   return Math.abs(h);
 }
+function pick(arr, seed){ return arr[seed % arr.length]; }
 
-var CAPTION_POOLS = {
-  baby: {
-    en: [
-      "A young child in this home means every box counts double.",
-      "There's a little one here who needs more than the budget allows.",
-      "A small family, a new baby, and costs that add up fast."
-    ],
-    ar: [
-      "وجود طفل صغير هنا يجعل لكل صندوق أهمية مضاعفة.",
-      "هناك طفل صغير يحتاج أكثر مما تسمح به الميزانية.",
-      "عائلة صغيرة، مولود جديد، ونفقات تتزايد بسرعة."
-    ]
-  },
-  kids: {
-    en: [
-      "Kids growing fast, on a budget that isn't.",
-      "A household full of homework — groceries don't always keep up.",
-      "The children don't go without, but it takes everything to make sure of that."
-    ],
-    ar: [
-      "أطفال يكبرون بسرعة، وميزانية لا تكبر معهم.",
-      "منزل مليء بالواجبات المدرسية — والمؤن لا تكفي دائماً.",
-      "الأطفال لا ينقصهم شيء، لكن ذلك يتطلب كل ما تملكه الأسرة."
-    ]
-  },
-  large: {
-    en: [
-      "A full house under one roof, sharing everything — including the worry.",
-      "Many people, one kitchen, and a budget stretched thin.",
-      "Several generations living together to make ends meet."
-    ],
-    ar: [
-      "بيت مزدحم تحت سقف واحد، يتشاركون كل شيء — حتى القلق.",
-      "أشخاص كثيرون، مطبخ واحد، وميزانية محدودة.",
-      "أجيال عديدة تعيش معاً لتسديد المصاريف."
-    ]
-  },
-  small: {
-    en: [
-      "Living simply, but the month doesn't always stretch far enough.",
-      "A quiet household doing their best to make ends meet.",
-      "No extra hands to share the load — just getting by, month to month."
-    ],
-    ar: [
-      "يعيشون بكل بساطة، لكن الشهر لا يكفي دائماً.",
-      "أسرة هادئة تحاول دائماً تسديد مصاريفها.",
-      "لا أحد يشاركهم الحمل — يتدبرون أمورهم شهرياً."
-    ]
-  }
-};
-
-var LONGTERM_SUFFIX = {
-  en: "This is a family we support on an ongoing basis — steady help makes a real difference here.",
-  ar: "هذه عائلة ندعمها بشكل مستمر — الدعم الثابت يصنع فرقاً حقيقياً هنا."
+// ── Nationality display + Arabic adjective form ──
+// Stored as the masculine adjective form; the feminine ("family") form
+// is derived by appending ة, which holds for every entry below. Anything
+// not in this list still displays — just in its raw English form, even
+// in Arabic mode (same graceful-fallback pattern as AREA_AR).
+var NATIONALITY_AR_MASC = {
+  "Bangladeshi": "بنغلاديشي", "Indian": "هندي", "Filipino": "فلبيني",
+  "Nepali": "نيبالي", "Pakistani": "باكستاني", "Sri Lankan": "سريلانكي",
+  "Egyptian": "مصري", "Sudanese": "سوداني", "Syrian": "سوري",
+  "Yemeni": "يمني", "Jordanian": "أردني", "Lebanese": "لبناني",
+  "Qatari": "قطري", "Ethiopian": "إثيوبي", "Kenyan": "كيني",
+  "Indonesian": "إندونيسي", "Moroccan": "مغربي", "Tunisian": "تونسي",
+  "Palestinian": "فلسطيني"
 };
 
 function buildCaption(row){
-  var bucket;
-  if(row.has_children_u3) bucket = 'baby';
-  else if(row.has_children_u18) bucket = 'kids';
-  else if((row.household_size||0) >= 6) bucket = 'large';
-  else bucket = 'small';
   var seed = hashId(row.id);
-  var en = CAPTION_POOLS[bucket].en[seed % CAPTION_POOLS[bucket].en.length];
-  var ar = CAPTION_POOLS[bucket].ar[seed % CAPTION_POOLS[bucket].ar.length];
-  if(row.is_long_term){ en += ' ' + LONGTERM_SUFFIX.en; ar += ' ' + LONGTERM_SUFFIX.ar; }
-  return { en: en, ar: ar };
+  var nat = (row.nationality || "").trim();
+  var natMasc = NATIONALITY_AR_MASC[nat] || nat;
+  var natFem = NATIONALITY_AR_MASC[nat] ? (NATIONALITY_AR_MASC[nat] + "ة") : nat;
+  var size = row.household_size || 1;
+  var nChildren = row.n_children || 0;
+
+  // ── Opener: who they are ──
+  var openerEn, openerAr;
+  if(row.is_family){
+    openerEn = nat
+      ? pick(["A " + nat + " family of " + size + ".", nat + " family — " + size + " people under one roof.", "A household of " + size + ", originally from " + nat + "."], seed)
+      : pick(["A family of " + size + ".", "A household of " + size + " under one roof."], seed);
+    openerAr = nat
+      ? pick(["أسرة " + natFem + " مكوّنة من " + size + ".", "أسرة " + natFem + " — " + size + " أشخاص تحت سقف واحد.", "أسرة من " + size + " أشخاص، أصلها من " + nat + "."], seed)
+      : pick(["أسرة من " + size + " أشخاص.", "أسرة مكوّنة من " + size + " تحت سقف واحد."], seed);
+  } else {
+    openerEn = nat
+      ? pick(["A " + nat + " bachelor household of " + size + ".", size + " " + nat + " roommates sharing one home.", "A small " + nat + " household, " + size + " sharing one roof."], seed)
+      : pick(["A bachelor household of " + size + ".", size + " roommates sharing one home."], seed);
+    openerAr = nat
+      ? pick(["بيت عزاب " + natMasc + " مكوّن من " + size + ".", size + " من العزاب " + (natMasc) + " يتشاركون منزلاً واحداً.", "بيت عزاب صغير، " + size + " يتشاركون سقفاً واحداً."], seed)
+      : pick(["بيت عزاب من " + size + " أشخاص.", size + " من العزاب يتشاركون منزلاً واحداً."], seed);
+  }
+
+  // ── Children clause (only if relevant) ──
+  var childEn = "", childAr = "";
+  if(row.has_children_u3){
+    childEn = " " + pick(["There's a young child still in diapers.", "A little one in the home needs extra care.", "Including a baby who needs more than the budget allows."], seed);
+    childAr = " " + pick(["هناك طفل صغير ما زال في مرحلة الحفاضات.", "طفل صغير في المنزل يحتاج عناية إضافية.", "من بينهم مولود يحتاج أكثر مما تسمح به الميزانية."], seed);
+  } else if(nChildren > 0){
+    childEn = " " + pick([nChildren + " of them are children.", nChildren + " kids growing fast in this home.", "Including " + nChildren + " school-age child" + (nChildren > 1 ? "ren" : "") + "."], seed);
+    childAr = " " + pick([String(nChildren) + " منهم أطفال.", String(nChildren) + " أطفال يكبرون بسرعة في هذا المنزل.", "من بينهم " + nChildren + " طفل" + (nChildren > 1 ? " في عمر المدرسة" : " في عمر المدرسة") + "."], seed);
+  } else if(row.has_children_u18){
+    childEn = " " + pick(["There are children in the home.", "Kids growing fast on a tight budget."], seed);
+    childAr = " " + pick(["يوجد أطفال في المنزل.", "أطفال يكبرون بسرعة في ظل ميزانية محدودة."], seed);
+  }
+
+  // ── Closing clause: hardship, varied by work status ──
+  var closeEn, closeAr;
+  if(row.is_working){
+    closeEn = pick(["They work, but the salary doesn't stretch far enough.", "Steady work, but never quite enough to cover everything.", "Doing everything right, and still falling short some months."], seed);
+    closeAr = pick(["يعملون، لكن الراتب لا يكفي.", "عمل ثابت، لكنه لا يكفي دائماً لتغطية كل شيء.", "يبذلون كل ما بوسعهم، ومع ذلك يقصّر الشهر في بعض الأحيان."], seed);
+  } else {
+    closeEn = pick(["No steady income right now — every box helps close the gap.", "Between jobs, and the days are tight.", "Getting by without a steady paycheck isn't easy."], seed);
+    closeAr = pick(["لا دخل ثابت حالياً — كل صندوق يساعد في تغطية الفجوة.", "بلا عمل ثابت حالياً، والأيام ضيقة.", "تدبير الأمور بلا راتب ثابت ليس سهلاً."], seed);
+  }
+
+  var en = (openerEn + childEn + " " + closeEn).replace(/\s+/g, " ").trim();
+  var ar = (openerAr + childAr + " " + closeAr).replace(/\s+/g, " ").trim();
+
+  if(row.is_long_term){
+    en += " This is a family we support on an ongoing basis — steady help makes a real difference here.";
+    ar += " هذه عائلة ندعمها بشكل مستمر — الدعم الثابت يصنع فرقاً حقيقياً هنا.";
+  }
+  return { en: en, ar: ar, natMasc: natMasc, natFem: natFem };
 }
 
 // ── Display labels for structured flags shown as tag pills ──
@@ -273,6 +280,11 @@ function mapPoolRowToFamily(row){
   else if(row.has_children_u18) tagKeys.push('kids');
   if(row.is_long_term) tagKeys.push('long_term');
   var cap = buildCaption(row);
+  var nat = (row.nationality || "").trim();
+  var householdTypeEn = nat ? (nat + " " + (row.is_family ? "family" : "bachelor household")) : (row.is_family ? "Family" : "Bachelor household");
+  var householdTypeAr = nat
+    ? (row.is_family ? ("أسرة " + cap.natFem) : ("بيت عزاب " + cap.natMasc))
+    : (row.is_family ? "أسرة" : "بيت عزاب");
   return {
     id: row.id,
     area: row.area_en || row.area || '',
@@ -280,14 +292,17 @@ function mapPoolRowToFamily(row){
     boxesNeeded: row.max_boxes || 3,
     note: cap.en,
     noteAr: cap.ar,
+    householdType: householdTypeEn,
+    householdTypeAr: householdTypeAr,
     tags: tagKeys.map(function(k){ return TAG_LABELS[k].en; }),
     tagsAr: tagKeys.map(function(k){ return TAG_LABELS[k].ar; })
   };
 }
 
 // Loads the live, not-yet-sponsored pool from the public-safe view (no
-// names, no QID, no document paths — see food_box_public_pool in the
-// migration). Re-runs the existing render pipeline once data arrives.
+// names, no QID, no document paths, no case-handler notes — see
+// food_box_public_pool in the migration). Re-runs the existing render
+// pipeline once data arrives.
 function loadFamilyPool(){
   poolState = "loading";
   renderFamilies();
@@ -298,7 +313,7 @@ function loadFamilyPool(){
   }
   window.sbClient
     .from("food_box_public_pool")
-    .select("id,area,area_en,household_size,max_boxes,has_children_u18,has_children_u3,is_long_term")
+    .select("id,area,area_en,household_size,max_boxes,has_children_u18,has_children_u3,is_long_term,is_family,nationality,is_working,n_children")
     .then(function(res){
       if(res.error) throw res.error;
       FRIENDS = (res.data || []).map(mapPoolRowToFamily);
@@ -389,6 +404,7 @@ function renderFamilies(){
     var inPrefArea = prefs.delivery === "self" && areaInPrefs(f.area, prefs.areas);
     var note = isAr ? f.noteAr : f.note;
     var tags = isAr ? f.tagsAr : f.tags;
+    var householdType = isAr ? f.householdTypeAr : f.householdType;
     var areaName = isAr ? (AREA_AR[f.area] || f.area) : f.area;
     var preferredLabel = isAr ? " · مفضّل" : " · Preferred";
     var familyLabel = isAr ? "عائلة " : "Family ";
@@ -404,7 +420,7 @@ function renderFamilies(){
       + '<div class="fam-id-wrap">'
       + '<div class="fam-avatar">' + displayNum + '</div>'
       + '<div><div class="fam-id">' + familyLabel + displayNum + '</div>'
-      + '<div class="fam-meta">' + f.size + peopleLabel + '</div></div>'
+      + '<div class="fam-meta">' + f.size + peopleLabel + ' · ' + householdType + '</div></div>'
       + '</div>'
       + '<div class="fam-check"></div>'
       + '</div>'
