@@ -21,7 +21,6 @@ body.lang-ar .pay-detail-row{flex-direction:row-reverse}
 body.lang-ar .pdr-value{flex-direction:row-reverse}
 body.lang-ar .pay-total{flex-direction:row-reverse}
 body.lang-ar .confirm-check{flex-direction:row-reverse}
-body.lang-ar .pref-row{flex-direction:row-reverse}
 body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .success-t{font-family:"Noto Kufi Arabic",sans-serif}
 
 .lang-toggle{display:flex;border:2px solid #1D7A47;border-radius:8px;overflow:hidden;flex-shrink:0}
@@ -95,15 +94,12 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .success-t{font-family:"No
 .cta-hint{text-align:center;font-size:11px;color:#bbb;font-weight:700;margin-top:8px}
 
 /* ── PREFERENCES / ACCOUNT SECTION ── */
-.pref-card{background:#fafaf7;border:1.5px solid #e8e8e0;border-radius:16px;overflow:hidden;margin-bottom:12px}
-.pref-row{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;border-bottom:1px solid #e8e8e0;transition:background .1s}
-.pref-row:last-child{border-bottom:none}
-.pref-row:has(input:checked){background:#EBF7F0}
-.pref-row input[type="checkbox"]{margin-top:2px;width:18px;height:18px;accent-color:#1D7A47;flex-shrink:0;cursor:pointer}
-.pref-info{display:flex;flex-direction:column;gap:3px;flex:1}
-.pref-title{font-family:"Nunito",sans-serif;font-size:13px;font-weight:800;color:#111;line-height:1.3}
-.pref-desc{font-size:11px;color:#888;font-weight:600;line-height:1.5}
 .password-wrap{background:#EBF7F0;border:1.5px solid #cdebd9;border-radius:14px;padding:14px 16px;margin-top:4px}
+.pass-perks{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.pass-perks li{font-size:12px;color:#3f6b51;font-weight:600;padding-left:18px;position:relative}
+.pass-perks li::before{content:"✓";position:absolute;left:0;color:#1D7A47;font-weight:800}
+body.lang-ar .pass-perks li{padding-left:0;padding-right:18px}
+body.lang-ar .pass-perks li::before{left:auto;right:0}
 .pass-hint{font-size:11px;color:#5a8a6e;font-weight:600;margin-top:6px;line-height:1.5}
 
 /* ── SUCCESS STATE ── */
@@ -233,37 +229,15 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .success-t{font-family:"No
   </div>
 
   <div class="section" id="account-section">
-    <div class="section-h" data-en="Stay in the loop?" data-ar="هل تريد البقاء على اطلاع؟">Stay in the loop?</div>
-    <div class="section-sub" data-en="Optional — takes 10 seconds" data-ar="اختياري — يستغرق ١٠ ثوانٍ">Optional — takes 10 seconds</div>
+    <div class="section-h" data-en="Stay in the loop? Add a password" data-ar="هل تريد البقاء على اطلاع؟ أضف كلمة مرور" >Stay in the loop? Add a password</div>
 
-    <div class="pref-card">
-      <label class="pref-row" for="pref-save">
-        <input type="checkbox" id="pref-save" checked>
-        <div class="pref-info">
-          <span class="pref-title" data-en="Remember my details next time" data-ar="تذكّر بياناتي في المرة القادمة">Remember my details next time</span>
-          <span class="pref-desc" data-en="Your name and email will be pre-filled so sponsoring again is one tap." data-ar="سيتم ملء اسمك وبريدك تلقائياً ليصبح التكفّل مجدداً بنقرة واحدة.">Your name and email will be pre-filled so sponsoring again is one tap.</span>
-        </div>
-      </label>
-      <label class="pref-row" for="pref-alerts">
-        <input type="checkbox" id="pref-alerts">
-        <div class="pref-info">
-          <span class="pref-title" data-en="Alert me when my box is delivered" data-ar="أبلّغني عند توصيل صندوقي">Alert me when my box is delivered</span>
-          <span class="pref-desc" data-en="We'll send a short message the moment the family receives their food box." data-ar="سنرسل رسالة قصيرة فور استلام العائلة صندوقها الغذائي.">We'll send a short message the moment the family receives their food box.</span>
-        </div>
-      </label>
-      <label class="pref-row" for="pref-register">
-        <input type="checkbox" id="pref-register" onchange="togglePasswordField(this.checked)">
-        <div class="pref-info">
-          <span class="pref-title" data-en="See what I've sponsored" data-ar="اعرف ما تكفّلت به">See what I've sponsored</span>
-          <span class="pref-desc" data-en="Create a password so you can log in and view your full sponsorship history." data-ar="أنشئ كلمة مرور لتسجيل الدخول ومطالعة تاريخ تكفّلاتك كاملاً.">Create a password so you can log in and view your full sponsorship history.</span>
-        </div>
-      </label>
-    </div>
-
-    <div class="password-wrap" id="password-wrap" style="display:none">
-      <label class="lbl" data-en="Choose a password" data-ar="اختر كلمة مرور">Choose a password</label>
-      <input class="inp" id="pay-password" type="password" data-en-placeholder="Min. 8 characters" data-ar-placeholder="٨ أحرف على الأقل" placeholder="Min. 8 characters" style="margin-top:6px">
-      <div class="pass-hint" data-en="Use this with your email to log in and track your orders anytime." data-ar="استخدمها مع بريدك لتسجيل الدخول وتتبّع طلباتك في أي وقت.">Use this with your email to log in and track your orders anytime.</div>
+    <div class="password-wrap" id="password-wrap">
+      <input class="inp" id="pay-password" type="password" data-en-placeholder="Optional — leave blank to skip" data-ar-placeholder="اختياري — اتركه فارغاً للتخطي" placeholder="Optional — leave blank to skip">
+      <ul class="pass-perks">
+        <li data-en="Remembers your details for next time" data-ar="يتذكّر بياناتك للمرة القادمة">Remembers your details for next time</li>
+        <li data-en="Get alerts when your box is delivered" data-ar="تنبيهات عند توصيل صندوقك">Get alerts when your box is delivered</li>
+        <li data-en="See a record of all your orders" data-ar="اعرض سجل جميع طلباتك">See a record of all your orders</li>
+      </ul>
     </div>
   </div>
 
@@ -349,13 +323,17 @@ function checkReady(){
   var name = document.getElementById("pay-name").value.trim();
   var email = document.getElementById("pay-email").value.trim();
   var confirmed = document.getElementById("confirm-transferred").checked;
+  var pwd = document.getElementById("pay-password").value;
   var btn = document.getElementById("continue-btn");
   var hint = document.getElementById("cta-hint");
   var isAr = document.body.classList.contains("lang-ar");
 
   var nameOk = name.length > 1;
   var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  var ready = nameOk && emailOk && confirmed;
+  // Password is optional — blank skips account creation entirely. Anything
+  // typed must be a real usable password (Supabase Auth requires 6+ chars).
+  var passwordOk = pwd.length === 0 || pwd.length >= 6;
+  var ready = nameOk && emailOk && confirmed && passwordOk;
 
   btn.disabled = !ready;
   btn.classList.toggle("is-ready", ready);
@@ -372,6 +350,8 @@ function checkReady(){
     hint.textContent = isAr ? "أدخل بريدك الإلكتروني لتأكيد تكفّلك" : "Enter your email so we can confirm your sponsorship";
   } else if(!emailOk){
     hint.textContent = isAr ? "البريد الإلكتروني يبدو غير مكتمل" : "Email address looks incomplete";
+  } else if(!passwordOk){
+    hint.textContent = isAr ? "كلمة المرور تحتاج ٦ أحرف على الأقل، أو اتركها فارغة" : "Password needs at least 6 characters, or leave it blank";
   } else if(!confirmed){
     hint.textContent = isAr ? "أكّد أنك قمت أو ستقوم بالتحويل" : "Confirm you've made or will make the transfer";
   } else {
@@ -379,7 +359,7 @@ function checkReady(){
   }
 }
 
-["pay-name","pay-wa","pay-email"].forEach(function(id){
+["pay-name","pay-wa","pay-email","pay-password"].forEach(function(id){
   document.getElementById(id).addEventListener("input", checkReady);
 });
 document.getElementById("confirm-transferred").addEventListener("change", checkReady);
@@ -394,10 +374,13 @@ async function submitSponsorship(){
   var name = document.getElementById("pay-name").value.trim();
   var wa = document.getElementById("pay-wa").value.trim();
   var email = document.getElementById("pay-email").value.trim();
-  var saveDetails = document.getElementById("pref-save").checked;
-  var wantAlerts = document.getElementById("pref-alerts").checked;
-  var wantAccount = document.getElementById("pref-register").checked;
-  var password = wantAccount ? (document.getElementById("pay-password").value || "") : "";
+  // No separate opt-in checkboxes anymore — setting a password is the one
+  // action that bundles all three benefits (remembered details, delivery
+  // alerts, order history). checkReady() already enforces 6+ chars or blank.
+  var password = document.getElementById("pay-password").value.trim();
+  var wantAccount = password.length >= 6;
+  var saveDetails = wantAccount;
+  var wantAlerts = wantAccount;
 
   var sponsorshipId = sessionStorage.getItem("faf_sponsorship_id");
   var refNo = sessionStorage.getItem("faf_ref_no") || "SP-PENDING";
@@ -531,10 +514,6 @@ function setLang(lang){
   renderSummary();
   // Refresh the payment-method note text for the currently active tab
   setPayMethod(payMethod);
-}
-
-function togglePasswordField(show){
-  document.getElementById("password-wrap").style.display = show ? "block" : "none";
 }
 
 renderSummary();
