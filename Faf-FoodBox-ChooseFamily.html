@@ -170,6 +170,7 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .fam-id,body.lang-ar .surp
 
 <script>
 var FRIENDS = []; // populated live from food_box_public_pool — see loadFamilyPool()
+var visibleFamilies = []; // curated subset actually rendered — see pickVisibleFamilies()
 var poolState = "loading"; // "loading" | "ready" | "error"
 
 var prefs = JSON.parse(sessionStorage.getItem("faf_prefs") || "{}");
@@ -322,6 +323,7 @@ function loadFamilyPool(){
     .then(function(res){
       if(res.error) throw res.error;
       FRIENDS = (res.data || []).map(mapPoolRowToFamily);
+      visibleFamilies = pickVisibleFamilies(FRIENDS);
       poolState = "ready";
       renderRecap();
       renderFamilies();
@@ -369,6 +371,25 @@ function renderRecap(){
   }).join("");
 }
 
+// Showing every eligible family in the pool at once was overwhelming for a
+// sponsor who only wants to fund 1-3 boxes. Instead: shuffle the pool (same
+// "lucky" approach as Surprise Me, so it's not always the same families up
+// top), then keep adding families until covering the sponsor's target PLUS
+// 5 extra boxes' worth — enough real choice without an endless scroll.
+function pickVisibleFamilies(pool){
+  if(!pool.length) return [];
+  var shuffled = pool.slice().sort(function(){ return Math.random() - 0.5; });
+  var capBoxes = targetBoxes + 5;
+  var picked = [];
+  var sum = 0;
+  for(var i = 0; i < shuffled.length; i++){
+    picked.push(shuffled[i]);
+    sum += shuffled[i].boxesNeeded;
+    if(sum >= capBoxes) break;
+  }
+  return picked;
+}
+
 function renderFamilies(){
   var grid = document.getElementById("fam-grid");
   var isAr = document.body.classList.contains("lang-ar");
@@ -393,9 +414,9 @@ function renderFamilies(){
     return;
   }
 
-  var list = FRIENDS;
+  var list = visibleFamilies;
   if(prefs.delivery === "self" && prefs.areas && prefs.areas.length){
-    list = FRIENDS.slice().sort(function(a,b){
+    list = visibleFamilies.slice().sort(function(a,b){
       return prefAreaRank(a.area) - prefAreaRank(b.area);
     });
   }
@@ -502,7 +523,7 @@ function surpriseMe(){
   selectedIds = [];
   document.querySelectorAll(".fam-card").forEach(function(c){ c.classList.remove("sel"); });
 
-  var pool = FRIENDS.slice().sort(function(){ return Math.random() - 0.5; });
+  var pool = visibleFamilies.slice().sort(function(){ return Math.random() - 0.5; });
   var remaining = targetBoxes;
   for(var i = 0; i < pool.length && remaining > 0; i++){
     var f = pool[i];
