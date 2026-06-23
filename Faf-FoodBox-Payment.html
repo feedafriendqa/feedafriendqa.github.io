@@ -404,7 +404,16 @@ async function submitSponsorship(){
         .eq("id", sponsorshipId)
         .select()
         .single();
-      if(!error && data && data.ref_no){
+      if(error){
+        // Don't block the success screen on this — the sponsor may have
+        // already transferred money, and an error page at that point would
+        // be worse than a quiet DB gap. But this must never be silent: a
+        // failed UPDATE here means sponsor_name/email/payment_method etc.
+        // never landed, even though everything below (family claim, email)
+        // still proceeds. Check here first if a "completed" sponsorship
+        // ever shows up blank in the admin Sponsorships table again.
+        console.error("sponsorships UPDATE failed — row will be missing sponsor details:", error.message, error);
+      } else if(data && data.ref_no){
         refNo = data.ref_no;
       }
 
