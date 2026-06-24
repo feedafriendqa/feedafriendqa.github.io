@@ -150,7 +150,7 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
 
 <!-- ── LOADING ── -->
 <div class="v on" id="v-loading">
-  <div class="loading"><div class="spin"></div><div class="spin-lbl">Loading…</div></div>
+  <div class="loading"><div class="spin"></div><div class="spin-lbl" id="loading-lbl">Loading…</div></div>
 </div>
 
 <!-- ── LOGIN ── -->
@@ -327,18 +327,26 @@ function clearE(){document.getElementById("l-err").textContent="";}
 
 async function loadDriver(){
   showV("v-loading");
-  var r=await sb.from("distributors").select("*").eq("email",CU.email).maybeSingle();
-  DP=r.data;
-  if(!DP){setHero("pending");showV("v-pending");return;}
-  if(DP.status==="pending"){setHero("pending");showV("v-pending");return;}
-  setHero("dash");
-  document.getElementById("cap-remind").textContent="Your "+DP.car_make+" "+DP.car_model+" fits "+DP.boxes_capacity+" boxes.";
-  await loadTrips();
-  showV("v-dash");
+  try{
+    var r=await sb.from("distributors").select("*").eq("email",CU.email).maybeSingle();
+    if(r.error)throw new Error("Lookup failed: "+r.error.message);
+    DP=r.data;
+    if(!DP){setHero("pending");showV("v-pending");return;}
+    if(DP.status==="pending"){setHero("pending");showV("v-pending");return;}
+    setHero("dash");
+    document.getElementById("cap-remind").textContent="Your "+DP.car_make+" "+DP.car_model+" fits "+DP.boxes_capacity+" boxes.";
+    await loadTrips();
+    showV("v-dash");
+  }catch(e){
+    var lbl=document.getElementById("loading-lbl");
+    if(lbl){lbl.textContent="Something went wrong: "+e.message;lbl.style.color="#c0392b";lbl.style.fontWeight="800";}
+    console.error("loadDriver failed:",e);
+  }
 }
 
 async function loadTrips(){
   var r=await sb.from("distribution_trips").select("*").eq("distributor_id",DP.id).order("created_at",{ascending:false});
+  if(r.error)throw new Error("Could not load trips: "+r.error.message);
   var trips=r.data||[];
   AT=trips.find(function(t){return t.status==="confirmed"||t.status==="in_progress";});
   var past=trips.filter(function(t){return t.status==="completed";});
