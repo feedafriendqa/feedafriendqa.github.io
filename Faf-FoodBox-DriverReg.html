@@ -231,6 +231,7 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
   <div class="card" id="lic-result-card" style="display:none">
     <div class="scan-ok-row"><div class="scan-dot"></div><div class="scan-ok-lbl">Licence read successfully</div></div>
     <div class="sf"><span class="sf-l">Name</span><span class="sf-v" id="sc-name">—</span></div>
+    <div class="sf"><span class="sf-l">QID number</span><span class="sf-v" id="sc-qid">—</span></div>
     <div class="sf"><span class="sf-l">Licence no.</span><span class="sf-v" id="sc-num">—</span></div>
     <div class="sf"><span class="sf-l">Expires</span><span class="sf-v" id="sc-exp">—</span></div>
     <div class="sf"><span class="sf-l">Nationality</span><span class="sf-v" id="sc-nat">—</span></div>
@@ -399,7 +400,7 @@ var D={
   driver_name:"", driver_pref:"", driver_phone:"",
   contact_name:"", contact_phone:"",
   email:"", pw:"",
-  lic_num:"", lic_exp:"", lic_name:"", lic_nat:"", lic_scanned:false,
+  lic_num:"", lic_exp:"", lic_name:"", lic_nat:"", qid_number:"", lic_scanned:false,
   car:null, use_back:false, boot_b:0, back_b:0, total_b:0, areas:[]
 };
 
@@ -507,13 +508,15 @@ async function scanLicence(inp){
       body:JSON.stringify({type:"scan_licence",image_base64:b64.split(",")[1],media_type:inp.files[0].type||"image/jpeg"})});
     var data=await r.json();
     var info=data.data||{};
-    if(!info.name&&!info.licence_number)throw new Error("empty");
+    if(!info.name&&!info.licence_number&&!info.qid_number)throw new Error("empty");
     D.lic_name=info.name||"";
     D.lic_num=info.licence_number||"";
     D.lic_exp=info.expiry||"";
     D.lic_nat=info.nationality||"";
+    D.qid_number=info.qid_number||"";
     D.lic_scanned=true;
     document.getElementById("sc-name").textContent=D.lic_name||"—";
+    document.getElementById("sc-qid").textContent=D.qid_number||"—";
     document.getElementById("sc-num").textContent=D.lic_num||"—";
     document.getElementById("sc-exp").textContent=D.lic_exp||"—";
     document.getElementById("sc-nat").textContent=D.lic_nat||"—";
@@ -657,7 +660,7 @@ async function submit(){
         phone:D.driver_phone,email:D.email,
         contact_name:D.driver_mode==="them"?D.contact_name:"",
         contact_phone:D.driver_mode==="them"?D.contact_phone:"",
-        licence_number:D.lic_num,licence_expiry:D.lic_exp||null,licence_name:D.lic_name,
+        licence_number:D.lic_num,licence_expiry:D.lic_exp||null,licence_name:D.lic_name,qid_number:D.qid_number||null,
         car_make:D.car?D.car.make:null,car_model:D.car?D.car.model:null,
         boot_litres:D.car?D.car.bootL:0,uses_back_seats:D.use_back,
         back_litres:(D.use_back&&D.car)?D.car.backL:0,
