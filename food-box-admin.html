@@ -306,6 +306,7 @@ select.edit-field{cursor:pointer;}
     <div class="view-switcher" id="view-switcher" style="display:none;margin-bottom:16px;">
       <button class="filter-btn active" id="view-btn-cases" onclick="showView('cases')">📋 Cases</button>
       <button class="filter-btn" id="view-btn-sponsorships" onclick="showView('sponsorships')">💳 Sponsorships</button>
+      <button class="filter-btn" id="view-btn-approvals" onclick="showView('approvals')">🚗 Approvals<span id="approvals-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
     </div>
     <div id="cases-view">
     <div class="welcome-banner">
@@ -400,6 +401,40 @@ select.edit-field{cursor:pointer;}
         <div id="sponsorships-empty" class="empty" style="display:none;">No sponsorships yet.</div>
       </div>
     </div>
+
+    <div id="approvals-view" style="display:none;">
+      <div class="welcome-banner">
+        <div class="welcome-name">Distributor Approvals</div>
+        <div class="welcome-scope">Review driver sign-ups — approving sends their welcome email and unlocks trips.</div>
+      </div>
+      <div class="filters">
+        <input class="search-box" id="approvals-search" placeholder="Search name, phone, email, area…" oninput="renderApprovalsTable()">
+        <button class="filter-btn active" data-astatus="pending" onclick="setApprovalFilter('pending',this)">Pending</button>
+        <button class="filter-btn" data-astatus="approved" onclick="setApprovalFilter('approved',this)">Approved</button>
+        <button class="filter-btn" data-astatus="rejected" onclick="setApprovalFilter('rejected',this)">Rejected</button>
+        <button class="filter-btn" data-astatus="all" onclick="setApprovalFilter('all',this)">All</button>
+      </div>
+      <div class="table-wrap">
+        <div id="approvals-loading" class="loading"><div class="spinner-lg"></div>Loading distributors…</div>
+        <table id="approvals-table" style="display:none;">
+          <thead>
+            <tr>
+              <th>Driver</th>
+              <th>Phone / Email</th>
+              <th>Vehicle</th>
+              <th>Capacity</th>
+              <th>Areas</th>
+              <th>Licence</th>
+              <th>Registered</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="approvals-tbody"></tbody>
+        </table>
+        <div id="approvals-empty" class="empty" style="display:none;">No distributor sign-ups found.</div>
+      </div>
+    </div>
   </div>
 
   <!-- SPONSORSHIP EDIT MODAL -->
@@ -409,6 +444,16 @@ select.edit-field{cursor:pointer;}
         <button class="modal-close" onclick="closeSpEditModal()">×</button>
       </div>
       <div class="modal-body" id="sp-edit-body" style="padding:20px;"></div>
+    </div>
+  </div>
+
+  <!-- DISTRIBUTOR DETAIL MODAL -->
+  <div class="modal-overlay" id="dist-detail-modal">
+    <div class="modal" style="max-width:480px;">
+      <div class="modal-header">
+        <button class="modal-close" onclick="closeDistDetailModal()">×</button>
+      </div>
+      <div class="modal-body" id="dist-detail-body" style="padding:20px;"></div>
     </div>
   </div>
 </div>
@@ -521,6 +566,8 @@ var currentMembers = [];
 var currentDocUrlMap = {};
 var currentSponsorship = null;
 var allSponsorships = [];
+var allDistributors = [];
+var currentApprovalFilter = 'pending';
 // Single source of truth for "which distribution are we on" — bump this
 // when the next cycle starts. New sponsorships created by the public
 // funnel are tagged with this same value (see Faf-FoodBox-Payment.html).
@@ -651,6 +698,20 @@ async function handleAdminSession(session) {
   document.getElementById('my-cases-toggle').style.display = (myRole === 'super_admin') ? 'inline-block' : 'none';
   document.getElementById('view-switcher').style.display = (myRole === 'super_admin') ? 'flex' : 'none';
   myCasesOnly = (myRole !== 'super_admin');
+
+  // Lightweight background check so the Approvals nav button shows a
+  // pending-count badge the moment you log in, without paying the cost
+  // of loading the whole distributors table until the tab is opened.
+  if (myRole === 'super_admin') {
+    apiHeadersAsync().then(function(headers) {
+      return fetch(SUPABASE_URL + '/rest/v1/distributors?select=id&status=eq.pending', { headers: headers });
+    }).then(function(r) { return r.ok ? r.json() : []; }).then(function(rows) {
+      var badge = document.getElementById('approvals-badge');
+      if (!badge) return;
+      if (rows && rows.length) { badge.textContent = rows.length; badge.style.display = 'inline-block'; }
+      else badge.style.display = 'none';
+    }).catch(function(){});
+  }
 
   // Daily quote
   var qt = getDailyQuote();
@@ -1583,9 +1644,12 @@ function updateStatus(id, status) {
 function showView(view) {
   document.getElementById('cases-view').style.display = (view === 'cases') ? '' : 'none';
   document.getElementById('sponsorships-view').style.display = (view === 'sponsorships') ? '' : 'none';
+  document.getElementById('approvals-view').style.display = (view === 'approvals') ? '' : 'none';
   document.getElementById('view-btn-cases').classList.toggle('active', view === 'cases');
   document.getElementById('view-btn-sponsorships').classList.toggle('active', view === 'sponsorships');
+  document.getElementById('view-btn-approvals').classList.toggle('active', view === 'approvals');
   if (view === 'sponsorships') loadSponsorshipsView();
+  if (view === 'approvals') loadApprovalsView();
 }
 
 function loadSponsorshipsView() {
@@ -1966,6 +2030,210 @@ function undoSponsorshipConfirmation(id) {
     }
     renderModal(app, currentMembers, currentDocUrlMap);
     if (document.getElementById('sponsorships-view').style.display !== 'none') renderSponsorshipsTable();
+  }).catch(function(e){ alert('Update failed: ' + e.message); });
+}
+
+// ── DISTRIBUTOR APPROVALS ──
+function loadApprovalsView() {
+  var loadingEl = document.getElementById('approvals-loading');
+  loadingEl.style.display = '';
+  loadingEl.textContent = 'Loading distributors…';
+  document.getElementById('approvals-table').style.display = 'none';
+  document.getElementById('approvals-empty').style.display = 'none';
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/distributors?select=*&order=created_at.desc', { headers: headers });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('status ' + r.status);
+    return r.json();
+  }).then(function(rows) {
+    allDistributors = rows || [];
+    updateApprovalsBadge();
+    renderApprovalsTable();
+  }).catch(function(e) {
+    loadingEl.textContent = 'Could not load distributors: ' + e.message;
+  });
+}
+
+// data-astatus is scoped to this tab's own filter buttons so it never
+// collides with the Cases tab's data-status filter buttons / setFilter().
+function setApprovalFilter(status, btn) {
+  currentApprovalFilter = status;
+  document.querySelectorAll('[data-astatus]').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderApprovalsTable();
+}
+
+function updateApprovalsBadge() {
+  var n = allDistributors.filter(function(d){ return (d.status || 'pending') === 'pending'; }).length;
+  var badge = document.getElementById('approvals-badge');
+  if (!badge) return;
+  if (n > 0) { badge.textContent = n; badge.style.display = 'inline-block'; }
+  else { badge.style.display = 'none'; }
+}
+
+function renderApprovalsTable() {
+  document.getElementById('approvals-loading').style.display = 'none';
+  var tbody = document.getElementById('approvals-tbody');
+  var q = (document.getElementById('approvals-search').value || '').trim().toLowerCase();
+  var visible = allDistributors.filter(function(d) {
+    var status = d.status || 'pending';
+    if (currentApprovalFilter !== 'all' && status !== currentApprovalFilter) return false;
+    if (!q) return true;
+    var hay = [d.name, d.preferred_name, d.email, d.phone, d.qid_number, d.contact_name, d.contact_phone]
+      .concat(d.location_preferences || []).filter(Boolean).join(' ').toLowerCase();
+    return hay.indexOf(q) !== -1;
+  });
+  if (!visible.length) {
+    document.getElementById('approvals-table').style.display = 'none';
+    document.getElementById('approvals-empty').style.display = '';
+    return;
+  }
+  document.getElementById('approvals-table').style.display = '';
+  document.getElementById('approvals-empty').style.display = 'none';
+  tbody.innerHTML = visible.map(function(d) {
+    var status = d.status || 'pending';
+    var badge = status === 'approved'
+      ? '<span class="accordion-count" style="background:var(--green);color:white;">✓ Approved</span>'
+      : status === 'rejected'
+      ? '<span class="accordion-count" style="background:var(--red);color:white;">✖ Rejected</span>'
+      : '<span class="accordion-count" style="background:var(--orange);color:white;">⏳ Pending</span>';
+    var areas = d.location_preferences || [];
+    var areasTxt = areas.length ? (areas.slice(0,3).join(', ') + (areas.length > 3 ? ' +' + (areas.length-3) + ' more' : '')) : '–';
+    var driverLabel = (d.preferred_name && d.preferred_name !== (d.name||'').split(' ')[0]) ? d.name + ' ("' + d.preferred_name + '")' : d.name;
+    if (d.driver_mode === 'them') driverLabel += '<br><span style="font-size:11px;color:var(--muted);">Registered by ' + (d.contact_name || 'someone else') + '</span>';
+    var actions = '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+    actions += '<button class="action-btn btn-view" onclick="viewDistributor(\'' + d.id + '\')">👁 View</button>';
+    if (status === 'pending') {
+      actions += '<button class="btn-comment" style="background:var(--green);padding:6px 10px;font-size:12px;" onclick="approveDistributor(\'' + d.id + '\')">✓ Approve</button>';
+      actions += '<button class="btn-comment" style="background:white;color:var(--red);border:1.5px solid var(--red);padding:6px 10px;font-size:12px;" onclick="rejectDistributor(\'' + d.id + '\')">✖ Reject</button>';
+    } else {
+      actions += '<button class="btn-comment" style="background:white;color:var(--green-dark);border:1.5px solid var(--green-dark);padding:6px 10px;font-size:12px;" onclick="resetDistributorStatus(\'' + d.id + '\')">↩ Reset</button>';
+    }
+    actions += '</div>';
+    return '<tr>' +
+      '<td>' + (driverLabel || '–') + '</td>' +
+      '<td>' + (d.phone || '–') + '<br><span style="font-size:11px;color:var(--muted);">' + (d.email || '–') + '</span></td>' +
+      '<td>' + ((d.car_make||'') + ' ' + (d.car_model||'')).trim() + '</td>' +
+      '<td>' + (d.boxes_capacity != null ? d.boxes_capacity + ' boxes' : '–') + '</td>' +
+      '<td>' + areasTxt + '</td>' +
+      '<td>' + (d.licence_number || '–') + (d.licence_expiry ? ('<br><span style="font-size:11px;color:var(--muted);">exp. ' + d.licence_expiry + '</span>') : '') + '</td>' +
+      '<td>' + (d.created_at ? new Date(d.created_at).toLocaleDateString('en-GB') : '–') + '</td>' +
+      '<td>' + badge + '</td>' +
+      '<td>' + actions + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function viewDistributor(id) {
+  var d = allDistributors.find(function(x){ return x.id === id; });
+  if (!d) return;
+  var di = function(lbl, val) { return val == null || val === '' ? '' : ('<div class="detail-item" style="margin-bottom:10px;"><div class="lbl">' + lbl + '</div><div style="font-weight:700;">' + val + '</div></div>'); };
+  var body = '<h3 style="margin:0 0 14px;">' + (d.preferred_name || d.name) + '</h3>';
+  body += di('Full name', d.name);
+  body += di('Phone', d.phone);
+  body += di('Email', d.email);
+  if (d.driver_mode === 'them') body += di('Registered by', (d.contact_name||'') + (d.contact_phone ? (' · ' + d.contact_phone) : ''));
+  body += di('QID', d.qid_number);
+  body += di('Licence number', d.licence_number);
+  body += di('Licence expiry', d.licence_expiry);
+  body += di('Licence holder name', d.licence_name);
+  body += di('Vehicle', ((d.car_make||'') + ' ' + (d.car_model||'')).trim());
+  body += di('Boot capacity', d.boot_litres ? (d.boot_litres + ' L') : null);
+  body += di('Uses back seats', d.uses_back_seats ? ('Yes (+' + (d.back_litres||0) + ' L)') : 'No');
+  body += di('Total box capacity', d.boxes_capacity != null ? (d.boxes_capacity + ' boxes') : null);
+  body += di('Preferred areas', (d.location_preferences||[]).join(', '));
+  body += di('Status', (d.status || 'pending'));
+  body += di('Registered', d.created_at ? new Date(d.created_at).toLocaleString('en-GB') : null);
+  body += '<div style="display:flex;gap:8px;margin-top:16px;">';
+  var status = d.status || 'pending';
+  if (status === 'pending') {
+    body += '<button class="btn-comment" style="flex:1;background:var(--green);color:white;" onclick="approveDistributor(\'' + d.id + '\')">✓ Approve</button>';
+    body += '<button class="btn-comment" style="flex:1;background:white;color:var(--red);border:1.5px solid var(--red);" onclick="rejectDistributor(\'' + d.id + '\')">✖ Reject</button>';
+  } else {
+    body += '<button class="btn-comment" style="flex:1;background:white;color:var(--green-dark);border:1.5px solid var(--green-dark);" onclick="resetDistributorStatus(\'' + d.id + '\')">↩ Reset to pending</button>';
+  }
+  body += '</div>';
+  document.getElementById('dist-detail-body').innerHTML = body;
+  document.getElementById('dist-detail-modal').classList.add('visible');
+}
+
+function closeDistDetailModal() {
+  document.getElementById('dist-detail-modal').classList.remove('visible');
+}
+
+// The only one of the three that goes through the edge function rather
+// than a direct PATCH — approve_distributor both flips the status AND
+// sends the "you're approved" email, so this has to be a real request,
+// not just a database write.
+function approveDistributor(id) {
+  if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
+  var d = allDistributors.find(function(x){ return x.id === id; });
+  if (!d) return;
+  if (!confirm('Approve ' + (d.preferred_name || d.name) + ' as a distributor? This sends them an approval email right away.')) return;
+  var btn = event && event.target;
+  if (btn) { btn.textContent = 'Approving…'; btn.disabled = true; }
+  sb.auth.getSession().then(function(res) {
+    var session = res && res.data ? res.data.session : null;
+    var token = session ? session.access_token : ANON_KEY;
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ type: 'approve_distributor', distributor_id: id })
+    });
+  }).then(function(r) { return r.json(); }).then(function(res) {
+    if (res.error) throw new Error(res.error);
+    d.status = 'approved';
+    d.approved_at = new Date().toISOString();
+    renderApprovalsTable();
+    updateApprovalsBadge();
+    closeDistDetailModal();
+  }).catch(function(e) {
+    alert('Approval failed: ' + e.message);
+    if (btn) { btn.textContent = '✓ Approve'; btn.disabled = false; }
+  });
+}
+
+function rejectDistributor(id) {
+  if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
+  var d = allDistributors.find(function(x){ return x.id === id; });
+  if (!d) return;
+  if (!confirm('Reject this distributor application? They will not be notified automatically.')) return;
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/distributors?id=eq.' + id, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ status: 'rejected' })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
+    d.status = 'rejected';
+    renderApprovalsTable();
+    updateApprovalsBadge();
+    closeDistDetailModal();
+  }).catch(function(e){ alert('Update failed: ' + e.message); });
+}
+
+function resetDistributorStatus(id) {
+  if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
+  var d = allDistributors.find(function(x){ return x.id === id; });
+  if (!d) return;
+  if (!confirm('Reset this distributor back to pending?')) return;
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/distributors?id=eq.' + id, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ status: 'pending', approved_at: null })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
+    d.status = 'pending'; d.approved_at = null;
+    renderApprovalsTable();
+    updateApprovalsBadge();
+    closeDistDetailModal();
   }).catch(function(e){ alert('Update failed: ' + e.message); });
 }
 

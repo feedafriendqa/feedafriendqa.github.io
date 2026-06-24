@@ -108,13 +108,23 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
 .al-lbl{font-size:10px;color:rgba(255,255,255,.4);font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
 .al-big{font-family:"Nunito",sans-serif;font-size:52px;font-weight:900;color:#F5C330;line-height:1;letter-spacing:-2px}
 .al-sub{font-size:12px;color:rgba(255,255,255,.45);font-weight:600;margin-top:6px;line-height:1.5}
-.alloc-fam{background:#fff;border-radius:14px;margin:8px 16px 0;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.alloc-fam{background:#fff;border-radius:14px;margin:8px 16px 0;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.04);position:relative}
 .af-area{font-family:"Nunito",sans-serif;font-size:12px;font-weight:900;color:#1D7A47;margin-bottom:3px}
 .af-sub{font-size:11px;color:#bbb;font-weight:600}
+.af-x{position:absolute;top:10px;right:12px;width:22px;height:22px;border-radius:50%;border:none;background:#F5F2EC;color:#bbb;font-size:14px;font-weight:900;cursor:pointer;line-height:22px;text-align:center;padding:0}
+.af-x:hover{background:#FBE7E7;color:#c0392b}
 .two-btn{display:flex;gap:10px;padding:10px 16px 0}
 .tb-out{flex:1;padding:13px;border-radius:30px;border:1.5px solid #DDD6C8;background:#fff;font-family:"Nunito",sans-serif;font-size:12px;font-weight:800;color:#888;cursor:pointer}
 .tb-grn{flex:2;padding:13px;border-radius:30px;border:none;background:#1D7A47;font-family:"Nunito",sans-serif;font-size:13px;font-weight:900;color:#F5C330;cursor:pointer}
 .tb-grn:disabled{opacity:.35;cursor:not-allowed}
+
+/* AREAS STEP (matches DriverReg styling) */
+.area-grid{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:9px 15px;border-radius:30px;border:1.5px solid #DDD6C8;font-family:"Nunito",sans-serif;font-size:12px;font-weight:800;cursor:pointer;background:#fff;color:#666;transition:all .12s;user-select:none;-webkit-tap-highlight-color:transparent}
+.chip.on{background:#1D7A47;color:#fff;border-color:#1D7A47}
+.area-stat{font-size:12px;font-weight:700;margin-top:14px}
+.area-stat.ok{color:#1D7A47}.area-stat.warn{color:#c0392b}
+.tag-boxes{background:#F0F4FD;color:#2255aa}
 
 /* NO TRIP */
 .no-trip{text-align:center;padding:24px 24px 8px}
@@ -207,13 +217,29 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
     <div id="fams-list"></div>
   </div>
 
+  <!-- Areas for this trip -->
+  <div id="pnl-areas" style="display:none;padding-bottom:24px">
+    <div class="back-row" style="padding-top:4px">
+      <button class="back-btn" onclick="showDashMain()">← Back</button>
+      <div class="back-title">Areas for this trip</div>
+    </div>
+    <p style="font-size:13px;color:#888;font-weight:600;line-height:1.6;padding:0 20px 14px">Pick which of your areas you can cover this round — we'll match families and boxes to fit your vehicle.</p>
+    <div class="card" style="margin:0 16px">
+      <div class="area-grid" id="trip-agrid"></div>
+      <div class="area-stat" id="trip-astat"></div>
+    </div>
+    <div class="cta-bar" style="position:static;background:none">
+      <button class="cta" id="areas-continue-btn" onclick="continueToAlloc()">Find my families →</button>
+    </div>
+  </div>
+
   <!-- Allocation preview -->
   <div id="pnl-alloc" style="display:none;padding-bottom:24px">
     <div class="back-row" style="padding-top:4px">
-      <button class="back-btn" onclick="showDashMain()">← Back</button>
+      <button class="back-btn" onclick="backToAreas()">← Back</button>
       <div class="back-title">Your allocation</div>
     </div>
-    <p style="font-size:13px;color:#888;font-weight:600;line-height:1.6;padding:0 20px 14px">Based on your vehicle and preferred areas — confirm or shuffle.</p>
+    <p style="font-size:13px;color:#888;font-weight:600;line-height:1.6;padding:0 20px 14px">Based on your vehicle and chosen areas. Remove a family to get a replacement, or shuffle everything.</p>
     <div class="alloc-dark">
       <div class="al-lbl">Families to deliver</div>
       <div class="al-big" id="alloc-n">…</div>
@@ -252,7 +278,7 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
 <script>
 var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4",EDGE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder";
 var sb=window.supabase?window.supabase.createClient(SB,KEY):null;
-var CU=null,DP=null,AT=null,ALLOC=null;
+var CU=null,DP=null,AT=null,ALLOC=null,ALLOC_META=null,SELAREAS=[],KEPT={},REMOVED=[];
 
 function showV(id){
   ["v-loading","v-login","v-reset","v-pending","v-dash"].forEach(function(v){
@@ -264,6 +290,7 @@ function showV(id){
 
 function showDashMain(){
   document.getElementById("pnl-fams").style.display="none";
+  document.getElementById("pnl-areas").style.display="none";
   document.getElementById("pnl-alloc").style.display="none";
   document.getElementById("pnl-active").style.display=AT?"block":"none";
   document.getElementById("pnl-none").style.display=AT?"none":"block";
@@ -362,13 +389,14 @@ function renderFamCard(row,num){
   var tags="";
   if(app.diaper_size&&app.diaper_size!=="Not needed")tags+='<span class="tag tag-diaper">🧷 '+app.diaper_size+'</span>';
   if(app.formula&&app.formula!=="Not needed")tags+='<span class="tag tag-formula">🍼 '+app.formula+'</span>';
+  if(app.household_size){var bx=Math.ceil(app.household_size/4);tags+='<span class="tag tag-boxes">📦 '+bx+' box'+(bx===1?"":"es")+'</span>';}
   if(app.household_size)tags+='<span class="tag tag-hh">'+app.household_size+' people</span>';
   return '<div class="fam-card" id="fc-'+row.id+'">'
     +'<div class="fam-head"><div class="fam-circle">'+num+'</div><span class="fam-st '+(done?"done":"pending")+'">'+(done?"✓ Delivered":"Pending")+'</span></div>'
     +'<div class="fam-row"><span class="fam-ic">📍</span><div><div class="fam-lbl">Address</div><div class="fam-val">'+addr+'</div></div></div>'
     +'<div class="fam-row"><span class="fam-ic">💬</span><div><div class="fam-lbl">Contact</div><div class="fam-val">'+waHtml+'</div></div></div>'
     +(tags?'<div class="fam-row"><span class="fam-ic">🛒</span><div><div class="fam-lbl">Needs</div><div style="margin-top:4px">'+tags+'</div></div></div>':"")
-    +'<button class="del-btn'+(done?" done":"")+'" id="db-'+row.id+'" onclick="markDel(''+row.id+'')" '+(done?"disabled":"")+'>'+(done?"✓ Marked as delivered":"Mark as delivered")+'</button>'
+    +'<button class="del-btn'+(done?" done":"")+'" id="db-'+row.id+'" onclick="markDel(\''+row.id+'\')" '+(done?"disabled":"")+'>'+(done?"✓ Marked as delivered":"Mark as delivered")+'</button>'
     +'</div>';
 }
 
@@ -393,46 +421,129 @@ async function completeTrip(){
   setTimeout(function(){if(confirm("Amazing work! Want to sign up for another trip?"))anotherTrip();},300);
 }
 
-async function anotherTrip(){
+function anotherTrip(){
   document.getElementById("pnl-none").style.display="none";
   document.getElementById("pnl-active").style.display="none";
-  document.getElementById("pnl-alloc").style.display="block";
-  await loadAlloc();
+  showAreasStep();
 }
 
+// ── AREAS-FOR-THIS-TRIP STEP ─────────────────────────────────────────────
+// Reuses the registration page's chip/area-grid look. Defaults to every
+// area the driver registered with, pre-checked — they only need to touch
+// it when they can't cover their full range this particular round.
+function showAreasStep(){
+  document.getElementById("pnl-fams").style.display="none";
+  document.getElementById("pnl-alloc").style.display="none";
+  document.getElementById("pnl-areas").style.display="block";
+  buildTripAreaGrid();
+}
+
+function buildTripAreaGrid(){
+  var prefs=(DP&&DP.location_preferences)||[];
+  if(!SELAREAS.length)SELAREAS=prefs.slice();
+  document.getElementById("trip-agrid").innerHTML=prefs.length?prefs.map(function(a){
+    return '<div class="chip'+(SELAREAS.indexOf(a)!==-1?" on":"")+'" onclick="togTripArea(this,\''+a.replace(/'/g,"\\'")+'\')">'+a+'</div>';
+  }).join(""):'<div style="font-size:12px;color:#bbb;font-weight:600;padding:8px 0">No areas on file — contact FaF to update your preferences.</div>';
+  updTripAreaStat();
+}
+
+function togTripArea(el,a){
+  if(el.classList.contains("on")){SELAREAS=SELAREAS.filter(function(x){return x!==a;});el.classList.remove("on");}
+  else{SELAREAS.push(a);el.classList.add("on");}
+  updTripAreaStat();
+}
+
+function updTripAreaStat(){
+  var n=SELAREAS.length,el=document.getElementById("trip-astat"),btn=document.getElementById("areas-continue-btn");
+  if(n===0){el.textContent="Select at least 1 area.";el.className="area-stat warn";btn.disabled=true;}
+  else{el.textContent=n+" area"+(n===1?"":"s")+" selected for this trip.";el.className="area-stat ok";btn.disabled=false;}
+}
+
+function continueToAlloc(){
+  document.getElementById("pnl-areas").style.display="none";
+  document.getElementById("pnl-alloc").style.display="block";
+  loadAlloc();
+}
+
+function backToAreas(){
+  document.getElementById("pnl-alloc").style.display="none";
+  showAreasStep();
+}
+
+// ── ALLOCATION (full reshuffle) ──────────────────────────────────────────
 async function loadAlloc(){
+  KEPT={};REMOVED=[];ALLOC_META=null;
   document.getElementById("alloc-n").textContent="…";
   document.getElementById("alloc-areas").textContent="Searching your areas…";
   document.getElementById("alloc-list").innerHTML='<div class="loading" style="padding:20px"><div class="spin"></div></div>';
   document.getElementById("confirm-btn").disabled=false;document.getElementById("confirm-btn").textContent="Confirm these →";
   try{
-    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_boxes",driver_email:CU.email})});
-    var d=await r.json();ALLOC=d;
-    var fams=d.families||[];
-    document.getElementById("alloc-n").textContent=fams.length;
-    var areas=[...new Set(fams.map(function(f){return f.area||"?";}))] ;
-    document.getElementById("alloc-areas").textContent=fams.length
-      ?"Areas: "+areas.slice(0,5).join(", ")+(areas.length>5?" +"+(areas.length-5)+" more":"")
-      :"No families in your areas right now.";
-    document.getElementById("alloc-list").innerHTML=fams.length===0
-      ?'<div style="text-align:center;padding:20px 24px;font-size:13px;color:#888;font-weight:600">No families available right now. Check back soon!</div>'
-      :fams.slice(0,8).map(function(f){
-          var tags=[f.diaper_size&&f.diaper_size!=="Not needed"?"🧷 Nappies":"",f.formula&&f.formula!=="Not needed"?"🍼 Formula":""].filter(Boolean).join(" · ");
-          return '<div class="alloc-fam"><div class="af-area">📍 '+(f.area||"Unknown")+'</div><div class="af-sub">'+(f.household_size?"Household of "+f.household_size:"")+( tags?" · "+tags:"")+'</div></div>';
-        }).join("")+(fams.length>8?'<div style="font-size:11px;color:#bbb;font-weight:600;text-align:center;padding:8px 0">+'+(fams.length-8)+' more families</div>':"");
+    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_boxes",driver_email:CU.email,areas:SELAREAS})});
+    var d=await r.json();
+    ALLOC_META=d;
+    (d.families||[]).forEach(function(f){KEPT[f.id]=f;});
+    renderAlloc();
   }catch(e){
     document.getElementById("alloc-list").innerHTML='<div style="color:#c0392b;font-size:12px;font-weight:700;padding:0 20px">Could not load — please try again.</div>';
   }
 }
 
+function renderAlloc(){
+  var fams=Object.values(KEPT);
+  var boxesUsed=fams.reduce(function(s,f){return s+(f.boxes_needed||1);},0);
+  document.getElementById("alloc-n").textContent=fams.length;
+  var areas=[...new Set(fams.map(function(f){return f.area||"?";}))];
+  var capTxt=ALLOC_META&&ALLOC_META.driver_capacity!=null?(" · "+boxesUsed+"/"+ALLOC_META.driver_capacity+" boxes"):"";
+  document.getElementById("alloc-areas").textContent=fams.length
+    ?"Areas: "+areas.slice(0,5).join(", ")+(areas.length>5?" +"+(areas.length-5)+" more":"")+capTxt
+    :"No families available in these areas right now.";
+  document.getElementById("alloc-list").innerHTML=fams.length===0
+    ?'<div style="text-align:center;padding:20px 24px;font-size:13px;color:#888;font-weight:600">No families available right now. Try different areas or check back soon!</div>'
+    :fams.map(function(f){
+        var bx=f.boxes_needed||1;
+        var tags=[bx+" box"+(bx===1?"":"es"),f.diaper_size&&f.diaper_size!=="Not needed"?"🧷 Nappies":"",f.formula&&f.formula!=="Not needed"?"🍼 Formula":"",f.is_sticky?"🔁 Your family last time":""].filter(Boolean).join(" · ");
+        return '<div class="alloc-fam" id="af-'+f.id+'"><button class="af-x" onclick="removeAllocFam(\''+f.id+'\')" title="Remove and match again">✕</button>'
+          +'<div class="af-area">📍 '+(f.area||"Unknown")+'</div>'
+          +'<div class="af-sub">'+(f.household_size?"Household of "+f.household_size+" · ":"")+tags+'</div></div>';
+      }).join("");
+}
+
+// ── REMOVE ONE CARD + RE-MATCH JUST THAT SLOT ────────────────────────────
+// Doesn't touch the families the driver already kept — only fetches a
+// replacement sized to whatever boxes the removed family freed up.
+function removeAllocFam(id){
+  delete KEPT[id];
+  REMOVED.push(id);
+  rematchRemoved();
+}
+
+async function rematchRemoved(){
+  renderAlloc();
+  if(!REMOVED.length)return;
+  var fams=Object.values(KEPT);
+  var used=fams.reduce(function(s,f){return s+(f.boxes_needed||1);},0);
+  var remainingCap=(ALLOC_META&&ALLOC_META.driver_capacity!=null?ALLOC_META.driver_capacity:0)-used;
+  if(remainingCap<=0){REMOVED=[];return;}
+  document.getElementById("alloc-areas").textContent="Matching a replacement…";
+  try{
+    var excludeIds=Object.keys(KEPT).concat(REMOVED);
+    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_boxes",driver_email:CU.email,areas:SELAREAS,exclude_ids:excludeIds,capacity_override:remainingCap})});
+    var d=await r.json();
+    (d.families||[]).forEach(function(f){KEPT[f.id]=f;});
+  }catch(e){ /* keep whatever's already kept — leave the rest of this trip intact */ }
+  REMOVED=[];
+  renderAlloc();
+}
+
 async function confirmAlloc(){
-  if(!ALLOC||!ALLOC.families||!ALLOC.families.length){alert("No families to confirm.");return;}
+  var fams=Object.values(KEPT);
+  if(!fams.length){alert("No families to confirm.");return;}
   var btn=document.getElementById("confirm-btn");
   btn.disabled=true;btn.textContent="Confirming…";
   try{
-    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"confirm_driver_trip",driver_email:CU.email,family_ids:ALLOC.families.map(function(f){return f.id;})})});
+    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"confirm_driver_trip",driver_email:CU.email,family_ids:fams.map(function(f){return f.id;}),areas:SELAREAS})});
     var d=await r.json();
-    AT={id:d.trip_id,boxes_count:ALLOC.families.length,status:"confirmed",trip_date:d.trip_date};
+    AT={id:d.trip_id,boxes_count:fams.length,status:"confirmed",trip_date:d.trip_date};
     renderActiveTrip(AT);
     document.getElementById("pnl-alloc").style.display="none";
     document.getElementById("pnl-active").style.display="block";
