@@ -711,6 +711,20 @@ async function handleAdminSession(session) {
       if (rows && rows.length) { badge.textContent = rows.length; badge.style.display = 'inline-block'; }
       else badge.style.display = 'none';
     }).catch(function(){});
+
+    // Deep link from the "✓ Approve this distributor" email button:
+    // ?approve=<distributor_id> jumps straight to the Approvals tab and
+    // opens that distributor's detail modal instead of the default Cases view.
+    var approveId = new URLSearchParams(window.location.search).get('approve');
+    if (approveId) {
+      showView('approvals');
+      var tryOpen = function(attemptsLeft) {
+        var d = allDistributors.find(function(x){ return x.id === approveId; });
+        if (d) { viewDistributor(approveId); }
+        else if (attemptsLeft > 0) { setTimeout(function(){ tryOpen(attemptsLeft - 1); }, 400); }
+      };
+      tryOpen(8);
+    }
   }
 
   // Daily quote

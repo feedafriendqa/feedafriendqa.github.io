@@ -551,7 +551,7 @@ async function confirmAlloc(){
 }
 
 function setHero(mode){
-  var pn=DP?(DP.preferred_name||DP.name.split(" ")[0]):"";
+  var pn=DP?(DP.preferred_name||(DP.name?DP.name.split(" ")[0]:"there")):"";
   if(mode==="dash"){
     document.getElementById("ph-eye").textContent="Welcome back, "+pn;
     document.getElementById("ph-h1").innerHTML="Your <em>trips.</em>";
