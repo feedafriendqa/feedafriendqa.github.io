@@ -501,7 +501,7 @@ function renderAlloc(){
     ?'<div style="text-align:center;padding:20px 24px;font-size:13px;color:#888;font-weight:600">No families available right now. Try different areas or check back soon!</div>'
     :fams.map(function(f){
         var bx=f.boxes_needed||1;
-        var tags=[bx+" box"+(bx===1?"":"es"),f.diaper_size&&f.diaper_size!=="Not needed"?"🧷 Nappies":"",f.formula&&f.formula!=="Not needed"?"🍼 Formula":"",f.is_sticky?"🔁 Your family last time":""].filter(Boolean).join(" · ");
+        var tags=[bx+" box"+(bx===1?"":"es"),f.diaper_size&&f.diaper_size!=="Not needed"?"🧷 Nappies":"",f.formula&&f.formula!=="Not needed"?"🍼 Formula":"",f.is_sticky?"🔁 Your family last time":"",f.family_group_size>1?"🔗 "+f.family_group_size+" deliveries, same household":""].filter(Boolean).join(" · ");
         return '<div class="alloc-fam" id="af-'+f.id+'"><button class="af-x" onclick="removeAllocFam(\''+f.id+'\')" title="Remove and match again">✕</button>'
           +'<div class="af-area">📍 '+(f.area||"Unknown")+'</div>'
           +'<div class="af-sub">'+(f.household_size?"Household of "+f.household_size+" · ":"")+tags+'</div></div>';
