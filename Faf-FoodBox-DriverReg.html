@@ -231,7 +231,6 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
   <div class="card" id="lic-result-card" style="display:none">
     <div class="scan-ok-row"><div class="scan-dot"></div><div class="scan-ok-lbl">Licence read successfully</div></div>
     <div class="sf"><span class="sf-l">Name</span><span class="sf-v" id="sc-name">—</span></div>
-    <div class="sf"><span class="sf-l">QID number</span><span class="sf-v" id="sc-qid">—</span></div>
     <div class="sf"><span class="sf-l">Licence no.</span><span class="sf-v" id="sc-num">—</span></div>
     <div class="sf"><span class="sf-l">Expires</span><span class="sf-v" id="sc-exp">—</span></div>
     <div class="sf"><span class="sf-l">Nationality</span><span class="sf-v" id="sc-nat">—</span></div>
@@ -392,7 +391,18 @@ var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5c
 var sb=window.supabase?window.supabase.createClient(SB,KEY):null;
 var BOX=91.125,EFF=0.65,EFF2=0.45;
 var CARS=[{id:"yaris",make:"Toyota",model:"Yaris",icon:"🚗",bootL:286,backL:250},{id:"corolla",make:"Toyota",model:"Corolla",icon:"🚗",bootL:371,backL:300},{id:"camry",make:"Toyota",model:"Camry",icon:"🚗",bootL:524,backL:350},{id:"altima",make:"Nissan",model:"Altima",icon:"🚗",bootL:436,backL:340},{id:"sunny",make:"Nissan",model:"Sunny",icon:"🚗",bootL:520,backL:300},{id:"elantra",make:"Hyundai",model:"Elantra",icon:"🚗",bootL:415,backL:300},{id:"accord",make:"Honda",model:"Accord",icon:"🚗",bootL:473,backL:350},{id:"cerato",make:"Kia",model:"Cerato / K3",icon:"🚗",bootL:402,backL:300},{id:"sportage",make:"Kia",model:"Sportage",icon:"🚙",bootL:503,backL:380},{id:"tucson",make:"Hyundai",model:"Tucson",icon:"🚙",bootL:539,backL:380},{id:"rav4",make:"Toyota",model:"RAV4",icon:"🚙",bootL:580,backL:380},{id:"crv",make:"Honda",model:"CR-V",icon:"🚙",bootL:589,backL:380},{id:"outlander",make:"Mitsubishi",model:"Outlander",icon:"🚙",bootL:477,backL:380},{id:"xtrail",make:"Nissan",model:"X-Trail",icon:"🚙",bootL:565,backL:380},{id:"duster",make:"Renault",model:"Duster",icon:"🚙",bootL:475,backL:340},{id:"fortuner",make:"Toyota",model:"Fortuner",icon:"🚙",bootL:296,backL:650},{id:"prado",make:"Toyota",model:"Prado",icon:"🚙",bootL:439,backL:600},{id:"pajero",make:"Mitsubishi",model:"Pajero",icon:"🚙",bootL:620,backL:600},{id:"explorer",make:"Ford",model:"Explorer",icon:"🚙",bootL:515,backL:650},{id:"landcruiser",make:"Toyota",model:"Land Cruiser",icon:"🚙",bootL:909,backL:700},{id:"patrol",make:"Nissan",model:"Patrol",icon:"🚙",bootL:889,backL:700},{id:"tahoe",make:"Chevrolet",model:"Tahoe",icon:"🚙",bootL:1050,backL:700},{id:"yukon",make:"GMC",model:"Yukon",icon:"🚙",bootL:690,backL:700},{id:"escalade",make:"Cadillac",model:"Escalade",icon:"🚙",bootL:720,backL:700},{id:"defender",make:"Land Rover",model:"Defender",icon:"🚙",bootL:726,backL:650},{id:"hilux",make:"Toyota",model:"Hilux",icon:"🛻",bootL:1200,backL:0},{id:"navara",make:"Nissan",model:"Navara",icon:"🛻",bootL:1200,backL:0},{id:"triton",make:"Mitsubishi",model:"L200 Triton",icon:"🛻",bootL:1100,backL:0},{id:"f150",make:"Ford",model:"F-150",icon:"🛻",bootL:1400,backL:0},{id:"hiace",make:"Toyota",model:"HiAce Van",icon:"🚐",bootL:3700,backL:0},{id:"transit",make:"Ford",model:"Transit Van",icon:"🚐",bootL:5800,backL:0}];
-var AREAS=["Industrial Area","Bin Mahmoud","Mansoura","Fereej Abdulaziz","Najma","Rawdat Al Khail","Al Muntazah","Umm Ghuwailina","Old Airport","Matar Qadeem","Nuaija","Al Mirqab","Fereej Al Amir","Al Aziziyah","Abu Hamour","Al Messila","Al Waab","Ain Khaled","Salwa","Al Meshaf","Al Sadd","Al Rayyan","Al Gharrafa","Madinat Khalifa","Duhail","Al Sailiya","Al Thumama","Lusail","The Pearl","West Bay","Al Khor","Al Wakra","Al Wakrah","Mesaieed","Dukhan","Shahaniya"];
+// Fallback only, used if the live list can't be reached. The real list
+// comes from the distribution_locations table so it always matches the
+// area names families pick on the application form (food-box-application.html)
+// — these two lists drifting apart silently breaks driver-family matching.
+var AREAS=["Abu Hamour","Ain Khaled","Al Sadd","Al Waab","Bin Mahmoud","Duhail","Dukhan","Industrial Area","Lusail","Madinat Khalifa North","Madinat Khalifa South","Mesaieed","Nuaija","Old Airport","Rawdat Al Khail","Shahaniya","Umm Ghuwailina"];
+function loadAreas(){
+  return fetch(SB+"/rest/v1/distribution_locations?select=name&active=eq.true&order=sort_order.asc",{headers:{apikey:KEY,Authorization:"Bearer "+KEY}})
+    .then(function(r){return r.json();})
+    .then(function(rows){ if(Array.isArray(rows)&&rows.length) AREAS=rows.map(function(x){return x.name;}); })
+    .catch(function(){ /* network hiccup — keep the fallback list above */ });
+}
+var AREAS_LOADED=loadAreas();
 
 // Steps: 1=who's driving, 2=licence, 3=details, 4=car, 5=areas, 6=review
 var D={
@@ -400,7 +410,7 @@ var D={
   driver_name:"", driver_pref:"", driver_phone:"",
   contact_name:"", contact_phone:"",
   email:"", pw:"",
-  lic_num:"", lic_exp:"", lic_name:"", lic_nat:"", qid_number:"", lic_scanned:false,
+  lic_num:"", lic_exp:"", lic_name:"", lic_nat:"", lic_scanned:false,
   car:null, use_back:false, boot_b:0, back_b:0, total_b:0, areas:[]
 };
 
@@ -508,15 +518,13 @@ async function scanLicence(inp){
       body:JSON.stringify({type:"scan_licence",image_base64:b64.split(",")[1],media_type:inp.files[0].type||"image/jpeg"})});
     var data=await r.json();
     var info=data.data||{};
-    if(!info.name&&!info.licence_number&&!info.qid_number)throw new Error("empty");
+    if(!info.name&&!info.licence_number)throw new Error("empty");
     D.lic_name=info.name||"";
     D.lic_num=info.licence_number||"";
     D.lic_exp=info.expiry||"";
     D.lic_nat=info.nationality||"";
-    D.qid_number=info.qid_number||"";
     D.lic_scanned=true;
     document.getElementById("sc-name").textContent=D.lic_name||"—";
-    document.getElementById("sc-qid").textContent=D.qid_number||"—";
     document.getElementById("sc-num").textContent=D.lic_num||"—";
     document.getElementById("sc-exp").textContent=D.lic_exp||"—";
     document.getElementById("sc-nat").textContent=D.lic_nat||"—";
@@ -608,18 +616,25 @@ function recalc(){
 // ── STEP 5: AREAS ────────────────────────────────────────────────────
 function v5(){clearErr("e5");if(D.areas.length<3){showErr("e5","Select at least 3 areas.");return false;}return true;}
 function buildGrid(){
-  document.getElementById("agrid").innerHTML=AREAS.map(function(a){
-    return'<div class="chip'+(D.areas.includes(a)?" on":"")+'" onclick="togA(this,\''+ a +'\')">'+a+'</div>';
-  }).join("");updStat();
+  AREAS_LOADED.then(function(){
+    document.getElementById("agrid").innerHTML=AREAS.map(function(a){
+      return'<div class="chip'+(D.areas.includes(a)?" on":"")+'" onclick="togA(this,\''+ a +'\')">'+a+'</div>';
+    }).join("");updStat();
+  });
 }
 function togA(el,a){
   if(el.classList.contains("on")){D.areas=D.areas.filter(function(x){return x!==a;});el.classList.remove("on");}
-  else{D.areas.push(a);el.classList.add("on");}updStat();
+  else{
+    if(D.areas.length>=6){updStat();return;}
+    D.areas.push(a);el.classList.add("on");
+  }
+  updStat();
 }
 function updStat(){
   var n=D.areas.length,el=document.getElementById("astat");
   if(n===0){el.textContent="Select at least 3 areas.";el.className="area-stat warn";}
   else if(n<3){el.textContent=n+" selected — "+(3-n)+" more needed.";el.className="area-stat warn";}
+  else if(n>=6){el.textContent="✓ "+n+" areas — that's the max for now.";el.className="area-stat ok";}
   else{el.textContent="✓ "+n+" areas — great coverage!";el.className="area-stat ok";}
 }
 
@@ -660,7 +675,7 @@ async function submit(){
         phone:D.driver_phone,email:D.email,
         contact_name:D.driver_mode==="them"?D.contact_name:"",
         contact_phone:D.driver_mode==="them"?D.contact_phone:"",
-        licence_number:D.lic_num,licence_expiry:D.lic_exp||null,licence_name:D.lic_name,qid_number:D.qid_number||null,
+        licence_number:D.lic_num,licence_expiry:D.lic_exp||null,licence_name:D.lic_name,
         car_make:D.car?D.car.make:null,car_model:D.car?D.car.model:null,
         boot_litres:D.car?D.car.bootL:0,uses_back_seats:D.use_back,
         back_litres:(D.use_back&&D.car)?D.car.backL:0,

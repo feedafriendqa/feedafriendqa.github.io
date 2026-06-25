@@ -113,6 +113,9 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
 .af-sub{font-size:11px;color:#bbb;font-weight:600}
 .af-x{position:absolute;top:10px;right:12px;width:22px;height:22px;border-radius:50%;border:none;background:#F5F2EC;color:#bbb;font-size:14px;font-weight:900;cursor:pointer;line-height:22px;text-align:center;padding:0}
 .af-x:hover{background:#FBE7E7;color:#c0392b}
+.alloc-fam{cursor:pointer}
+.alloc-fam.af-off{opacity:.4}
+.af-off-lbl{font-size:10px;font-weight:900;color:#c0392b;letter-spacing:.04em;text-transform:uppercase;margin-top:4px}
 .two-btn{display:flex;gap:10px;padding:10px 16px 0}
 .tb-out{flex:1;padding:13px;border-radius:30px;border:1.5px solid #DDD6C8;background:#fff;font-family:"Nunito",sans-serif;font-size:12px;font-weight:800;color:#888;cursor:pointer}
 .tb-grn{flex:2;padding:13px;border-radius:30px;border:none;background:#1D7A47;font-family:"Nunito",sans-serif;font-size:13px;font-weight:900;color:#F5C330;cursor:pointer}
@@ -223,13 +226,28 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
       <button class="back-btn" onclick="showDashMain()">← Back</button>
       <div class="back-title">Areas for this trip</div>
     </div>
-    <p style="font-size:13px;color:#888;font-weight:600;line-height:1.6;padding:0 20px 14px">Pick which of your areas you can cover this round — we'll match families and boxes to fit your vehicle.</p>
+    <p style="font-size:13px;color:#888;font-weight:600;line-height:1.6;padding:0 20px 14px">Pick up to 6 areas you can cover this round — add or remove any, not just your saved ones. We'll match friends and boxes to fit your vehicle.</p>
     <div class="card" style="margin:0 16px">
       <div class="area-grid" id="trip-agrid"></div>
       <div class="area-stat" id="trip-astat"></div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:#666;font-weight:700">
+        <input type="checkbox" id="areas-save" style="width:16px;height:16px"> Save these as my areas for next time
+      </label>
+    </div>
+    <div class="card" style="margin:12px 16px 0">
+      <div class="lbl" style="margin-bottom:8px;text-align:center">Your vehicle's capacity</div>
+      <div style="display:flex;align-items:center;gap:14px;justify-content:center">
+        <button class="tb-out" style="flex:0 0 auto;width:42px;padding:10px 0" onclick="adjCap(-1)">−</button>
+        <div style="font-family:'Nunito',sans-serif;font-size:28px;font-weight:900;color:#1D7A47;min-width:60px;text-align:center" id="cap-val">5</div>
+        <button class="tb-out" style="flex:0 0 auto;width:42px;padding:10px 0" onclick="adjCap(1)">+</button>
+      </div>
+      <div style="font-size:11px;color:#bbb;text-align:center;margin-top:6px">boxes — adjust if your actual capacity is different</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:#666;font-weight:700">
+        <input type="checkbox" id="cap-save" checked style="width:16px;height:16px"> Save this as my new capacity
+      </label>
     </div>
     <div class="cta-bar" style="position:static;background:none">
-      <button class="cta" id="areas-continue-btn" onclick="continueToAlloc()">Find my families →</button>
+      <button class="cta" id="areas-continue-btn" onclick="continueToAlloc()">Find my friends →</button>
     </div>
   </div>
 
@@ -239,15 +257,18 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
       <button class="back-btn" onclick="backToAreas()">← Back</button>
       <div class="back-title">Your allocation</div>
     </div>
-    <p style="font-size:13px;color:#888;font-weight:600;line-height:1.6;padding:0 20px 14px">Based on your vehicle and chosen areas. Remove a family to get a replacement, or shuffle everything.</p>
+    <p style="font-size:13px;color:#888;font-weight:600;line-height:1.6;padding:0 20px 14px">Based on your vehicle and chosen areas. Tap a card to leave it out for now, ✕ to swap it for someone else, or shuffle everything.</p>
     <div class="alloc-dark">
-      <div class="al-lbl">Families to deliver</div>
+      <div class="al-lbl">Friends to deliver</div>
       <div class="al-big" id="alloc-n">…</div>
       <div class="al-sub" id="alloc-areas">Searching your areas…</div>
     </div>
     <div id="alloc-list"></div>
+    <div id="reshuffle-row" style="padding:10px 16px 0;display:none">
+      <button class="tb-out" style="width:100%" id="reshuffle-btn" onclick="reshuffleUnselected()">🔄 Reshuffle the rest</button>
+    </div>
     <div class="two-btn">
-      <button class="tb-out" onclick="loadAlloc()">↺ Shuffle</button>
+      <button class="tb-out" onclick="loadAlloc()">↺ Shuffle all</button>
       <button class="tb-grn" id="confirm-btn" onclick="confirmAlloc()">Confirm these →</button>
     </div>
   </div>
@@ -261,7 +282,7 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
     <div class="no-trip">
       <div class="nt-ic">📦</div>
       <div class="nt-t" id="cap-remind"></div>
-      <div class="nt-d">We'll match you with families in your preferred areas.</div>
+      <div class="nt-d">We'll match you with friends in your preferred areas.</div>
       <button onclick="anotherTrip()" class="cta" style="display:block;max-width:280px;margin:0 auto">Sign up for a trip →</button>
     </div>
   </div>
@@ -278,7 +299,7 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
 <script>
 var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4",EDGE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder";
 var sb=window.supabase?window.supabase.createClient(SB,KEY):null;
-var CU=null,DP=null,AT=null,ALLOC=null,ALLOC_META=null,SELAREAS=[],KEPT={},REMOVED=[];
+var CU=null,DP=null,AT=null,ALLOC=null,ALLOC_META=null,SELAREAS=[],KEPT={},REMOVED=[],TRIPCAP=null,ALL_AREAS=[],AVAILABILITY={},DESELECTED={};
 
 function showV(id){
   ["v-loading","v-login","v-reset","v-pending","v-dash"].forEach(function(v){
@@ -363,7 +384,7 @@ function renderActiveTrip(t){
   document.getElementById("active-card").innerHTML=
     '<div class="trip-card"><div class="trip-head"><span class="trip-ref">TRIP-'+t.id.slice(0,6).toUpperCase()+'</span><span class="badge badge-ok">✓ Confirmed</span></div>'+
     '<div class="tr"><span class="tr-l">Date</span><span class="tr-v">'+date+'</span></div>'+
-    '<div class="tr"><span class="tr-l">Deliveries</span><span class="tr-v">'+t.boxes_count+' families</span></div>'+
+    '<div class="tr"><span class="tr-l">Deliveries</span><span class="tr-v">'+t.boxes_count+' friends</span></div>'+
     '<div class="tr"><span class="tr-l">Vehicle</span><span class="tr-v">'+DP.car_make+' '+DP.car_model+'</span></div></div>';
 }
 
@@ -371,7 +392,7 @@ function renderPastTrip(t){
   var date=t.trip_date?new Date(t.trip_date).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"—";
   return '<div class="trip-card" style="margin:0 16px 10px"><div class="trip-head"><span class="trip-ref">TRIP-'+t.id.slice(0,6).toUpperCase()+'</span><span class="badge badge-done">✓ Done</span></div>'+
     '<div class="tr"><span class="tr-l">Date</span><span class="tr-v">'+date+'</span></div>'+
-    '<div class="tr"><span class="tr-l">Deliveries</span><span class="tr-v">'+t.boxes_count+' families</span></div></div>';
+    '<div class="tr"><span class="tr-l">Deliveries</span><span class="tr-v">'+t.boxes_count+' friends</span></div></div>';
 }
 
 async function showFamilies(){
@@ -395,7 +416,7 @@ function renderFamCard(row,num){
   var waHtml=wa?'<a href="https://wa.me/'+wa+'" target="_blank">Open WhatsApp 💬</a>':"—";
   var done=row.status==="delivered";
   var tags="";
-  if(app.diaper_size&&app.diaper_size!=="Not needed")tags+='<span class="tag tag-diaper">🧷 '+app.diaper_size+'</span>';
+  if(app.diaper_size&&app.diaper_size!=="Not needed")tags+='<span class="tag tag-diaper">👶 '+app.diaper_size+'</span>';
   if(app.formula&&app.formula!=="Not needed")tags+='<span class="tag tag-formula">🍼 '+app.formula+'</span>';
   if(app.household_size){var bx=Math.ceil(app.household_size/4);tags+='<span class="tag tag-boxes">📦 '+bx+' box'+(bx===1?"":"es")+'</span>';}
   if(app.household_size)tags+='<span class="tag tag-hh">'+app.household_size+' people</span>';
@@ -443,33 +464,92 @@ function showAreasStep(){
   document.getElementById("pnl-fams").style.display="none";
   document.getElementById("pnl-alloc").style.display="none";
   document.getElementById("pnl-areas").style.display="block";
+  if(!SELAREAS.length)SELAREAS=((DP&&DP.location_preferences)||[]).slice();
+  TRIPCAP=(DP&&DP.boxes_capacity)?DP.boxes_capacity:5;
+  document.getElementById("cap-val").textContent=TRIPCAP;
+  document.getElementById("cap-save").checked=true;
+  document.getElementById("areas-save").checked=false;
+  document.getElementById("trip-agrid").innerHTML='<div class="loading" style="padding:10px"><div class="spin"></div></div>';
+  loadAllAreas();
+}
+
+function adjCap(delta){
+  TRIPCAP=Math.max(1,(TRIPCAP||1)+delta);
+  document.getElementById("cap-val").textContent=TRIPCAP;
+}
+
+// One editable list for the whole picker — every canonical area, not just
+// the driver's own saved ones — with a live count of unassigned confirmed
+// friends tacked on where there are any. Lets a driver add an area they
+// didn't originally register for, for this trip (or permanently, if they
+// tick "save"), instead of relying only on the silent system-wide fallback.
+async function loadAllAreas(){
+  try{
+    var locRes=await sb.from("distribution_locations").select("name").eq("active",true).order("sort_order");
+    ALL_AREAS=(locRes.data||[]).map(function(r){return r.name;});
+  }catch(e){ ALL_AREAS=((DP&&DP.location_preferences)||[]).slice(); }
+  try{
+    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_available_areas"})});
+    var d=await r.json();
+    AVAILABILITY={};
+    (d.areas||[]).forEach(function(a){AVAILABILITY[a.area]=a.count;});
+  }catch(e){ AVAILABILITY={}; }
   buildTripAreaGrid();
 }
 
 function buildTripAreaGrid(){
-  var prefs=(DP&&DP.location_preferences)||[];
-  if(!SELAREAS.length)SELAREAS=prefs.slice();
-  document.getElementById("trip-agrid").innerHTML=prefs.length?prefs.map(function(a){
-    return '<div class="chip'+(SELAREAS.indexOf(a)!==-1?" on":"")+'" onclick="togTripArea(this,\''+a.replace(/'/g,"\\'")+'\')">'+a+'</div>';
-  }).join(""):'<div style="font-size:12px;color:#bbb;font-weight:600;padding:8px 0">No areas on file — contact FaF to update your preferences.</div>';
+  if(!ALL_AREAS.length){
+    document.getElementById("trip-agrid").innerHTML='<div style="font-size:12px;color:#bbb;font-weight:600;padding:8px 0">Could not load the area list — try again in a moment.</div>';
+    return;
+  }
+  // Areas you've already picked first, then everywhere else, so your
+  // current selection doesn't jump around as you change it.
+  var sorted=ALL_AREAS.slice().sort(function(a,b){
+    var aSel=SELAREAS.indexOf(a)!==-1,bSel=SELAREAS.indexOf(b)!==-1;
+    if(aSel!==bSel)return aSel?-1:1;
+    return 0;
+  });
+  document.getElementById("trip-agrid").innerHTML=sorted.map(function(a){
+    var cnt=AVAILABILITY[a];
+    var label=a+(cnt?" ("+cnt+")":"");
+    return '<div class="chip'+(SELAREAS.indexOf(a)!==-1?" on":"")+'" onclick="togTripArea(this,\''+a.replace(/'/g,"\\'")+'\')">'+label+'</div>';
+  }).join("");
   updTripAreaStat();
 }
 
 function togTripArea(el,a){
   if(el.classList.contains("on")){SELAREAS=SELAREAS.filter(function(x){return x!==a;});el.classList.remove("on");}
-  else{SELAREAS.push(a);el.classList.add("on");}
+  else{
+    if(SELAREAS.length>=6){updTripAreaStat();return;}
+    SELAREAS.push(a);el.classList.add("on");
+  }
   updTripAreaStat();
 }
 
 function updTripAreaStat(){
   var n=SELAREAS.length,el=document.getElementById("trip-astat"),btn=document.getElementById("areas-continue-btn");
   if(n===0){el.textContent="Select at least 1 area.";el.className="area-stat warn";btn.disabled=true;}
+  else if(n>=6){el.textContent="✓ "+n+" areas — that's the max for now.";el.className="area-stat ok";btn.disabled=false;}
   else{el.textContent=n+" area"+(n===1?"":"s")+" selected for this trip.";el.className="area-stat ok";btn.disabled=false;}
 }
 
-function continueToAlloc(){
+async function continueToAlloc(){
   document.getElementById("pnl-areas").style.display="none";
   document.getElementById("pnl-alloc").style.display="block";
+  if(document.getElementById("cap-save").checked && DP && TRIPCAP!==DP.boxes_capacity){
+    try{
+      await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"update_driver_capacity",driver_email:CU.email,boxes_capacity:TRIPCAP})});
+      DP.boxes_capacity=TRIPCAP;
+      var capRemind=document.getElementById("cap-remind");
+      if(capRemind)capRemind.textContent="Your "+DP.car_make+" "+DP.car_model+" fits "+DP.boxes_capacity+" boxes.";
+    }catch(e){ /* not fatal — still proceed using TRIPCAP for this trip regardless */ }
+  }
+  if(document.getElementById("areas-save").checked && DP){
+    try{
+      await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"update_driver_areas",driver_email:CU.email,areas:SELAREAS})});
+      DP.location_preferences=SELAREAS.slice();
+    }catch(e){ /* not fatal — still proceed using SELAREAS for this trip regardless */ }
+  }
   loadAlloc();
 }
 
@@ -480,13 +560,13 @@ function backToAreas(){
 
 // ── ALLOCATION (full reshuffle) ──────────────────────────────────────────
 async function loadAlloc(){
-  KEPT={};REMOVED=[];ALLOC_META=null;
+  KEPT={};REMOVED=[];DESELECTED={};ALLOC_META=null;
   document.getElementById("alloc-n").textContent="…";
   document.getElementById("alloc-areas").textContent="Searching your areas…";
   document.getElementById("alloc-list").innerHTML='<div class="loading" style="padding:20px"><div class="spin"></div></div>';
   document.getElementById("confirm-btn").disabled=false;document.getElementById("confirm-btn").textContent="Confirm these →";
   try{
-    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_boxes",driver_email:CU.email,areas:SELAREAS})});
+    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_boxes",driver_email:CU.email,areas:SELAREAS,capacity_override:TRIPCAP})});
     var d=await r.json();
     ALLOC_META=d;
     (d.families||[]).forEach(function(f){KEPT[f.id]=f;});
@@ -502,18 +582,45 @@ function renderAlloc(){
   document.getElementById("alloc-n").textContent=fams.length;
   var areas=[...new Set(fams.map(function(f){return f.area||"?";}))];
   var capTxt=ALLOC_META&&ALLOC_META.driver_capacity!=null?(" · "+boxesUsed+"/"+ALLOC_META.driver_capacity+" boxes"):"";
+  var fallbackNote=ALLOC_META&&ALLOC_META.used_fallback_areas?" — none of your chosen areas had matches, so we widened the search":"";
   document.getElementById("alloc-areas").textContent=fams.length
-    ?"Areas: "+areas.slice(0,5).join(", ")+(areas.length>5?" +"+(areas.length-5)+" more":"")+capTxt
-    :"No families available in these areas right now.";
+    ?"Areas: "+areas.slice(0,5).join(", ")+(areas.length>5?" +"+(areas.length-5)+" more":"")+capTxt+fallbackNote
+    :"No friends available right now — every confirmed friend already has a driver, or there's nothing left to deliver.";
   document.getElementById("alloc-list").innerHTML=fams.length===0
-    ?'<div style="text-align:center;padding:20px 24px;font-size:13px;color:#888;font-weight:600">No families available right now. Try different areas or check back soon!</div>'
+    ?'<div style="text-align:center;padding:20px 24px;font-size:13px;color:#888;font-weight:600">No friends available right now. Check back soon!</div>'
     :fams.map(function(f){
         var bx=f.boxes_needed||1;
-        var tags=[bx+" box"+(bx===1?"":"es"),f.diaper_size&&f.diaper_size!=="Not needed"?"🧷 Nappies":"",f.formula&&f.formula!=="Not needed"?"🍼 Formula":"",f.is_sticky?"🔁 Your family last time":"",f.family_group_size>1?"🔗 "+f.family_group_size+" deliveries, same household":""].filter(Boolean).join(" · ");
-        return '<div class="alloc-fam" id="af-'+f.id+'"><button class="af-x" onclick="removeAllocFam(\''+f.id+'\')" title="Remove and match again">✕</button>'
+        var off=!!DESELECTED[f.id];
+        var tags=[bx+" box"+(bx===1?"":"es"),f.diaper_size&&f.diaper_size!=="Not needed"?"👶 Nappies":"",f.formula&&f.formula!=="Not needed"?"🍼 Formula":"",f.is_sticky?"🔁 Your friend last time":"",f.family_group_size>1?"🔗 "+f.family_group_size+" deliveries, same household":"",f.outside_selected_areas?"📍 Outside your chosen areas":""].filter(Boolean).join(" · ");
+        return '<div class="alloc-fam'+(off?" af-off":"")+'" id="af-'+f.id+'" onclick="toggleDeselect(\''+f.id+'\')"><button class="af-x" onclick="event.stopPropagation();removeAllocFam(\''+f.id+'\')" title="Remove and match again">✕</button>'
           +'<div class="af-area">📍 '+(f.area||"Unknown")+'</div>'
-          +'<div class="af-sub">'+(f.household_size?"Household of "+f.household_size+" · ":"")+tags+'</div></div>';
+          +'<div class="af-sub">'+(f.household_size?"Household of "+f.household_size+" · ":"")+tags+'</div>'
+          +(off?'<div class="af-off-lbl">Not confirming this time — tap to bring back</div>':'')
+          +'</div>';
       }).join("");
+  var selectedCount=fams.length-Object.keys(DESELECTED).length;
+  var confirmBtn=document.getElementById("confirm-btn");
+  confirmBtn.textContent=selectedCount===fams.length?"Confirm these →":"Confirm selected ("+selectedCount+") →";
+  var deselCount=Object.keys(DESELECTED).filter(function(id){return KEPT[id];}).length;
+  document.getElementById("reshuffle-row").style.display=deselCount>0?"block":"none";
+  if(deselCount>0)document.getElementById("reshuffle-btn").textContent="🔄 Reshuffle the rest ("+deselCount+")";
+}
+
+// Tap a card to leave it out of THIS confirmation without removing it
+// outright — different from ✕, which swaps it for a different friend
+// immediately. Deselected cards get batch-reshuffled together via the
+// "Reshuffle the rest" button below the list.
+function toggleDeselect(id){
+  if(DESELECTED[id])delete DESELECTED[id];
+  else DESELECTED[id]=true;
+  renderAlloc();
+}
+
+async function reshuffleUnselected(){
+  var idsToReplace=Object.keys(DESELECTED).filter(function(id){return KEPT[id];});
+  if(!idsToReplace.length)return;
+  idsToReplace.forEach(function(id){ delete KEPT[id]; delete DESELECTED[id]; REMOVED.push(id); });
+  await rematchRemoved();
 }
 
 // ── REMOVE ONE CARD + RE-MATCH JUST THAT SLOT ────────────────────────────
@@ -521,6 +628,7 @@ function renderAlloc(){
 // replacement sized to whatever boxes the removed family freed up.
 function removeAllocFam(id){
   delete KEPT[id];
+  delete DESELECTED[id];
   REMOVED.push(id);
   rematchRemoved();
 }
@@ -544,8 +652,8 @@ async function rematchRemoved(){
 }
 
 async function confirmAlloc(){
-  var fams=Object.values(KEPT);
-  if(!fams.length){alert("No families to confirm.");return;}
+  var fams=Object.values(KEPT).filter(function(f){return !DESELECTED[f.id];});
+  if(!fams.length){alert("No friends to confirm.");return;}
   var btn=document.getElementById("confirm-btn");
   btn.disabled=true;btn.textContent="Confirming…";
   try{
