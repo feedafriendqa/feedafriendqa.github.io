@@ -323,9 +323,24 @@ async function init(){
     if(ev==="SIGNED_IN"&&sess){CU=sess.user;await loadDriver();}
     else if(ev==="SIGNED_OUT"){CU=null;setHero("login");showV("v-login");}
   });
-  var r=await sb.auth.getSession();
-  if(r.data&&r.data.session){CU=r.data.session.user;await loadDriver();}
-  else{setHero("login");showV("v-login");}
+  // getSession() can throw (not just return {error}) if the locally stored
+  // refresh token is stale/invalid — without this try/catch, that exception
+  // was uncaught and left the page stranded on the static "Loading…" markup
+  // forever, with no way back to the login screen short of a manual
+  // localStorage wipe. A 10s timeout guards against the call hanging with
+  // no response at all (flaky network) doing the same thing.
+  try{
+    var r=await Promise.race([
+      sb.auth.getSession(),
+      new Promise(function(_,rej){setTimeout(function(){rej(new Error("Session check timed out"));},10000);})
+    ]);
+    if(r.data&&r.data.session){CU=r.data.session.user;await loadDriver();}
+    else{setHero("login");showV("v-login");}
+  }catch(e){
+    console.error("getSession failed, clearing stale session:",e);
+    try{await sb.auth.signOut();}catch(e2){/* best effort — localStorage may already be corrupt */}
+    setHero("login");showV("v-login");
+  }
 }
 
 async function signIn(){
@@ -403,8 +418,23 @@ async function showFamilies(){
   var r=await sb.from("trip_assignments")
     .select("*,food_box_applications(full_name_en,full_name,whatsapp,zone,street,building,unit,area,diaper_size,formula,household_size)")
     .eq("trip_id",AT.id);
+  // r.data can come back [] either because the trip genuinely has no rows,
+  // or because RLS quietly filtered everything out (Postgres returns an
+  // empty set for a denied read, not an error) — surfacing r.error here
+  // is the only way to tell those two cases apart instead of always
+  // showing "0 deliveries".
+  if(r.error){
+    document.getElementById("fam-count-lbl").textContent="Could not load";
+    listEl.innerHTML='<div style="color:#c0392b;font-size:12px;font-weight:700;padding:0 20px 20px">Could not load deliveries: '+r.error.message+'</div>';
+    console.error("trip_assignments fetch failed:",r.error);
+    return;
+  }
   var rows=r.data||[];
   document.getElementById("fam-count-lbl").textContent=rows.length+" deliveries";
+  if(rows.length===0){
+    listEl.innerHTML='<div style="text-align:center;padding:20px 24px;font-size:13px;color:#888;font-weight:600">No deliveries found for this trip — this trip has '+(AT.boxes_count||"?")+' boxes recorded, so if that number is non-zero this is likely a permissions issue, not an empty trip.</div>';
+    return;
+  }
   listEl.innerHTML=rows.map(function(row,i){return renderFamCard(row,i+1);}).join("");
 }
 
