@@ -298,7 +298,18 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
 </div></body>
 <script>
 var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4",EDGE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder";
-var sb=window.supabase?window.supabase.createClient(SB,KEY):null;
+// Works around a known supabase-js deadlock (supabase/supabase-js#1594,
+// #2013, #2111): internally it serializes every auth call (getSession,
+// signOut, etc.) through navigator.locks, and if that browser-level lock
+// is ever left held — e.g. by a previous tab/load that didn't unwind
+// cleanly — every future auth call queues behind it and hangs FOREVER,
+// with literally zero network requests ever fired (which is exactly what
+// "supabase.co" showing nothing in the Network tab confirmed). This
+// dashboard only ever runs in one tab at a time, so it doesn't need that
+// cross-tab coordination — swapping in a no-op lock sidesteps the bug
+// entirely instead of waiting on a fix upstream.
+function noOpLock(name,acquireTimeout,fn){return fn();}
+var sb=window.supabase?window.supabase.createClient(SB,KEY,{auth:{lock:noOpLock}}):null;
 var CU=null,DP=null,AT=null,ALLOC=null,ALLOC_META=null,SELAREAS=[],KEPT={},REMOVED=[],TRIPCAP=null,ALL_AREAS=[],AVAILABILITY={},DESELECTED={};
 
 function showV(id){
@@ -337,8 +348,10 @@ async function init(){
     if(r.data&&r.data.session){CU=r.data.session.user;await loadDriver();}
     else{setHero("login");showV("v-login");}
   }catch(e){
-    console.error("getSession failed, clearing stale session:",e);
-    try{await sb.auth.signOut();}catch(e2){/* best effort — localStorage may already be corrupt */}
+    console.error("getSession failed/timed out, clearing stored session directly:",e);
+    // Deliberately NOT calling sb.auth.signOut() here — it goes through the
+    // same lock mechanism that just deadlocked, so it would hang too.
+    try{localStorage.removeItem("sb-xbxagukdvgyaoqvbqoic-auth-token");}catch(e2){/* best effort */}
     setHero("login");showV("v-login");
   }
 }
