@@ -154,6 +154,9 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
 <!-- ── LOADING ── -->
 <div class="v on" id="v-loading">
   <div class="loading"><div class="spin"></div><div class="spin-lbl" id="loading-lbl">Loading…</div></div>
+  <div id="stuck-reset" style="display:none;text-align:center;padding:0 24px">
+    <button onclick="resetSession()" class="out-btn" style="margin:0 auto;max-width:240px">Taking too long? Tap to reset & sign in again</button>
+  </div>
 </div>
 
 <!-- ── LOGIN ── -->
@@ -312,12 +315,30 @@ function noOpLock(name,acquireTimeout,fn){return fn();}
 var sb=window.supabase?window.supabase.createClient(SB,KEY,{auth:{lock:noOpLock}}):null;
 var CU=null,DP=null,AT=null,ALLOC=null,ALLOC_META=null,SELAREAS=[],KEPT={},REMOVED=[],TRIPCAP=null,ALL_AREAS=[],AVAILABILITY={},DESELECTED={};
 
+var STUCK_TIMER=null;
 function showV(id){
   ["v-loading","v-login","v-reset","v-pending","v-dash"].forEach(function(v){
     document.getElementById(v).className="v"+(v===id?" on":"");
   });
   document.getElementById("l-btn")&&(document.getElementById("l-btn").parentElement.style.display=id==="v-login"?"block":"none");
   document.getElementById("so-btn").style.display=(id==="v-dash"||id==="v-pending")?"block":"none";
+  // Surfaces a manual escape hatch if loading hangs (e.g. a stuck browser
+  // lock or a slow/blocked query) — same fix as resetSession() below, just
+  // reachable without opening DevTools. Cleared whenever we leave loading
+  // normally so it doesn't flash on every ordinary quick load.
+  if(STUCK_TIMER){clearTimeout(STUCK_TIMER);STUCK_TIMER=null;}
+  if(id==="v-loading"){
+    document.getElementById("stuck-reset").style.display="none";
+    STUCK_TIMER=setTimeout(function(){document.getElementById("stuck-reset").style.display="block";},5000);
+  }
+}
+function resetSession(){
+  // Clears the locally stored session directly via localStorage rather
+  // than sb.auth.signOut() — signOut() goes through the same browser lock
+  // that can deadlock getSession() in the first place, so it isn't a safe
+  // way out of a stuck loading screen.
+  try{localStorage.removeItem("sb-xbxagukdvgyaoqvbqoic-auth-token");}catch(e){/* best effort */}
+  location.reload();
 }
 
 function showDashMain(){
