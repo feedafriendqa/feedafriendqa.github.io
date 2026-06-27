@@ -278,6 +278,24 @@ body.ar{direction:rtl;}
       </div>
     </div>
 
+    <div id="pending-docs-section" style="display:none;">
+      <div class="field">
+        <label id="lbl-pending-docs">Help speed up your review</label>
+        <div class="upload-zone" id="salary-proof-zone" onclick="document.getElementById('salary-proof-input').click()">
+          <div class="upload-icon">💼</div>
+          <p id="salary-proof-label">Tap to upload salary proof</p>
+          <input type="file" id="salary-proof-input" accept="image/*,.pdf" style="display:none" onchange="handlePendingDoc(this,'salary_proof')">
+        </div>
+        <p id="salary-proof-done" style="display:none;color:#1D7A47;font-weight:700;font-size:13px;margin:4px 0 12px">✓ Salary proof on file</p>
+        <div class="upload-zone" id="rent-proof-zone" onclick="document.getElementById('rent-proof-input').click()">
+          <div class="upload-icon">🏠</div>
+          <p id="rent-proof-label">Tap to upload rent proof</p>
+          <input type="file" id="rent-proof-input" accept="image/*,.pdf" style="display:none" onchange="handlePendingDoc(this,'rent_proof')">
+        </div>
+        <p id="rent-proof-done" style="display:none;color:#1D7A47;font-weight:700;font-size:13px;margin:4px 0 0">✓ Rent proof on file</p>
+      </div>
+    </div>
+
     <div class="allowance-wrap" id="allowance-wrap" style="display:none;">
       <div class="allowance-header">
         <span id="lbl-boxes">Boxes received</span>
@@ -319,19 +337,16 @@ body.ar{direction:rtl;}
         </div>
       </div>
 
-      <div class="field">
-        <label id="lbl-needs-diapers">Does anyone in your household currently need diapers?</label>
-        <div class="loc-choice">
-          <button type="button" class="loc-btn" id="diaper-yes-btn" onclick="chooseNeedsDiapers(true)">Yes</button>
-          <button type="button" class="loc-btn" id="diaper-no-btn" onclick="chooseNeedsDiapers(false)">No</button>
+      <div class="field" id="diaper-question-block">
+        <label id="lbl-needs-diapers">Update diaper size if your child has grown</label>
+        <div class="diaper-pills" id="reapply-diaper-pills"></div>
+        <div class="check-item" style="margin-top:8px">
+          <input type="checkbox" id="chk-no-diapers" onchange="toggleNoDiapers()">
+          <label for="chk-no-diapers" id="lbl-chk-no-diapers">We no longer need diapers</label>
         </div>
       </div>
-      <div class="field" id="diaper-size-block" style="display:none;">
-        <label id="lbl-diaper-size">What size?</label>
-        <div class="diaper-pills" id="reapply-diaper-pills"></div>
-      </div>
 
-      <div class="field">
+      <div class="field" id="formula-question-block">
         <label id="lbl-needs-formula">Is there a baby aged 1 or under who needs formula?</label>
         <div class="loc-choice">
           <button type="button" class="loc-btn" id="formula-yes-btn" onclick="chooseNeedsFormula(true)">Yes</button>
@@ -342,6 +357,20 @@ body.ar{direction:rtl;}
         <label id="lbl-formula-brand">Any particular brand preference?</label>
         <input type="text" id="inp-formula-brand" placeholder="e.g. Similac">
       </div>
+
+      <div class="field" id="pregnancy-block" style="display:none;">
+        <label id="lbl-pregnant">Is anyone in your household currently pregnant?</label>
+        <div class="loc-choice">
+          <button type="button" class="loc-btn" id="pregnant-yes-btn" onclick="choosePregnant(true)">Yes</button>
+          <button type="button" class="loc-btn" id="pregnant-no-btn" onclick="choosePregnant(false)">No</button>
+        </div>
+      </div>
+      <div class="field" id="due-date-block" style="display:none;">
+        <label id="lbl-due-date">Expected due date (if known)</label>
+        <input type="date" id="inp-due-date">
+      </div>
+
+      <p id="anticipated-date-note" style="font-size:12px;color:#5a7050;font-weight:700;margin:0 0 10px"></p>
 
       <div class="check-item">
         <input type="checkbox" id="chk-need" onchange="updateReapplyBtn()">
@@ -473,9 +502,9 @@ var STATUS_CONTENT = {
     ar: { title: "تم استلام طلبك", msg: "لقد استلمنا طلبك وسنتواصل معك قريباً. شكراً لصبرك." }
   },
   pending: {
-    icon: '📞',
-    en: { title: "We've been in touch", msg: "We have made contact with you and your application is under review. Please wait for your approval confirmation." },
-    ar: { title: "جارٍ التواصل معك", msg: "لقد تواصلنا معك وطلبك قيد المراجعة. يرجى انتظار تأكيد الموافقة." }
+    icon: '⏳',
+    en: { title: "Application received", msg: "We've received your application — thank you. Applications typically take 3–4 weeks to process. Adding your salary and rent proof below (if you haven't already) can help speed up the review." },
+    ar: { title: "تم استلام طلبك", msg: "لقد استلمنا طلبك — شكراً لك. تستغرق معالجة الطلبات عادةً من 3 إلى 4 أسابيع. إضافة إثبات الراتب والإيجار أدناه (إن لم تكن قد أرفقتهما) قد تساعد في تسريع المراجعة." }
   },
   approved: {
     icon: '✅',
@@ -868,6 +897,25 @@ function showStatusScreen(status, data, canReapply) {
   document.getElementById('status-title').textContent = langContent.title;
   document.getElementById('status-msg').textContent = langContent.msg;
 
+  // Document upload — only relevant before a decision has been made.
+  // Independent of canReapply, since new/pending applicants are exactly
+  // the ones who can't reapply yet.
+  var pendingDocsSection = document.getElementById('pending-docs-section');
+  if (data.status === 'new' || data.status === 'pending') {
+    pendingDocsSection.style.display = 'block';
+    document.getElementById('lbl-pending-docs').textContent = ar ? 'ساعدنا على تسريع مراجعة طلبك' : 'Help speed up your review';
+    document.getElementById('salary-proof-label').textContent = ar ? 'اضغط لرفع إثبات الراتب' : 'Tap to upload salary proof';
+    document.getElementById('rent-proof-label').textContent = ar ? 'اضغط لرفع إثبات الإيجار' : 'Tap to upload rent proof';
+    document.getElementById('salary-proof-done').textContent = ar ? '✓ إثبات الراتب متوفر' : '✓ Salary proof on file';
+    document.getElementById('rent-proof-done').textContent = ar ? '✓ إثبات الإيجار متوفر' : '✓ Rent proof on file';
+    document.getElementById('salary-proof-zone').style.display = data.has_salary_proof ? 'none' : 'block';
+    document.getElementById('salary-proof-done').style.display = data.has_salary_proof ? 'block' : 'none';
+    document.getElementById('rent-proof-zone').style.display = data.has_rent_proof ? 'none' : 'block';
+    document.getElementById('rent-proof-done').style.display = data.has_rent_proof ? 'block' : 'none';
+  } else {
+    pendingDocsSection.style.display = 'none';
+  }
+
   // Allowance bar (show if has boxes data)
   var allowanceWrap = document.getElementById('allowance-wrap');
   if (data.boxes_received !== undefined && data.max_boxes) {
@@ -908,17 +956,43 @@ function showStatusScreen(status, data, canReapply) {
     document.getElementById('loc-no-btn').textContent = ar ? 'لا، انتقلت' : "No, I've moved";
     document.getElementById('reapply-plate-label').textContent = ar ? 'اضغط لرفع لوحة عنوانك الجديدة' : 'Tap to upload your new blue address plate';
     document.getElementById('lbl-new-addr').textContent = ar ? 'العنوان الجديد' : 'New address';
-    document.getElementById('lbl-needs-diapers').textContent = ar ? 'هل يحتاج أي فرد في أسرتك إلى حفاضات حالياً؟' : 'Does anyone in your household currently need diapers?';
-    document.getElementById('diaper-yes-btn').textContent = ar ? 'نعم' : 'Yes';
-    document.getElementById('diaper-no-btn').textContent = ar ? 'لا' : 'No';
-    document.getElementById('lbl-diaper-size').textContent = ar ? 'ما هو المقاس؟' : 'What size?';
+
+    // Each question only appears when it's actually relevant — asking
+    // about diapers/formula/pregnancy unconditionally on every reapply,
+    // regardless of whether it could possibly apply, is what this
+    // replaces. doReapply() below checks these same flags again before
+    // deciding what to send, so an ineligible/hidden question can never
+    // accidentally overwrite a real existing answer with a blank one.
+    diaperQuestionVisible = !!(data.already_has_diapers && data.diaper_eligible_child);
+    formulaQuestionVisible = !!(!data.already_has_formula && data.formula_eligible_baby);
+    pregnancyQuestionVisible = !!data.adult_female_present;
+
+    document.getElementById('diaper-question-block').style.display = diaperQuestionVisible ? 'block' : 'none';
+    document.getElementById('lbl-needs-diapers').textContent = ar ? 'حدّث مقاس الحفاضات إذا كبر طفلك' : 'Update diaper size if your child has grown';
+    document.getElementById('lbl-chk-no-diapers').textContent = ar ? 'لم نعد بحاجة إلى حفاضات' : 'We no longer need diapers';
+
+    document.getElementById('formula-question-block').style.display = formulaQuestionVisible ? 'block' : 'none';
     document.getElementById('lbl-needs-formula').textContent = ar ? 'هل يوجد طفل بعمر سنة أو أقل يحتاج إلى حليب أطفال؟' : 'Is there a baby aged 1 or under who needs formula?';
     document.getElementById('formula-yes-btn').textContent = ar ? 'نعم' : 'Yes';
     document.getElementById('formula-no-btn').textContent = ar ? 'لا' : 'No';
     document.getElementById('lbl-formula-brand').textContent = ar ? 'هل لديك تفضيل لنوع معين؟' : 'Any particular brand preference?';
+
+    document.getElementById('pregnancy-block').style.display = pregnancyQuestionVisible ? 'block' : 'none';
+    document.getElementById('lbl-pregnant').textContent = ar ? 'هل توجد حالة حمل حالياً في أسرتك؟' : 'Is anyone in your household currently pregnant?';
+    document.getElementById('pregnant-yes-btn').textContent = ar ? 'نعم' : 'Yes';
+    document.getElementById('pregnant-no-btn').textContent = ar ? 'لا' : 'No';
+    document.getElementById('lbl-due-date').textContent = ar ? 'تاريخ الولادة المتوقع (إن كان معروفاً)' : 'Expected due date (if known)';
+
     document.getElementById('lbl-chk-need').textContent = ar ? 'أؤكد أنني لا أزال بحاجة إلى دعم غذائي.' : 'I confirm I still need food support.';
     resetLocationChoice();
     resetDiaperFormulaChoice(data.diaper_size, data.formula);
+    resetPregnancyChoice(data.is_pregnant);
+
+    var anticipatedMonth = new Date();
+    anticipatedMonth.setMonth(anticipatedMonth.getMonth() + 1);
+    var monthStr = anticipatedMonth.toLocaleDateString(ar ? 'ar-QA' : 'en-GB', { year: 'numeric', month: 'long' });
+    document.getElementById('anticipated-date-note').textContent = (ar ? ' التوزيع القادم المتوقع: ' : 'Anticipated next distribution: ') + monthStr;
+
     document.getElementById('chk-need').checked = false;
     document.getElementById('reapply-btn').disabled = true;
     document.getElementById('reapply-btn-text').textContent = ar ? 'طلب صندوق الطعام ←' : 'Request my food box →';
@@ -937,6 +1011,14 @@ var reapplyPlateFile = null;
 var diaperChoice = null; // 'yes' | 'no' | null
 var diaperSizeVal = null;
 var formulaChoice = null; // 'yes' | 'no' | null
+var pregnantChoice = null; // 'yes' | 'no' | null
+// Set by showStatusScreen each time it runs — doReapply() reads these to
+// decide whether to include a field in the update at all, so a question
+// that was never shown (ineligible) can't send a value that clears a real
+// existing answer.
+var diaperQuestionVisible = false;
+var formulaQuestionVisible = false;
+var pregnancyQuestionVisible = false;
 
 var DIAPER_SIZES = ['NB (Newborn)', 'S (Size 1)', 'M (Size 2)', 'L (Size 3)', 'XL (Size 4)', 'XXL (Size 5)'];
 
@@ -1024,12 +1106,11 @@ function resetLocationChoice() {
 }
 
 function resetDiaperFormulaChoice(existingDiaperSize, existingFormula) {
-  diaperChoice = null;
+  diaperChoice = null; // null = still need diapers (default whenever this question is shown at all); 'no' = opted out via checkbox
   diaperSizeVal = null;
   formulaChoice = null;
-  document.getElementById('diaper-yes-btn').classList.remove('selected');
-  document.getElementById('diaper-no-btn').classList.remove('selected');
-  document.getElementById('diaper-size-block').style.display = 'none';
+  document.getElementById('chk-no-diapers').checked = false;
+  document.getElementById('reapply-diaper-pills').style.display = 'flex';
   document.getElementById('formula-yes-btn').classList.remove('selected');
   document.getElementById('formula-no-btn').classList.remove('selected');
   document.getElementById('formula-brand-block').style.display = 'none';
@@ -1062,12 +1143,16 @@ function selectReapplyDiaper(pill) {
   updateReapplyBtn();
 }
 
-function chooseNeedsDiapers(isYes) {
-  diaperChoice = isYes ? 'yes' : 'no';
-  document.getElementById('diaper-yes-btn').classList.toggle('selected', isYes);
-  document.getElementById('diaper-no-btn').classList.toggle('selected', !isYes);
-  document.getElementById('diaper-size-block').style.display = isYes ? 'block' : 'none';
-  if (!isYes) diaperSizeVal = null;
+// Replaces the old yes/no "does anyone need diapers" toggle — eligibility
+// already confirms they do (that's the only reason this question is
+// visible at all), so the real question is just the size, with this as a
+// lightweight escape hatch for "actually, not anymore" (e.g. potty-trained
+// early, despite still being under 4).
+function toggleNoDiapers() {
+  var optedOut = document.getElementById('chk-no-diapers').checked;
+  diaperChoice = optedOut ? 'no' : null;
+  document.getElementById('reapply-diaper-pills').style.display = optedOut ? 'none' : 'flex';
+  if (optedOut) diaperSizeVal = null;
   updateReapplyBtn();
 }
 
@@ -1077,6 +1162,25 @@ function chooseNeedsFormula(isYes) {
   document.getElementById('formula-no-btn').classList.toggle('selected', !isYes);
   document.getElementById('formula-brand-block').style.display = isYes ? 'block' : 'none';
   updateReapplyBtn();
+}
+
+function choosePregnant(isYes) {
+  pregnantChoice = isYes ? 'yes' : 'no';
+  document.getElementById('pregnant-yes-btn').classList.toggle('selected', isYes);
+  document.getElementById('pregnant-no-btn').classList.toggle('selected', !isYes);
+  document.getElementById('due-date-block').style.display = isYes ? 'block' : 'none';
+  updateReapplyBtn();
+}
+
+function resetPregnancyChoice(existingIsPregnant) {
+  pregnantChoice = null;
+  document.getElementById('pregnant-yes-btn').classList.remove('selected');
+  document.getElementById('pregnant-no-btn').classList.remove('selected');
+  document.getElementById('due-date-block').style.display = 'none';
+  document.getElementById('inp-due-date').value = '';
+  // Pre-fill from whatever's already on file, same convention as diaper
+  // size / formula brand above — they can change it either way.
+  if (existingIsPregnant) choosePregnant(true);
 }
 
 function chooseStillHere(isHere) {
@@ -1148,11 +1252,51 @@ function handleReapplyPlate(input) {
   });
 }
 
+// Reuses the same generic upload_document action the original application
+// form uses for salary proof — rent proof is new (doc_key 'rent_proof'
+// writes to rent_proof_path, added alongside this feature), but the upload
+// mechanism itself didn't need anything new built for it.
+function handlePendingDoc(input, docKey) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var ar = currentLang === 'ar';
+  var zoneEl = document.getElementById(docKey.replace('_', '-') + '-zone');
+  var doneEl = document.getElementById(docKey.replace('_', '-') + '-done');
+  var originalLabel = zoneEl.querySelector('p').textContent;
+  zoneEl.querySelector('p').textContent = ar ? '⏳ جاري الرفع…' : '⏳ Uploading…';
+
+  fileToBase64(file).then(function(b64) {
+    return fetch(EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+      body: JSON.stringify({
+        type: 'upload_document',
+        application_id: currentApp.id,
+        doc_key: docKey,
+        file_base64: b64,
+        media_type: file.type || 'image/jpeg'
+      })
+    });
+  }).then(function(r) { return r.json(); }).then(function(raw) {
+    if (raw.data && raw.data.ok) {
+      zoneEl.style.display = 'none';
+      doneEl.style.display = 'block';
+    } else {
+      zoneEl.querySelector('p').textContent = originalLabel;
+      alert(ar ? 'تعذّر رفع الملف. حاول مرة أخرى.' : 'Could not upload the file. Please try again.');
+    }
+  }).catch(function() {
+    zoneEl.querySelector('p').textContent = originalLabel;
+    alert(ar ? 'خطأ في الاتصال.' : 'Connection error. Please try again.');
+  });
+}
+
 function updateReapplyBtn() {
   var locationOk = locationChoice === 'here' || (locationChoice === 'moved' && movedAddressConfirmed);
-  var diaperOk = diaperChoice === 'no' || (diaperChoice === 'yes' && !!diaperSizeVal);
-  var formulaOk = formulaChoice === 'yes' || formulaChoice === 'no';
-  var ok = locationOk && diaperOk && formulaOk && document.getElementById('chk-need').checked;
+  var diaperOk = !diaperQuestionVisible || diaperChoice === 'no' || !!diaperSizeVal;
+  var formulaOk = !formulaQuestionVisible || formulaChoice === 'yes' || formulaChoice === 'no';
+  var pregnantOk = !pregnancyQuestionVisible || pregnantChoice === 'yes' || pregnantChoice === 'no';
+  var ok = locationOk && diaperOk && formulaOk && pregnantOk && document.getElementById('chk-need').checked;
   document.getElementById('reapply-btn').disabled = !ok;
 }
 
@@ -1165,18 +1309,31 @@ async function doReapply() {
   document.getElementById('reapply-btn-text').textContent = ar ? 'جاري التأكيد...' : 'Confirming...';
   errEl.classList.remove('show');
 
+  // Each field is only included when its question was actually shown and
+  // eligible — omitted entirely otherwise, never sent as null/cleared, so
+  // a hidden/ineligible question can't wipe a real existing answer.
+  // (diaperChoice is never literally 'yes' in this model — null means
+  // "still need it, size below applies"; 'no' means opted out via the
+  // checkbox — so the value sent has to be driven off that, not a 'yes' check.)
+  var extrasPayload = { type: 'update_reapply_extras', application_id: currentApp.id };
+  if (diaperQuestionVisible) {
+    extrasPayload.diaper_size = diaperChoice === 'no' ? 'Not needed' : diaperSizeVal;
+  }
+  if (formulaQuestionVisible) {
+    var formulaBrand = document.getElementById('inp-formula-brand').value.trim();
+    extrasPayload.formula = formulaChoice === 'yes' ? (formulaBrand || 'Yes') : 'Not needed';
+  }
+  if (pregnancyQuestionVisible) {
+    extrasPayload.is_pregnant = pregnantChoice === 'yes';
+    extrasPayload.due_date = pregnantChoice === 'yes' ? (document.getElementById('inp-due-date').value || null) : null;
+  }
+
   // Fire-and-forget: this is supplementary info, not eligibility-critical,
   // so it shouldn't block or risk the actual box confirmation below.
-  var formulaBrand = document.getElementById('inp-formula-brand').value.trim();
   fetch(EDGE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
-    body: JSON.stringify({
-      type: 'update_reapply_extras',
-      application_id: currentApp.id,
-      diaper_size: diaperChoice === 'yes' ? diaperSizeVal : null,
-      formula: formulaChoice === 'yes' ? (formulaBrand || 'Yes') : 'Not needed'
-    })
+    body: JSON.stringify(extrasPayload)
   }).catch(function() {});
 
   try {
