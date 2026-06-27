@@ -547,6 +547,17 @@ function setLang(lang) {
   document.getElementById('inp-qid').placeholder = lang === 'ar' ? '٢٨xxxxxxxxx' : '28xxxxxxxxx';
   document.getElementById('inp-wa').placeholder = lang === 'ar' ? '+٩٧٤ ٥xxx xxxx' : '+974 5xxx xxxx';
   refreshLegacyToggleText();
+
+  // The static labels above are all the setLang() loop ever touched — none
+  // of the actual status content (greeting, title, message) was, since
+  // that's rendered dynamically by showStatusScreen() rather than coming
+  // from the T dictionary. Re-running it from the cached currentApp fixes
+  // that, but only when the status screen is the one actually showing —
+  // otherwise switching language from, say, the home screen would force a
+  // navigation nobody asked for.
+  if (currentApp && document.getElementById('screen-status').classList.contains('active')) {
+    showStatusScreen(currentApp.status || 'approved', currentApp, !!currentApp.ok);
+  }
 }
 
 function showScreen(id) {
