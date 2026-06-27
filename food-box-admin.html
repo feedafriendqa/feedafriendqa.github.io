@@ -54,6 +54,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 .stat-card.sc-boxes{background:linear-gradient(135deg,#7c5cbf,#a78bdb);}
 .stat-card.sc-archived{background:linear-gradient(135deg,#546e7a,#90a4ae);}
 .stat-card.sc-review{background:linear-gradient(135deg,#7b5ea7,#a07fd4);}
+.stat-card.sc-wbb{background:linear-gradient(135deg,#ad1457,#f48fb1);}
 .stat-card .num{font-size:28px;font-weight:900;color:white;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,0.15);}
 .stat-card .lbl{font-size:12px;color:rgba(255,255,255,0.88);font-weight:700;margin-top:4px;}
 
@@ -322,6 +323,7 @@ select.edit-field{cursor:pointer;}
       <div class="stat-card sc-boxes" onclick="setFilterFromTile('active')"><div class="num" id="stat-boxes-needed">–</div><div class="lbl">Boxes needed</div></div>
       <div class="stat-card sc-archived" onclick="setFilterFromTile('archived')"><div class="num" id="stat-archived">–</div><div class="lbl">Archived</div></div>
       <div class="stat-card sc-review" onclick="setFilterFromTile('review')"><div class="num" id="stat-translation">–</div><div class="lbl">Needs review</div></div>
+      <div class="stat-card sc-wbb" onclick="setFilterFromTile('wbb_review')"><div class="num" id="stat-wbb-review">–</div><div class="lbl">🍼 Pregnant — verify WBB</div></div>
     </div>
 
     <div id="daily-quote" style="background:var(--green);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;color:white;"></div>
@@ -843,6 +845,7 @@ function updateStats() {
   document.getElementById('stat-boxes-needed').textContent = boxesNeeded;
   document.getElementById('stat-archived').textContent = scoped.filter(function(a){return resolveStatus(a)==='archived';}).length;
   document.getElementById('stat-translation').textContent = scoped.filter(function(a){return a.translation_pending;}).length;
+  document.getElementById('stat-wbb-review').textContent = scoped.filter(function(a){return a.is_pregnant && !a.wbb_case_created;}).length;
 }
 
 var LANG_TAGS = {ar:'🇶🇦 AR',bn:'🇧🇩 BN',hi:'🇮🇳 HI',ur:'🇵🇰 UR',tl:'🇵🇭 TL',en:'🇬🇧 EN'};
@@ -950,6 +953,20 @@ function setFilterFromTile(status) {
     document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
     var filtered = allApps.filter(function(a){
       if (a.translation_pending !== true) return false;
+      if (myCasesOnly && (a.assigned_to || autoAssign(a)) !== myName) return false;
+      return true;
+    });
+    renderTable(filtered); return;
+  }
+  if (status === 'wbb_review') {
+    // Self-maintaining: wbb_case_created flips to true the moment a case
+    // handler actually creates the Welcome Baby case (see notify_welcome_baby),
+    // so a handled pregnancy drops off this list on its own — no separate
+    // "dismiss" action needed, and nothing here can grow stale.
+    currentFilter = 'all';
+    document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
+    var filtered = allApps.filter(function(a){
+      if (!a.is_pregnant || a.wbb_case_created) return false;
       if (myCasesOnly && (a.assigned_to || autoAssign(a)) !== myName) return false;
       return true;
     });

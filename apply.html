@@ -358,15 +358,11 @@ body.ar{direction:rtl;}
       </div>
 
       <div class="field" id="formula-question-block">
-        <label id="lbl-needs-formula">Is there a baby aged 1 or under who needs formula?</label>
+        <label id="lbl-needs-formula">Would you like to request formula?</label>
         <div class="loc-choice">
           <button type="button" class="loc-btn" id="formula-yes-btn" onclick="chooseNeedsFormula(true)">Yes</button>
           <button type="button" class="loc-btn" id="formula-no-btn" onclick="chooseNeedsFormula(false)">No</button>
         </div>
-      </div>
-      <div class="field" id="formula-brand-block" style="display:none;">
-        <label id="lbl-formula-brand">Any particular brand preference?</label>
-        <input type="text" id="inp-formula-brand" placeholder="e.g. Similac">
       </div>
 
       <div class="field" id="pregnancy-block" style="display:none;">
@@ -423,7 +419,7 @@ body.ar{direction:rtl;}
   <!-- SUCCESS -->
   <div class="screen" id="screen-success">
     <div class="success-wrap">
-      <div class="success-emoji">🥗</div>
+      <div class="success-emoji">📦</div>
       <div class="success-title" id="s-success-title">You're confirmed!</div>
       <div class="success-month">
         <div class="sm-month" id="success-month"></div>
@@ -1000,10 +996,9 @@ function showStatusScreen(status, data, canReapply) {
     document.getElementById('lbl-chk-no-diapers').textContent = ar ? 'لم نعد بحاجة إلى حفاضات' : 'We no longer need diapers';
 
     document.getElementById('formula-question-block').style.display = formulaQuestionVisible ? 'block' : 'none';
-    document.getElementById('lbl-needs-formula').textContent = ar ? 'هل يوجد طفل بعمر سنة أو أقل يحتاج إلى حليب أطفال؟' : 'Is there a baby aged 1 or under who needs formula?';
+    document.getElementById('lbl-needs-formula').textContent = ar ? 'هل تريد طلب حليب أطفال؟' : 'Would you like to request formula?';
     document.getElementById('formula-yes-btn').textContent = ar ? 'نعم' : 'Yes';
     document.getElementById('formula-no-btn').textContent = ar ? 'لا' : 'No';
-    document.getElementById('lbl-formula-brand').textContent = ar ? 'هل لديك تفضيل لنوع معين؟' : 'Any particular brand preference?';
 
     document.getElementById('pregnancy-block').style.display = pregnancyQuestionVisible ? 'block' : 'none';
     document.getElementById('lbl-pregnant').textContent = ar ? 'هل توجد حالة حمل حالياً في أسرتك؟' : 'Is anyone in your household currently pregnant?';
@@ -1141,8 +1136,6 @@ function resetDiaperFormulaChoice(existingDiaperSize, existingFormula) {
   document.getElementById('reapply-diaper-pills').style.display = 'flex';
   document.getElementById('formula-yes-btn').classList.remove('selected');
   document.getElementById('formula-no-btn').classList.remove('selected');
-  document.getElementById('formula-brand-block').style.display = 'none';
-  document.getElementById('inp-formula-brand').value = '';
 
   var pillsContainer = document.getElementById('reapply-diaper-pills');
   pillsContainer.innerHTML = '';
@@ -1158,10 +1151,9 @@ function resetDiaperFormulaChoice(existingDiaperSize, existingFormula) {
   if (existingDiaperSize && DIAPER_SIZES.indexOf(existingDiaperSize) !== -1) {
     diaperSizeVal = existingDiaperSize;
   }
-  // Pre-fill from whatever's already on file as a starting point — they can change it.
-  if (existingFormula && existingFormula !== 'Not needed') {
-    document.getElementById('inp-formula-brand').value = existingFormula;
-  }
+  // No pre-fill needed for formula — this question is only ever shown when
+  // already_has_formula is false (that's the eligibility gate itself), so
+  // there's never an existing value to start from; it's always a fresh ask.
 }
 
 function selectReapplyDiaper(pill) {
@@ -1188,7 +1180,6 @@ function chooseNeedsFormula(isYes) {
   formulaChoice = isYes ? 'yes' : 'no';
   document.getElementById('formula-yes-btn').classList.toggle('selected', isYes);
   document.getElementById('formula-no-btn').classList.toggle('selected', !isYes);
-  document.getElementById('formula-brand-block').style.display = isYes ? 'block' : 'none';
   updateReapplyBtn();
 }
 
@@ -1348,8 +1339,7 @@ async function doReapply() {
     extrasPayload.diaper_size = diaperChoice === 'no' ? 'Not needed' : diaperSizeVal;
   }
   if (formulaQuestionVisible) {
-    var formulaBrand = document.getElementById('inp-formula-brand').value.trim();
-    extrasPayload.formula = formulaChoice === 'yes' ? (formulaBrand || 'Yes') : 'Not needed';
+    extrasPayload.formula = formulaChoice === 'yes' ? 'Yes' : 'Not needed';
   }
   if (pregnancyQuestionVisible) {
     extrasPayload.is_pregnant = pregnantChoice === 'yes';
