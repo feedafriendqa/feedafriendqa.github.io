@@ -523,19 +523,28 @@ function submitForm() {
   btn.disabled = true;
   btn.textContent = ar ? 'جاري الإرسال…' : 'Submitting…';
 
-  sb.from('shoe_requests').insert([{
-    phone: phone,
-    full_name: scannedName,
-    qid_number: qidNumber,
-    gender: scannedGender,
-    dob: scannedDob,
-    nationality: scannedNationality,
-    sponsor: scannedSponsor,
-    qid_expiry: scannedExpiry,
-    shoe_size_eu: selectedSize,
-    phone_registered: phoneRegistered,
-    matched: false
-  }]).then(function(res) {
+  sb.rpc('find_or_create_friend', {
+    p_qid: qidNumber, p_full_name: scannedName, p_full_name_en: null, p_whatsapp: phone,
+    p_nationality: scannedNationality, p_zone: null, p_street: null, p_building: null, p_unit: null
+  }).then(function(friendRes) {
+    var friendId = friendRes.error ? null : friendRes.data;
+    if (friendRes.error) console.warn('find_or_create_friend failed, continuing without it:', friendRes.error);
+
+    return sb.from('shoe_requests').insert([{
+      phone: phone,
+      full_name: scannedName,
+      qid_number: qidNumber,
+      gender: scannedGender,
+      dob: scannedDob,
+      nationality: scannedNationality,
+      sponsor: scannedSponsor,
+      qid_expiry: scannedExpiry,
+      shoe_size_eu: selectedSize,
+      phone_registered: phoneRegistered,
+      matched: false,
+      friend_id: friendId
+    }]);
+  }).then(function(res) {
     if (res.error) throw res.error;
 
     // Best-effort: fill in any QID details missing on the matching food box

@@ -775,6 +775,23 @@ async function submitForm() {
       status: 'pending',
     };
 
+    // Father's fields are the required ones on this form (mother's are
+    // optional), so he's the more reliable anchor for shared identity here
+    // — falls back to mother only if he has no QID on file.
+    let friendId = null;
+    try {
+      const { data: fid, error: friendErr } = await db.rpc('find_or_create_friend', {
+        p_qid: familyData.father_qid || familyData.mother_qid || null,
+        p_full_name: familyData.father_qid ? familyData.father_name : (familyData.mother_name || familyData.father_name),
+        p_full_name_en: null,
+        p_whatsapp: familyData.father_qid ? familyData.father_phone : (familyData.mother_phone || familyData.father_phone),
+        p_nationality: familyData.father_qid ? familyData.father_nationality : (familyData.mother_nationality || familyData.father_nationality),
+        p_zone: familyData.zone || null, p_street: null, p_building: null, p_unit: null
+      });
+      if (!friendErr) friendId = fid;
+    } catch (e) { console.warn('find_or_create_friend failed, continuing without it:', e); }
+    if (friendId) familyData.friend_id = friendId;
+
     const {data: family, error: fErr} = await db.from('ll_families').insert(familyData).select().single();
     if(fErr) throw fErr;
 

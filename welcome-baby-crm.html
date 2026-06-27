@@ -524,7 +524,7 @@ select.inline-input { cursor:pointer; }
     <div class="filter-chip" onclick="filterFamilies('closed',this)">Closed</div>
   </div>
   <div class="family-list" id="families-list"></div>
-  <div class="fab" id="fab-family" onclick="openModal('modal-family')">＋</div>
+  <div class="fab" id="fab-family" onclick="resetFamilyModal();openModal('modal-family')">＋</div>
 </div>
 
 <!-- ══ PROFILE ══ -->
@@ -921,9 +921,16 @@ select.inline-input { cursor:pointer; }
 <div class="modal" id="modal-family">
   <div class="modal-inner">
     <div class="modal-title">Add family <button class="modal-close" onclick="closeModal('modal-family')">✕</button></div>
+    <div class="form-group">
+      <label class="form-label">Link to Food Box applicant (optional, recommended)</label>
+      <input class="form-input" id="f-fb-search" type="text" placeholder="Search by name or QID" oninput="searchFoodBoxForFamily(this.value)">
+      <div id="f-fb-results" style="margin-top:6px;display:none;border:1px solid #e0e0d8;border-radius:8px;max-height:160px;overflow:auto;background:#fff;"></div>
+      <div id="f-fb-linked" style="display:none;margin-top:6px;font-size:12px;font-weight:700;color:#0f6e56;">✓ Linked to <span id="f-fb-linked-name"></span> <button type="button" onclick="clearFoodBoxLink()" style="margin-left:8px;font-size:11px;color:#888;background:none;border:none;cursor:pointer;text-decoration:underline;">unlink</button></div>
+    </div>
     <div class="form-group"><label class="form-label">Mother's name *</label><input class="form-input" id="f-mother" type="text"></div>
     <div class="form-group"><label class="form-label">Father's name</label><input class="form-input" id="f-father" type="text"></div>
-    <div class="form-group"><label class="form-label">Due date *</label><input class="form-input" id="f-due" type="date"></div>
+    <div class="form-group" id="f-qid-group"><label class="form-label">Mother's QID (if not linked above)</label><input class="form-input" id="f-mqid" type="text" placeholder="29xxxxxxxxx"></div>
+    <div class="form-group"><label class="form-label">Due date *</label><input class="form-input" id="f-duedate" type="date"></div>
     <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="f-location" type="text" placeholder="Area in Qatar"></div>
     <div class="form-group"><label class="form-label">Language</label>
       <select class="form-input" id="f-language"><option>Arabic</option><option>English</option><option>Urdu</option><option>Hindi</option><option>Tagalog</option><option>Other</option></select>
@@ -1621,17 +1628,106 @@ async function renderFairies() {
     </div>`;
   }).join('')||'<div class="empty-state"><div class="empty-icon">🧚‍♀️</div><p>No fairies yet.</p></div>';
 }
+// ── FOOD BOX LINK SEARCH (for Add Family modal) ──
+let fbLinkedApp = null;
+let fbSearchTimer = null;
+
+function searchFoodBoxForFamily(q) {
+  clearTimeout(fbSearchTimer);
+  const term = q.trim();
+  const resultsEl = document.getElementById('f-fb-results');
+  if (term.length < 2) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; return; }
+  fbSearchTimer = setTimeout(async () => {
+    const { data } = await sb.from('food_box_applications')
+      .select('id, full_name, full_name_en, qid_number, whatsapp, friend_id')
+      .or(`full_name.ilike.%${term}%,full_name_en.ilike.%${term}%,qid_number.ilike.%${term}%`)
+      .limit(8);
+    const rows = data || [];
+    window.__fbSearchResults = rows;
+    resultsEl.style.display = rows.length ? 'block' : 'none';
+    resultsEl.innerHTML = rows.map((r, i) =>
+      `<div style="padding:6px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid #eee;" onclick="selectFoodBoxLink(${i})">${(r.full_name_en || r.full_name || '—')} · ${r.qid_number || 'no QID'} · ${r.whatsapp || ''}</div>`
+    ).join('');
+  }, 300);
+}
+
+function selectFoodBoxLink(i) {
+  const app = (window.__fbSearchResults || [])[i];
+  if (!app) return;
+  fbLinkedApp = app;
+  if (!document.getElementById('f-mother').value) {
+    document.getElementById('f-mother').value = app.full_name_en || app.full_name || '';
+  }
+  document.getElementById('f-fb-results').style.display = 'none';
+  document.getElementById('f-fb-search').value = '';
+  document.getElementById('f-fb-linked').style.display = 'block';
+  document.getElementById('f-fb-linked-name').textContent = app.full_name_en || app.full_name || app.qid_number || '—';
+  document.getElementById('f-qid-group').style.display = 'none';
+}
+
+function clearFoodBoxLink() {
+  fbLinkedApp = null;
+  document.getElementById('f-fb-linked').style.display = 'none';
+  document.getElementById('f-qid-group').style.display = 'block';
+}
+
+function resetFamilyModal() {
+  fbLinkedApp = null;
+  document.getElementById('f-fb-search').value = '';
+  document.getElementById('f-fb-results').style.display = 'none';
+  document.getElementById('f-fb-linked').style.display = 'none';
+  document.getElementById('f-qid-group').style.display = 'block';
+  document.getElementById('f-mqid').value = '';
+}
+
 // ── SAVE FAMILY ──
 async function saveFamily() {
   const mother=document.getElementById('f-mother').value.trim();
-  const due=document.getElementById('f-due').value;
+  const due=document.getElementById('f-duedate').value;
   if(!mother){showToast('Mother name required');return;}
+
+  // This is the root of why source_food_box_application_id was sitting
+  // unused on every existing row — this form had no way to link to an
+  // existing Food Box application at all, just free-text name entry. If
+  // linked above, reuse that application's already-resolved friend_id
+  // directly rather than re-deriving one. Otherwise, fall back to
+  // find_or_create_friend with whatever QID was entered manually — phone
+  // isn't collected on this form, so unlinked cases match on QID only,
+  // never on a risky phone-only guess.
+  let friendId = null;
+  let sourceAppId = null;
+  if (fbLinkedApp) {
+    sourceAppId = fbLinkedApp.id;
+    friendId = fbLinkedApp.friend_id;
+    if (!friendId) {
+      try {
+        const { data: fid, error: friendErr } = await sb.rpc('find_or_create_friend', {
+          p_qid: fbLinkedApp.qid_number || null, p_full_name: fbLinkedApp.full_name,
+          p_full_name_en: fbLinkedApp.full_name_en, p_whatsapp: fbLinkedApp.whatsapp,
+          p_nationality: null, p_zone: null, p_street: null, p_building: null, p_unit: null
+        });
+        if (!friendErr) friendId = fid;
+      } catch (e) { console.warn('find_or_create_friend failed, continuing without it:', e); }
+    }
+  } else {
+    const mqid = document.getElementById('f-mqid').value.trim();
+    try {
+      const { data: fid, error: friendErr } = await sb.rpc('find_or_create_friend', {
+        p_qid: mqid || null, p_full_name: mother, p_full_name_en: null, p_whatsapp: null,
+        p_nationality: null, p_zone: null, p_street: null, p_building: null, p_unit: null
+      });
+      if (!friendErr) friendId = fid;
+    } catch (e) { console.warn('find_or_create_friend failed, continuing without it:', e); }
+  }
+
   const {data,error} = await sb.from('families').insert([{
     mother_name:mother, father_name:document.getElementById('f-father').value.trim(),
     due_date:due||null, location:document.getElementById('f-location').value.trim(),
     language:document.getElementById('f-language').value,
     siblings:document.getElementById('f-siblings').value.trim(),
-    status:'new', food_box_active:true
+    status:'new', food_box_active:true,
+    source_food_box_application_id: sourceAppId,
+    friend_id: friendId
   }]).select();
   if(error){showToast('Error: '+error.message);return;}
   // Auto-generate milestones
