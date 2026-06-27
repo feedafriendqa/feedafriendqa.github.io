@@ -231,7 +231,9 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
     </div>
     <p style="font-size:13px;color:#888;font-weight:600;line-height:1.6;padding:0 20px 14px">Pick up to 6 areas you can cover this round — add or remove any, not just your saved ones. We'll match friends and boxes to fit your vehicle.</p>
     <div class="card" style="margin:0 16px">
+      <input type="text" id="area-search" placeholder="Search areas…" oninput="filterTripAreaGrid(this.value)" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #e5e2d9;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:10px">
       <div class="area-grid" id="trip-agrid"></div>
+      <div id="area-show-more" style="display:none;text-align:center;padding-top:8px"><button class="tb-out" style="font-size:12px;padding:8px 16px" onclick="EXPAND_AREAS=true;buildTripAreaGrid();">Show all <span id="area-total-n"></span> areas</button></div>
       <div class="area-stat" id="trip-astat"></div>
       <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:#666;font-weight:700">
         <input type="checkbox" id="areas-save" style="width:16px;height:16px"> Save these as my areas for next time
@@ -266,6 +268,7 @@ body{font-family:"Nunito Sans",sans-serif;background:#F5F0E8;color:#111;min-heig
       <div class="al-big" id="alloc-n">…</div>
       <div class="al-sub" id="alloc-areas">Searching your areas…</div>
     </div>
+    <div id="hold-timer" style="display:none;text-align:center;font-size:12px;font-weight:700;color:#1D7A47;padding:10px 20px 0">Reserved for you — confirm within <span id="hold-mins">10:00</span></div>
     <div id="alloc-list"></div>
     <div id="reshuffle-row" style="padding:10px 16px 0;display:none">
       <button class="tb-out" style="width:100%" id="reshuffle-btn" onclick="reshuffleUnselected()">🔄 Reshuffle the rest</button>
@@ -313,7 +316,7 @@ var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5c
 // entirely instead of waiting on a fix upstream.
 function noOpLock(name,acquireTimeout,fn){return fn();}
 var sb=window.supabase?window.supabase.createClient(SB,KEY,{auth:{lock:noOpLock}}):null;
-var CU=null,DP=null,AT=null,ALLOC=null,ALLOC_META=null,SELAREAS=[],KEPT={},REMOVED=[],TRIPCAP=null,ALL_AREAS=[],AVAILABILITY={},DESELECTED={};
+var CU=null,DP=null,AT=null,ALLOC=null,ALLOC_META=null,SELAREAS=[],KEPT={},REMOVED=[],TRIPCAP=null,ALL_AREAS=[],AVAILABILITY={},DESELECTED={},HOLD_TIMER=null,EXPAND_AREAS=false;
 
 var STUCK_TIMER=null;
 function showV(id){
@@ -450,7 +453,7 @@ async function showFamilies(){
   var listEl=document.getElementById("fams-list");
   listEl.innerHTML='<div class="loading"><div class="spin"></div></div>';
   var r=await sb.from("trip_assignments")
-    .select("*,food_box_applications(full_name_en,full_name,whatsapp,zone,street,building,unit,area,diaper_size,formula,household_size)")
+    .select("*,food_box_applications(full_name_en,full_name,whatsapp,zone,street,building,unit,area,diaper_size,formula,household_size,nationality,submission_lang)")
     .eq("trip_id",AT.id);
   // r.data can come back [] either because the trip genuinely has no rows,
   // or because RLS quietly filtered everything out (Postgres returns an
@@ -476,8 +479,11 @@ function renderFamCard(row,num){
   var app=row.food_box_applications||{};
   var addrParts=[app.zone?"Zone "+app.zone:"",app.street?"St. "+app.street:"",app.building?"Bldg "+app.building:"",app.unit?"Unit "+app.unit:""].filter(Boolean);
   var addr=addrParts.length?addrParts.join(", "):(app.area||"—");
+  var name=app.full_name_en||app.full_name||"—";
   var wa=(app.whatsapp||"").replace(/[^0-9+]/g,"");
   var waHtml=wa?'<a href="https://wa.me/'+wa+'" target="_blank">Open WhatsApp 💬</a>':"—";
+  var phoneTxt=app.whatsapp||"—";
+  var language=app.submission_lang==="ar"?"Arabic":(app.submission_lang?"English":"—");
   var done=row.status==="delivered";
   var tags="";
   if(app.diaper_size&&app.diaper_size!=="Not needed")tags+='<span class="tag tag-diaper">👶 '+app.diaper_size+'</span>';
@@ -486,8 +492,10 @@ function renderFamCard(row,num){
   if(app.household_size)tags+='<span class="tag tag-hh">'+app.household_size+' people</span>';
   return '<div class="fam-card" id="fc-'+row.id+'">'
     +'<div class="fam-head"><div class="fam-circle">'+num+'</div><span class="fam-st '+(done?"done":"pending")+'">'+(done?"✓ Delivered":"Pending")+'</span></div>'
+    +'<div class="fam-row"><span class="fam-ic">👤</span><div><div class="fam-lbl">Name</div><div class="fam-val">'+name+(app.nationality?' <span style="color:#999;font-weight:600">· '+app.nationality+'</span>':"")+'</div></div></div>'
     +'<div class="fam-row"><span class="fam-ic">📍</span><div><div class="fam-lbl">Address</div><div class="fam-val">'+addr+'</div></div></div>'
-    +'<div class="fam-row"><span class="fam-ic">💬</span><div><div class="fam-lbl">Contact</div><div class="fam-val">'+waHtml+'</div></div></div>'
+    +'<div class="fam-row"><span class="fam-ic">💬</span><div><div class="fam-lbl">Contact</div><div class="fam-val">'+phoneTxt+(wa?' · ':"")+waHtml+'</div></div></div>'
+    +'<div class="fam-row"><span class="fam-ic">🗣️</span><div><div class="fam-lbl">Language</div><div class="fam-val">'+language+'</div></div></div>'
     +(tags?'<div class="fam-row"><span class="fam-ic">🛒</span><div><div class="fam-lbl">Needs</div><div style="margin-top:4px">'+tags+'</div></div></div>':"")
     +'<button class="del-btn'+(done?" done":"")+'" id="db-'+row.id+'" onclick="markDel(\''+row.id+'\')" '+(done?"disabled":"")+'>'+(done?"✓ Marked as delivered":"Mark as delivered")+'</button>'
     +'</div>';
@@ -528,6 +536,7 @@ function showAreasStep(){
   document.getElementById("pnl-fams").style.display="none";
   document.getElementById("pnl-alloc").style.display="none";
   document.getElementById("pnl-areas").style.display="block";
+  EXPAND_AREAS=false;
   if(!SELAREAS.length)SELAREAS=((DP&&DP.location_preferences)||[]).slice();
   TRIPCAP=(DP&&DP.boxes_capacity)?DP.boxes_capacity:5;
   document.getElementById("cap-val").textContent=TRIPCAP;
@@ -566,18 +575,51 @@ function buildTripAreaGrid(){
     document.getElementById("trip-agrid").innerHTML='<div style="font-size:12px;color:#bbb;font-weight:600;padding:8px 0">Could not load the area list — try again in a moment.</div>';
     return;
   }
-  // Areas you've already picked first, then everywhere else, so your
-  // current selection doesn't jump around as you change it.
-  var sorted=ALL_AREAS.slice().sort(function(a,b){
+  document.getElementById("area-search").value="";
+  renderTripAreaGrid(ALL_AREAS);
+}
+
+// Re-rendered on every keystroke in the search box — always searches the
+// FULL area list regardless of the show-all/collapsed state below, since
+// search is precisely how you reach a collapsed long-tail area without
+// scrolling.
+function filterTripAreaGrid(q){
+  q=(q||"").trim().toLowerCase();
+  if(!q){renderTripAreaGrid(ALL_AREAS);return;}
+  renderTripAreaGrid(ALL_AREAS.filter(function(a){return a.toLowerCase().indexOf(q)!==-1;}),true);
+}
+
+function renderTripAreaGrid(list,isSearch){
+  // Areas you've already picked first, then areas with pending matches,
+  // then everywhere else — so your current selection doesn't jump around,
+  // and the areas actually worth picking surface before the long alphabetical
+  // tail of zero-match areas. Default view collapses that tail behind a
+  // "Show all" toggle (skipped entirely while actively searching) so the
+  // ~74-area list isn't a giant wall of chips every time.
+  var sorted=list.slice().sort(function(a,b){
     var aSel=SELAREAS.indexOf(a)!==-1,bSel=SELAREAS.indexOf(b)!==-1;
     if(aSel!==bSel)return aSel?-1:1;
+    var aCnt=AVAILABILITY[a]?1:0,bCnt=AVAILABILITY[b]?1:0;
+    if(aCnt!==bCnt)return aCnt?-1:1;
     return 0;
   });
-  document.getElementById("trip-agrid").innerHTML=sorted.map(function(a){
+  var visible=sorted,hiddenCount=0;
+  if(!isSearch&&!EXPAND_AREAS){
+    visible=sorted.filter(function(a){return SELAREAS.indexOf(a)!==-1||AVAILABILITY[a];});
+    hiddenCount=sorted.length-visible.length;
+  }
+  document.getElementById("trip-agrid").innerHTML=visible.map(function(a){
     var cnt=AVAILABILITY[a];
     var label=a+(cnt?" ("+cnt+")":"");
     return '<div class="chip'+(SELAREAS.indexOf(a)!==-1?" on":"")+'" onclick="togTripArea(this,\''+a.replace(/'/g,"\\'")+'\')">'+label+'</div>';
-  }).join("");
+  }).join("")||'<div style="font-size:12px;color:#bbb;font-weight:600;padding:8px 0">No areas match your search.</div>';
+  var moreEl=document.getElementById("area-show-more");
+  if(hiddenCount>0){
+    moreEl.style.display="block";
+    document.getElementById("area-total-n").textContent=ALL_AREAS.length;
+  }else{
+    moreEl.style.display="none";
+  }
   updTripAreaStat();
 }
 
@@ -595,6 +637,37 @@ function updTripAreaStat(){
   if(n===0){el.textContent="Select at least 1 area.";el.className="area-stat warn";btn.disabled=true;}
   else if(n>=6){el.textContent="✓ "+n+" areas — that's the max for now.";el.className="area-stat ok";btn.disabled=false;}
   else{el.textContent=n+" area"+(n===1?"":"s")+" selected for this trip.";el.className="area-stat ok";btn.disabled=false;}
+}
+
+// ── HOLD COUNTDOWN ───────────────────────────────────────────────────────
+// The families shown here are reserved for THIS driver for 10 minutes
+// server-side (see get_driver_boxes) so another driver's picker won't show
+// the same ones meanwhile. This just keeps the driver honestly informed of
+// that window — confirm_driver_trip re-validates server-side regardless, so
+// letting the timer run out isn't unsafe, just means a fresh list is needed.
+function startHoldCountdown(holdUntilIso){
+  stopHoldCountdown();
+  if(!holdUntilIso){document.getElementById("hold-timer").style.display="none";return;}
+  var deadline=new Date(holdUntilIso).getTime();
+  document.getElementById("hold-timer").style.display="block";
+  function tick(){
+    var msLeft=deadline-Date.now();
+    if(msLeft<=0){
+      stopHoldCountdown();
+      document.getElementById("hold-mins").textContent="0:00";
+      document.getElementById("hold-timer").innerHTML='Reservation expired — tap <strong>"↺ Shuffle all"</strong> for a fresh list before confirming.';
+      var cb=document.getElementById("confirm-btn");
+      if(cb){cb.disabled=true;}
+      return;
+    }
+    var s=Math.floor(msLeft/1000);
+    document.getElementById("hold-mins").textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+  }
+  tick();
+  HOLD_TIMER=setInterval(tick,1000);
+}
+function stopHoldCountdown(){
+  if(HOLD_TIMER){clearInterval(HOLD_TIMER);HOLD_TIMER=null;}
 }
 
 async function continueToAlloc(){
@@ -618,8 +691,12 @@ async function continueToAlloc(){
 }
 
 function backToAreas(){
+  stopHoldCountdown();
   document.getElementById("pnl-alloc").style.display="none";
   showAreasStep();
+  // Best-effort — frees this driver's held families immediately instead of
+  // making other drivers wait out the full 10-minute natural expiry.
+  fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"release_driver_hold",driver_email:CU.email})}).catch(function(){});
 }
 
 // ── ALLOCATION (full reshuffle) ──────────────────────────────────────────
@@ -634,6 +711,7 @@ async function loadAlloc(){
     var d=await r.json();
     ALLOC_META=d;
     (d.families||[]).forEach(function(f){KEPT[f.id]=f;});
+    startHoldCountdown(d.held_until);
     renderAlloc();
   }catch(e){
     document.getElementById("alloc-list").innerHTML='<div style="color:#c0392b;font-size:12px;font-weight:700;padding:0 20px">Could not load — please try again.</div>';
@@ -723,10 +801,27 @@ async function confirmAlloc(){
   try{
     var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"confirm_driver_trip",driver_email:CU.email,family_ids:fams.map(function(f){return f.id;}),areas:SELAREAS})});
     var d=await r.json();
-    AT={id:d.trip_id,boxes_count:fams.length,status:"confirmed",trip_date:d.trip_date};
+    if(d.error){
+      // Every single one was taken by another driver in the meantime
+      // (held past expiry, or assigned through a different path) — nothing
+      // was confirmed, so send them back to get a genuinely fresh list
+      // rather than show a "confirmed" trip that doesn't really exist.
+      alert(d.error);
+      btn.disabled=false;btn.textContent="Confirm these →";
+      loadAlloc();
+      return;
+    }
+    stopHoldCountdown();
+    var lostCount=(d.lost_ids||[]).length;
+    AT={id:d.trip_id,boxes_count:d.boxes,status:"confirmed",trip_date:d.trip_date};
     renderActiveTrip(AT);
     document.getElementById("pnl-alloc").style.display="none";
     document.getElementById("pnl-active").style.display="block";
+    if(lostCount>0){
+      // Confirmed, but fewer than requested — be upfront about the gap
+      // rather than silently showing a smaller number with no explanation.
+      setTimeout(function(){alert((lostCount===1?"One delivery was":lostCount+" deliveries were")+" claimed by another driver just before you confirmed, so your trip went ahead with the rest ("+d.boxes+").");},300);
+    }
   }catch(e){btn.disabled=false;btn.textContent="Confirm these →";alert("Something went wrong.");}
 }
 
