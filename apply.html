@@ -79,7 +79,7 @@ body.ar{direction:rtl;}
 .alt-link:hover strong{text-decoration:underline;}
 
 .loc-choice{display:flex;gap:10px;}
-.loc-btn{flex:1;padding:13px 10px;border:2px solid var(--border);border-radius:var(--radius-sm);background:var(--off-white);color:var(--text);font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all 0.2s;}
+.loc-btn{flex:1;padding:13px 10px;border:2px solid #b9d1bc;border-radius:var(--radius-sm);background:#eef5ef;color:var(--text);font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all 0.2s;}
 .loc-btn:hover{border-color:var(--green);}
 .loc-btn.selected{background:var(--green);border-color:var(--green);color:white;}
 .loc-btn.selected.moved{background:var(--yellow);border-color:var(--yellow);color:var(--text);}
@@ -140,7 +140,11 @@ body.ar{direction:rtl;}
 .check-item label{font-size:13px;font-weight:700;color:var(--text);cursor:pointer;line-height:1.5;}
 
 /* ADDRESS */
-.addr-box{background:var(--off-white);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px;}
+.addr-box{background:var(--off-white);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px;position:relative;}
+.addr-box .lock-note{font-size:11px;color:var(--muted);font-style:italic;margin-top:4px;}
+.section-divider{display:flex;align-items:center;gap:8px;margin:22px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--yellow);}
+.section-divider .icon{font-size:16px;}
+.section-divider .label{font-size:13px;font-weight:900;color:#7a5a0a;text-transform:uppercase;letter-spacing:0.4px;}
 .addr-label{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;}
 .addr-val{font-size:15px;font-weight:800;color:var(--text);}
 
@@ -310,10 +314,17 @@ body.ar{direction:rtl;}
       <div class="addr-box">
         <div class="addr-label" id="lbl-delivery-addr">Delivery address</div>
         <div class="addr-val" id="status-address" dir="ltr"></div>
+        <div class="lock-note" id="lock-note-address">🔒 On file — tell us below if this has changed</div>
       </div>
       <div class="addr-box" id="household-size-box" style="display:none;">
         <div class="addr-label" id="lbl-household-size">Household members</div>
         <div class="addr-val" id="status-household-size" dir="ltr"></div>
+        <div class="lock-note" id="lock-note-household">🔒 On file — contact our team to update this</div>
+      </div>
+
+      <div class="section-divider">
+        <span class="icon">📝</span>
+        <span class="label" id="lbl-section-divider">A few quick questions</span>
       </div>
 
       <div class="field">
@@ -458,6 +469,9 @@ var T = {
     'back-home-btn': '← Back',
     'lbl-boxes': 'Boxes received',
     'lbl-delivery-addr': 'Delivery address',
+    'lock-note-address': '🔒 On file — tell us below if this has changed',
+    'lock-note-household': '🔒 On file — contact our team to update this',
+    'lbl-section-divider': 'A few quick questions',
     'lbl-chk-need': 'I confirm I still need food support and cannot purchase sufficient food for my household.',
     'reapply-btn-text': 'Request my food box →',
     'status-back-btn': '← Back',
@@ -484,6 +498,9 @@ var T = {
     'back-home-btn': '→ رجوع',
     'lbl-boxes': 'الصناديق المستلمة',
     'lbl-delivery-addr': 'عنوان التوصيل',
+    'lock-note-address': '🔒 مسجل لدينا — أخبرنا أدناه إذا تغيّر',
+    'lock-note-household': '🔒 مسجل لدينا — تواصل مع فريقنا لتحديث هذا',
+    'lbl-section-divider': 'بضعة أسئلة سريعة',
     'lbl-chk-need': 'أؤكد أنني لا أزال بحاجة إلى دعم غذائي وغير قادر على شراء طعام كافٍ لأسرتي.',
     'reapply-btn-text': 'طلب صندوق الطعام ←',
     'status-back-btn': '→ رجوع',
