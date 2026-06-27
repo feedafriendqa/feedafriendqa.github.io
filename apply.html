@@ -249,6 +249,27 @@ body.ar{direction:rtl;}
     <div class="screen-title" id="status-greeting"></div>
     <div class="screen-sub" id="status-sub-text"></div>
 
+    <!-- Driven independently of the status pipeline above (last_delivered_at /
+         thanked_at / upcoming_trip_date) so it can't interfere with the
+         approved/archived reapply logic, whatever shape that ends up in. -->
+    <div class="status-card" id="upcoming-card" style="display:none;background:#FFF8E6">
+      <div class="status-icon">🚚</div>
+      <div class="status-body">
+        <h3 id="upcoming-title">Scheduled for delivery</h3>
+        <p id="upcoming-msg"></p>
+      </div>
+    </div>
+
+    <div class="status-card" id="delivered-card" style="display:none;background:#EBF7F0">
+      <div class="status-icon">📦</div>
+      <div class="status-body">
+        <h3 id="delivered-title">Delivered</h3>
+        <p id="delivered-msg"></p>
+        <button class="btn btn-green" id="thankyou-open-btn" style="margin-top:10px;padding:10px 18px;font-size:13px" onclick="openThankyou()">Write a thank-you 💌</button>
+        <p id="thankyou-sent-msg" style="display:none;color:#1D7A47;font-weight:700;font-size:13px;margin-top:8px">✓ Your thank-you was sent</p>
+      </div>
+    </div>
+
     <div class="status-card" id="status-card">
       <div class="status-icon" id="status-icon"></div>
       <div class="status-body">
@@ -335,6 +356,30 @@ body.ar{direction:rtl;}
     <button class="btn btn-back" onclick="showScreen('screen-home')" style="margin-top:12px;" id="status-back-btn">← Back</button>
   </div>
 
+  <!-- THANK YOU -->
+  <div class="screen" id="screen-thankyou">
+    <div class="screen-title" id="ty-title">Write a thank-you</div>
+    <div class="screen-sub" id="ty-sub">This goes to whoever sponsored your box. Your name and contact details are never shared — it's sent anonymously.</div>
+    <div class="err-msg" id="ty-err"></div>
+    <div class="field">
+      <label id="lbl-ty-message">Your message</label>
+      <textarea id="inp-ty-message" rows="4" style="width:100%;padding:13px 14px;border:2px solid #e5e5dc;border-radius:12px;font-size:14px;font-family:'Nunito Sans',sans-serif;color:#111;background:#fafaf7;outline:none" placeholder="Say thank you in your own words..."></textarea>
+    </div>
+    <div class="upload-zone" id="ty-photo-zone" onclick="document.getElementById('ty-photo-input').click()">
+      <div class="upload-icon">📷</div>
+      <p id="ty-photo-label">Tap to add a photo (optional)</p>
+      <input type="file" id="ty-photo-input" accept="image/*" style="display:none" onchange="handleThankyouPhoto(this)">
+    </div>
+    <div class="capture-confirm" id="ty-photo-confirm" style="display:none;">
+      <p id="ty-photo-confirm-label">Photo attached ✓</p>
+      <button class="btn btn-back" type="button" onclick="clearThankyouPhoto()">Remove photo</button>
+    </div>
+    <button class="btn btn-green" id="ty-submit-btn" style="margin-top:14px;" onclick="submitThankyou()">
+      <span id="ty-submit-text">Send thank-you →</span>
+    </button>
+    <button class="btn btn-back" onclick="showScreen('screen-status')" style="margin-top:12px;">← Back</button>
+  </div>
+
   <!-- SUCCESS -->
   <div class="screen" id="screen-success">
     <div class="success-wrap">
@@ -358,6 +403,7 @@ const SB_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const EDGE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder';
+const FEEDBACK_EDGE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/food-box-feedback';
 const SCAN_QID_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/scan-qid';
 
 var currentLang = 'en';
@@ -548,7 +594,10 @@ async function doVerify() {
     }
 
     currentApp = data;
-    showStatusScreen(data.status || 'approved', data, data.status === 'approved');
+    // long_term's own STATUS_CONTENT message already says "request your
+    // next box below" — canReapply needs to actually match that, not just
+    // fire for 'approved'.
+    showStatusScreen(data.status || 'approved', data, data.status === 'approved' || data.status === 'long_term');
 
   } catch(e) {
     errEl.textContent = ar ? 'خطأ في الاتصال. يرجى المحاولة مرة أخرى.' : 'Connection error. Please try again.';
@@ -784,6 +833,34 @@ function showStatusScreen(status, data, canReapply) {
   document.getElementById('status-greeting').textContent = ar ? ('أهلاً ' + name + '!') : ('Hello, ' + name + '!');
   document.getElementById('status-sub-text').textContent = ar ? 'هذه حالة طلبك الحالية.' : 'Here is your current application status.';
 
+  // Driven by last_delivered_at/thanked_at/upcoming_trip_date, independent
+  // of the status pipeline above — so this can't break the existing
+  // approved/archived/reapply logic no matter what shape that's in.
+  var upcomingCard = document.getElementById('upcoming-card');
+  var deliveredCard = document.getElementById('delivered-card');
+  if (data.last_delivered_at) {
+    upcomingCard.style.display = 'none';
+    deliveredCard.style.display = 'flex';
+    var dDate = '—';
+    try { dDate = new Date(data.last_delivered_at).toLocaleDateString(ar ? 'ar-QA' : 'en-GB', { year: 'numeric', month: 'short', day: 'numeric' }); } catch(e) {}
+    document.getElementById('delivered-title').textContent = ar ? 'تم التوصيل' : 'Delivered';
+    document.getElementById('delivered-msg').textContent = (ar ? 'تم توصيل صندوقك بتاريخ ' : 'Your box was delivered on ') + dDate;
+    var thankBtn = document.getElementById('thankyou-open-btn');
+    var thankSent = document.getElementById('thankyou-sent-msg');
+    if (data.thanked_at) { thankBtn.style.display = 'none'; thankSent.style.display = 'block'; }
+    else { thankBtn.style.display = 'inline-block'; thankSent.style.display = 'none'; thankBtn.textContent = ar ? 'كتابة رسالة شكر 💌' : 'Write a thank-you 💌'; }
+  } else if (data.upcoming_trip_date) {
+    deliveredCard.style.display = 'none';
+    upcomingCard.style.display = 'flex';
+    var uDate = '—';
+    try { uDate = new Date(data.upcoming_trip_date).toLocaleDateString(ar ? 'ar-QA' : 'en-GB', { year: 'numeric', month: 'short', day: 'numeric' }); } catch(e) {}
+    document.getElementById('upcoming-title').textContent = ar ? 'مجدول للتوصيل' : 'Scheduled for delivery';
+    document.getElementById('upcoming-msg').textContent = (ar ? 'موعد التوصيل المتوقع: ' : 'Expected around ') + uDate;
+  } else {
+    upcomingCard.style.display = 'none';
+    deliveredCard.style.display = 'none';
+  }
+
   // Status card
   var card = document.getElementById('status-card');
   card.className = 'status-card ' + status;
@@ -862,6 +939,76 @@ var diaperSizeVal = null;
 var formulaChoice = null; // 'yes' | 'no' | null
 
 var DIAPER_SIZES = ['NB (Newborn)', 'S (Size 1)', 'M (Size 2)', 'L (Size 3)', 'XL (Size 4)', 'XXL (Size 5)'];
+
+function openThankyou() {
+  document.getElementById('inp-ty-message').value = '';
+  thankyouPhotoFile = null;
+  document.getElementById('ty-photo-zone').style.display = 'block';
+  document.getElementById('ty-photo-confirm').style.display = 'none';
+  document.getElementById('ty-err').classList.remove('show');
+  showScreen('screen-thankyou');
+}
+
+var thankyouPhotoFile = null;
+
+function handleThankyouPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  thankyouPhotoFile = input.files[0];
+  document.getElementById('ty-photo-zone').style.display = 'none';
+  document.getElementById('ty-photo-confirm').style.display = 'block';
+}
+
+function clearThankyouPhoto() {
+  thankyouPhotoFile = null;
+  document.getElementById('ty-photo-input').value = '';
+  document.getElementById('ty-photo-zone').style.display = 'block';
+  document.getElementById('ty-photo-confirm').style.display = 'none';
+}
+
+async function submitThankyou() {
+  var ar = currentLang === 'ar';
+  var message = document.getElementById('inp-ty-message').value.trim();
+  var errEl = document.getElementById('ty-err');
+  var btn = document.getElementById('ty-submit-btn');
+  errEl.classList.remove('show');
+  if (!message && !thankyouPhotoFile) {
+    errEl.textContent = ar ? 'يرجى كتابة رسالة أو إضافة صورة.' : 'Please write a message or add a photo.';
+    errEl.classList.add('show');
+    return;
+  }
+  btn.disabled = true;
+  document.getElementById('ty-submit-text').textContent = ar ? 'جاري الإرسال...' : 'Sending...';
+  try {
+    var payload = { type: 'submit_thankyou', application_id: currentApp.id, message: message || null };
+    if (thankyouPhotoFile) {
+      payload.photo_base64 = await fileToBase64(thankyouPhotoFile);
+      payload.photo_media_type = thankyouPhotoFile.type || 'image/jpeg';
+    }
+    var res = await fetch(FEEDBACK_EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+      body: JSON.stringify(payload)
+    });
+    var raw = await res.json();
+    var d = raw.data || {};
+    if (d.error) {
+      errEl.textContent = ar ? 'تعذّر الإرسال. حاول مرة أخرى.' : 'Could not send. Please try again.';
+      errEl.classList.add('show');
+      btn.disabled = false;
+      document.getElementById('ty-submit-text').textContent = ar ? 'إرسال الشكر ←' : 'Send thank-you →';
+      return;
+    }
+    currentApp.thanked_at = new Date().toISOString();
+    showScreen('screen-status');
+    document.getElementById('thankyou-open-btn').style.display = 'none';
+    document.getElementById('thankyou-sent-msg').style.display = 'block';
+  } catch (e) {
+    errEl.textContent = ar ? 'خطأ في الاتصال. يرجى المحاولة مرة أخرى.' : 'Connection error. Please try again.';
+    errEl.classList.add('show');
+    btn.disabled = false;
+    document.getElementById('ty-submit-text').textContent = ar ? 'إرسال الشكر ←' : 'Send thank-you →';
+  }
+}
 
 function resetLocationChoice() {
   locationChoice = null;
