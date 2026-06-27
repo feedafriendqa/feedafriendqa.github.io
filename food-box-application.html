@@ -319,6 +319,18 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
 
 <div class="main">
 
+<div id="success-screen" style="display:none;position:fixed;inset:0;background:#fff;z-index:9999;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;overflow-y:auto">
+  <div id="success-logo-mount" style="margin-bottom:20px"></div>
+  <div style="font-size:56px;line-height:1;margin-bottom:8px">✅</div>
+  <h1 id="success-title" style="color:var(--green-dark);font-size:24px;font-weight:900;margin-bottom:10px">Application received!</h1>
+  <p id="success-sub" style="color:#5a7050;font-size:14px;max-width:380px;margin-bottom:24px">Our team will review your application and be in touch.</p>
+  <div style="background:#f0f4f0;border-radius:14px;padding:18px 24px;max-width:380px;width:100%;margin-bottom:8px">
+    <p id="success-ref-label" style="font-size:12px;color:#5a7050;font-weight:700;text-transform:uppercase;margin-bottom:8px">Use this to check your status later</p>
+    <p id="success-ref-qid" style="font-size:16px;font-weight:800;color:var(--green-dark)"></p>
+    <p id="success-ref-wa" style="font-size:14px;color:#5a7050;margin-top:4px"></p>
+  </div>
+</div>
+
 <!-- ══ ELIGIBILITY ══ -->
 <div class="elig-card" id="elig-card">
   <div class="elig-header-bar">
@@ -427,8 +439,8 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
       <div class="field"><label id="lbl-whatsapp">WhatsApp number <span class="req">*</span></label><input type="tel" id="inp-whatsapp" data-numfield="true" inputmode="tel" placeholder="+974 5xxx xxxx" data-en="+974 5xxx xxxx" data-ar="+٩٧٤ ٥xxx xxxx"></div>
       <div class="field">
         <label id="lbl-nationality">Nationality <span class="req">*</span></label>
-        <select id="inp-nationality" required>
-          <option value="" id="opt-nat-sel">Select…</option>
+        <select id="inp-nationality" required disabled style="background:#f0f4f0;color:#9cbfa2;cursor:not-allowed;">
+          <option value="" id="opt-nat-sel">Auto-filled from QID</option>
           <option>Algerian</option><option>Bangladeshi</option><option>British</option><option>Burmese</option><option>Egyptian</option><option>Eritrean</option><option>Ethiopian</option><option>Filipino</option><option>Gambian</option><option>Ghanaian</option><option>Indian</option><option>Indonesian</option><option>Kenyan</option><option>Lebanese</option><option>Nepalese</option><option>Nigerian</option><option>Pakistani</option><option>Palestinian</option><option>Somalian</option><option>South African</option><option>Sri Lankan</option><option>Sudanese</option><option>Syrian</option><option>Tunisian</option><option>Ugandan</option><option>Yemeni</option><option>Other</option>
         </select>
       </div>
@@ -1009,8 +1021,14 @@ function scanQID(frontFile, backFile) {
 
       var fnEl = document.getElementById('inp-fullname');
       var qnEl = document.getElementById('inp-qidnum');
+      var natEl = document.getElementById('inp-nationality');
       if (fnEl) { fnEl.removeAttribute('readonly'); fnEl.style.background=''; fnEl.style.color=''; fnEl.style.cursor=''; }
       if (qnEl) { qnEl.removeAttribute('readonly'); qnEl.style.background=''; qnEl.style.color=''; qnEl.style.cursor=''; }
+      // Unconditional, same as the two fields above — even if the scan
+      // can't read a nationality off this particular card, the field still
+      // needs to become a normal interactive dropdown rather than staying
+      // permanently locked with no way to set a value at all.
+      if (natEl) { natEl.removeAttribute('disabled'); natEl.style.background=''; natEl.style.color=''; natEl.style.cursor=''; }
       if (parsed.full_name) document.getElementById('inp-fullname').value = parsed.full_name;
       if (parsed.qid_number) document.getElementById('inp-qidnum').value = parsed.qid_number;
       if (parsed.expiry_date) document.getElementById('inp-expiry').value = parsed.expiry_date;
@@ -1558,26 +1576,6 @@ function collectMembers() {
 
 
 
-function triggerLittleLearnersReferrals(data) {
-  if (!data.household_members) return;
-  var llKids = data.household_members.filter(function(m) {
-    return m.ll_referral === true || m.ll_consent === true;
-  });
-  if (llKids.length === 0) return;
-  // Send to clever-responder edge function
-  fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4' },
-    body: JSON.stringify({
-      type: 'little_learners_referral',
-      applicant_name: data.full_name_en || data.full_name,
-      whatsapp: data.whatsapp,
-      area: data.area,
-      children: llKids.map(function(k) { return { name: k.name, dob: k.dob }; })
-    })
-  }).catch(function() {});
-}
-
 function submitApplication() {
   var btn = document.getElementById('submit-btn');
   if (!btn) return;
@@ -1634,12 +1632,7 @@ function submitApplication() {
     body: JSON.stringify({ type: 'submit_application', application: application, members: members, submission_lang: currentLang })
   }).then(function(r) { return r.json(); }).then(function(data) {
     if (data.ok) {
-      btn.textContent = currentLang === 'ar'
-        ? '✅ تم استلام طلبك! رقم الطلب: ' + data.id.substring(0,8)
-        : '✅ Application received! Ref: ' + data.id.substring(0,8);
-      btn.style.background = 'var(--green-dark)';
-      btn.style.color = 'white';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      showSuccessScreen(application.qid_number, application.whatsapp);
       // The application is safely saved at this point — document uploads run
       // in the background and don't block or risk the confirmation above.
       uploadAllApplicationDocuments(data.id, data.member_ids || [], memberFormIndices);
@@ -1652,6 +1645,35 @@ function submitApplication() {
     btn.textContent = currentLang === 'ar' ? '❌ تعذّر الإرسال. تحقق من اتصالك.' : '❌ Submission failed. Check your connection.';
     btn.disabled = false;
   });
+}
+
+// Replaces the old approach of just changing the submit button's own text in
+// place, while the entire form stayed visible around it -- that's exactly
+// why a successful submission looked like nothing had happened. This is a
+// real full-screen overlay (fixed, covers the whole viewport including the
+// header above it) instead.
+function showSuccessScreen(qid, whatsapp) {
+  var screen = document.getElementById('success-screen');
+  var mount = document.getElementById('success-logo-mount');
+  // Clones the page's own header logo rather than duplicating that large
+  // base64 image a second time in this file.
+  if (mount && !mount.firstChild) {
+    var headerLogo = document.querySelector('.header-logo img');
+    if (headerLogo) {
+      var clone = headerLogo.cloneNode(true);
+      clone.style.height = '48px';
+      clone.style.width = 'auto';
+      mount.appendChild(clone);
+    }
+  }
+  var ar = currentLang === 'ar';
+  document.getElementById('success-title').textContent = ar ? '✅ تم استلام طلبك!' : '✅ Application received!';
+  document.getElementById('success-sub').textContent = ar ? 'سيقوم فريقنا بمراجعة طلبك والتواصل معك.' : 'Our team will review your application and be in touch.';
+  document.getElementById('success-ref-label').textContent = ar ? 'استخدم هذا لمتابعة حالة طلبك لاحقاً' : 'Use this to check your status later';
+  document.getElementById('success-ref-qid').textContent = (ar ? 'رقم الهوية: ' : 'QID: ') + (qid || '—');
+  document.getElementById('success-ref-wa').textContent = (ar ? 'واتساب: ' : 'WhatsApp: ') + (whatsapp || '—');
+  screen.style.display = 'flex';
+  window.scrollTo({ top: 0 });
 }
 
 // Uploads one file to the private documents bucket via clever-responder
