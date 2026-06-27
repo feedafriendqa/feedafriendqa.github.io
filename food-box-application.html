@@ -446,6 +446,10 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
       </div>
     </div>
     <div class="field">
+      <label id="lbl-email">Email <span class="hint" id="lbl-email-hint">(optional — for a confirmation email)</span></label>
+      <input type="email" id="inp-email" placeholder="you@email.com" data-en="you@email.com" data-ar="example@email.com">
+    </div>
+    <div class="field">
       <label id="lbl-address">Home address <span class="req">*</span>
         <span class="hint" id="lbl-address-hint">Upload your blue Qatar address plate for instant auto-fill, or enter manually below.</span>
       </label>
@@ -640,6 +644,7 @@ const T = {
     'lbl-salary-proof':'Salary proof','lbl-salary-proof-sub':'Tap to upload',
     'lbl-rent-proof':'Rent proof','lbl-rent-proof-sub':'Tap to upload',
     'lbl-address':'Home address',
+    'lbl-email':'Email','lbl-email-hint':'(optional — for a confirmation email)',
     'lbl-address-hint':'Upload your blue Qatar address plate for instant auto-fill, or enter manually.',
     'lbl-blue-plate-btn':'Upload blue address plate',
     'lbl-blue-plate-sub':'Tap to scan your Qatar address plate',
@@ -695,6 +700,7 @@ const T = {
     'lbl-salary-proof':'إثبات الراتب','lbl-salary-proof-sub':'اضغط للرفع',
     'lbl-rent-proof':'إثبات الإيجار','lbl-rent-proof-sub':'اضغط للرفع',
     'lbl-address':'عنوان السكن',
+    'lbl-email':'البريد الإلكتروني','lbl-email-hint':'(اختياري — لإرسال تأكيد عبر البريد الإلكتروني)',
     'lbl-address-hint':'ارفع صورة اللوحة الزرقاء لملء العنوان تلقائياً، أو أدخله يدوياً.',
     'lbl-blue-plate-btn':'ارفع اللوحة الزرقاء',
     'lbl-blue-plate-sub':'اضغط لمسح لوحة العنوان القطرية',
@@ -1609,6 +1615,7 @@ function submitApplication() {
     sponsor: getVal('inp-sponsor'),
     qid_expiry: getVal('inp-expiry') || null,
     whatsapp: getVal('inp-whatsapp'),
+    email: getVal('inp-email') || null,
     preferred_lang: getRadio('pref-lang'),
     applicant_role: getRadio('applicant-role'),
     is_working: getRadio('working') === 'yes',
