@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Friend Profile — Feed a Friend</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,700;0,800;0,900;1,900&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --green:#2d7a3a;--green-dark:#1e5528;--green-light:#eaf5ec;--green-mid:#4a9e58;
+  --yellow:#f5b942;--yellow-light:#fef8ec;
+  --red:#c0392b;--red-light:#fdeaea;
+  --border:#e0eee2;--off-white:#f7f9f7;--muted:#5a7060;--text:#1a2e1d;
+  --radius:12px;--radius-sm:8px;
+  --teal:#00a896;--teal-dark:#007a6e;
+  --orange:#f4845f;--orange-dark:#c45e3a;
+  --purple:#7b5ea7;--purple-dark:#5a3f82;
+  --sky:#0ea5c9;--sky-dark:#0878a0;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito Sans',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh}
+h1,h2,h3,button,.num{font-family:'Nunito',sans-serif}
+
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--green-light);padding:20px}
+.login-card{background:#fff;border-radius:var(--radius);padding:36px 32px;max-width:380px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.08)}
+.login-card h1{font-size:20px;font-weight:900;color:var(--green-dark);margin-bottom:4px}
+.login-card p{font-size:13px;color:var(--muted);margin-bottom:20px}
+.login-card input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;margin-bottom:12px;font-family:'Nunito Sans',sans-serif}
+.login-card input:focus{outline:none;border-color:var(--green)}
+.login-card button{width:100%;padding:12px;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:800;cursor:pointer}
+.login-card button:disabled{opacity:.6;cursor:default}
+.login-err{display:none;background:var(--red-light);color:var(--red);font-size:12px;font-weight:700;padding:8px 10px;border-radius:8px;margin-bottom:12px}
+
+.topbar{background:var(--green);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.topbar h1{color:#fff;font-size:16px;font-weight:900}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.topbar button{background:rgba(255,255,255,.15);color:#fff;border:none;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer}
+
+.wrap{max-width:880px;margin:0 auto;padding:24px 20px 60px}
+
+.search-row{display:flex;gap:10px;margin-bottom:18px}
+.search-row input{flex:1;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:#fff}
+.search-row input:focus{outline:none;border-color:var(--green)}
+.search-row button{padding:13px 22px;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap}
+
+.result-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.result-card:hover{border-color:var(--green)}
+.result-name{font-weight:800;font-size:14px}
+.result-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.empty-state{text-align:center;padding:50px 20px;color:var(--muted);font-size:13px}
+
+.back-btn{background:none;border:none;color:var(--green-dark);font-weight:800;font-size:13px;cursor:pointer;margin-bottom:16px;padding:0}
+
+.profile-header{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px}
+.profile-name{font-size:22px;font-weight:900;color:var(--green-dark)}
+.profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:14px}
+.profile-field-label{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:800;margin-bottom:2px}
+.profile-field-val{font-size:14px;font-weight:700}
+
+.review-banner{background:var(--yellow-light);border:1.5px solid var(--yellow);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:18px}
+.review-banner-title{font-weight:800;font-size:13px;color:#7a5a0a;margin-bottom:6px}
+.candidate-row{display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:8px;padding:10px 12px;margin-top:8px;flex-wrap:wrap;gap:8px}
+.candidate-actions button{font-size:11px;font-weight:800;padding:6px 12px;border-radius:16px;border:none;cursor:pointer;margin-left:6px}
+.btn-merge{background:var(--green);color:#fff}
+.btn-dismiss{background:#eee;color:var(--muted)}
+
+.prog-section{margin-bottom:22px}
+.prog-title{font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:10px}
+.prog-card{background:#fff;border:1.5px solid var(--border);border-left:4px solid var(--green);border-radius:var(--radius-sm);padding:16px;margin-bottom:10px}
+.prog-card.wbb{border-left-color:var(--purple)}
+.prog-card.ll{border-left-color:var(--sky)}
+.prog-card.shoe{border-left-color:var(--orange)}
+.prog-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px}
+.badge{display:inline-block;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:800}
+.badge-active{background:var(--green-light);color:var(--green-dark)}
+.badge-pending{background:var(--yellow-light);color:#7a5a0a}
+.badge-archived{background:#eee;color:var(--muted)}
+.badge-duplicate{background:var(--red-light);color:var(--red)}
+.field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;font-size:13px}
+.field-grid .k{color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase}
+.field-grid .v{font-weight:700}
+.sub-list{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.sub-list-title{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+.sub-item{font-size:12px;padding:4px 0;display:flex;gap:8px;flex-wrap:wrap}
+.sub-item b{font-weight:800}
+.flag{font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;background:var(--yellow-light);color:#7a5a0a}
+
+.loading{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+
+<div id="login-screen" class="login-page">
+  <div class="login-card">
+    <h1>Friend profile</h1>
+    <p>Cross-programme view — sign in with your staff account.</p>
+    <div class="login-err" id="login-err"></div>
+    <input type="email" id="login-email" placeholder="you@email.com" autocomplete="email">
+    <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+    <button id="login-btn" onclick="doLogin()">Sign in →</button>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="topbar">
+    <h1>👤 Friend profile</h1>
+    <div class="topbar-actions">
+      <span id="staff-name" style="color:#fff;font-size:12px;font-weight:700;opacity:.85"></span>
+      <button onclick="signOut()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div id="view-search">
+      <div class="search-row">
+        <input type="text" id="search-input" placeholder="Search by name, QID, or phone…" onkeydown="if(event.key==='Enter')doSearch()">
+        <button onclick="doSearch()">Search</button>
+      </div>
+      <div id="search-results"></div>
+    </div>
+
+    <div id="view-profile" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
+const sb = supabase.createClient(SUPABASE_URL, ANON_KEY);
+
+document.addEventListener('DOMContentLoaded', async function() {
+  var { data: { session } } = await sb.auth.getSession();
+  if (session) await handleSession(session);
+  sb.auth.onAuthStateChange(async function(event, session) {
+    if (session) await handleSession(session);
+    else { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('app').style.display = 'none'; }
+  });
+  var pwField = document.getElementById('login-password');
+  if (pwField) pwField.addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+});
+
+async function handleSession(session) {
+  // Mirrors food-box-admin.html's own auth pattern exactly (faf_user_roles
+  // by email, default to 'admin' if no row exists) — this tool reads the
+  // same confidential data, so it should be gated the same way, not invent
+  // a stricter or looser rule of its own.
+  var result = await sb.from('faf_user_roles').select('display_name').eq('email', session.user.email).maybeSingle();
+  var name = (result.data && result.data.display_name) ? result.data.display_name.split(' ')[0] : session.user.email.split('@')[0];
+  document.getElementById('staff-name').textContent = name;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+
+async function doLogin() {
+  var email = document.getElementById('login-email').value.trim();
+  var password = document.getElementById('login-password').value;
+  var errEl = document.getElementById('login-err');
+  var btn = document.getElementById('login-btn');
+  errEl.style.display = 'none';
+  if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; errEl.style.display = 'block'; return; }
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+  var result = await sb.auth.signInWithPassword({ email: email, password: password });
+  if (result.error) {
+    errEl.textContent = '⚠️ ' + result.error.message;
+    errEl.style.display = 'block';
+  }
+  btn.textContent = 'Sign in →'; btn.disabled = false;
+}
+
+function signOut() { sb.auth.signOut(); }
+
+async function doSearch() {
+  var term = document.getElementById('search-input').value.trim();
+  var resultsEl = document.getElementById('search-results');
+  if (term.length < 2) { resultsEl.innerHTML = '<div class="empty-state">Type at least 2 characters.</div>'; return; }
+  resultsEl.innerHTML = '<div class="loading">Searching…</div>';
+  var { data, error } = await sb.rpc('search_friends', { p_term: term });
+  if (error) { resultsEl.innerHTML = '<div class="empty-state">Search failed: ' + error.message + '</div>'; return; }
+  var rows = data || [];
+  if (rows.length === 0) { resultsEl.innerHTML = '<div class="empty-state">No matches.</div>'; return; }
+  resultsEl.innerHTML = rows.map(function(f) {
+    return '<div class="result-card" onclick="openProfile(\'' + f.id + '\')">'
+      + '<div><div class="result-name">' + escapeHtml(f.full_name_en || f.full_name || '—') + '</div>'
+      + '<div class="result-meta">' + (f.qid_number || 'no QID on file') + ' · ' + (f.whatsapp || 'no phone on file') + '</div></div>'
+      + '<div style="color:var(--muted);font-size:18px">→</div></div>';
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleDateString('en-GB', { year:'numeric', month:'short', day:'numeric' }); } catch(e) { return d; }
+}
+
+function statusBadge(status) {
+  var cls = 'badge-active';
+  if (['new','pending','assessment'].indexOf(status) !== -1) cls = 'badge-pending';
+  else if (status === 'archived') cls = 'badge-archived';
+  else if (status === 'duplicate') cls = 'badge-duplicate';
+  return '<span class="badge ' + cls + '">' + escapeHtml(status || '—') + '</span>';
+}
+
+let currentFriendId = null;
+
+async function openProfile(friendId) {
+  currentFriendId = friendId;
+  document.getElementById('view-search').style.display = 'none';
+  var view = document.getElementById('view-profile');
+  view.style.display = 'block';
+  view.innerHTML = '<button class="back-btn" onclick="backToSearch()">← Back to search</button><div class="loading">Loading profile…</div>';
+
+  var { data, error } = await sb.rpc('get_friend_profile', { p_friend_id: friendId });
+  if (error) { view.innerHTML = '<button class="back-btn" onclick="backToSearch()">← Back to search</button><div class="empty-state">Could not load profile: ' + escapeHtml(error.message) + '</div>'; return; }
+  renderProfile(data || {});
+}
+
+function backToSearch() {
+  document.getElementById('view-profile').style.display = 'none';
+  document.getElementById('view-search').style.display = 'block';
+}
+
+async function renderProfile(bundle) {
+  var f = bundle.friend || {};
+  var html = '<button class="back-btn" onclick="backToSearch()">← Back to search</button>';
+
+  html += '<div class="profile-header">'
+    + '<div class="profile-name">' + escapeHtml(f.full_name_en || f.full_name || 'Unnamed') + '</div>'
+    + '<div class="profile-grid">'
+    + field('QID', f.qid_number) + field('Phone', f.whatsapp) + field('Nationality', f.nationality)
+    + field('Address', [f.building, f.street ? 'St. '+f.street : '', f.zone ? 'Zone '+f.zone : ''].filter(Boolean).join(', '))
+    + '</div></div>';
+
+  if ((bundle.pending_review || []).length > 0) {
+    html += '<div class="review-banner" id="review-banner">'
+      + '<div class="review-banner-title">⚠ Possible duplicate — shares a phone number with another record</div>'
+      + '<div id="review-candidates">Loading possible matches…</div>'
+      + '</div>';
+  }
+
+  html += programmeSection('Food Box', 'food_box', bundle.food_box, function(row) {
+    var members = (bundle.food_box_members || []).filter(function(m) { return m.application_id === row.id; });
+    var membersHtml = members.length ? ('<div class="sub-list"><div class="sub-list-title">Household members</div>' + members.map(function(m) {
+      var flags = [];
+      if (m.is_attending_school === 'no' || m.is_attending_school === false) flags.push('<span class="flag">not in school</span>');
+      if (m.is_pregnant) flags.push('<span class="flag">pregnant</span>');
+      return '<div class="sub-item"><b>' + escapeHtml(m.full_name || '—') + '</b> · ' + escapeHtml(m.role || '—') + (m.dob ? ' · ' + fmtDate(m.dob) : '') + ' ' + flags.join(' ') + '</div>';
+    }).join('') + '</div>') : '';
+    return '<div class="prog-card-top">' + statusBadge(row.status) + '<span style="font-size:11px;color:var(--muted)">' + fmtDate(row.created_at) + '</span></div>'
+      + '<div class="field-grid">'
+      + kv('Area', row.area) + kv('Household size', row.household_size) + kv('Boxes received', (row.boxes_received||0) + (row.max_boxes ? ' / ' + row.max_boxes : (row.is_long_term ? ' / ∞' : '')))
+      + kv('Diaper size', row.diaper_size) + kv('Formula', row.formula) + kv('Ref no', row.ref_no)
+      + '</div>' + membersHtml;
+  });
+
+  html += programmeSection('Welcome Baby', 'wbb', bundle.welcome_baby, function(row) {
+    var babies = (bundle.babies || []).filter(function(b) { return b.family_id === row.id; });
+    var babiesHtml = babies.length ? ('<div class="sub-list"><div class="sub-list-title">Babies</div>' + babies.map(function(b) {
+      return '<div class="sub-item"><b>' + escapeHtml(b.baby_name || '—') + '</b> · ' + (b.dob ? fmtDate(b.dob) : 'not born yet') + (b.feeding_method ? ' · ' + escapeHtml(b.feeding_method) : '') + '</div>';
+    }).join('') + '</div>') : '';
+    return '<div class="prog-card-top">' + statusBadge(row.status) + '<span style="font-size:11px;color:var(--muted)">Due ' + fmtDate(row.due_date) + '</span></div>'
+      + '<div class="field-grid">'
+      + kv('Mother', row.mother_name) + kv('Father', row.father_name) + kv('Location', row.location) + kv('Language', row.language)
+      + '</div>' + babiesHtml;
+  });
+
+  html += programmeSection('Little Learners', 'll', bundle.little_learners, function(row) {
+    var children = (bundle.ll_children || []).filter(function(c) { return c.family_id === row.id; });
+    var childrenHtml = children.length ? ('<div class="sub-list"><div class="sub-list-title">Children</div>' + children.map(function(c) {
+      return '<div class="sub-item"><b>' + escapeHtml(c.full_name || '—') + '</b> · ' + escapeHtml(c.school_status || '—') + (c.final_year_group ? ' · ' + escapeHtml(c.final_year_group) : '') + '</div>';
+    }).join('') + '</div>') : '';
+    return '<div class="prog-card-top">' + statusBadge(row.pipeline_status || row.status) + '<span style="font-size:11px;color:var(--muted)">' + escapeHtml(row.area || '') + '</span></div>'
+      + '<div class="field-grid">' + kv('URN', row.urn) + kv('Assessor', row.assessor) + '</div>' + childrenHtml;
+  });
+
+  html += programmeSection('Shoe Giveaway', 'shoe', bundle.shoe_requests, function(row) {
+    return '<div class="prog-card-top">' + (row.matched ? '<span class="badge badge-active">matched</span>' : '<span class="badge badge-pending">unmatched</span>') + '<span style="font-size:11px;color:var(--muted)">' + fmtDate(row.created_at) + '</span></div>'
+      + '<div class="field-grid">' + kv('Shoe size (EU)', row.shoe_size_eu) + '</div>';
+  });
+
+  document.getElementById('view-profile').innerHTML = html;
+
+  if ((bundle.pending_review || []).length > 0) loadReviewCandidates(f.id);
+}
+
+function field(label, val) {
+  return '<div><div class="profile-field-label">' + label + '</div><div class="profile-field-val">' + escapeHtml(val || '—') + '</div></div>';
+}
+function kv(label, val) {
+  return '<div><div class="k">' + label + '</div><div class="v">' + escapeHtml((val === 0 ? 0 : val) || '—') + '</div></div>';
+}
+
+function programmeSection(title, cls, rows, renderBody) {
+  if (!rows || rows.length === 0) return '';
+  var cards = rows.map(function(row) { return '<div class="prog-card ' + cls + '">' + renderBody(row) + '</div>'; }).join('');
+  return '<div class="prog-section"><div class="prog-title">' + title + ' (' + rows.length + ')</div>' + cards + '</div>';
+}
+
+async function loadReviewCandidates(friendId) {
+  var el = document.getElementById('review-candidates');
+  var { data, error } = await sb.rpc('get_friend_match_candidates', { p_friend_id: friendId });
+  if (error || !data || data.length === 0) { el.innerHTML = '<div style="font-size:12px;color:var(--muted)">No other record currently shares this phone — may have already been resolved.</div>'; return; }
+  el.innerHTML = data.map(function(c) {
+    return '<div class="candidate-row"><div><b>' + escapeHtml(c.full_name_en || c.full_name || 'Unnamed') + '</b> · ' + (c.qid_number || 'no QID') + '</div>'
+      + '<div class="candidate-actions">'
+      + '<button class="btn-merge" onclick="doMerge(\'' + friendId + '\',\'' + c.id + '\')">Same person — merge</button>'
+      + '<button class="btn-dismiss" onclick="doDismiss(\'' + friendId + '\',\'' + c.id + '\')">Different person</button>'
+      + '</div></div>';
+  }).join('');
+}
+
+async function doMerge(keepId, removeId) {
+  if (!confirm('Merge these into one person? This cannot be undone.')) return;
+  var { error } = await sb.rpc('merge_friends', { p_keep_id: keepId, p_remove_id: removeId });
+  if (error) { alert('Merge failed: ' + error.message); return; }
+  openProfile(keepId);
+}
+
+async function doDismiss(idA, idB) {
+  var { error } = await sb.rpc('dismiss_friend_match', { p_friend_id_a: idA, p_friend_id_b: idB });
+  if (error) { alert('Failed: ' + error.message); return; }
+  openProfile(idA);
+}
+</script>
+</body>
+</html>
