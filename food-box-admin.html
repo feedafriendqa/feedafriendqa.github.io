@@ -54,7 +54,6 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 .stat-card.sc-boxes{background:linear-gradient(135deg,#7c5cbf,#a78bdb);}
 .stat-card.sc-archived{background:linear-gradient(135deg,#546e7a,#90a4ae);}
 .stat-card.sc-review{background:linear-gradient(135deg,#7b5ea7,#a07fd4);}
-.stat-card.sc-wbb{background:linear-gradient(135deg,#ad1457,#f48fb1);}
 .stat-card .num{font-size:28px;font-weight:900;color:white;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,0.15);}
 .stat-card .lbl{font-size:12px;color:rgba(255,255,255,0.88);font-weight:700;margin-top:4px;}
 
@@ -323,7 +322,6 @@ select.edit-field{cursor:pointer;}
       <div class="stat-card sc-boxes" onclick="setFilterFromTile('active')"><div class="num" id="stat-boxes-needed">–</div><div class="lbl">Boxes needed</div></div>
       <div class="stat-card sc-archived" onclick="setFilterFromTile('archived')"><div class="num" id="stat-archived">–</div><div class="lbl">Archived</div></div>
       <div class="stat-card sc-review" onclick="setFilterFromTile('review')"><div class="num" id="stat-translation">–</div><div class="lbl">Needs review</div></div>
-      <div class="stat-card sc-wbb" onclick="setFilterFromTile('wbb_review')"><div class="num" id="stat-wbb-review">–</div><div class="lbl">🍼 Pregnant — verify WBB</div></div>
     </div>
 
     <div id="daily-quote" style="background:var(--green);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;color:white;"></div>
@@ -713,34 +711,6 @@ async function handleAdminSession(session) {
       if (rows && rows.length) { badge.textContent = rows.length; badge.style.display = 'inline-block'; }
       else badge.style.display = 'none';
     }).catch(function(){});
-
-    // Deep link from friend-profile.html's "open in Food Box CRM" link:
-    // ?view=<application_id> opens that application's detail modal
-    // directly, same retry pattern as ?approve= above since allApps loads
-    // asynchronously after page load.
-    var viewId = new URLSearchParams(window.location.search).get('view');
-    if (viewId) {
-      var tryOpenApp = function(attemptsLeft) {
-        var a = allApps.find(function(x){ return x.id === viewId; });
-        if (a) { viewApp(viewId); }
-        else if (attemptsLeft > 0) { setTimeout(function(){ tryOpenApp(attemptsLeft - 1); }, 400); }
-      };
-      tryOpenApp(8);
-    }
-
-    // Deep link from the "✓ Approve this distributor" email button:
-    // ?approve=<distributor_id> jumps straight to the Approvals tab and
-    // opens that distributor's detail modal instead of the default Cases view.
-    var approveId = new URLSearchParams(window.location.search).get('approve');
-    if (approveId) {
-      showView('approvals');
-      var tryOpen = function(attemptsLeft) {
-        var d = allDistributors.find(function(x){ return x.id === approveId; });
-        if (d) { viewDistributor(approveId); }
-        else if (attemptsLeft > 0) { setTimeout(function(){ tryOpen(attemptsLeft - 1); }, 400); }
-      };
-      tryOpen(8);
-    }
   }
 
   // Daily quote
@@ -786,7 +756,7 @@ function loadApps() {
     langFilter = '&submission_lang=in.(' + myLanguages.join(',') + ')';
   }
 
-  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=*&order=created_at.desc' + langFilter, {
+  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=*&order=created_at.desc&limit=5000' + langFilter, {
     headers: apiHeaders()
   }).then(function(r) { return r.json(); }).then(function(data) {
     var apps = Array.isArray(data) ? data : [];
@@ -859,7 +829,6 @@ function updateStats() {
   document.getElementById('stat-boxes-needed').textContent = boxesNeeded;
   document.getElementById('stat-archived').textContent = scoped.filter(function(a){return resolveStatus(a)==='archived';}).length;
   document.getElementById('stat-translation').textContent = scoped.filter(function(a){return a.translation_pending;}).length;
-  document.getElementById('stat-wbb-review').textContent = scoped.filter(function(a){return a.is_pregnant && !a.wbb_case_created;}).length;
 }
 
 var LANG_TAGS = {ar:'🇶🇦 AR',bn:'🇧🇩 BN',hi:'🇮🇳 HI',ur:'🇵🇰 UR',tl:'🇵🇭 TL',en:'🇬🇧 EN'};
@@ -972,20 +941,6 @@ function setFilterFromTile(status) {
     });
     renderTable(filtered); return;
   }
-  if (status === 'wbb_review') {
-    // Self-maintaining: wbb_case_created flips to true the moment a case
-    // handler actually creates the Welcome Baby case (see notify_welcome_baby),
-    // so a handled pregnancy drops off this list on its own — no separate
-    // "dismiss" action needed, and nothing here can grow stale.
-    currentFilter = 'all';
-    document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
-    var filtered = allApps.filter(function(a){
-      if (!a.is_pregnant || a.wbb_case_created) return false;
-      if (myCasesOnly && (a.assigned_to || autoAssign(a)) !== myName) return false;
-      return true;
-    });
-    renderTable(filtered); return;
-  }
   var btn = Array.from(document.querySelectorAll('.filter-btn')).find(function(b){ return b.dataset.status === status; });
   if (btn) setFilter(status, btn);
 }
@@ -1008,10 +963,13 @@ function filterApps() {
   var q = document.getElementById('search-box').value.toLowerCase();
   var filtered = allApps.filter(function(a) {
     var status = resolveStatus(a);
-    if (currentFilter === 'new_pending') {
-      if (status !== 'new' && status !== 'pending') return false;
-    } else if (currentFilter !== 'all' && status !== currentFilter) {
-      return false;
+    // When actively searching, skip status filter so archived records appear
+    if (!q) {
+      if (currentFilter === 'new_pending') {
+        if (status !== 'new' && status !== 'pending') return false;
+      } else if (currentFilter !== 'all' && status !== currentFilter) {
+        return false;
+      }
     }
     // Case handlers only ever see their own queue (myCasesOnly is forced
     // true for them at login). Super admins see everything by default,
