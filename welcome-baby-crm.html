@@ -1002,16 +1002,25 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 async function handleSession(session) {
   currentUser = session.user;
-  const { data: roleData } = await sb.from('user_roles').select('*').eq('user_id', session.user.id).single();
+  // .maybeSingle() instead of .single() — the latter errors out the
+  // moment more than one row matches, which is exactly what turned one
+  // historical duplicate into 90+ over a few days (see migration 25).
+  // The unique constraint added there makes a repeat structurally
+  // impossible, but this is the other half of the fix: the code shouldn't
+  // have broken this way even before that happened once.
+  const { data: roleData } = await sb.from('user_roles').select('*').eq('user_id', session.user.id).maybeSingle();
   document.getElementById('loading').style.display = 'none';
 
   if (!roleData) {
-    await sb.from('user_roles').insert([{
+    // ignoreDuplicates so this can never overwrite a real existing row
+    // back to approved:false, even in a worst-case race condition —
+    // this should only ever actually insert for a genuinely new signup.
+    await sb.from('user_roles').upsert([{
       user_id: session.user.id,
       email: session.user.email,
       full_name: session.user.email.split('@')[0],
       approved: false
-    }]).then(() => {}).catch(() => {});
+    }], { onConflict: 'user_id', ignoreDuplicates: true }).then(() => {}).catch(() => {});
     showScreen('screen-pending');
     return;
   }
@@ -1041,7 +1050,17 @@ async function handleSession(session) {
   await loadAllData();
   await loadFairyCache();
   if (currentRole === 'super') loadApprovals();
-  goDash();
+
+  // Deep link from friend-profile.html's "open in Welcome Baby CRM" link.
+  // allFamilies is already loaded by this point (awaited above), so this
+  // can check directly rather than needing the retry-polling pattern the
+  // Food Box admin's equivalent deep link uses.
+  const viewFamilyId = new URLSearchParams(window.location.search).get('view');
+  if (viewFamilyId && allFamilies.find(f => f.id === viewFamilyId)) {
+    openProfile(viewFamilyId);
+  } else {
+    goDash();
+  }
 }
 
 // ── SIGN IN ──
@@ -1471,7 +1490,7 @@ async function openProfile(familyId) {
     assignBar.style.display = 'flex';
     // Find fairy name
     if (f.assigned_fairy_id) {
-      sb.from('user_roles').select('full_name,email').eq('user_id', f.assigned_fairy_id).single().then(({data}) => {
+      sb.from('user_roles').select('full_name,email').eq('user_id', f.assigned_fairy_id).maybeSingle().then(({data}) => {
         if (data) document.getElementById('p-assigned-fairy-name').textContent = data.full_name || data.email;
       });
     } else {

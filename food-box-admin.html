@@ -714,6 +714,20 @@ async function handleAdminSession(session) {
       else badge.style.display = 'none';
     }).catch(function(){});
 
+    // Deep link from friend-profile.html's "open in Food Box CRM" link:
+    // ?view=<application_id> opens that application's detail modal
+    // directly, same retry pattern as ?approve= above since allApps loads
+    // asynchronously after page load.
+    var viewId = new URLSearchParams(window.location.search).get('view');
+    if (viewId) {
+      var tryOpenApp = function(attemptsLeft) {
+        var a = allApps.find(function(x){ return x.id === viewId; });
+        if (a) { viewApp(viewId); }
+        else if (attemptsLeft > 0) { setTimeout(function(){ tryOpenApp(attemptsLeft - 1); }, 400); }
+      };
+      tryOpenApp(8);
+    }
+
     // Deep link from the "✓ Approve this distributor" email button:
     // ?approve=<distributor_id> jumps straight to the Approvals tab and
     // opens that distributor's detail modal instead of the default Cases view.
