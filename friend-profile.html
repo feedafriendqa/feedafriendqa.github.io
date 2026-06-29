@@ -59,10 +59,14 @@ h1,h2,h3,button,.num{font-family:'Nunito',sans-serif}
 .back-btn{background:none;border:none;color:var(--green-dark);font-weight:800;font-size:13px;cursor:pointer;margin-bottom:16px;padding:0}
 
 .profile-header{background:#fff;border:1.5px solid var(--border);border-bottom:3px solid var(--green);border-radius:var(--radius);padding:20px;margin-bottom:0}
+.profile-top{display:flex;align-items:center;gap:14px}
+.profile-avatar{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green-mid));color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;flex-shrink:0}
 .profile-name{font-size:22px;font-weight:900;color:var(--green-dark)}
-.profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:14px}
-.profile-field-label{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:800;margin-bottom:2px}
-.profile-field-val{font-size:14px;font-weight:700}
+.chip-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.id-chip{display:flex;align-items:center;gap:6px;background:var(--off-white);border:1px solid var(--border);border-radius:20px;padding:6px 12px 6px 8px;font-size:12px}
+.id-chip .ic{font-size:14px}
+.id-chip .v{font-weight:800;color:var(--text)}
+.id-chip .v.empty{color:var(--muted);font-weight:600}
 
 .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
 .prog-pill{font-size:12px;font-weight:800;padding:6px 14px;border-radius:16px;cursor:pointer;border:none;background:var(--green-light);color:var(--green-dark);transition:transform .1s}
@@ -262,11 +266,17 @@ async function renderProfile(bundle) {
     { key: 'shoe', label: '👟 Shoes', cls: 'shoe', count: (bundle.shoe_requests || []).length }
   ].filter(function(s) { return s.count > 0; });
 
+  var displayName = f.full_name_en || f.full_name || 'Unnamed';
+  var initials = displayName.trim().split(/\s+/).slice(0, 2).map(function(w) { return w[0]; }).join('').toUpperCase();
+  var addr = [f.building, f.street ? 'St. '+f.street : '', f.zone ? 'Zone '+f.zone : ''].filter(Boolean).join(', ');
+
   html += '<div class="profile-header">'
-    + '<div class="profile-name">' + escapeHtml(f.full_name_en || f.full_name || 'Unnamed') + '</div>'
-    + '<div class="profile-grid">'
-    + field('QID', f.qid_number) + field('Phone', f.whatsapp) + field('Nationality', f.nationality)
-    + field('Address', [f.building, f.street ? 'St. '+f.street : '', f.zone ? 'Zone '+f.zone : ''].filter(Boolean).join(', '))
+    + '<div class="profile-top">'
+    + '<div class="profile-avatar">' + escapeHtml(initials || '?') + '</div>'
+    + '<div class="profile-name">' + escapeHtml(displayName) + '</div>'
+    + '</div>'
+    + '<div class="chip-row">'
+    + idChip('🆔', f.qid_number) + idChip('📱', f.whatsapp) + idChip('🌍', f.nationality) + idChip('📍', addr)
     + '</div>';
 
   if (sectionsPresent.length > 0) {
@@ -297,38 +307,38 @@ async function renderProfile(bundle) {
       var flags = [];
       if (m.is_attending_school === 'no' || m.is_attending_school === false) flags.push('<span class="flag">not in school</span>');
       if (m.is_pregnant) flags.push('<span class="flag">pregnant</span>');
-      return '<div class="sub-item"><b>' + escapeHtml(m.full_name || '—') + '</b> · ' + escapeHtml(m.role || '—') + (m.dob ? ' · ' + fmtDate(m.dob) : '') + ' ' + flags.join(' ') + '</div>';
+      return '<div class="sub-item">👤 <b>' + escapeHtml(m.full_name || '—') + '</b> · ' + escapeHtml(m.role || '—') + (m.dob ? ' · ' + fmtDate(m.dob) : '') + ' ' + flags.join(' ') + '</div>';
     }).join('') + '</div>') : '';
     return '<div class="prog-card-top">' + statusBadge(row.status) + '<span style="font-size:11px;color:var(--muted)"><i class="prog-card-link-icon">↗</i> ' + fmtDate(row.created_at) + '</span></div>'
       + '<div class="field-grid">'
-      + kv('Area', row.area) + kv('Household size', row.household_size) + kv('Boxes received', (row.boxes_received||0) + (row.max_boxes ? ' / ' + row.max_boxes : (row.is_long_term ? ' / ∞' : '')))
-      + kv('Diaper size', row.diaper_size) + kv('Formula', row.formula) + kv('Ref no', row.ref_no)
+      + kv('📍 Area', row.area) + kv('👥 Household size', row.household_size) + kv('📦 Boxes received', (row.boxes_received||0) + (row.max_boxes ? ' / ' + row.max_boxes : (row.is_long_term ? ' / ∞' : '')))
+      + kv('🧷 Diaper size', row.diaper_size) + kv('🍼 Formula', row.formula) + kv('# Ref no', row.ref_no)
       + '</div>' + membersHtml;
   }, function(row) { return 'food-box-admin.html?view=' + row.id; });
 
   html += programmeSection('wbb', 'Welcome Baby', 'wbb', bundle.welcome_baby, function(row) {
     var babies = (bundle.babies || []).filter(function(b) { return b.family_id === row.id; });
     var babiesHtml = babies.length ? ('<div class="sub-list"><div class="sub-list-title">Babies</div>' + babies.map(function(b) {
-      return '<div class="sub-item"><b>' + escapeHtml(b.baby_name || '—') + '</b> · ' + (b.dob ? fmtDate(b.dob) : 'not born yet') + (b.feeding_method ? ' · ' + escapeHtml(b.feeding_method) : '') + '</div>';
+      return '<div class="sub-item">👶 <b>' + escapeHtml(b.baby_name || '—') + '</b> · ' + (b.dob ? fmtDate(b.dob) : 'not born yet') + (b.feeding_method ? ' · ' + escapeHtml(b.feeding_method) : '') + '</div>';
     }).join('') + '</div>') : '';
     return '<div class="prog-card-top">' + statusBadge(row.status) + '<span style="font-size:11px;color:var(--muted)"><i class="prog-card-link-icon">↗</i> Due ' + fmtDate(row.due_date) + '</span></div>'
       + '<div class="field-grid">'
-      + kv('Mother', row.mother_name) + kv('Father', row.father_name) + kv('Location', row.location) + kv('Language', row.language)
+      + kv('👩 Mother', row.mother_name) + kv('👨 Father', row.father_name) + kv('📍 Location', row.location) + kv('🗣️ Language', row.language)
       + '</div>' + babiesHtml;
   }, function(row) { return 'welcome-baby-crm.html?view=' + row.id; });
 
   html += programmeSection('ll', 'Little Learners', 'll', bundle.little_learners, function(row) {
     var children = (bundle.ll_children || []).filter(function(c) { return c.family_id === row.id; });
     var childrenHtml = children.length ? ('<div class="sub-list"><div class="sub-list-title">Children</div>' + children.map(function(c) {
-      return '<div class="sub-item"><b>' + escapeHtml(c.full_name || '—') + '</b> · ' + escapeHtml(c.school_status || '—') + (c.final_year_group ? ' · ' + escapeHtml(c.final_year_group) : '') + '</div>';
+      return '<div class="sub-item">🎓 <b>' + escapeHtml(c.full_name || '—') + '</b> · ' + escapeHtml(c.school_status || '—') + (c.final_year_group ? ' · ' + escapeHtml(c.final_year_group) : '') + '</div>';
     }).join('') + '</div>') : '';
     return '<div class="prog-card-top">' + statusBadge(row.pipeline_status || row.status) + '<span style="font-size:11px;color:var(--muted)">' + escapeHtml(row.area || '') + '</span></div>'
-      + '<div class="field-grid">' + kv('URN', row.urn) + kv('Assessor', row.assessor) + '</div>' + childrenHtml;
+      + '<div class="field-grid">' + kv('# URN', row.urn) + kv('🧑‍🏫 Assessor', row.assessor) + '</div>' + childrenHtml;
   });
 
   html += programmeSection('shoe', 'Shoe Giveaway', 'shoe', bundle.shoe_requests, function(row) {
     return '<div class="prog-card-top">' + (row.matched ? '<span class="badge badge-active">matched</span>' : '<span class="badge badge-pending">unmatched</span>') + '<span style="font-size:11px;color:var(--muted)">' + fmtDate(row.created_at) + '</span></div>'
-      + '<div class="field-grid">' + kv('Shoe size (EU)', row.shoe_size_eu) + '</div>';
+      + '<div class="field-grid">' + kv('👟 Shoe size (EU)', row.shoe_size_eu) + '</div>';
   });
 
   html += '</div>';
@@ -343,8 +353,9 @@ function scrollToSection(key) {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function field(label, val) {
-  return '<div><div class="profile-field-label">' + label + '</div><div class="profile-field-val">' + escapeHtml(val || '—') + '</div></div>';
+function idChip(icon, val) {
+  var hasVal = val !== null && val !== undefined && val !== '';
+  return '<div class="id-chip"><span class="ic">' + icon + '</span><span class="v' + (hasVal ? '' : ' empty') + '">' + escapeHtml(hasVal ? val : 'Not on file') + '</span></div>';
 }
 function kv(label, val) {
   return '<div><div class="k">' + label + '</div><div class="v">' + escapeHtml((val === 0 ? 0 : val) || '—') + '</div></div>';
