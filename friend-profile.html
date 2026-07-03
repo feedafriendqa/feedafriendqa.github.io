@@ -11,17 +11,19 @@
   --green:#2d7a3a;--green-dark:#1e5528;--green-light:#eaf5ec;--green-mid:#4a9e58;
   --yellow:#f5b942;--yellow-light:#fef8ec;
   --red:#c0392b;--red-light:#fdeaea;
-  --border:#e0eee2;--off-white:#f7f9f7;--muted:#5a7060;--text:#1a2e1d;
-  --radius:12px;--radius-sm:8px;
-  --teal:#00a896;--teal-dark:#007a6e;
-  --orange:#f4845f;--orange-dark:#c45e3a;
-  --purple:#7b5ea7;--purple-dark:#5a3f82;
-  --sky:#0ea5c9;--sky-dark:#0878a0;
+  --border:#e0ece0;--off-white:#f2f5f2;--muted:#5a7060;--text:#1a2e1d;
+  --radius:14px;--radius-sm:10px;
+  /* Real brand colors sampled from feedafriend.org */
+  --fb:#f7c948;--fb-dark:#5c4a13;--fb-light:#fff9e6;--fb-border:#f0cf6a;
+  --wbb:#d56dff;--wbb-dark:#4a1f5c;--wbb-light:#fdf6ff;--wbb-border:#e8b0ff;
+  --ll:#4bb6b7;--ll-dark:#0b3d3d;--ll-light:#f0fafa;--ll-border:#9adede;
+  --shoe:#f57664;--shoe-dark:#5e1a10;--shoe-light:#fff2f0;--shoe-border:#f5b5aa;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Nunito Sans',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh}
-h1,h2,h3,button,.num{font-family:'Nunito',sans-serif}
+h1,h2,h3,button{font-family:'Nunito',sans-serif}
 
+/* Login */
 .login-logo{width:88px;margin:0 auto 16px;display:flex;justify-content:center}
 .login-logo img{width:88px;height:auto;object-fit:contain}
 .login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--green-light);padding:20px}
@@ -34,82 +36,119 @@ h1,h2,h3,button,.num{font-family:'Nunito',sans-serif}
 .login-card button:disabled{opacity:.6;cursor:default}
 .login-err{display:none;background:var(--red-light);color:var(--red);font-size:12px;font-weight:700;padding:8px 10px;border-radius:8px;margin-bottom:12px}
 
+/* Topbar */
 .topbar{background:var(--green);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.topbar h1{color:#fff;font-size:16px;font-weight:900}
-.topbar-actions{display:flex;gap:8px;align-items:center}
-.topbar button{background:rgba(255,255,255,.15);color:#fff;border:none;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer}
+.topbar-titles{display:flex;align-items:center;gap:10px}
 .topbar-logo{width:42px;height:42px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fff;border-radius:10px;padding:5px}
 .topbar-logo img{width:100%;height:100%;object-fit:contain}
-.topbar-titles{display:flex;align-items:center;gap:10px}
+.topbar h1{color:#fff;font-size:16px;font-weight:900}
 .topbar-sub{color:rgba(255,255,255,.8);font-size:11px;font-weight:700;margin-top:1px}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.topbar-actions span{color:#fff;font-size:12px;font-weight:700;opacity:.85}
+.topbar button{background:rgba(255,255,255,.15);color:#fff;border:none;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer}
 
-.wrap{max-width:880px;margin:0 auto;padding:24px 20px 60px}
+/* Wrap */
+.wrap{max-width:780px;margin:0 auto;padding:24px 20px 60px}
 
+/* Search */
 .search-row{display:flex;gap:10px;margin-bottom:18px}
 .search-row input{flex:1;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:#fff}
 .search-row input:focus{outline:none;border-color:var(--green)}
 .search-row button{padding:13px 22px;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap}
-
-.result-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.result-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:border-color .15s}
 .result-card:hover{border-color:var(--green)}
 .result-name{font-weight:800;font-size:14px}
 .result-meta{font-size:12px;color:var(--muted);margin-top:2px}
 .empty-state{text-align:center;padding:50px 20px;color:var(--muted);font-size:13px}
+.loading{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px}
 
-.back-btn{background:none;border:none;color:var(--green-dark);font-weight:800;font-size:13px;cursor:pointer;margin-bottom:16px;padding:0}
+/* Profile — Magazine style */
+.back-btn{background:none;border:none;color:var(--green-dark);font-weight:800;font-size:13px;cursor:pointer;margin-bottom:16px;padding:0;display:inline-flex;align-items:center;gap:4px}
 
-.profile-header{background:#fff;border:1.5px solid var(--border);border-bottom:3px solid var(--green);border-radius:var(--radius);padding:20px;margin-bottom:0}
-.profile-top{display:flex;align-items:center;gap:14px}
-.profile-avatar{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green-mid));color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;flex-shrink:0}
-.profile-name{font-size:22px;font-weight:900;color:var(--green-dark)}
-.chip-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
-.id-chip{display:flex;align-items:center;gap:6px;background:var(--off-white);border:1px solid var(--border);border-radius:20px;padding:6px 12px 6px 8px;font-size:12px}
-.id-chip .ic{font-size:14px}
-.id-chip .v{font-weight:800;color:var(--text)}
-.id-chip .v.empty{color:var(--muted);font-weight:600}
+/* Identity banner */
+.identity-card{background:#fff;border-radius:var(--radius);overflow:hidden;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.identity-banner{background:linear-gradient(135deg,var(--green),var(--green-dark));padding:22px 20px}
+.identity-top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.profile-avatar{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;flex-shrink:0;border:2.5px solid rgba(255,255,255,.45)}
+.profile-name{color:#fff;font-size:22px;font-weight:900;line-height:1.1}
+.profile-sub{color:rgba(255,255,255,.8);font-size:12px;margin-top:3px}
+.chip-row{display:flex;gap:8px;flex-wrap:wrap}
+.id-chip{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 10px;font-size:12px;color:#fff}
+.id-chip .v.empty{opacity:.6}
+.pill-row{padding:14px 20px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.prog-pill{font-size:12px;font-weight:800;padding:7px 15px;border-radius:16px;cursor:pointer;border:none;font-family:'Nunito',sans-serif;transition:transform .1s,opacity .1s}
+.prog-pill:hover{transform:translateY(-1px);opacity:.9}
+.prog-pill.food_box{background:var(--fb);color:var(--fb-dark)}
+.prog-pill.wbb{background:var(--wbb);color:#fff}
+.prog-pill.ll{background:var(--ll);color:var(--ll-dark)}
+.prog-pill.shoe{background:var(--shoe);color:#fff}
 
-.pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
-.prog-pill{font-size:12px;font-weight:800;padding:6px 14px;border-radius:16px;cursor:pointer;border:none;background:var(--green-light);color:var(--green-dark);transition:transform .1s}
-.prog-pill:hover{transform:translateY(-1px)}
-.prog-pill.wbb{background:#fbeaf0;color:#72243e}
-.prog-pill.ll{background:#e6f1fb;color:#0c447c}
-.prog-pill.shoe{background:#faece7;color:#712b13}
-
-.sections-wrap{background:#fff;border:1.5px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);padding:20px;margin-bottom:18px}
-
-.review-banner{background:var(--yellow-light);border:1.5px solid var(--yellow);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:18px}
+/* Review banner */
+.review-banner{margin:14px 20px 0;background:var(--yellow-light);border:1.5px solid var(--yellow);border-radius:var(--radius-sm);padding:14px 16px}
 .review-banner-title{font-weight:800;font-size:13px;color:#7a5a0a;margin-bottom:6px}
 .candidate-row{display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:8px;padding:10px 12px;margin-top:8px;flex-wrap:wrap;gap:8px}
 .candidate-actions button{font-size:11px;font-weight:800;padding:6px 12px;border-radius:16px;border:none;cursor:pointer;margin-left:6px}
 .btn-merge{background:var(--green);color:#fff}
 .btn-dismiss{background:#eee;color:var(--muted)}
 
-.prog-section{margin-bottom:22px}
+/* Magazine programme sections */
+.prog-section{margin-bottom:14px;border-radius:var(--radius);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .prog-section:last-child{margin-bottom:0}
-.prog-title{font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:10px}
-.prog-card{background:#fff;border:1.5px solid var(--border);border-top:4px solid var(--green);border-radius:var(--radius-sm);padding:16px;margin-bottom:10px;display:block;text-decoration:none;color:inherit}
-.prog-card.wbb{border-top-color:var(--purple)}
-.prog-card.ll{border-top-color:var(--sky)}
-.prog-card.shoe{border-top-color:var(--orange)}
-.prog-card.linkable{cursor:pointer;transition:transform .12s,box-shadow .12s}
-.prog-card.linkable:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.08)}
-.prog-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px}
-.prog-card-link-icon{color:var(--green-dark);font-size:16px}
+
+.prog-header{padding:12px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.prog-header.food_box{background:var(--fb)}
+.prog-header.wbb{background:var(--wbb)}
+.prog-header.ll{background:var(--ll)}
+.prog-header.shoe{background:var(--shoe)}
+.prog-header-name{font-family:'Nunito',sans-serif;font-size:15px;font-weight:900}
+.prog-header.food_box .prog-header-name{color:var(--fb-dark)}
+.prog-header.wbb .prog-header-name,.prog-header.shoe .prog-header-name{color:#fff}
+.prog-header.ll .prog-header-name{color:var(--ll-dark)}
+.prog-header-link{font-size:12px;font-weight:800;opacity:.85}
+.prog-header.food_box .prog-header-link{color:var(--fb-dark)}
+.prog-header.wbb .prog-header-link,.prog-header.shoe .prog-header-link{color:#fff}
+.prog-header.ll .prog-header-link{color:var(--ll-dark)}
+
+.prog-body{background:#fff;padding:16px 18px}
+.prog-card{display:block;text-decoration:none;color:inherit;margin-bottom:12px}
+.prog-card:last-child{margin-bottom:0}
+.prog-card + .prog-card{padding-top:12px;border-top:1px solid var(--border)}
+
+/* Status bar on active boxes */
+.box-stat{display:flex;align-items:baseline;gap:6px;margin-bottom:6px}
+.box-num{font-family:'Nunito',sans-serif;font-size:30px;font-weight:900;color:var(--text);line-height:1}
+.box-denom{font-size:14px;color:var(--muted)}
+.bar-bg{height:6px;background:#eee;border-radius:3px;overflow:hidden;margin-bottom:12px}
+.bar-fill{height:100%;background:var(--fb);border-radius:3px}
+
+.prog-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:8px}
 .badge{display:inline-block;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:800}
 .badge-active{background:var(--green-light);color:var(--green-dark)}
 .badge-pending{background:var(--yellow-light);color:#7a5a0a}
 .badge-archived{background:#eee;color:var(--muted)}
 .badge-duplicate{background:var(--red-light);color:var(--red)}
-.field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;font-size:13px}
-.field-grid .k{color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase}
-.field-grid .v{font-weight:700}
-.sub-list{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+
+.field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;font-size:13px}
+.field-bg{background:var(--off-white);border-radius:8px;padding:8px 10px}
+.field-bg .k{color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:2px}
+.field-bg .v{font-weight:700}
+
+.sub-list{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
 .sub-list-title{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
-.sub-item{font-size:12px;padding:4px 0;display:flex;gap:8px;flex-wrap:wrap}
+.sub-item{font-size:12px;padding:3px 0;display:flex;gap:8px;flex-wrap:wrap}
 .sub-item b{font-weight:800}
 .flag{font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;background:var(--yellow-light);color:#7a5a0a}
 
-.loading{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px}
+/* Baby mini cards */
+.baby-cards{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.baby-card{background:var(--wbb-light);border:1px solid var(--wbb-border);border-radius:8px;padding:8px 10px;flex:1;min-width:120px}
+.baby-card .k{font-size:10px;font-weight:700;color:var(--wbb);text-transform:uppercase;margin-bottom:2px}
+.baby-card .v{font-size:13px;font-weight:700;color:var(--wbb-dark)}
+
+/* Shoe display */
+.shoe-display{display:flex;align-items:center;gap:14px}
+.shoe-num{font-family:'Nunito',sans-serif;font-size:44px;font-weight:900;color:var(--shoe);line-height:1}
+.shoe-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -269,24 +308,27 @@ async function renderProfile(bundle) {
   var displayName = f.full_name_en || f.full_name || 'Unnamed';
   var initials = displayName.trim().split(/\s+/).slice(0, 2).map(function(w) { return w[0]; }).join('').toUpperCase();
   var addr = [f.building, f.street ? 'St. '+f.street : '', f.zone ? 'Zone '+f.zone : ''].filter(Boolean).join(', ');
+  var totalBoxes = (bundle.food_box || []).reduce(function(s,r){ return s + (r.boxes_received||0); }, 0);
+  var summary = sectionsPresent.length + ' programme' + (sectionsPresent.length !== 1 ? 's' : '')
+    + (totalBoxes ? ' · ' + totalBoxes + ' box' + (totalBoxes !== 1 ? 'es' : '') + ' delivered' : '');
 
-  html += '<div class="profile-header">'
-    + '<div class="profile-top">'
+  // Identity banner — green gradient with avatar and ID chips
+  html += '<div class="identity-card">'
+    + '<div class="identity-banner">'
+    + '<div class="identity-top">'
     + '<div class="profile-avatar">' + escapeHtml(initials || '?') + '</div>'
-    + '<div class="profile-name">' + escapeHtml(displayName) + '</div>'
+    + '<div><div class="profile-name">' + escapeHtml(displayName) + '</div>'
+    + '<div class="profile-sub">' + escapeHtml(summary) + '</div></div>'
     + '</div>'
     + '<div class="chip-row">'
     + idChip('🆔', f.qid_number) + idChip('📱', f.whatsapp) + idChip('🌍', f.nationality) + idChip('📍', addr)
-    + '</div>';
+    + '</div></div>';
 
   if (sectionsPresent.length > 0) {
     html += '<div class="pill-row">' + sectionsPresent.map(function(s) {
       return '<button class="prog-pill ' + s.cls + '" onclick="scrollToSection(\'' + s.key + '\')">' + s.label + ' (' + s.count + ')</button>';
     }).join('') + '</div>';
   }
-  html += '</div>';
-
-  html += '<div class="sections-wrap">';
 
   if ((bundle.pending_review || []).length > 0) {
     html += '<div class="review-banner" id="review-banner">'
@@ -295,53 +337,58 @@ async function renderProfile(bundle) {
       + '</div>';
   }
 
-  // Food Box and Welcome Baby cards link straight into their admin CRM via
-  // ?view=<id> (wired into both tools to support this). Little Learners and
-  // Shoe Giveaway don't get a link — there's no separate admin page with a
-  // matching deep-link target for either yet, and a card that looks
-  // clickable but goes nowhere would be worse than one that's honestly
-  // just informational.
-  html += programmeSection('food_box', 'Food Box', 'food_box', bundle.food_box, function(row) {
+  html += '</div>'; // close identity-card
+
+  // Magazine sections — each programme gets a full-width coloured header then a white body
+  html += programmeSection('food_box', '🥡 Food Box', 'food_box', bundle.food_box, function(row) {
+    var received = row.boxes_received || 0;
+    var maxB = row.max_boxes;
+    var pct = maxB ? Math.round(received / maxB * 100) : 0;
     var members = (bundle.food_box_members || []).filter(function(m) { return m.application_id === row.id; });
-    var membersHtml = members.length ? ('<div class="sub-list"><div class="sub-list-title">Household members</div>' + members.map(function(m) {
+    var membersHtml = members.length ? ('<div class="sub-list"><div class="sub-list-title">Household</div>' + members.map(function(m) {
       var flags = [];
       if (m.is_attending_school === 'no' || m.is_attending_school === false) flags.push('<span class="flag">not in school</span>');
       if (m.is_pregnant) flags.push('<span class="flag">pregnant</span>');
       return '<div class="sub-item">👤 <b>' + escapeHtml(m.full_name || '—') + '</b> · ' + escapeHtml(m.role || '—') + (m.dob ? ' · ' + fmtDate(m.dob) : '') + ' ' + flags.join(' ') + '</div>';
     }).join('') + '</div>') : '';
-    return '<div class="prog-card-top">' + statusBadge(row.status) + '<span style="font-size:11px;color:var(--muted)"><i class="prog-card-link-icon">↗</i> ' + fmtDate(row.created_at) + '</span></div>'
+    return '<div class="prog-card-top">' + statusBadge(row.status) + '<span style="font-size:11px;color:var(--muted)">' + fmtDate(row.created_at) + '</span></div>'
+      + (maxB ? '<div class="box-stat"><div class="box-num">' + received + '</div><div class="box-denom">/ ' + maxB + ' boxes received</div></div><div class="bar-bg"><div class="bar-fill" style="width:' + pct + '%"></div></div>' : '')
       + '<div class="field-grid">'
-      + kv('📍 Area', row.area) + kv('👥 Household size', row.household_size) + kv('📦 Boxes received', (row.boxes_received||0) + (row.max_boxes ? ' / ' + row.max_boxes : (row.is_long_term ? ' / ∞' : '')))
-      + kv('🧷 Diaper size', row.diaper_size) + kv('🍼 Formula', row.formula) + kv('# Ref no', row.ref_no)
+      + kvb('📍 Area', row.area) + kvb('👥 Household', row.household_size)
+      + kvb('🧷 Diapers', row.diaper_size) + kvb('🍼 Formula', row.formula)
       + '</div>' + membersHtml;
   }, function(row) { return 'food-box-admin.html?view=' + row.id; });
 
-  html += programmeSection('wbb', 'Welcome Baby', 'wbb', bundle.welcome_baby, function(row) {
+  html += programmeSection('wbb', '🍼 Welcome Baby', 'wbb', bundle.welcome_baby, function(row) {
     var babies = (bundle.babies || []).filter(function(b) { return b.family_id === row.id; });
-    var babiesHtml = babies.length ? ('<div class="sub-list"><div class="sub-list-title">Babies</div>' + babies.map(function(b) {
-      return '<div class="sub-item">👶 <b>' + escapeHtml(b.baby_name || '—') + '</b> · ' + (b.dob ? fmtDate(b.dob) : 'not born yet') + (b.feeding_method ? ' · ' + escapeHtml(b.feeding_method) : '') + '</div>';
+    var babiesHtml = babies.length ? ('<div class="baby-cards">' + babies.map(function(b) {
+      return '<div class="baby-card"><div class="k">👶 Baby</div><div class="v">' + escapeHtml(b.baby_name || '—') + '</div>'
+        + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + (b.dob ? fmtDate(b.dob) : 'not born yet') + (b.feeding_method ? ' · ' + escapeHtml(b.feeding_method) : '') + '</div></div>';
     }).join('') + '</div>') : '';
-    return '<div class="prog-card-top">' + statusBadge(row.status) + '<span style="font-size:11px;color:var(--muted)"><i class="prog-card-link-icon">↗</i> Due ' + fmtDate(row.due_date) + '</span></div>'
+    return '<div class="prog-card-top">' + statusBadge(row.status) + '<span style="font-size:11px;color:var(--muted)">Due ' + fmtDate(row.due_date) + '</span></div>'
       + '<div class="field-grid">'
-      + kv('👩 Mother', row.mother_name) + kv('👨 Father', row.father_name) + kv('📍 Location', row.location) + kv('🗣️ Language', row.language)
+      + kvb('👩 Mother', row.mother_name) + kvb('👨 Father', row.father_name)
+      + kvb('📍 Location', row.location) + kvb('🗣️ Language', row.language)
       + '</div>' + babiesHtml;
   }, function(row) { return 'welcome-baby-crm.html?view=' + row.id; });
 
-  html += programmeSection('ll', 'Little Learners', 'll', bundle.little_learners, function(row) {
+  html += programmeSection('ll', '📚 Little Learners', 'll', bundle.little_learners, function(row) {
     var children = (bundle.ll_children || []).filter(function(c) { return c.family_id === row.id; });
     var childrenHtml = children.length ? ('<div class="sub-list"><div class="sub-list-title">Children</div>' + children.map(function(c) {
       return '<div class="sub-item">🎓 <b>' + escapeHtml(c.full_name || '—') + '</b> · ' + escapeHtml(c.school_status || '—') + (c.final_year_group ? ' · ' + escapeHtml(c.final_year_group) : '') + '</div>';
     }).join('') + '</div>') : '';
     return '<div class="prog-card-top">' + statusBadge(row.pipeline_status || row.status) + '<span style="font-size:11px;color:var(--muted)">' + escapeHtml(row.area || '') + '</span></div>'
-      + '<div class="field-grid">' + kv('# URN', row.urn) + kv('🧑‍🏫 Assessor', row.assessor) + '</div>' + childrenHtml;
+      + '<div class="field-grid">' + kvb('# URN', row.urn) + kvb('🧑‍🏫 Assessor', row.assessor) + '</div>' + childrenHtml;
   });
 
-  html += programmeSection('shoe', 'Shoe Giveaway', 'shoe', bundle.shoe_requests, function(row) {
-    return '<div class="prog-card-top">' + (row.matched ? '<span class="badge badge-active">matched</span>' : '<span class="badge badge-pending">unmatched</span>') + '<span style="font-size:11px;color:var(--muted)">' + fmtDate(row.created_at) + '</span></div>'
-      + '<div class="field-grid">' + kv('👟 Shoe size (EU)', row.shoe_size_eu) + '</div>';
+  html += programmeSection('shoe', '👟 Shoe Giveaway', 'shoe', bundle.shoe_requests, function(row) {
+    return '<div class="shoe-display">'
+      + '<div class="shoe-num">' + escapeHtml(row.shoe_size_eu || '—') + '</div>'
+      + '<div><div class="shoe-label">EU shoe size</div>'
+      + (row.matched ? '<span class="badge badge-active" style="display:inline-block;margin-top:4px;">matched</span>' : '<span class="badge badge-pending" style="display:inline-block;margin-top:4px;">unmatched</span>')
+      + '<div style="font-size:11px;color:var(--muted);margin-top:4px;">' + fmtDate(row.created_at) + '</div>'
+      + '</div></div>';
   });
-
-  html += '</div>';
 
   document.getElementById('view-profile').innerHTML = html;
 
@@ -355,22 +402,31 @@ function scrollToSection(key) {
 
 function idChip(icon, val) {
   var hasVal = val !== null && val !== undefined && val !== '';
-  return '<div class="id-chip"><span class="ic">' + icon + '</span><span class="v' + (hasVal ? '' : ' empty') + '">' + escapeHtml(hasVal ? val : 'Not on file') + '</span></div>';
+  return '<div class="id-chip"><span>' + icon + '</span><span class="v' + (hasVal ? '' : ' empty') + '">' + escapeHtml(hasVal ? val : 'Not on file') + '</span></div>';
 }
-function kv(label, val) {
-  return '<div><div class="k">' + label + '</div><div class="v">' + escapeHtml((val === 0 ? 0 : val) || '—') + '</div></div>';
+
+function kvb(label, val) {
+  return '<div class="field-bg"><div class="k">' + label + '</div><div class="v">' + escapeHtml((val === 0 ? 0 : val) || '—') + '</div></div>';
 }
+
+// Kept for backwards compat with any code that still calls kv()
+function kv(label, val) { return kvb(label, val); }
 
 function programmeSection(key, title, cls, rows, renderBody, linkFn) {
   if (!rows || rows.length === 0) return '';
+  var count = rows.length;
+  var openLink = linkFn ? '<span class="prog-header-link">↗ Open CRM</span>' : '';
+  var header = '<div class="prog-header ' + cls + '">'
+    + '<span class="prog-header-name">' + title + (count > 1 ? ' (' + count + ')' : '') + '</span>'
+    + openLink + '</div>';
   var cards = rows.map(function(row) {
     var inner = renderBody(row);
     if (linkFn) {
-      return '<a class="prog-card linkable ' + cls + '" href="' + linkFn(row) + '">' + inner + '</a>';
+      return '<a class="prog-card" href="' + linkFn(row) + '" style="display:block;text-decoration:none;color:inherit;">' + inner + '</a>';
     }
-    return '<div class="prog-card ' + cls + '">' + inner + '</div>';
+    return '<div class="prog-card">' + inner + '</div>';
   }).join('');
-  return '<div class="prog-section" id="section-' + key + '"><div class="prog-title">' + title + ' (' + rows.length + ')</div>' + cards + '</div>';
+  return '<div class="prog-section" id="section-' + key + '">' + header + '<div class="prog-body">' + cards + '</div></div>';
 }
 
 async function loadReviewCandidates(friendId) {
@@ -380,8 +436,8 @@ async function loadReviewCandidates(friendId) {
   el.innerHTML = data.map(function(c) {
     return '<div class="candidate-row"><div><b>' + escapeHtml(c.full_name_en || c.full_name || 'Unnamed') + '</b> · ' + (c.qid_number || 'no QID') + '</div>'
       + '<div class="candidate-actions">'
-      + '<button class="btn-merge" onclick="doMerge(\'' + friendId + '\',\'' + c.id + '\')">Same person — merge</button>'
-      + '<button class="btn-dismiss" onclick="doDismiss(\'' + friendId + '\',\'' + c.id + '\')">Different person</button>'
+      + '<button class="btn-merge" onclick="doMerge(\'' + friendId + '\',\'' + c.id + '\')\">Same person — merge</button>'
+      + '<button class="btn-dismiss" onclick="doDismiss(\'' + friendId + '\',\'' + c.id + '\')\">Different person</button>'
       + '</div></div>';
   }).join('');
 }
