@@ -149,6 +149,19 @@ h1,h2,h3,button{font-family:'Nunito',sans-serif}
 .shoe-display{display:flex;align-items:center;gap:14px}
 .shoe-num{font-family:'Nunito',sans-serif;font-size:44px;font-weight:900;color:var(--shoe);line-height:1}
 .shoe-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}
+
+/* Family profile section — sits between identity banner and programme cards */
+.family-section{background:#fff;border-radius:var(--radius);overflow:hidden;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.family-header{background:#f2f5f2;padding:10px 18px;border-bottom:1px solid var(--border)}
+.family-header-title{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.family-body{padding:14px 18px}
+.family-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+.family-member{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.family-member:last-child{border-bottom:none}
+.family-member-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.family-member-info{flex:1}
+.family-member-name{font-weight:800;font-size:13px}
+.family-member-meta{font-size:11px;color:var(--muted);margin-top:1px}
 </style>
 </head>
 <body>
@@ -298,21 +311,27 @@ async function renderProfile(bundle) {
   var f = bundle.friend || {};
   var html = '<button class="back-btn" onclick="backToSearch()">← Back to search</button>';
 
+  // Filter out duplicate food box applications — case handlers flag these
+  // as status='duplicate' when the same person reapplied; no point showing
+  // them here since all the useful info is on the active/approved record.
+  var activeFoodBox = (bundle.food_box || []).filter(function(r) { return r.status !== 'duplicate'; });
+  var allFoodBox    = bundle.food_box || [];
+
   var sectionsPresent = [
-    { key: 'food_box', label: '🥡 Food Box', cls: 'food_box', count: (bundle.food_box || []).length },
-    { key: 'wbb', label: '🍼 Welcome Baby', cls: 'wbb', count: (bundle.welcome_baby || []).length },
-    { key: 'll', label: '📚 Little Learners', cls: 'll', count: (bundle.little_learners || []).length },
-    { key: 'shoe', label: '👟 Shoes', cls: 'shoe', count: (bundle.shoe_requests || []).length }
+    { key: 'food_box', label: '🥡 Food Box', cls: 'food_box', count: activeFoodBox.length },
+    { key: 'wbb',      label: '🍼 Welcome Baby', cls: 'wbb', count: (bundle.welcome_baby || []).length },
+    { key: 'll',       label: '📚 Little Learners', cls: 'll', count: (bundle.little_learners || []).length },
+    { key: 'shoe',     label: '👟 Shoes', cls: 'shoe', count: (bundle.shoe_requests || []).length }
   ].filter(function(s) { return s.count > 0; });
 
   var displayName = f.full_name_en || f.full_name || 'Unnamed';
-  var initials = displayName.trim().split(/\s+/).slice(0, 2).map(function(w) { return w[0]; }).join('').toUpperCase();
+  var initials = displayName.trim().split(/\s+/).slice(0,2).map(function(w){ return w[0]; }).join('').toUpperCase();
   var addr = [f.building, f.street ? 'St. '+f.street : '', f.zone ? 'Zone '+f.zone : ''].filter(Boolean).join(', ');
-  var totalBoxes = (bundle.food_box || []).reduce(function(s,r){ return s + (r.boxes_received||0); }, 0);
+  var totalBoxes = allFoodBox.reduce(function(s,r){ return s + (r.boxes_received||0); }, 0);
   var summary = sectionsPresent.length + ' programme' + (sectionsPresent.length !== 1 ? 's' : '')
-    + (totalBoxes ? ' · ' + totalBoxes + ' box' + (totalBoxes !== 1 ? 'es' : '') + ' delivered' : '');
+    + (totalBoxes ? ' · ' + totalBoxes + ' box' + (totalBoxes !== 1 ? 'es' : '') + ' received' : '');
 
-  // Identity banner — green gradient with avatar and ID chips
+  // ── Identity banner ──────────────────────────────────────────────────
   html += '<div class="identity-card">'
     + '<div class="identity-banner">'
     + '<div class="identity-top">'
@@ -336,62 +355,132 @@ async function renderProfile(bundle) {
       + '<div id="review-candidates">Loading possible matches…</div>'
       + '</div>';
   }
-
   html += '</div>'; // close identity-card
 
-  // Magazine sections — each programme gets a full-width coloured header then a white body
-  html += programmeSection('food_box', '🥡 Food Box', 'food_box', bundle.food_box, function(row) {
+  // ── Family profile ───────────────────────────────────────────────────
+  // Collect household members from the most complete (active/approved)
+  // Food Box record — that's where the household is consistently recorded.
+  // Mother/father come from Welcome Baby if available, since WBB collects
+  // them explicitly; Food Box only has the main applicant as "applicant"
+  // role. Babies from WBB, children from Little Learners.
+  var primaryFB = activeFoodBox.find(function(r){ return r.status === 'active' || r.status === 'approved' || r.status === 'long_term'; })
+    || activeFoodBox[0];
+  var members = primaryFB ? (bundle.food_box_members || []).filter(function(m){ return m.application_id === primaryFB.id; }) : [];
+  var wbbRow = (bundle.welcome_baby || [])[0];
+  var babies = wbbRow ? (bundle.babies || []).filter(function(b){ return b.family_id === wbbRow.id; }) : [];
+  var llRow  = (bundle.little_learners || [])[0];
+  var llChildren = llRow ? (bundle.ll_children || []).filter(function(c){ return c.family_id === llRow.id; }) : [];
+
+  var hasFamilyData = members.length || babies.length || llChildren.length || wbbRow;
+  if (hasFamilyData) {
+    html += '<div class="family-section">'
+      + '<div class="family-header"><span class="family-header-title">👨‍👩‍👧‍👦 Family</span></div>'
+      + '<div class="family-body">';
+
+    // Mother / father from WBB (most reliable source for these names)
+    if (wbbRow && (wbbRow.mother_name || wbbRow.father_name)) {
+      html += '<div class="family-grid">'
+        + (wbbRow.mother_name ? kvb('👩 Mother', wbbRow.mother_name) : '')
+        + (wbbRow.father_name ? kvb('👨 Father', wbbRow.father_name) : '')
+        + (wbbRow.language ? kvb('🗣️ Language', wbbRow.language) : '')
+        + (addr ? kvb('📍 Address', addr) : '')
+        + '</div>';
+    } else if (primaryFB) {
+      // No WBB — pull address from Food Box
+      html += '<div class="family-grid">'
+        + (addr ? kvb('📍 Address', addr) : '')
+        + (primaryFB.area ? kvb('📍 Area', primaryFB.area) : '')
+        + '</div>';
+    }
+
+    // Household members
+    if (members.length) {
+      html += '<div>';
+      members.forEach(function(m) {
+        var icon = m.role === 'child' ? '👦' : m.role === 'husband' || m.role === 'spouse' ? '👨' : m.role === 'wife' ? '👩' : '👤';
+        var flags = [];
+        if (m.is_attending_school === 'no' || m.is_attending_school === false) flags.push('<span class="flag">not in school</span>');
+        if (m.is_pregnant) flags.push('<span class="flag">pregnant</span>');
+        html += '<div class="family-member">'
+          + '<div class="family-member-icon">' + icon + '</div>'
+          + '<div class="family-member-info">'
+          + '<div class="family-member-name">' + escapeHtml(m.full_name || '—') + ' ' + flags.join(' ') + '</div>'
+          + '<div class="family-member-meta">' + escapeHtml(m.role || '') + (m.dob ? ' · ' + fmtDate(m.dob) : '') + '</div>'
+          + '</div></div>';
+      });
+      html += '</div>';
+    }
+
+    // Babies from WBB
+    if (babies.length) {
+      html += '<div class="baby-cards" style="margin-top:' + (members.length ? '12px' : '0') + '">';
+      babies.forEach(function(b) {
+        html += '<div class="baby-card"><div class="k">👶 Baby</div><div class="v">' + escapeHtml(b.baby_name || '—') + '</div>'
+          + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + (b.dob ? fmtDate(b.dob) : 'not born yet') + (b.feeding_method ? ' · ' + escapeHtml(b.feeding_method) : '') + '</div></div>';
+      });
+      html += '</div>';
+    }
+
+    // Children from LL
+    if (llChildren.length) {
+      html += '<div style="margin-top:10px;">';
+      llChildren.forEach(function(c) {
+        html += '<div class="family-member">'
+          + '<div class="family-member-icon">🎓</div>'
+          + '<div class="family-member-info">'
+          + '<div class="family-member-name">' + escapeHtml(c.full_name || '—') + '</div>'
+          + '<div class="family-member-meta">' + escapeHtml(c.school_status || '') + (c.final_year_group ? ' · ' + escapeHtml(c.final_year_group) : '') + '</div>'
+          + '</div></div>';
+      });
+      html += '</div>';
+    }
+
+    html += '</div></div>'; // close family-body and family-section
+  }
+
+  // ── Programme sections ───────────────────────────────────────────────
+  // Food Box: programme-specific info only — no household members repeated
+  html += programmeSection('food_box', '🥡 Food Box', 'food_box', activeFoodBox, function(row) {
     var received = row.boxes_received || 0;
     var maxB = row.max_boxes;
     var pct = maxB ? Math.round(received / maxB * 100) : 0;
-    var members = (bundle.food_box_members || []).filter(function(m) { return m.application_id === row.id; });
-    var membersHtml = members.length ? ('<div class="sub-list"><div class="sub-list-title">Household</div>' + members.map(function(m) {
-      var flags = [];
-      if (m.is_attending_school === 'no' || m.is_attending_school === false) flags.push('<span class="flag">not in school</span>');
-      if (m.is_pregnant) flags.push('<span class="flag">pregnant</span>');
-      return '<div class="sub-item">👤 <b>' + escapeHtml(m.full_name || '—') + '</b> · ' + escapeHtml(m.role || '—') + (m.dob ? ' · ' + fmtDate(m.dob) : '') + ' ' + flags.join(' ') + '</div>';
-    }).join('') + '</div>') : '';
-    return '<div class="prog-card-top">' + statusBadge(row.status) + '<span style="font-size:11px;color:var(--muted)">' + fmtDate(row.created_at) + '</span></div>'
+    return '<div class="prog-card-top">' + statusBadge(row.status)
+      + '<span style="font-size:11px;color:var(--muted)">' + fmtDate(row.created_at) + '</span></div>'
       + (maxB ? '<div class="box-stat"><div class="box-num">' + received + '</div><div class="box-denom">/ ' + maxB + ' boxes received</div></div><div class="bar-bg"><div class="bar-fill" style="width:' + pct + '%"></div></div>' : '')
       + '<div class="field-grid">'
-      + kvb('📍 Area', row.area) + kvb('👥 Household', row.household_size)
+      + kvb('📍 Area', row.area) + kvb('👥 Household size', row.household_size)
       + kvb('🧷 Diapers', row.diaper_size) + kvb('🍼 Formula', row.formula)
-      + '</div>' + membersHtml;
+      + '</div>';
   }, function(row) { return 'food-box-admin.html?view=' + row.id; });
 
+  // Welcome Baby: programme status + dates only — family info is in the section above
   html += programmeSection('wbb', '🍼 Welcome Baby', 'wbb', bundle.welcome_baby, function(row) {
-    var babies = (bundle.babies || []).filter(function(b) { return b.family_id === row.id; });
-    var babiesHtml = babies.length ? ('<div class="baby-cards">' + babies.map(function(b) {
-      return '<div class="baby-card"><div class="k">👶 Baby</div><div class="v">' + escapeHtml(b.baby_name || '—') + '</div>'
-        + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + (b.dob ? fmtDate(b.dob) : 'not born yet') + (b.feeding_method ? ' · ' + escapeHtml(b.feeding_method) : '') + '</div></div>';
-    }).join('') + '</div>') : '';
-    return '<div class="prog-card-top">' + statusBadge(row.status) + '<span style="font-size:11px;color:var(--muted)">Due ' + fmtDate(row.due_date) + '</span></div>'
+    return '<div class="prog-card-top">' + statusBadge(row.status)
+      + '<span style="font-size:11px;color:var(--muted)">Due ' + fmtDate(row.due_date) + '</span></div>'
       + '<div class="field-grid">'
-      + kvb('👩 Mother', row.mother_name) + kvb('👨 Father', row.father_name)
       + kvb('📍 Location', row.location) + kvb('🗣️ Language', row.language)
-      + '</div>' + babiesHtml;
+      + '</div>';
   }, function(row) { return 'welcome-baby-crm.html?view=' + row.id; });
 
+  // Little Learners: programme status — family/children already in family section
   html += programmeSection('ll', '📚 Little Learners', 'll', bundle.little_learners, function(row) {
-    var children = (bundle.ll_children || []).filter(function(c) { return c.family_id === row.id; });
-    var childrenHtml = children.length ? ('<div class="sub-list"><div class="sub-list-title">Children</div>' + children.map(function(c) {
-      return '<div class="sub-item">🎓 <b>' + escapeHtml(c.full_name || '—') + '</b> · ' + escapeHtml(c.school_status || '—') + (c.final_year_group ? ' · ' + escapeHtml(c.final_year_group) : '') + '</div>';
-    }).join('') + '</div>') : '';
-    return '<div class="prog-card-top">' + statusBadge(row.pipeline_status || row.status) + '<span style="font-size:11px;color:var(--muted)">' + escapeHtml(row.area || '') + '</span></div>'
-      + '<div class="field-grid">' + kvb('# URN', row.urn) + kvb('🧑‍🏫 Assessor', row.assessor) + '</div>' + childrenHtml;
+    return '<div class="prog-card-top">' + statusBadge(row.pipeline_status || row.status)
+      + '<span style="font-size:11px;color:var(--muted)">' + escapeHtml(row.area || '') + '</span></div>'
+      + '<div class="field-grid">' + kvb('# URN', row.urn) + kvb('🧑‍🏫 Assessor', row.assessor) + '</div>';
   });
 
+  // Shoe Giveaway
   html += programmeSection('shoe', '👟 Shoe Giveaway', 'shoe', bundle.shoe_requests, function(row) {
     return '<div class="shoe-display">'
       + '<div class="shoe-num">' + escapeHtml(row.shoe_size_eu || '—') + '</div>'
       + '<div><div class="shoe-label">EU shoe size</div>'
-      + (row.matched ? '<span class="badge badge-active" style="display:inline-block;margin-top:4px;">matched</span>' : '<span class="badge badge-pending" style="display:inline-block;margin-top:4px;">unmatched</span>')
+      + (row.matched ? '<span class="badge badge-active" style="display:inline-block;margin-top:4px;">matched</span>'
+                     : '<span class="badge badge-pending" style="display:inline-block;margin-top:4px;">unmatched</span>')
       + '<div style="font-size:11px;color:var(--muted);margin-top:4px;">' + fmtDate(row.created_at) + '</div>'
       + '</div></div>';
   });
 
   document.getElementById('view-profile').innerHTML = html;
-
   if ((bundle.pending_review || []).length > 0) loadReviewCandidates(f.id);
 }
 
