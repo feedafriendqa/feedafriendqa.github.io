@@ -304,7 +304,16 @@ async function openProfile(friendId) {
         + '<div class="empty-state" style="color:var(--red);">RPC error: ' + escapeHtml(error.message) + '</div>';
       return;
     }
-    renderProfile(data || {});
+    // supabase-js returns scalar function results as the raw value in data.
+    // Parse if it came back as a string, guard against null.
+    var bundle = data;
+    if (typeof bundle === 'string') { try { bundle = JSON.parse(bundle); } catch(e) {} }
+    if (!bundle || typeof bundle !== 'object') {
+      view.innerHTML = '<button class="back-btn" onclick="backToSearch()">← Back to search</button>'
+        + '<div class="empty-state" style="color:var(--red);">No data returned for this profile.</div>';
+      return;
+    }
+    renderProfile(bundle);
   } catch(e) {
     view.innerHTML = '<button class="back-btn" onclick="backToSearch()">← Back to search</button>'
       + '<div class="empty-state" style="color:var(--red);">Error: ' + escapeHtml(String(e)) + '</div>';
@@ -317,6 +326,7 @@ function backToSearch() {
 }
 
 async function renderProfile(bundle) {
+  if (!bundle || typeof bundle !== 'object') return;
   var f = bundle.friend || {};
   var html = '<button class="back-btn" onclick="backToSearch()">← Back to search</button>';
 
