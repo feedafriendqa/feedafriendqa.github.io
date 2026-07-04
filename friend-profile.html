@@ -326,7 +326,23 @@ async function renderProfile(bundle) {
 
   var displayName = f.full_name_en || f.full_name || 'Unnamed';
   var initials = displayName.trim().split(/\s+/).slice(0,2).map(function(w){ return w[0]; }).join('').toUpperCase();
+  // ── Address: fall back to primary Food Box application if friends table
+  // has no address (common when address was updated directly on the
+  // application after the friends record was created).
   var addr = [f.building, f.street ? 'St. '+f.street : '', f.zone ? 'Zone '+f.zone : ''].filter(Boolean).join(', ');
+  if (!addr && primaryFB) {
+    addr = [primaryFB.building,
+      primaryFB.street ? 'St. '+primaryFB.street : '',
+      primaryFB.zone ? 'Zone '+primaryFB.zone : ''].filter(Boolean).join(', ');
+  }
+
+  // ── Deduplicate babies: if a WBB baby shares a DOB with a food_box_member
+  // child, they're the same person (Celine = Salyn). Suppress the WBB baby
+  // from the family section — the food_box_member row already shows them with
+  // the correct name. The WBB baby still appears in the Welcome Baby
+  // programme card where it belongs (feeding method, etc).
+  var memberDOBs = new Set(members.filter(function(m){ return m.dob; }).map(function(m){ return m.dob.substring(0,10); }));
+  var uniqueBabies = babies.filter(function(b){ return !b.dob || !memberDOBs.has(b.dob.substring(0,10)); });
   var totalBoxes = allFoodBox.reduce(function(s,r){ return s + (r.boxes_received||0); }, 0);
   var summary = sectionsPresent.length + ' programme' + (sectionsPresent.length !== 1 ? 's' : '')
     + (totalBoxes ? ' · ' + totalBoxes + ' box' + (totalBoxes !== 1 ? 'es' : '') + ' received' : '');
@@ -419,10 +435,10 @@ async function renderProfile(bundle) {
       html += '</div>';
     }
 
-    // Babies from WBB
-    if (babies.length) {
+    // Babies from WBB — only those not already shown as a food_box_member
+    if (uniqueBabies.length) {
       html += '<div class="baby-cards" style="margin-top:' + (members.length ? '12px' : '0') + '">';
-      babies.forEach(function(b) {
+      uniqueBabies.forEach(function(b) {
         html += '<div class="baby-card"><div class="k">👶 Baby</div><div class="v">' + escapeHtml(b.baby_name || '—') + '</div>'
           + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + (b.dob ? fmtDate(b.dob) : 'not born yet') + (b.feeding_method ? ' · ' + escapeHtml(b.feeding_method) : '') + '</div></div>';
       });
@@ -453,6 +469,13 @@ async function renderProfile(bundle) {
     var maxB = row.max_boxes;
     var pct = maxB ? Math.round(received / maxB * 100) : 0;
     var fullAddr = [row.unit ? 'Unit '+row.unit : '', row.building ? 'Bldg '+row.building : '', row.street ? 'St. '+row.street : '', row.zone ? 'Zone '+row.zone : ''].filter(Boolean).join(', ');
+    // Diaper size: prefer application-level, fall back to any member with
+    // a diaper_size recorded (e.g. a baby whose need was entered on their
+    // member row rather than the top-level application).
+    var rowMembers = (bundle.food_box_members || []).filter(function(m){ return m.application_id === row.id; });
+    var memberDiaper = rowMembers.find(function(m){ return m.diaper_size && m.diaper_size !== 'Not needed'; });
+    var displayDiaper = (row.diaper_size && row.diaper_size !== 'Not needed') ? row.diaper_size
+      : (memberDiaper ? memberDiaper.diaper_size + ' (' + escapeHtml(memberDiaper.full_name || 'member') + ')' : null);
     return '<div class="prog-card-top">' + statusBadge(row.status)
       + '<span style="font-size:11px;color:var(--muted)">' + fmtDate(row.created_at) + '</span></div>'
       + (maxB ? '<div class="box-stat"><div class="box-num">' + received + '</div><div class="box-denom">/ ' + maxB + ' boxes received</div></div><div class="bar-bg"><div class="bar-fill" style="width:' + pct + '%"></div></div>' : '')
@@ -460,18 +483,28 @@ async function renderProfile(bundle) {
       + kvb('📍 Area', row.area)
       + (fullAddr ? kvb('🏠 Address', fullAddr) : '')
       + kvb('👥 Household size', row.household_size)
-      + kvb('🧷 Diapers', row.diaper_size)
+      + kvb('🧷 Diapers', displayDiaper)
       + kvb('🍼 Formula', row.formula)
       + '</div>';
   }, function(row) { return 'food-box-admin.html?view=' + row.id; });
 
-  // Welcome Baby: programme status + dates only — family info is in the section above
+  // Welcome Baby: babies with feeding details + fairy — location/language
+  // are already in the family section above, no need to repeat them here.
   html += programmeSection('wbb', '🍼 Welcome Baby', 'wbb', bundle.welcome_baby, function(row) {
+    var rowBabies = (bundle.babies || []).filter(function(b){ return b.family_id === row.id; });
+    var babiesHtml = rowBabies.length ? ('<div class="baby-cards" style="margin-top:10px;">' + rowBabies.map(function(b) {
+      return '<div class="baby-card">'
+        + '<div class="k">👶 ' + escapeHtml(b.baby_name || 'Baby') + '</div>'
+        + '<div class="v">' + (b.dob ? fmtDate(b.dob) : 'not born yet') + '</div>'
+        + (b.feeding_method ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + escapeHtml(b.feeding_method) + '</div>' : '')
+        + '</div>';
+    }).join('') + '</div>') : '';
+    var fairyHtml = row.fairy_name
+      ? '<div style="font-size:12px;font-weight:700;color:var(--muted);margin-top:10px;">🧚 Assigned to: ' + escapeHtml(row.fairy_name) + '</div>'
+      : '';
     return '<div class="prog-card-top">' + statusBadge(row.status)
       + '<span style="font-size:11px;color:var(--muted)">Due ' + fmtDate(row.due_date) + '</span></div>'
-      + '<div class="field-grid">'
-      + kvb('📍 Location', row.location) + kvb('🗣️ Language', row.language)
-      + '</div>';
+      + babiesHtml + fairyHtml;
   }, function(row) { return 'welcome-baby-crm.html?view=' + row.id; });
 
   // Little Learners: programme status — family/children already in family section
