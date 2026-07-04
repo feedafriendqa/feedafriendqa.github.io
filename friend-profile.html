@@ -69,7 +69,7 @@ h1,h2,h3,button{font-family:'Nunito',sans-serif}
 .identity-card{background:#fff;border-radius:var(--radius);overflow:hidden;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .identity-banner{background:linear-gradient(135deg,var(--green),var(--green-dark));padding:22px 20px}
 .identity-top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
-.profile-avatar{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;flex-shrink:0;border:2.5px solid rgba(255,255,255,.45)}
+.profile-avatar{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;flex-shrink:0;border:2.5px solid rgba(255,255,255,.45);overflow:hidden}
 .profile-name{color:#fff;font-size:22px;font-weight:900;line-height:1.1}
 .profile-sub{color:rgba(255,255,255,.8);font-size:12px;margin-top:3px}
 .chip-row{display:flex;gap:8px;flex-wrap:wrap}
@@ -335,12 +335,14 @@ async function renderProfile(bundle) {
   html += '<div class="identity-card">'
     + '<div class="identity-banner">'
     + '<div class="identity-top">'
-    + '<div class="profile-avatar">' + escapeHtml(initials || '?') + '</div>'
+    + '<div class="profile-avatar" id="profile-avatar-wrap">'
+    + '<div id="profile-avatar-initials">' + escapeHtml(initials || '?') + '</div>'
+    + '</div>'
     + '<div><div class="profile-name">' + escapeHtml(displayName) + '</div>'
     + '<div class="profile-sub">' + escapeHtml(summary) + '</div></div>'
     + '</div>'
     + '<div class="chip-row">'
-    + idChip('🆔', f.qid_number) + idChip('📱', f.whatsapp) + idChip('🌍', f.nationality) + idChip('📍', addr)
+    + idChip('🆔', f.qid_number) + idChip('📱', f.whatsapp) + idChip(null, nationalityWithFlag(f.nationality)) + idChip('📍', addr)
     + '</div></div>';
 
   if (sectionsPresent.length > 0) {
@@ -393,19 +395,25 @@ async function renderProfile(bundle) {
         + '</div>';
     }
 
-    // Household members
+    // Household members — show phone number for adults since case handlers
+    // often need it to follow up, but skip for children (both because
+    // children don't have their own numbers, and because displaying a
+    // child's DOB alongside a phone that could be theirs is misleading).
     if (members.length) {
       html += '<div>';
       members.forEach(function(m) {
-        var icon = m.role === 'child' ? '👦' : m.role === 'husband' || m.role === 'spouse' ? '👨' : m.role === 'wife' ? '👩' : '👤';
+        var isChild = m.role === 'child';
+        var icon = isChild ? '👦' : m.role === 'husband' || m.role === 'spouse' ? '👨' : m.role === 'wife' ? '👩' : '👤';
         var flags = [];
         if (m.is_attending_school === 'no' || m.is_attending_school === false) flags.push('<span class="flag">not in school</span>');
         if (m.is_pregnant) flags.push('<span class="flag">pregnant</span>');
+        var meta = escapeHtml(m.role || '') + (m.dob ? ' · ' + fmtDate(m.dob) : '');
+        if (!isChild && m.whatsapp) meta += ' · 📱 ' + escapeHtml(m.whatsapp);
         html += '<div class="family-member">'
           + '<div class="family-member-icon">' + icon + '</div>'
           + '<div class="family-member-info">'
           + '<div class="family-member-name">' + escapeHtml(m.full_name || '—') + ' ' + flags.join(' ') + '</div>'
-          + '<div class="family-member-meta">' + escapeHtml(m.role || '') + (m.dob ? ' · ' + fmtDate(m.dob) : '') + '</div>'
+          + '<div class="family-member-meta">' + meta + '</div>'
           + '</div></div>';
       });
       html += '</div>';
@@ -482,6 +490,20 @@ async function renderProfile(bundle) {
 
   document.getElementById('view-profile').innerHTML = html;
   if ((bundle.pending_review || []).length > 0) loadReviewCandidates(f.id);
+
+  // Async: try to load the QID front photo from the primary Food Box
+  // application and swap the initials avatar for it. Uses the same
+  // get_document_url path food-box-admin.html already uses — nothing new
+  // needs building server-side. Silently leaves the initials avatar in
+  // place if there's no photo on file or the signed URL request fails.
+  var qidPath = primaryFB && primaryFB.qid_front_path;
+  if (qidPath) {
+    fetchQidPhotoUrl(qidPath).then(function(url) {
+      var wrap = document.getElementById('profile-avatar-wrap');
+      if (!wrap || !url) return;
+      wrap.innerHTML = '<img src="' + url + '" alt="QID photo" style="width:58px;height:58px;border-radius:50%;object-fit:cover;border:2.5px solid rgba(255,255,255,.45);">';
+    });
+  }
 }
 
 function scrollToSection(key) {
@@ -489,9 +511,60 @@ function scrollToSection(key) {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// Maps nationality names (as they actually appear in the data) to flag emojis.
+// Covers the nationalities you'd realistically see in Qatar; falls back
+// to the globe emoji rather than nothing for anything not listed.
+var NATIONALITY_FLAGS = {
+  'Afghan':'🇦🇫','Algerian':'🇩🇿','American':'🇺🇸','Australian':'🇦🇺',
+  'Bangladeshi':'🇧🇩','British':'🇬🇧','Burmese':'🇲🇲',
+  'Canadian':'🇨🇦','Chinese':'🇨🇳',
+  'Egyptian':'🇪🇬','Eritrean':'🇪🇷','Ethiopian':'🇪🇹',
+  'Filipino':'🇵🇭','French':'🇫🇷',
+  'Gambian':'🇬🇲','Ghanaian':'🇬🇭',
+  'Indian':'🇮🇳','Indonesian':'🇮🇩','Iraqi':'🇮🇶',
+  'Jordanian':'🇯🇴',
+  'Kenyan':'🇰🇪',
+  'Lebanese':'🇱🇧','Libyan':'🇱🇾',
+  'Malaysian':'🇲🇾','Moroccan':'🇲🇦',
+  'Nepalese':'🇳🇵','Nigerian':'🇳🇬',
+  'Pakistani':'🇵🇰','Palestinian':'🇵🇸',
+  'Qatari':'🇶🇦',
+  'Rwandan':'🇷🇼',
+  'Saudi':'🇸🇦','Senegalese':'🇸🇳','Somalian':'🇸🇴','South African':'🇿🇦',
+  'Sri Lankan':'🇱🇰','Sudanese':'🇸🇩','Syrian':'🇸🇾',
+  'Tanzanian':'🇹🇿','Tunisian':'🇹🇳','Turkish':'🇹🇷',
+  'Ugandan':'🇺🇬',
+  'Yemeni':'🇾🇪'
+};
+
+function nationalityWithFlag(nat) {
+  if (!nat) return '—';
+  var flag = NATIONALITY_FLAGS[nat] || '🌍';
+  return flag + ' ' + nat;
+}
+
+// Fetches a signed URL for a QID photo via clever-responder (same
+// mechanism food-box-admin.html already uses — private bucket, requires
+// an authenticated admin session).
+async function fetchQidPhotoUrl(path) {
+  if (!path) return null;
+  try {
+    var { data: { session } } = await sb.auth.getSession();
+    var token = session ? session.access_token : '';
+    var res = await fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ type: 'get_document_url', paths: [path] })
+    });
+    var json = await res.json();
+    return (json.urls && json.urls[path]) || null;
+  } catch (e) { return null; }
+}
+
 function idChip(icon, val) {
-  var hasVal = val !== null && val !== undefined && val !== '';
-  return '<div class="id-chip"><span>' + icon + '</span><span class="v' + (hasVal ? '' : ' empty') + '">' + escapeHtml(hasVal ? val : 'Not on file') + '</span></div>';
+  var hasVal = val !== null && val !== undefined && val !== '' && val !== '—';
+  var iconHtml = icon ? '<span>' + icon + '</span>' : '';
+  return '<div class="id-chip">' + iconHtml + '<span class="v' + (hasVal ? '' : ' empty') + '">' + escapeHtml(hasVal ? val : 'Not on file') + '</span></div>';
 }
 
 function kvb(label, val) {
