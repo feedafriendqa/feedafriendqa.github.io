@@ -298,7 +298,12 @@ async function openProfile(friendId) {
   view.innerHTML = '<button class="back-btn" onclick="backToSearch()">← Back to search</button><div class="loading">Loading profile…</div>';
 
   var { data, error } = await sb.rpc('get_friend_profile', { p_friend_id: friendId });
-  if (error) { view.innerHTML = '<button class="back-btn" onclick="backToSearch()">← Back to search</button><div class="empty-state">Could not load profile: ' + escapeHtml(error.message) + '</div>'; return; }
+  if (error) {
+    view.innerHTML = '<button class="back-btn" onclick="backToSearch()">← Back to search</button>'
+      + '<div class="empty-state" style="color:var(--red);">Could not load profile: ' + escapeHtml(error.message) + '</div>';
+    console.error('get_friend_profile error:', error);
+    return;
+  }
   renderProfile(data || {});
 }
 
