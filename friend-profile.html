@@ -452,12 +452,16 @@ async function renderProfile(bundle) {
     var received = row.boxes_received || 0;
     var maxB = row.max_boxes;
     var pct = maxB ? Math.round(received / maxB * 100) : 0;
+    var fullAddr = [row.unit ? 'Unit '+row.unit : '', row.building ? 'Bldg '+row.building : '', row.street ? 'St. '+row.street : '', row.zone ? 'Zone '+row.zone : ''].filter(Boolean).join(', ');
     return '<div class="prog-card-top">' + statusBadge(row.status)
       + '<span style="font-size:11px;color:var(--muted)">' + fmtDate(row.created_at) + '</span></div>'
       + (maxB ? '<div class="box-stat"><div class="box-num">' + received + '</div><div class="box-denom">/ ' + maxB + ' boxes received</div></div><div class="bar-bg"><div class="bar-fill" style="width:' + pct + '%"></div></div>' : '')
       + '<div class="field-grid">'
-      + kvb('📍 Area', row.area) + kvb('👥 Household size', row.household_size)
-      + kvb('🧷 Diapers', row.diaper_size) + kvb('🍼 Formula', row.formula)
+      + kvb('📍 Area', row.area)
+      + (fullAddr ? kvb('🏠 Address', fullAddr) : '')
+      + kvb('👥 Household size', row.household_size)
+      + kvb('🧷 Diapers', row.diaper_size)
+      + kvb('🍼 Formula', row.formula)
       + '</div>';
   }, function(row) { return 'food-box-admin.html?view=' + row.id; });
 
