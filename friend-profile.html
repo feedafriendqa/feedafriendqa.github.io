@@ -297,9 +297,18 @@ async function openProfile(friendId) {
   view.style.display = 'block';
   view.innerHTML = '<button class="back-btn" onclick="backToSearch()">← Back to search</button><div class="loading">Loading profile…</div>';
 
-  var { data, error } = await sb.rpc('get_friend_profile', { p_friend_id: friendId });
-  if (error) { view.innerHTML = '<button class="back-btn" onclick="backToSearch()">← Back to search</button><div class="empty-state">Could not load profile: ' + escapeHtml(error.message) + '</div>'; return; }
-  renderProfile(data || {});
+  try {
+    var { data, error } = await sb.rpc('get_friend_profile', { p_friend_id: friendId });
+    if (error) {
+      view.innerHTML = '<button class="back-btn" onclick="backToSearch()">← Back to search</button>'
+        + '<div class="empty-state" style="color:var(--red);">RPC error: ' + escapeHtml(error.message) + '</div>';
+      return;
+    }
+    renderProfile(data || {});
+  } catch(e) {
+    view.innerHTML = '<button class="back-btn" onclick="backToSearch()">← Back to search</button>'
+      + '<div class="empty-state" style="color:var(--red);">Error: ' + escapeHtml(String(e)) + '</div>';
+  }
 }
 
 function backToSearch() {
@@ -311,11 +320,17 @@ async function renderProfile(bundle) {
   var f = bundle.friend || {};
   var html = '<button class="back-btn" onclick="backToSearch()">← Back to search</button>';
 
-  // Filter out duplicate food box applications — case handlers flag these
-  // as status='duplicate' when the same person reapplied; no point showing
-  // them here since all the useful info is on the active/approved record.
   var activeFoodBox = (bundle.food_box || []).filter(function(r) { return r.status !== 'duplicate'; });
   var allFoodBox    = bundle.food_box || [];
+
+  // These need to be defined early — addr and uniqueBabies both depend on them
+  var primaryFB = activeFoodBox.find(function(r){ return r.status === 'active' || r.status === 'approved' || r.status === 'long_term'; })
+    || activeFoodBox[0];
+  var members = primaryFB ? (bundle.food_box_members || []).filter(function(m){ return m.application_id === primaryFB.id; }) : [];
+  var wbbRow = (bundle.welcome_baby || [])[0];
+  var babies = wbbRow ? (bundle.babies || []).filter(function(b){ return b.family_id === wbbRow.id; }) : [];
+  var llRow  = (bundle.little_learners || [])[0];
+  var llChildren = llRow ? (bundle.ll_children || []).filter(function(c){ return c.family_id === llRow.id; }) : [];
 
   var sectionsPresent = [
     { key: 'food_box', label: '🥡 Food Box', cls: 'food_box', count: activeFoodBox.length },
@@ -326,9 +341,7 @@ async function renderProfile(bundle) {
 
   var displayName = f.full_name_en || f.full_name || 'Unnamed';
   var initials = displayName.trim().split(/\s+/).slice(0,2).map(function(w){ return w[0]; }).join('').toUpperCase();
-  // ── Address: fall back to primary Food Box application if friends table
-  // has no address (common when address was updated directly on the
-  // application after the friends record was created).
+
   var addr = [f.building, f.street ? 'St. '+f.street : '', f.zone ? 'Zone '+f.zone : ''].filter(Boolean).join(', ');
   if (!addr && primaryFB) {
     addr = [primaryFB.building,
@@ -336,11 +349,6 @@ async function renderProfile(bundle) {
       primaryFB.zone ? 'Zone '+primaryFB.zone : ''].filter(Boolean).join(', ');
   }
 
-  // ── Deduplicate babies: if a WBB baby shares a DOB with a food_box_member
-  // child, they're the same person (Celine = Salyn). Suppress the WBB baby
-  // from the family section — the food_box_member row already shows them with
-  // the correct name. The WBB baby still appears in the Welcome Baby
-  // programme card where it belongs (feeding method, etc).
   var memberDOBs = new Set(members.filter(function(m){ return m.dob; }).map(function(m){ return m.dob.substring(0,10); }));
   var uniqueBabies = babies.filter(function(b){ return !b.dob || !memberDOBs.has(b.dob.substring(0,10)); });
   var totalBoxes = allFoodBox.reduce(function(s,r){ return s + (r.boxes_received||0); }, 0);
@@ -374,20 +382,6 @@ async function renderProfile(bundle) {
       + '</div>';
   }
   html += '</div>'; // close identity-card
-
-  // ── Family profile ───────────────────────────────────────────────────
-  // Collect household members from the most complete (active/approved)
-  // Food Box record — that's where the household is consistently recorded.
-  // Mother/father come from Welcome Baby if available, since WBB collects
-  // them explicitly; Food Box only has the main applicant as "applicant"
-  // role. Babies from WBB, children from Little Learners.
-  var primaryFB = activeFoodBox.find(function(r){ return r.status === 'active' || r.status === 'approved' || r.status === 'long_term'; })
-    || activeFoodBox[0];
-  var members = primaryFB ? (bundle.food_box_members || []).filter(function(m){ return m.application_id === primaryFB.id; }) : [];
-  var wbbRow = (bundle.welcome_baby || [])[0];
-  var babies = wbbRow ? (bundle.babies || []).filter(function(b){ return b.family_id === wbbRow.id; }) : [];
-  var llRow  = (bundle.little_learners || [])[0];
-  var llChildren = llRow ? (bundle.ll_children || []).filter(function(c){ return c.family_id === llRow.id; }) : [];
 
   var hasFamilyData = members.length || babies.length || llChildren.length || wbbRow;
   if (hasFamilyData) {
