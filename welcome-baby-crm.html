@@ -521,7 +521,7 @@ select.inline-input { cursor:pointer; }
     <div class="filter-chip" onclick="filterFamilies('active',this)">Active</div>
     <div class="filter-chip" onclick="filterFamilies('new',this)">New</div>
     <div class="filter-chip" onclick="filterFamilies('emergency',this)">Emergency</div>
-    <div class="filter-chip" onclick="filterFamilies('closed',this)">Closed</div>
+    <div class="filter-chip" onclick="filterFamilies('graduated',this)">Graduated</div>
   </div>
   <div class="family-list" id="families-list"></div>
   <div class="fab" id="fab-family" onclick="resetFamilyModal();openModal('modal-family')">＋</div>
@@ -1131,7 +1131,7 @@ async function goConsultantDash(navEl) {
   const qEl = document.getElementById('consultant-quote-card');
   if(qEl) qEl.innerHTML = `<div style="font-size:13px;font-style:italic;color:rgba(255,255,255,0.9);line-height:1.6;margin-bottom:6px;">"${qText}"</div><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.65);">— ${qAuthor}</div>`;
   // Stats
-  const activeFams = allFamilies.filter(f => f.status !== 'closed');
+  const activeFams = allFamilies.filter(f => f.status !== 'graduated');
   const formula = activeFams.filter(f => ['Formula','Mixed','Other'].includes(f.babies&&f.babies[0]&&f.babies[0].feeding_method));
   const breast = activeFams.filter(f => f.babies&&f.babies[0]&&(f.babies[0].feeding_method||'').toLowerCase().includes('breast'));
   (function(){const el=document.getElementById('c-formula');if(el)el.textContent=formula.length;})();
@@ -1224,7 +1224,7 @@ async function goDash(navEl) {
   });
   const dateStr = today.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const overdue = allMilestones.filter(m => !m.completed && new Date(m.due_date) <= today);
-  const active = allFamilies.filter(f => f.status !== 'closed');
+  const active = allFamilies.filter(f => f.status !== 'graduated');
 
   // Hide all navs, show correct one
   ['nav-super','nav-admin','nav-fairy'].forEach(n => document.getElementById(n).style.display='none');
