@@ -419,6 +419,7 @@ select.inline-input { cursor:pointer; }
   <div id="super-quote-card" style="margin:16px 20px 0;background:var(--green);border-radius:var(--radius);padding:16px 18px;"></div>
   <div class="stats-row">
     <div class="stat-card purple" style="cursor:pointer;" onclick="showMainScreen('screen-families')"><div class="stat-icon">👨‍👩‍👧</div><div class="stat-num" id="s-total">–</div><div class="stat-label">Total families</div></div>
+    <div class="stat-card" style="cursor:default;background:#5e3a8c;border-color:#5e3a8c;"><div class="stat-icon">👶</div><div class="stat-num" id="s-babies-total" style="color:white;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);">Babies to date</div></div>
     <div class="stat-card green" style="cursor:pointer;" onclick="showMainScreen('screen-team')"><div class="stat-icon">🧚‍♀️</div><div class="stat-num" id="s-fairies">–</div><div class="stat-label">Baby fairies</div></div>
     <div class="stat-card coral" style="cursor:pointer;" onclick="filterAndGo('unassigned')"><div class="stat-icon">⚠️</div><div class="stat-num" id="s-unassigned">–</div><div class="stat-label">Unassigned</div></div>
     <div class="stat-card" style="cursor:pointer;background:#8e44ad;border-color:#8e44ad;" onclick="filterAndGo('due')"><div class="stat-icon">🤰</div><div class="stat-num" id="s-due" style="color:white;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);">Due in 30 days</div></div>
@@ -426,6 +427,15 @@ select.inline-input { cursor:pointer; }
     <div class="stat-card" style="cursor:pointer;background:#c0392b;border-color:#c0392b;" onclick="showMainScreen('screen-reminders')"><div class="stat-icon">⏰</div><div class="stat-num" id="s-rem" style="color:white;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);">Reminders due</div></div>
     <div class="stat-card" style="cursor:pointer;background:#2980b9;border-color:#2980b9;" onclick="filterAndGo('arabic')"><div class="stat-icon">🌙</div><div class="stat-num" id="s-arabic" style="color:white;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);">Arabic families</div></div>
     <div class="stat-card" style="cursor:pointer;background:#16a085;border-color:#16a085;" onclick="filterAndGo('english')"><div class="stat-icon">🌍</div><div class="stat-num" id="s-english" style="color:white;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);">English families</div></div>
+  </div>
+  <div style="margin:16px 20px 0;">
+    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Families by status</div>
+    <div class="stats-row" style="grid-template-columns:repeat(4,1fr);">
+      <div class="stat-card" style="cursor:pointer;background:#27ae60;border-color:#27ae60;padding:12px;" onclick="filterAndGo('status:active')"><div class="stat-num" id="s-status-active" style="color:white;font-size:20px;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);font-size:11px;">Active</div></div>
+      <div class="stat-card" style="cursor:pointer;background:#2980b9;border-color:#2980b9;padding:12px;" onclick="filterAndGo('status:new')"><div class="stat-num" id="s-status-new" style="color:white;font-size:20px;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);font-size:11px;">New</div></div>
+      <div class="stat-card" style="cursor:pointer;background:#e67e22;border-color:#e67e22;padding:12px;" onclick="filterAndGo('status:emergency')"><div class="stat-num" id="s-status-emergency" style="color:white;font-size:20px;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);font-size:11px;">Emergency</div></div>
+      <div class="stat-card" style="cursor:pointer;background:#7f8c8d;border-color:#7f8c8d;padding:12px;" onclick="filterAndGo('status:graduated')"><div class="stat-num" id="s-status-graduated" style="color:white;font-size:20px;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);font-size:11px;">Graduated</div></div>
+    </div>
   </div>
   <div class="section-head"><div class="section-title">All families</div><div class="section-link" onclick="showMainScreen('screen-families')">See all →</div></div>
   <div class="family-list" id="super-fam-list"></div>
@@ -457,6 +467,7 @@ select.inline-input { cursor:pointer; }
   <div id="admin-quote-card" style="margin:16px 20px 0;background:var(--green);border-radius:var(--radius);padding:16px 18px;"></div>
   <div class="stats-row">
     <div class="stat-card purple" style="cursor:pointer;" onclick="showMainScreen('screen-families')"><div class="stat-icon">👨‍👩‍👧</div><div class="stat-num" id="a-families">–</div><div class="stat-label">Active families</div></div>
+    <div class="stat-card" style="cursor:default;background:#5e3a8c;border-color:#5e3a8c;"><div class="stat-icon">👶</div><div class="stat-num" id="a-babies-total" style="color:white;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);">Babies to date</div></div>
     <div class="stat-card" style="cursor:pointer;background:#c0392b;border-color:#c0392b;" onclick="showMainScreen('screen-reminders')"><div class="stat-icon">⏰</div><div class="stat-num" id="a-rem" style="color:white;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);">Reminders due</div></div>
     <div class="stat-card amber" style="cursor:pointer;" onclick="filterAndGo('birthdays')"><div class="stat-icon">🎂</div><div class="stat-num" id="a-bday">–</div><div class="stat-label">Birthdays this month</div></div>
     <div class="stat-card" style="cursor:pointer;background:var(--teal);border-color:var(--teal);" onclick="filterAndGo('due')"><div class="stat-icon">🤰</div><div class="stat-num" id="a-due" style="color:white;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);">Due in 30 days</div></div>
@@ -492,6 +503,7 @@ select.inline-input { cursor:pointer; }
   <div id="fairy-quote-card" style="margin:16px 20px 0;background:var(--green);border-radius:var(--radius);padding:16px 18px;"></div>
   <div class="stats-row">
     <div class="stat-card purple" style="cursor:pointer;" onclick="showMainScreen('screen-families')"><div class="stat-icon">👨‍👩‍👧</div><div class="stat-num" id="f-families">–</div><div class="stat-label">My families</div></div>
+    <div class="stat-card" style="cursor:default;background:#5e3a8c;border-color:#5e3a8c;"><div class="stat-icon">👶</div><div class="stat-num" id="f-babies-total" style="color:white;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);">Babies to date</div></div>
     <div class="stat-card" style="cursor:pointer;background:#c0392b;border-color:#c0392b;" onclick="showMainScreen('screen-reminders')"><div class="stat-icon">⏰</div><div class="stat-num" id="f-rem" style="color:white;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);">Reminders due</div></div>
     <div class="stat-card amber" style="cursor:pointer;" onclick="filterAndGo('birthdays')"><div class="stat-icon">🎂</div><div class="stat-num" id="f-bday">–</div><div class="stat-label">Birthdays this month</div></div>
     <div class="stat-card" style="cursor:pointer;background:var(--teal);border-color:var(--teal);" onclick="filterAndGo('due')"><div class="stat-icon">🤰</div><div class="stat-num" id="f-due" style="color:white;">–</div><div class="stat-label" style="color:rgba(255,255,255,0.75);">Due in 30 days</div></div>
@@ -1264,6 +1276,14 @@ async function goDash(navEl) {
     const sArabic = active.filter(f => (f.language||'').toLowerCase().includes('arabic'));
     const sEnglish = active.filter(f => !(f.language||'').toLowerCase().includes('arabic'));
     (function(){var __e=document.getElementById('s-total');if(__e)__e.textContent=active.length;})(void 0);
+    (function(){var __e=document.getElementById('s-babies-total');if(__e)__e.textContent=allFamilies.reduce((sum,f)=>sum+((f.babies||[]).length),0);})(void 0);
+    (function(){
+      const counts = {active:0,new:0,emergency:0,graduated:0};
+      allFamilies.forEach(f => { const st = f.status || 'active'; if (counts[st]!==undefined) counts[st]++; });
+      ['active','new','emergency','graduated'].forEach(st => {
+        var __e=document.getElementById('s-status-'+st); if(__e) __e.textContent = counts[st];
+      });
+    })();
     sb.from('user_roles').select('id',{count:'exact'}).eq('approved',true).in('role',['fairy','admin','consultant']).then(({count}) => {
       (function(){var __e=document.getElementById('s-fairies');if(__e)__e.textContent=count || 0;})(void 0);
     });
@@ -1288,6 +1308,7 @@ async function goDash(navEl) {
     const arabicFams = active.filter(f => (f.language||'').toLowerCase().includes('arabic'));
     const englishFams = active.filter(f => (f.language||'').toLowerCase().includes('english') || (f.language||'').toLowerCase().includes('urdu') || (f.language||'').toLowerCase().includes('tagalog'));
     (function(){var __e=document.getElementById('a-families');if(__e)__e.textContent=active.length;})(void 0);
+    (function(){var __e=document.getElementById('a-babies-total');if(__e)__e.textContent=allFamilies.reduce((sum,f)=>sum+((f.babies||[]).length),0);})(void 0);
     (function(){var __e=document.getElementById('a-rem');if(__e)__e.textContent=overdue.length;})(void 0);
     (function(){var __e=document.getElementById('a-bday');if(__e)__e.textContent=bdays.length;})(void 0);
     (function(){var __e=document.getElementById('a-due');if(__e)__e.textContent=dueSoon.length;})(void 0);
@@ -1315,6 +1336,7 @@ async function goDash(navEl) {
     const myArabic = myFams.filter(f => (f.language||'').toLowerCase().includes('arabic'));
     const myEnglish = myFams.filter(f => !(f.language||'').toLowerCase().includes('arabic'));
     (function(){var __e=document.getElementById('f-families');if(__e)__e.textContent=myFams.length;})(void 0);
+    (function(){var __e=document.getElementById('f-babies-total');if(__e)__e.textContent=myFams.reduce((sum,f)=>sum+((f.babies||[]).length),0);})(void 0);
     (function(){var __e=document.getElementById('f-rem');if(__e)__e.textContent=myOverdue.length;})(void 0);
     (function(){var __e=document.getElementById('f-bday');if(__e)__e.textContent=bdays.length;})(void 0);
     (function(){var __e=document.getElementById('f-due');if(__e)__e.textContent=dueSoon.length;})(void 0);
@@ -2175,6 +2197,9 @@ function filterAndGo(type) {
     filtered = src.filter(f => (f.language||'').toLowerCase().includes('arabic'));
   } else if (type === 'english') {
     filtered = src.filter(f => !(f.language||'').toLowerCase().includes('arabic'));
+  } else if (type.startsWith('status:')) {
+    const status = type.split(':')[1];
+    filtered = src.filter(f => (f.status || 'active') === status);
   }
 
   showScreen('screen-families');
