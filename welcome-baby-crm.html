@@ -247,6 +247,22 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
 .ms-check.done { background:var(--green); color:white; }
 .ms-check.pending { background:var(--border); color:var(--muted); }
 .ms-check.overdue { background:var(--coral-light); color:var(--coral); }
+.ms-timeline-wrap { padding:18px 16px 8px; overflow-x:auto; }
+.ms-timeline { display:flex; align-items:flex-start; min-width:max-content; }
+.ms-step { display:flex; flex-direction:column; align-items:center; width:92px; flex-shrink:0; position:relative; cursor:pointer; }
+.ms-step-line { position:absolute; top:13px; left:-46px; width:92px; height:3px; background:var(--border); z-index:0; }
+.ms-step:first-child .ms-step-line { display:none; }
+.ms-step-line.done { background:var(--green); }
+.ms-step-dot { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; z-index:1; background:var(--border); color:var(--muted); border:3px solid white; box-sizing:content-box; }
+.ms-step-dot.done { background:var(--green); color:white; }
+.ms-step-dot.current { background:white; color:var(--ink); border:3px solid var(--green); }
+.ms-step-dot.overdue { background:var(--coral); color:white; }
+.ms-step-label { font-size:11px; font-weight:700; color:var(--ink); text-align:center; margin-top:8px; line-height:1.25; padding:0 2px; }
+.ms-step-date { font-size:10px; color:var(--muted); margin-top:2px; font-weight:600; }
+.ms-step-tag { font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:0.3px; margin-top:3px; }
+.ms-step-tag.done { color:var(--green); }
+.ms-step-tag.overdue { color:var(--coral); }
+.ms-step-tag.current { color:#b8860b; }
 .inline-input { border:none; border-bottom:1.5px solid var(--border); border-radius:0; padding:2px 4px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:600; color:var(--ink); background:transparent; text-align:right; width:100%; outline:none; }
 .inline-input:focus { border-bottom-color:var(--green); }
 select.inline-input { cursor:pointer; }
@@ -693,10 +709,11 @@ select.inline-input { cursor:pointer; }
       <div class="add-note-label">➕ Log an update</div>
       <textarea class="add-note-input" id="note-text" placeholder="Write a note, visit summary, or update…"></textarea>
       <div class="add-note-row">
-        <select class="note-type-select" id="note-type">
+        <select class="note-type-select" id="note-type" onchange="toggleMilestoneSelect()">
           <option>Check-in</option><option>Home visit</option><option>Feeding update</option>
           <option>Milestone</option><option>Concern flagged</option><option>Box delivered</option><option>Other</option>
         </select>
+        <select class="note-type-select" id="note-milestone" style="display:none;"></select>
         <button class="btn-log" onclick="logNote()">Log it</button>
       </div>
     </div>
@@ -1512,13 +1529,34 @@ async function openProfile(familyId) {
   } else { hCard.style.display='none'; }
   // Milestones from DB
   const {data:ms} = await sb.from('milestones').select('*').eq('family_id',familyId).order('due_date');
+  window.currentMilestones = ms || [];
+  populateMilestoneDropdown();
   const today=new Date();
-  (function(){const el=document.getElementById('p-milestones'); if(el) el.innerHTML = ms&&ms.length ? ms.map(m=>{
-    const due=new Date(m.due_date);
-    const cls=m.completed?'done':due<today?'overdue':'pending';
-    const icon=m.completed?'✓':due<today?'!':'·';
-    return `<div class="ms-row"><div class="ms-check ${cls}" onclick="toggleMs('${m.id}','${familyId}',${m.completed},'${m.milestone_name}')">${icon}</div><div class="ms-label">${m.milestone_name}</div><div class="ms-date">${formatDate(m.due_date)}</div></div>`;
-  }).join('') : '<div style="padding:14px 16px;font-size:13px;color:var(--muted);">No milestones yet.</div>';})();
+  (function(){const el=document.getElementById('p-milestones'); if(!el) return;
+    if (!ms || !ms.length) { el.innerHTML = '<div style="padding:14px 16px;font-size:13px;color:var(--muted);">No milestones yet.</div>'; return; }
+    const doneCount = ms.filter(m=>m.completed).length;
+    const summary = `<div style="padding:10px 16px;font-size:12px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border);">${doneCount} of ${ms.length} complete</div>`;
+    // Figure out which milestone is "current" — the first one not yet done, in date order.
+    const firstPendingIdx = ms.findIndex(m=>!m.completed);
+    const steps = ms.map((m,i)=>{
+      const due=new Date(m.due_date);
+      const isOverdue = !m.completed && due<today;
+      const isCurrent = !m.completed && !isOverdue && i===firstPendingIdx;
+      const cls = m.completed?'done':isOverdue?'overdue':isCurrent?'current':'';
+      const icon = m.completed?'✓':isOverdue?'!':(i+1);
+      const tag = m.completed?'Done':isOverdue?'Overdue':isCurrent?'Up next':'';
+      const lineDone = i>0 && ms[i-1].completed;
+      return `<div class="ms-step" onclick="toggleMs('${m.id}','${familyId}',${m.completed},'${m.milestone_name}')">
+        <div class="ms-step-line ${lineDone?'done':''}"></div>
+        <div class="ms-step-dot ${cls}">${icon}</div>
+        <div class="ms-step-label">${m.milestone_name}</div>
+        <div class="ms-step-date">${formatDate(m.due_date)}</div>
+        ${tag?`<div class="ms-step-tag ${cls}">${tag}</div>`:''}
+      </div>`;
+    }).join('');
+    const timeline = `<div class="ms-timeline-wrap"><div class="ms-timeline">${steps}</div></div>`;
+    el.innerHTML = summary + timeline;
+  })();
   // Activity log from DB
   const {data:logs} = await sb.from('activity_log').select('*').eq('family_id',familyId).order('created_at',{ascending:false});
   document.getElementById('p-timeline').innerHTML = logs&&logs.length ? logs.map(l=>`
@@ -1641,15 +1679,45 @@ async function confirmBoxDelivery() {
   pendingFamilyId = null;
 }
 
+// ── MILESTONE PICKER FOR LOG-UPDATE BOX ──
+function populateMilestoneDropdown() {
+  const sel = document.getElementById('note-milestone');
+  if (!sel) return;
+  const ms = window.currentMilestones || [];
+  sel.innerHTML = ms.map(m => `<option value="${m.id}">${m.milestone_name}${m.completed?' (done)':''}</option>`).join('');
+}
+function toggleMilestoneSelect() {
+  const type = document.getElementById('note-type').value;
+  const sel = document.getElementById('note-milestone');
+  if (!sel) return;
+  sel.style.display = (type === 'Milestone' && sel.options.length) ? 'inline-block' : 'none';
+}
+
 async function logNote() {
   const note=document.getElementById('note-text').value.trim();
   const type=document.getElementById('note-type').value;
   if(!note||!currentFamilyId){showToast('Please write a note first');return;}
+  let finalNote = note;
+  let milestoneId = null;
+  if (type === 'Milestone') {
+    const msSel = document.getElementById('note-milestone');
+    if (msSel && msSel.value) {
+      milestoneId = msSel.value;
+      const chosen = (window.currentMilestones||[]).find(m=>m.id===milestoneId);
+      if (chosen) finalNote = `[${chosen.milestone_name}] ${note}`;
+    }
+  }
   const {error} = await sb.from('activity_log').insert([{
-    family_id:currentFamilyId, log_type:type, note,
+    family_id:currentFamilyId, log_type:type, note:finalNote,
     logged_by: document.getElementById('menu-name').textContent
   }]);
   if(error){showToast('Error saving note');return;}
+  if (milestoneId) {
+    const chosen = (window.currentMilestones||[]).find(m=>m.id===milestoneId);
+    if (chosen && !chosen.completed) {
+      await sb.from('milestones').update({completed:true}).eq('id', milestoneId);
+    }
+  }
   document.getElementById('note-text').value='';
   showToast('✅ Note logged');
   openProfile(currentFamilyId);
@@ -2235,7 +2303,7 @@ async function denyUser() {
 // ── SMART FILTER NAVIGATION ──
 // ── FAIRY CACHE ──
 async function loadFairyCache() {
-  const {data} = await sb.from('user_roles').select('user_id,full_name,email').eq('approved',true).in('role',['fairy','admin','consultant']);
+  const {data} = await sb.from('user_roles').select('user_id,full_name,email').eq('approved',true).in('role',['fairy','admin','consultant','super']);
   window.fairyCache = {};
   (data||[]).forEach(u => { window.fairyCache[u.user_id] = u; });
 }
