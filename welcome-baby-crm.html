@@ -249,7 +249,7 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
 .ms-check.overdue { background:var(--coral-light); color:var(--coral); }
 .ms-timeline-wrap { padding:18px 16px 8px; overflow-x:auto; }
 .ms-timeline { display:flex; align-items:flex-start; min-width:max-content; }
-.ms-step { display:flex; flex-direction:column; align-items:center; width:92px; flex-shrink:0; position:relative; cursor:pointer; }
+.ms-step { display:flex; flex-direction:column; align-items:center; width:92px; flex-shrink:0; position:relative; }
 .ms-step-line { position:absolute; top:13px; left:-46px; width:92px; height:3px; background:var(--border); z-index:0; }
 .ms-step:first-child .ms-step-line { display:none; }
 .ms-step-line.done { background:var(--green); }
@@ -1546,7 +1546,7 @@ async function openProfile(familyId) {
       const icon = m.completed?'✓':isOverdue?'!':(i+1);
       const tag = m.completed?'Done':isOverdue?'Overdue':isCurrent?'Up next':'';
       const lineDone = i>0 && ms[i-1].completed;
-      return `<div class="ms-step" onclick="toggleMs('${m.id}','${familyId}',${m.completed},'${m.milestone_name}')">
+      return `<div class="ms-step">
         <div class="ms-step-line ${lineDone?'done':''}"></div>
         <div class="ms-step-dot ${cls}">${icon}</div>
         <div class="ms-step-label">${m.milestone_name}</div>
@@ -2620,6 +2620,28 @@ async function saveAllProfileFields() {
     const f = allFamilies.find(x => x.id === currentFamilyId);
     if (f) Object.assign(f, familyFields);
     if (f && f.babies && f.babies[0]) Object.assign(f.babies[0], babyFields);
+    // The moment a baby's DOB is recorded, generate the post-birth milestone
+    // chain (if it isn't already there) so pregnant cases automatically flow
+    // into the 1/6/12-month journey instead of someone typing them by hand.
+    if (babyFields.dob) {
+      const {data: existing} = await sb.from('milestones').select('milestone_name').eq('family_id', currentFamilyId);
+      const already = new Set((existing||[]).map(m=>m.milestone_name));
+      const postBirth = [
+        {name:'Post-birth home visit', offset:7},
+        {name:'Baby box delivered', offset:7},
+        {name:'1 month — request birth certificate', offset:30},
+        {name:'6 months — emergency support only', offset:180},
+        {name:'12 months — birthday cake & gift 🎂', offset:365},
+      ].filter(m => !already.has(m.name));
+      if (postBirth.length) {
+        const dob = new Date(babyFields.dob);
+        await sb.from('milestones').insert(postBirth.map(m=>{
+          const d=new Date(dob); d.setDate(d.getDate()+m.offset);
+          return {family_id: currentFamilyId, milestone_name: m.name, due_date: d.toISOString().split('T')[0]};
+        }));
+        openProfile(currentFamilyId);
+      }
+    }
   }
 }
 
