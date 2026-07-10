@@ -649,7 +649,9 @@ select.inline-input { cursor:pointer; }
       </div>
     </div>
     <div class="info-card">
-      <div class="info-card-header"><div class="info-card-title">📅 Milestones</div></div>
+      <div class="info-card-header"><div class="info-card-title">📅 Milestones</div>
+        <button type="button" onclick="copyWhatsAppInfo()" style="font-size:11px;font-weight:700;background:#e9f7f1;color:#0f6e56;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;">📋 Copy WhatsApp group info</button>
+      </div>
       <div id="p-milestones" style="padding:14px 16px;font-size:13px;color:var(--muted);">Loading…</div>
     </div>
     <div class="info-card">
@@ -1774,6 +1776,28 @@ function resetFamilyModal() {
   document.getElementById('f-fb-linked').style.display = 'none';
   document.getElementById('f-qid-group').style.display = 'block';
   document.getElementById('f-mqid').value = '';
+}
+
+// ── COPY WHATSAPP GROUP INFO ──
+async function copyWhatsAppInfo() {
+  const f = allFamilies.find(x=>x.id===currentFamilyId);
+  if (!f) { showToast('Could not load family'); return; }
+  const baby = f.babies && f.babies[0];
+  const lines = [
+    'Baby: ' + (baby && baby.baby_name ? baby.baby_name : '–'),
+    'Born: ' + (baby && baby.dob ? formatDate(baby.dob) : '–'),
+    'Mother: ' + (f.mother_name || '–'),
+    'Father: ' + (f.father_name || '–'),
+    'Location: ' + (f.location || '–')
+  ];
+  const text = lines.join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('✅ Copied — paste into the WhatsApp group description');
+  } catch (e) {
+    // Clipboard API can fail on non-HTTPS/older browsers — fall back to a manual copy prompt.
+    window.prompt('Copy this text (Ctrl+C / Cmd+C):', text);
+  }
 }
 
 // ── SAVE FAMILY ──
