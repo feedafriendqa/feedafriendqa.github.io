@@ -1466,12 +1466,19 @@ async function openProfile(familyId) {
   const baby=f.babies&&f.babies[0];
   document.getElementById('p-baby-name').textContent = baby&&baby.baby_name?'Baby '+baby.baby_name:'Awaiting birth';
   document.getElementById('p-family-name').textContent = (f.mother_name||'')+' family'+(baby&&baby.dob?' · Born '+formatDate(baby.dob):f.due_date?' · Due '+formatDate(f.due_date):'');
+  // Distinguish "baby already born, needs box delivery + assessment visit"
+  // from "still pregnant, on the due-date schedule" at a glance -- the
+  // family name subtitle already says Born/Due, but that's easy to miss
+  // in a long list of milestones below, so this gets its own pill.
+  const stagePillHtml = baby && baby.dob
+    ? '<div class="profile-pill" style="background:var(--coral-light);color:var(--coral);">🍼 Newborn — box & visit</div>'
+    : (f.due_date ? '<div class="profile-pill" style="background:var(--amber-light);color:var(--amber);">🤰 Expecting</div>' : '');
   const pillItems = [
     baby&&baby.feeding_method ? baby.feeding_method : '🤱 Breastfeeding',
     f.language || null,
     (f.status||'active').charAt(0).toUpperCase()+(f.status||'active').slice(1)
   ].filter(Boolean);
-  (function(){const el=document.getElementById('p-pills'); if(el) el.innerHTML=pillItems.map(p=>`<div class="profile-pill">${p}</div>`).join('');})();
+  (function(){const el=document.getElementById('p-pills'); if(el) el.innerHTML=stagePillHtml+pillItems.map(p=>`<div class="profile-pill">${p}</div>`).join('');})();
   // Store baby ID for saves
   currentBabyId = baby ? baby.id : null;
   // Baby fields
