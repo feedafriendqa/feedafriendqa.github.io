@@ -957,7 +957,9 @@ select.inline-input { cursor:pointer; }
       <div id="f-fb-linked" style="display:none;margin-top:6px;font-size:12px;font-weight:700;color:#0f6e56;">✓ Linked to <span id="f-fb-linked-name"></span> <button type="button" onclick="clearFoodBoxLink()" style="margin-left:8px;font-size:11px;color:#888;background:none;border:none;cursor:pointer;text-decoration:underline;">unlink</button></div>
     </div>
     <div class="form-group"><label class="form-label">Mother's name *</label><input class="form-input" id="f-mother" type="text"></div>
+    <div class="form-group"><label class="form-label">Mother's phone</label><input class="form-input" id="f-mphone" type="text"></div>
     <div class="form-group"><label class="form-label">Father's name</label><input class="form-input" id="f-father" type="text"></div>
+    <div class="form-group"><label class="form-label">Father's phone</label><input class="form-input" id="f-fphone" type="text"></div>
     <div class="form-group" id="f-qid-group"><label class="form-label">Mother's QID (if not linked above)</label><input class="form-input" id="f-mqid" type="text" placeholder="29xxxxxxxxx"></div>
     <div class="form-group"><label class="form-label">Due date *</label><input class="form-input" id="f-duedate" type="date"></div>
     <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="f-location" type="text" placeholder="Area in Qatar"></div>
@@ -1704,7 +1706,7 @@ function searchFoodBoxForFamily(q) {
   if (term.length < 2) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; return; }
   fbSearchTimer = setTimeout(async () => {
     const { data } = await sb.from('food_box_applications')
-      .select('id, full_name, full_name_en, qid_number, whatsapp, friend_id')
+      .select('id, full_name, full_name_en, qid_number, whatsapp, friend_id, household_size, admin_notes, area, language')
       .or(`full_name.ilike.%${term}%,full_name_en.ilike.%${term}%,qid_number.ilike.%${term}%`)
       .limit(8);
     const rows = data || [];
@@ -1716,13 +1718,42 @@ function searchFoodBoxForFamily(q) {
   }, 300);
 }
 
-function selectFoodBoxLink(i) {
+async function selectFoodBoxLink(i) {
   const app = (window.__fbSearchResults || [])[i];
   if (!app) return;
   fbLinkedApp = app;
   if (!document.getElementById('f-mother').value) {
     document.getElementById('f-mother').value = app.full_name_en || app.full_name || '';
   }
+  if (!document.getElementById('f-mphone').value) {
+    document.getElementById('f-mphone').value = app.whatsapp || '';
+  }
+  if (!document.getElementById('f-location').value) {
+    document.getElementById('f-location').value = app.area || '';
+  }
+
+  // Pull household members (father/spouse + children) from the linked
+  // Food Box application. This is what was missing before — the family
+  // record only ever got the mother's name from the linked app, nothing else.
+  const { data: members } = await sb.from('food_box_members')
+    .select('full_name, role, gender, whatsapp')
+    .eq('application_id', app.id);
+  const rows = members || [];
+  const father = rows.find(m => ['husband','spouse'].includes((m.role||'').toLowerCase()) && (m.gender||'').toLowerCase() !== 'female')
+              || rows.find(m => ['husband','spouse'].includes((m.role||'').toLowerCase()));
+  const childCount = rows.filter(m => (m.role||'').toLowerCase() === 'child').length;
+
+  if (father) {
+    if (!document.getElementById('f-father').value) document.getElementById('f-father').value = father.full_name || '';
+    if (!document.getElementById('f-fphone').value) document.getElementById('f-fphone').value = father.whatsapp || '';
+  }
+  if (!document.getElementById('f-siblings').value && childCount > 0) {
+    document.getElementById('f-siblings').value = String(childCount);
+  }
+  // Stash the transfer note (if any) so saveFamily() can log it to
+  // activity_log once the family record actually exists.
+  fbLinkedApp._transferNote = app.admin_notes || null;
+
   document.getElementById('f-fb-results').style.display = 'none';
   document.getElementById('f-fb-search').value = '';
   document.getElementById('f-fb-linked').style.display = 'block';
@@ -1787,6 +1818,8 @@ async function saveFamily() {
 
   const {data,error} = await sb.from('families').insert([{
     mother_name:mother, father_name:document.getElementById('f-father').value.trim(),
+    mother_phone:document.getElementById('f-mphone').value.trim(),
+    father_phone:document.getElementById('f-fphone').value.trim(),
     due_date:due||null, location:document.getElementById('f-location').value.trim(),
     language:document.getElementById('f-language').value,
     siblings:document.getElementById('f-siblings').value.trim(),
@@ -1806,6 +1839,15 @@ async function saveFamily() {
       const d=new Date(dueDate); d.setDate(d.getDate()+m.offset);
       return {family_id:fid,milestone_name:m.name,due_date:d.toISOString().split('T')[0]};
     }));
+  }
+  // Carry over the Food Box admin note into the case's activity log
+  // (not a plain field) so it shows in the log/updates section on both portals.
+  if (fbLinkedApp && fbLinkedApp._transferNote && data && data[0]) {
+    await sb.from('activity_log').insert([{
+      family_id: data[0].id, log_type: 'note',
+      note: 'Transferred from Food Box portal: ' + fbLinkedApp._transferNote,
+      logged_by: 'System (Food Box transfer)'
+    }]);
   }
   closeModal('modal-family');
   showToast('✅ Family added');
