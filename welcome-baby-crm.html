@@ -986,7 +986,7 @@ select.inline-input { cursor:pointer; }
     <div class="form-group"><label class="form-label">Language</label>
       <select class="form-input" id="f-language"><option>Arabic</option><option>English</option><option>Urdu</option><option>Hindi</option><option>Tagalog</option><option>Other</option></select>
     </div>
-    <div class="form-group"><label class="form-label">Siblings</label><input class="form-input" id="f-siblings" type="text"></div>
+    <div class="form-group"><label class="form-label">Siblings</label><input class="form-input" id="f-siblings" type="text" placeholder="e.g. 2 (ages 4, 7)"></div>
     <button class="btn-primary" onclick="saveFamily()">Save family</button>
   </div>
 </div>
@@ -1550,9 +1550,9 @@ async function openProfile(familyId) {
     // Any real milestones with a custom name not in the template (rare) go at the end.
     (ms||[]).forEach(m => { if (!template.includes(m.milestone_name)) merged.push(m); });
 
-    const realCount = merged.filter(m=>!m._placeholder).length;
+    const totalCount = merged.length;
     const doneCount = merged.filter(m=>m.completed).length;
-    const summary = `<div style="padding:10px 16px;font-size:12px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border);">${doneCount} of ${realCount} complete</div>`;
+    const summary = `<div style="padding:10px 16px;font-size:12px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border);">${doneCount} of ${totalCount} complete</div>`;
 
     const firstPendingIdx = merged.findIndex(m=>!m.completed);
     const steps = merged.map((m,i)=>{
@@ -1872,8 +1872,11 @@ async function copyWhatsAppInfo() {
   const lines = [
     'Baby: ' + (baby && baby.baby_name ? baby.baby_name : '–'),
     'Born: ' + (baby && baby.dob ? formatDate(baby.dob) : '–'),
+    'Weight: ' + (baby && baby.birth_weight ? baby.birth_weight : '–'),
+    'Feeding: ' + (baby && baby.feeding_method ? baby.feeding_method : '–'),
     'Mother: ' + (f.mother_name || '–'),
     'Father: ' + (f.father_name || '–'),
+    'Siblings: ' + (f.siblings || '–'),
     'Location: ' + (f.location || '–')
   ];
   const text = lines.join('\n');
