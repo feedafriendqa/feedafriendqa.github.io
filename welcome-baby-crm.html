@@ -257,6 +257,7 @@ body { background:var(--bg); font-family:'Nunito',sans-serif; color:var(--ink); 
 .ms-step-dot.done { background:var(--green); color:white; }
 .ms-step-dot.current { background:white; color:var(--ink); border:3px solid var(--green); }
 .ms-step-dot.overdue { background:var(--coral); color:white; }
+.ms-step-dot.placeholder { background:transparent; border-style:dashed; color:var(--border); }
 .ms-step-label { font-size:11px; font-weight:700; color:var(--ink); text-align:center; margin-top:8px; line-height:1.25; padding:0 2px; }
 .ms-step-date { font-size:10px; color:var(--muted); margin-top:2px; font-weight:600; }
 .ms-step-tag { font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:0.3px; margin-top:3px; }
@@ -1533,24 +1534,41 @@ async function openProfile(familyId) {
   populateMilestoneDropdown();
   const today=new Date();
   (function(){const el=document.getElementById('p-milestones'); if(!el) return;
-    if (!ms || !ms.length) { el.innerHTML = '<div style="padding:14px 16px;font-size:13px;color:var(--muted);">No milestones yet.</div>'; return; }
-    const doneCount = ms.filter(m=>m.completed).length;
-    const summary = `<div style="padding:10px 16px;font-size:12px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border);">${doneCount} of ${ms.length} complete</div>`;
-    // Figure out which milestone is "current" — the first one not yet done, in date order.
-    const firstPendingIdx = ms.findIndex(m=>!m.completed);
-    const steps = ms.map((m,i)=>{
-      const due=new Date(m.due_date);
-      const isOverdue = !m.completed && due<today;
-      const isCurrent = !m.completed && !isOverdue && i===firstPendingIdx;
-      const cls = m.completed?'done':isOverdue?'overdue':isCurrent?'current':'';
+    // The full journey every case goes through, in order. Steps that don't exist
+    // yet as real milestone rows (usually the post-birth ones, before a DOB is
+    // recorded) are shown as greyed-out "TBD" placeholders so the whole journey
+    // is always visible, not just whatever's been created so far.
+    const template = [
+      'Baby fairy assigned','WhatsApp group created','Pre-birth home visit',
+      'Post-birth home visit','Baby box delivered',
+      '1 month — request birth certificate','6 months — emergency support only',
+      '12 months — birthday cake & gift 🎂'
+    ];
+    const byName = {};
+    (ms||[]).forEach(m => { byName[m.milestone_name] = m; });
+    const merged = template.map(name => byName[name] || {milestone_name:name, due_date:null, completed:false, _placeholder:true});
+    // Any real milestones with a custom name not in the template (rare) go at the end.
+    (ms||[]).forEach(m => { if (!template.includes(m.milestone_name)) merged.push(m); });
+
+    const realCount = merged.filter(m=>!m._placeholder).length;
+    const doneCount = merged.filter(m=>m.completed).length;
+    const summary = `<div style="padding:10px 16px;font-size:12px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border);">${doneCount} of ${realCount} complete</div>`;
+
+    const firstPendingIdx = merged.findIndex(m=>!m.completed);
+    const steps = merged.map((m,i)=>{
+      const due = m.due_date ? new Date(m.due_date) : null;
+      const isOverdue = !m.completed && due && due<today;
+      const isCurrent = !m.completed && !isOverdue && !m._placeholder && i===firstPendingIdx;
+      const cls = m.completed?'done':m._placeholder?'placeholder':isOverdue?'overdue':isCurrent?'current':'';
       const icon = m.completed?'✓':isOverdue?'!':(i+1);
-      const tag = m.completed?'Done':isOverdue?'Overdue':isCurrent?'Up next':'';
-      const lineDone = i>0 && ms[i-1].completed;
+      const tag = m.completed?'Done':isOverdue?'Overdue':isCurrent?'Up next':m._placeholder?'':'';
+      const lineDone = i>0 && merged[i-1].completed;
+      const dateLabel = m.due_date ? formatDate(m.due_date) : 'TBD';
       return `<div class="ms-step">
         <div class="ms-step-line ${lineDone?'done':''}"></div>
         <div class="ms-step-dot ${cls}">${icon}</div>
-        <div class="ms-step-label">${m.milestone_name}</div>
-        <div class="ms-step-date">${formatDate(m.due_date)}</div>
+        <div class="ms-step-label" style="${m._placeholder?'color:var(--muted);':''}">${m.milestone_name}</div>
+        <div class="ms-step-date">${dateLabel}</div>
         ${tag?`<div class="ms-step-tag ${cls}">${tag}</div>`:''}
       </div>`;
     }).join('');
