@@ -708,15 +708,17 @@ select.inline-input { cursor:pointer; }
 
     <div class="add-note-box">
       <div class="add-note-label">➕ Log an update</div>
+      <button type="button" onclick="openHomeVisitForm()" style="width:100%;background:#eef2ff;color:#3949ab;border:none;border-radius:10px;padding:10px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:10px;">🏠 Log a structured home visit</button>
       <textarea class="add-note-input" id="note-text" placeholder="Write a note, visit summary, or update…"></textarea>
       <div class="add-note-row">
         <select class="note-type-select" id="note-type" onchange="toggleMilestoneSelect()">
           <option>Check-in</option><option>Home visit</option><option>Feeding update</option>
           <option>Milestone</option><option>Concern flagged</option><option>Box delivered</option><option>Other</option>
         </select>
-        <select class="note-type-select" id="note-milestone" style="display:none;"></select>
+        <select class="note-type-select" id="note-milestone" style="display:none;" onchange="toggleMilestoneExtra()"></select>
         <button class="btn-log" onclick="logNote()">Log it</button>
       </div>
+      <div id="note-milestone-extra" style="display:none;margin-top:10px;"></div>
     </div>
     <div style="height:24px;"></div>
   </div>
@@ -1003,6 +1005,57 @@ select.inline-input { cursor:pointer; }
   </div>
 </div>
 
+<div class="modal" id="modal-home-visit">
+  <div class="modal-inner" style="max-height:85vh;overflow-y:auto;">
+    <div class="modal-title">🏠 Home visit <button class="modal-close" onclick="closeModal('modal-home-visit')">✕</button></div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Pre-birth or post-birth visit — matches the printed Baby Fairy guide.</p>
+
+    <div style="font-weight:800;font-size:13px;color:var(--ink);margin:12px 0 6px;">🌙 Sleeping arrangements</div>
+    <div class="form-group"><label class="form-label">Where does mum sleep?</label><input class="form-input" id="hv-mum-sleep" type="text"></div>
+    <div class="form-group"><label class="form-label">Where will baby sleep?</label><input class="form-input" id="hv-baby-sleep" type="text"></div>
+    <div class="form-group"><label class="form-label">Best sleeping option</label>
+      <select class="form-input" id="hv-sleep-option"><option value="">–</option><option>Moses basket (small)</option><option>Next to me (medium)</option><option>Cot / Crib (large)</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">Any other sleeping notes</label><input class="form-input" id="hv-sleep-notes" type="text"></div>
+
+    <div style="font-weight:800;font-size:13px;color:var(--ink);margin:16px 0 6px;">🔎 Quick check</div>
+    <div class="form-group"><label class="form-label">Does the family have food?</label>
+      <select class="form-input" id="hv-food"><option value="">–</option><option>Yes</option><option>No</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">Safe sleeping space (flat, nothing soft/loose)?</label>
+      <select class="form-input" id="hv-safe-sleep"><option value="">–</option><option>Yes</option><option>No</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">Good lighting?</label>
+      <select class="form-input" id="hv-lighting"><option value="">–</option><option>Yes</option><option>No</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">Good ventilation & temperature?</label>
+      <select class="form-input" id="hv-ventilation"><option value="">–</option><option>Yes</option><option>No</option></select>
+    </div>
+
+    <div style="font-weight:800;font-size:13px;color:var(--ink);margin:16px 0 6px;">🔒 Sensitive — admin/fairy only</div>
+    <div class="form-group"><label class="form-label">Any immediate concerns?</label><textarea class="form-input" id="hv-concerns" style="min-height:60px;resize:none;"></textarea></div>
+    <div class="form-group"><label class="form-label">Mum's requests (one per line)</label><textarea class="form-input" id="hv-requests" style="min-height:60px;resize:none;" placeholder="Car seat&#10;Changing mat"></textarea></div>
+    <div class="form-group"><label class="form-label">Anything else to note</label><textarea class="form-input" id="hv-other" style="min-height:60px;resize:none;"></textarea></div>
+
+    <button class="btn-primary green" onclick="saveHomeVisit()" style="margin-top:8px;">✅ Save home visit</button>
+  </div>
+</div>
+
+<div class="modal" id="modal-photo-crop">
+  <div class="modal-inner">
+    <div class="modal-title">📸 Adjust photo <button class="modal-close" onclick="closeModal('modal-photo-crop')">✕</button></div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Drag to reposition, use the slider to zoom.</p>
+    <div style="display:flex;justify-content:center;">
+      <canvas id="crop-canvas" width="280" height="280" style="border-radius:16px;background:#eee;touch-action:none;cursor:grab;"></canvas>
+    </div>
+    <div class="form-group" style="margin-top:16px;">
+      <label class="form-label">Zoom</label>
+      <input type="range" id="crop-zoom" min="100" max="400" value="100" style="width:100%;" oninput="cropRedraw()">
+    </div>
+    <button class="btn-primary green" onclick="saveCroppedPhoto()">✅ Save photo</button>
+  </div>
+</div>
+
 <div class="modal" id="modal-need">
   <div class="modal-inner">
     <div class="modal-title">Log a need <button class="modal-close" onclick="closeModal('modal-need')">✕</button></div>
@@ -1036,7 +1089,7 @@ let allDonations = [];
 let currentFamilyId = null;
 let prevScreen = null;
 const AVATARS = ['av-purple','av-green','av-teal','av-amber'];
-const LOG_ICONS = {'Check-in':'📱','Home visit':'🏠','Feeding update':'🍼','Milestone':'📅','Concern flagged':'⚠️','Box delivered':'📦','Other':'📝'};
+const LOG_ICONS = {'Check-in':'📱','Home visit':'🏠','Home visit — confidential':'🔒','Feeding update':'🍼','Milestone':'📅','Concern flagged':'⚠️','Box delivered':'📦','Other':'📝'};
 
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', async function() {
@@ -1540,7 +1593,7 @@ async function openProfile(familyId) {
     // is always visible, not just whatever's been created so far.
     const template = [
       'Baby fairy assigned','WhatsApp group created','Pre-birth home visit',
-      'Post-birth home visit','Baby box delivered',
+      'Baby born','Post-birth home visit','Baby box delivered',
       '1 month — request birth certificate','6 months — emergency support only',
       '12 months — birthday cake & gift 🎂'
     ];
@@ -1577,10 +1630,12 @@ async function openProfile(familyId) {
   })();
   // Activity log from DB
   const {data:logs} = await sb.from('activity_log').select('*').eq('family_id',familyId).order('created_at',{ascending:false});
-  document.getElementById('p-timeline').innerHTML = logs&&logs.length ? logs.map(l=>`
+  const canSeeSensitive = ['super','admin','fairy'].includes(currentRole);
+  const visibleLogs = (logs||[]).filter(l => canSeeSensitive || l.log_type !== 'Home visit — confidential');
+  document.getElementById('p-timeline').innerHTML = visibleLogs.length ? visibleLogs.map(l=>`
     <div class="timeline-item">
       <div class="tl-dot purple">${LOG_ICONS[l.log_type]||'📝'}</div>
-      <div class="tl-content"><div class="tl-title">${l.log_type}</div><div class="tl-note">${l.note}</div><div class="tl-meta">${l.logged_by||'–'} · ${formatDateTime(l.created_at)}</div></div>
+      <div class="tl-content"><div class="tl-title">${l.log_type}${l.log_type==='Home visit — confidential'?' <span style="font-size:10px;color:var(--coral);font-weight:800;">🔒 ADMIN/FAIRY ONLY</span>':''}</div><div class="tl-note">${l.note}</div><div class="tl-meta">${l.logged_by||'–'} · ${formatDateTime(l.created_at)}</div></div>
     </div>`).join('') : '<div style="padding:14px 0;font-size:13px;color:var(--muted);">No activity yet.</div>';
   document.getElementById('profile-back').onclick = ()=>showScreen(prevScreen||'screen-families');
   // Load doc status
@@ -1697,18 +1752,90 @@ async function confirmBoxDelivery() {
   pendingFamilyId = null;
 }
 
-// ── MILESTONE PICKER FOR LOG-UPDATE BOX ──
+// ── STRUCTURED HOME VISIT FORM ──
+function openHomeVisitForm() {
+  ['hv-mum-sleep','hv-baby-sleep','hv-sleep-notes','hv-concerns','hv-requests','hv-other'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  ['hv-sleep-option','hv-food','hv-safe-sleep','hv-lighting','hv-ventilation'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  document.getElementById('modal-home-visit').classList.add('open');
+}
+
+async function saveHomeVisit() {
+  if (!currentFamilyId) return;
+  const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const loggedBy = document.getElementById('menu-name').textContent;
+
+  // General/factual half — visible to everyone.
+  const generalLines = [];
+  if (val('hv-mum-sleep')) generalLines.push('Where mum sleeps: ' + val('hv-mum-sleep'));
+  if (val('hv-baby-sleep')) generalLines.push('Where baby will sleep: ' + val('hv-baby-sleep'));
+  if (val('hv-sleep-option')) generalLines.push('Sleeping option: ' + val('hv-sleep-option'));
+  if (val('hv-sleep-notes')) generalLines.push('Other sleeping notes: ' + val('hv-sleep-notes'));
+  if (val('hv-food')) generalLines.push('Food in the home: ' + val('hv-food'));
+  if (val('hv-safe-sleep')) generalLines.push('Safe sleeping space: ' + val('hv-safe-sleep'));
+  if (val('hv-lighting')) generalLines.push('Good lighting: ' + val('hv-lighting'));
+  if (val('hv-ventilation')) generalLines.push('Good ventilation/temperature: ' + val('hv-ventilation'));
+
+  // Sensitive half — admin/fairy/super only, kept as a separate log entry so
+  // it can be filtered out of the timeline for other roles.
+  const sensitiveLines = [];
+  if (val('hv-concerns')) sensitiveLines.push('Immediate concerns: ' + val('hv-concerns'));
+  if (val('hv-requests')) sensitiveLines.push('Mum\'s requests:\n' + val('hv-requests').split('\n').map(l=>'• '+l.trim()).filter(l=>l!=='• ').join('\n'));
+  if (val('hv-other')) sensitiveLines.push('Other notes: ' + val('hv-other'));
+
+  if (!generalLines.length && !sensitiveLines.length) { showToast('Please fill in at least one field'); return; }
+
+  const inserts = [];
+  if (generalLines.length) inserts.push({family_id: currentFamilyId, log_type: 'Home visit', note: generalLines.join('\n'), logged_by: loggedBy});
+  if (sensitiveLines.length) inserts.push({family_id: currentFamilyId, log_type: 'Home visit — confidential', note: sensitiveLines.join('\n'), logged_by: loggedBy});
+
+  const {error} = await sb.from('activity_log').insert(inserts);
+  if (error) { showToast('Error saving visit: ' + error.message); return; }
+
+  // Auto-generate a need for each of mum's requests, so it shows up on the
+  // Donations/needs board instead of only living inside the note text.
+  const requestLines = val('hv-requests').split('\n').map(l=>l.trim()).filter(Boolean);
+  if (requestLines.length) {
+    await sb.from('needs').insert(requestLines.map(item => ({
+      family_id: currentFamilyId, item, priority: 'When available', notes: 'From home visit', matched: false
+    }))).then(({error}) => { if (error) console.error('needs insert error', error); });
+  }
+
+  closeModal('modal-home-visit');
+  showToast('✅ Home visit logged');
+  openProfile(currentFamilyId);
+}
 function populateMilestoneDropdown() {
   const sel = document.getElementById('note-milestone');
   if (!sel) return;
   const ms = window.currentMilestones || [];
   sel.innerHTML = ms.map(m => `<option value="${m.id}">${m.milestone_name}${m.completed?' (done)':''}</option>`).join('');
+  toggleMilestoneExtra();
 }
 function toggleMilestoneSelect() {
   const type = document.getElementById('note-type').value;
   const sel = document.getElementById('note-milestone');
   if (!sel) return;
   sel.style.display = (type === 'Milestone' && sel.options.length) ? 'inline-block' : 'none';
+  toggleMilestoneExtra();
+}
+function toggleMilestoneExtra() {
+  const type = document.getElementById('note-type').value;
+  const extra = document.getElementById('note-milestone-extra');
+  if (!extra) return;
+  if (type !== 'Milestone') { extra.style.display = 'none'; extra.innerHTML = ''; return; }
+  const sel = document.getElementById('note-milestone');
+  const chosen = (window.currentMilestones||[]).find(m => m.id === sel.value);
+  if (!chosen) { extra.style.display = 'none'; extra.innerHTML = ''; return; }
+  if (chosen.milestone_name === 'Baby born') {
+    extra.style.display = 'block';
+    extra.innerHTML = '<label class="form-label">Baby\'s date of birth *</label><input class="form-input" id="ms-extra-dob" type="date">';
+  } else if (chosen.milestone_name === 'Baby box delivered') {
+    extra.style.display = 'block';
+    extra.innerHTML = '<label class="form-label">Box number *</label><input class="form-input" id="ms-extra-box" type="number" placeholder="e.g. 42">';
+  } else {
+    extra.style.display = 'none';
+    extra.innerHTML = '';
+  }
 }
 
 async function logNote() {
@@ -1717,12 +1844,25 @@ async function logNote() {
   if(!note||!currentFamilyId){showToast('Please write a note first');return;}
   let finalNote = note;
   let milestoneId = null;
+  let chosen = null;
   if (type === 'Milestone') {
     const msSel = document.getElementById('note-milestone');
     if (msSel && msSel.value) {
       milestoneId = msSel.value;
-      const chosen = (window.currentMilestones||[]).find(m=>m.id===milestoneId);
+      chosen = (window.currentMilestones||[]).find(m=>m.id===milestoneId);
       if (chosen) finalNote = `[${chosen.milestone_name}] ${note}`;
+    }
+    // Milestones that need extra info before they can be marked complete.
+    if (chosen && chosen.milestone_name === 'Baby born') {
+      const dob = document.getElementById('ms-extra-dob') ? document.getElementById('ms-extra-dob').value : '';
+      if (!dob) { showToast('Please enter the baby\'s date of birth'); return; }
+      await recordBabyBorn(currentFamilyId, dob);
+    } else if (chosen && chosen.milestone_name === 'Baby box delivered') {
+      const boxNum = document.getElementById('ms-extra-box') ? document.getElementById('ms-extra-box').value.trim() : '';
+      if (!boxNum) { showToast('Please enter the box number'); return; }
+      await sb.from('families').update({box_number: boxNum}).eq('id', currentFamilyId);
+      const f = allFamilies.find(x=>x.id===currentFamilyId); if (f) f.box_number = boxNum;
+      finalNote = `[Baby box delivered] Box #${boxNum}. ${note}`;
     }
   }
   const {error} = await sb.from('activity_log').insert([{
@@ -1731,14 +1871,43 @@ async function logNote() {
   }]);
   if(error){showToast('Error saving note');return;}
   if (milestoneId) {
-    const chosen = (window.currentMilestones||[]).find(m=>m.id===milestoneId);
     if (chosen && !chosen.completed) {
-      await sb.from('milestones').update({completed:true}).eq('id', milestoneId);
+      await sb.from('milestones').update({completed:true, completed_at:new Date().toISOString()}).eq('id', milestoneId);
     }
   }
   document.getElementById('note-text').value='';
   showToast('✅ Note logged');
   openProfile(currentFamilyId);
+}
+
+// Called when "Baby born" is logged with a DOB. Creates the baby record if
+// one doesn't exist yet, and generates the post-birth milestone chain timed
+// off the actual birth date (not the original due date).
+async function recordBabyBorn(familyId, dob) {
+  const f = allFamilies.find(x=>x.id===familyId);
+  let babyId = f && f.babies && f.babies[0] ? f.babies[0].id : null;
+  if (babyId) {
+    await sb.from('babies').update({dob}).eq('id', babyId);
+  } else {
+    const {data} = await sb.from('babies').insert([{family_id: familyId, dob}]).select();
+    if (data && data[0]) babyId = data[0].id;
+  }
+  const {data: existing} = await sb.from('milestones').select('milestone_name').eq('family_id', familyId);
+  const already = new Set((existing||[]).map(m=>m.milestone_name));
+  const postBirth = [
+    {name:'Post-birth home visit', offset:7},
+    {name:'Baby box delivered', offset:7},
+    {name:'1 month — request birth certificate', offset:30},
+    {name:'6 months — emergency support only', offset:180},
+    {name:'12 months — birthday cake & gift 🎂', offset:365},
+  ].filter(m => !already.has(m.name));
+  if (postBirth.length) {
+    const dobDate = new Date(dob);
+    await sb.from('milestones').insert(postBirth.map(m=>{
+      const d=new Date(dobDate); d.setDate(d.getDate()+m.offset);
+      return {family_id: familyId, milestone_name: m.name, due_date: d.toISOString().split('T')[0]};
+    }));
+  }
 }
 
 // ── REMINDERS ──
@@ -1947,6 +2116,7 @@ async function saveFamily() {
     const ms=[
       {name:'Baby fairy assigned',offset:-14},{name:'WhatsApp group created',offset:-14},
       {name:'Pre-birth home visit',offset:-7},
+      {name:'Baby born',offset:0},
     ];
     await sb.from('milestones').insert(ms.map(m=>{
       const d=new Date(dueDate); d.setDate(d.getDate()+m.offset);
@@ -2466,22 +2636,98 @@ function triggerPhotoUpload() {
   document.getElementById('photo-file-input').click();
 }
 
+// ── BABY PHOTO CROP ──
+let cropImg = null, cropOffsetX = 0, cropOffsetY = 0, cropDragging = false, cropLastX = 0, cropLastY = 0, cropMinZoom = 100;
+
 async function uploadBabyPhoto(event) {
   const file = event.target.files[0];
   if (!file || !currentFamilyId) return;
-  showToast('Uploading photo…');
-  const ext = file.name.split('.').pop().toLowerCase();
-  const path = `${currentFamilyId}/photo.${ext}`;
-  const { error } = await sb.storage.from('baby-photos').upload(path, file, { upsert: true, contentType: file.type });
-  if (error) { showToast('Upload failed: ' + error.message); console.error(error); return; }
-  // Get signed URL (private bucket)
-  const { data: signed } = await sb.storage.from('baby-photos').createSignedUrl(path, 3600);
-  const photoEl = document.getElementById('p-baby-photo');
-  if (signed && signed.signedUrl) {
-    photoEl.innerHTML = `<img src="${signed.signedUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:16px;">`;
-  }
-  showToast('✅ Photo uploaded!');
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      cropImg = img;
+      cropOffsetX = 0; cropOffsetY = 0;
+      // Base zoom so the shorter side just covers the 280x280 canvas.
+      cropMinZoom = 100;
+      document.getElementById('crop-zoom').value = 100;
+      document.getElementById('modal-photo-crop').classList.add('open');
+      cropRedraw();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
   event.target.value = '';
+}
+
+function cropRedraw() {
+  if (!cropImg) return;
+  const canvas = document.getElementById('crop-canvas');
+  const ctx = canvas.getContext('2d');
+  const size = canvas.width; // square, 280
+  ctx.clearRect(0,0,size,size);
+  const zoom = document.getElementById('crop-zoom').value / 100;
+  // Scale so the image's shorter side covers the canvas at zoom=1, then zoom multiplies further.
+  const baseScale = Math.max(size / cropImg.width, size / cropImg.height);
+  const scale = baseScale * zoom;
+  const w = cropImg.width * scale, h = cropImg.height * scale;
+  const x = (size - w) / 2 + cropOffsetX;
+  const y = (size - h) / 2 + cropOffsetY;
+  ctx.drawImage(cropImg, x, y, w, h);
+}
+
+(function initCropDrag(){
+  const canvas = document.getElementById('crop-canvas');
+  if (!canvas) return;
+  const start = (clientX, clientY) => { cropDragging = true; cropLastX = clientX; cropLastY = clientY; canvas.style.cursor='grabbing'; };
+  const move = (clientX, clientY) => {
+    if (!cropDragging) return;
+    cropOffsetX += (clientX - cropLastX);
+    cropOffsetY += (clientY - cropLastY);
+    cropLastX = clientX; cropLastY = clientY;
+    cropRedraw();
+  };
+  const end = () => { cropDragging = false; canvas.style.cursor='grab'; };
+  canvas.addEventListener('mousedown', e => start(e.clientX, e.clientY));
+  canvas.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+  canvas.addEventListener('mouseup', end);
+  canvas.addEventListener('mouseleave', end);
+  canvas.addEventListener('touchstart', e => { const t=e.touches[0]; start(t.clientX, t.clientY); }, {passive:true});
+  canvas.addEventListener('touchmove', e => { const t=e.touches[0]; move(t.clientX, t.clientY); e.preventDefault(); }, {passive:false});
+  canvas.addEventListener('touchend', end);
+})();
+
+async function saveCroppedPhoto() {
+  if (!cropImg || !currentFamilyId) return;
+  const canvas = document.getElementById('crop-canvas');
+  // Export at a higher resolution than the on-screen preview for a crisper result.
+  const outSize = 480;
+  const out = document.createElement('canvas');
+  out.width = outSize; out.height = outSize;
+  const octx = out.getContext('2d');
+  const zoom = document.getElementById('crop-zoom').value / 100;
+  const previewSize = canvas.width;
+  const ratio = outSize / previewSize;
+  const baseScale = Math.max(previewSize / cropImg.width, previewSize / cropImg.height);
+  const scale = baseScale * zoom * ratio;
+  const w = cropImg.width * scale, h = cropImg.height * scale;
+  const x = (outSize - w) / 2 + cropOffsetX * ratio;
+  const y = (outSize - h) / 2 + cropOffsetY * ratio;
+  octx.drawImage(cropImg, x, y, w, h);
+  out.toBlob(async (blob) => {
+    showToast('Uploading photo…');
+    const path = `${currentFamilyId}/photo.jpg`;
+    const { error } = await sb.storage.from('baby-photos').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+    if (error) { showToast('Upload failed: ' + error.message); console.error(error); return; }
+    const { data: signed } = await sb.storage.from('baby-photos').createSignedUrl(path, 3600);
+    const photoEl = document.getElementById('p-baby-photo');
+    if (signed && signed.signedUrl) {
+      photoEl.innerHTML = `<img src="${signed.signedUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:16px;">`;
+    }
+    closeModal('modal-photo-crop');
+    cropImg = null;
+    showToast('✅ Photo uploaded!');
+  }, 'image/jpeg', 0.9);
 }
 
 function triggerDocUpload(docType) {
@@ -2631,16 +2877,25 @@ async function saveAllProfileFields() {
     const {error} = await sb.from('families').update(familyFields).eq('id', currentFamilyId);
     if (error) { showToast('Error saving: ' + error.message); ok = false; }
   }
-  if (Object.keys(babyFields).length && currentBabyId) {
-    const {error} = await sb.from('babies').update(babyFields).eq('id', currentBabyId);
-    if (error) { showToast('Error saving baby: ' + error.message); ok = false; }
+  if (Object.keys(babyFields).length) {
+    if (currentBabyId) {
+      const {error} = await sb.from('babies').update(babyFields).eq('id', currentBabyId);
+      if (error) { showToast('Error saving baby: ' + error.message); ok = false; }
+    } else {
+      const {data, error} = await sb.from('babies').insert([{family_id: currentFamilyId, ...babyFields}]).select();
+      if (error) { showToast('Error saving baby: ' + error.message); ok = false; }
+      else if (data && data[0]) currentBabyId = data[0].id;
+    }
   }
   if (ok) {
     showToast('✅ Profile saved!');
     // Update local cache
     const f = allFamilies.find(x => x.id === currentFamilyId);
     if (f) Object.assign(f, familyFields);
-    if (f && f.babies && f.babies[0]) Object.assign(f.babies[0], babyFields);
+    if (f && Object.keys(babyFields).length) {
+      if (f.babies && f.babies[0]) Object.assign(f.babies[0], babyFields);
+      else f.babies = [{ id: currentBabyId, family_id: currentFamilyId, ...babyFields }];
+    }
     // The moment a baby's DOB is recorded, generate the post-birth milestone
     // chain (if it isn't already there) so pregnant cases automatically flow
     // into the 1/6/12-month journey instead of someone typing them by hand.
