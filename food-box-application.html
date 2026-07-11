@@ -231,6 +231,44 @@ body.ar input::placeholder { direction: rtl; font-family: inherit; }
 .add-member-btn:hover { border-color: var(--green); background: var(--green-light); }
 .err-msg { color: var(--red); font-size: 13px; font-weight: 700; }
 
+/* ── MEMBER SAVE ACTIONS ── */
+.member-save-row { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.member-save-btn {
+  width: 100%; padding: 13px;
+  background: var(--green); color: white;
+  border: none; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 800; font-family: 'Nunito', sans-serif;
+  cursor: pointer; transition: all 0.2s; letter-spacing: 0.1px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.member-save-btn:hover { background: var(--green-dark); }
+.member-save-btn:disabled { background: #9cbfa2; color: #eef5ef; cursor: not-allowed; }
+.member-save-btn-add { background: var(--green-mid); }
+.member-save-btn-add:hover { background: var(--green); }
+
+/* ── SUBMIT ERROR BANNER ── */
+.submit-error-banner {
+  background: var(--red-light); border: 1.5px solid #f5b8b8;
+  border-radius: var(--radius-sm); padding: 12px 14px 12px 16px;
+  margin-bottom: 4px;
+}
+.submit-error-title { font-size: 13.5px; font-weight: 800; color: var(--red); margin-bottom: 6px; }
+.submit-error-banner ul { list-style: disc; padding-inline-start: 18px; margin: 0; }
+.submit-error-banner li { font-size: 13px; color: var(--red); margin-bottom: 3px; cursor: pointer; text-decoration: underline; }
+.submit-error-banner li:hover { color: var(--green-dark); }
+
+/* Highlight for a field flagged by validation */
+.field-error input[type="text"], .field-error input[type="tel"], .field-error input[type="number"],
+.field-error input[type="date"], .field-error select, .field-error textarea {
+  border-color: var(--red) !important;
+  background: var(--red-light) !important;
+}
+.field-error .radio-opt {
+  border-color: var(--red);
+  background: var(--red-light);
+}
+.field-error > label { color: var(--red); }
+
 /* ── PROOF UPLOAD ── */
 .proof-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .proof-zone {
@@ -441,7 +479,7 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
         <label id="lbl-nationality">Nationality <span class="req">*</span></label>
         <select id="inp-nationality" required disabled style="background:#f0f4f0;color:#9cbfa2;cursor:not-allowed;">
           <option value="" id="opt-nat-sel">Auto-filled from QID</option>
-          <option>Algerian</option><option>Bangladeshi</option><option>British</option><option>Burmese</option><option>Egyptian</option><option>Eritrean</option><option>Ethiopian</option><option>Filipino</option><option>Gambian</option><option>Ghanaian</option><option>Indian</option><option>Indonesian</option><option>Kenyan</option><option>Lebanese</option><option>Nepalese</option><option>Nigerian</option><option>Pakistani</option><option>Palestinian</option><option>Somalian</option><option>South African</option><option>Sri Lankan</option><option>Sudanese</option><option>Syrian</option><option>Tunisian</option><option>Ugandan</option><option>Yemeni</option><option>Other</option>
+          <option value="Algerian">Algerian</option><option value="Bangladeshi">Bangladeshi</option><option value="British">British</option><option value="Burmese">Burmese</option><option value="Egyptian">Egyptian</option><option value="Eritrean">Eritrean</option><option value="Ethiopian">Ethiopian</option><option value="Filipino">Filipino</option><option value="Gambian">Gambian</option><option value="Ghanaian">Ghanaian</option><option value="Indian">Indian</option><option value="Indonesian">Indonesian</option><option value="Kenyan">Kenyan</option><option value="Lebanese">Lebanese</option><option value="Nepalese">Nepalese</option><option value="Nigerian">Nigerian</option><option value="Pakistani">Pakistani</option><option value="Palestinian">Palestinian</option><option value="Somalian">Somalian</option><option value="South African">South African</option><option value="Sri Lankan">Sri Lankan</option><option value="Sudanese">Sudanese</option><option value="Syrian">Syrian</option><option value="Tunisian">Tunisian</option><option value="Ugandan">Ugandan</option><option value="Yemeni">Yemeni</option><option value="Other">Other</option>
         </select>
       </div>
     </div>
@@ -470,7 +508,7 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
           <label id="lbl-area">Area <span class="req">*</span></label>
           <select id="inp-area" required>
             <option value="" id="opt-area-sel">Select area…</option>
-            <option>Abu Hamour</option><option>Ain Khaled</option><option>Al Asiri</option><option>Al Aziziya</option><option>Al Bidda</option><option>Al Dafna</option><option>Al Ebb</option><option>Al Egla</option><option>Al Gharafa</option><option>Al Kharaitiyat</option><option>Al Kheesa</option><option>Al Khor</option><option>Al Khulaifat</option><option>Al Maamoura</option><option>Al Mansoura</option><option>Al Markhiya</option><option>Al Murra</option><option>Al Nasr</option><option>Al Sadd</option><option>Al Waab</option><option>Al Wajba</option><option>Bani Hajer</option><option>Bin Mahmoud</option><option>Bin Omran</option><option>Bu Samra</option><option>Bu Sidra</option><option>Daayen</option><option>Doha al Jadidah</option><option>Duhail</option><option>Dukhan</option><option>Fereej Abdel Aziz</option><option>Fereej Kulaib</option><option>Fuwairit</option><option>Hilal</option><option>Hitmi</option><option>Industrial Area</option><option>Izghawa</option><option>Leabaib</option><option>Luaib</option><option>Luqta</option><option>Lusail</option><option>Madinat Khalifa North</option><option>Madinat Khalifa South</option><option>Mesaieed</option><option>Mesaimeer</option><option>Messila</option><option>Muaither</option><option>Muraikh</option><option>Musheirib</option><option>New Rayyan</option><option>New Salata</option><option>Nuaija</option><option>Old Airport</option><option>Old Al Ghanim</option><option>Old Rayyan</option><option>Old Salata</option><option>Onaiza</option><option>Pearl</option><option>Ras Abu Aboud</option><option>Rawdat Al Khail</option><option>Sailiya</option><option>Shahaniya</option><option>Soudan</option><option>Thakhira</option><option>Themaid</option><option>Thumama</option><option>Umm Bab</option><option>Umm Ghuwailina</option><option>Umm Lekhba</option><option>Umm Qarn</option><option>Umm Salal Ali</option><option>Umm Salal Mohammed</option><option>Wakrah</option><option>Wukair</option><option>Other</option>
+            <option value="Abu Hamour">Abu Hamour</option><option value="Ain Khaled">Ain Khaled</option><option value="Al Asiri">Al Asiri</option><option value="Al Aziziya">Al Aziziya</option><option value="Al Bidda">Al Bidda</option><option value="Al Dafna">Al Dafna</option><option value="Al Ebb">Al Ebb</option><option value="Al Egla">Al Egla</option><option value="Al Gharafa">Al Gharafa</option><option value="Al Kharaitiyat">Al Kharaitiyat</option><option value="Al Kheesa">Al Kheesa</option><option value="Al Khor">Al Khor</option><option value="Al Khulaifat">Al Khulaifat</option><option value="Al Maamoura">Al Maamoura</option><option value="Al Mansoura">Al Mansoura</option><option value="Al Markhiya">Al Markhiya</option><option value="Al Murra">Al Murra</option><option value="Al Nasr">Al Nasr</option><option value="Al Sadd">Al Sadd</option><option value="Al Waab">Al Waab</option><option value="Al Wajba">Al Wajba</option><option value="Bani Hajer">Bani Hajer</option><option value="Bin Mahmoud">Bin Mahmoud</option><option value="Bin Omran">Bin Omran</option><option value="Bu Samra">Bu Samra</option><option value="Bu Sidra">Bu Sidra</option><option value="Daayen">Daayen</option><option value="Doha al Jadidah">Doha al Jadidah</option><option value="Duhail">Duhail</option><option value="Dukhan">Dukhan</option><option value="Fereej Abdel Aziz">Fereej Abdel Aziz</option><option value="Fereej Kulaib">Fereej Kulaib</option><option value="Fuwairit">Fuwairit</option><option value="Hilal">Hilal</option><option value="Hitmi">Hitmi</option><option value="Industrial Area">Industrial Area</option><option value="Izghawa">Izghawa</option><option value="Leabaib">Leabaib</option><option value="Luaib">Luaib</option><option value="Luqta">Luqta</option><option value="Lusail">Lusail</option><option value="Madinat Khalifa North">Madinat Khalifa North</option><option value="Madinat Khalifa South">Madinat Khalifa South</option><option value="Mesaieed">Mesaieed</option><option value="Mesaimeer">Mesaimeer</option><option value="Messila">Messila</option><option value="Muaither">Muaither</option><option value="Muraikh">Muraikh</option><option value="Musheirib">Musheirib</option><option value="New Rayyan">New Rayyan</option><option value="New Salata">New Salata</option><option value="Nuaija">Nuaija</option><option value="Old Airport">Old Airport</option><option value="Old Al Ghanim">Old Al Ghanim</option><option value="Old Rayyan">Old Rayyan</option><option value="Old Salata">Old Salata</option><option value="Onaiza">Onaiza</option><option value="Pearl">Pearl</option><option value="Ras Abu Aboud">Ras Abu Aboud</option><option value="Rawdat Al Khail">Rawdat Al Khail</option><option value="Sailiya">Sailiya</option><option value="Shahaniya">Shahaniya</option><option value="Soudan">Soudan</option><option value="Thakhira">Thakhira</option><option value="Themaid">Themaid</option><option value="Thumama">Thumama</option><option value="Umm Bab">Umm Bab</option><option value="Umm Ghuwailina">Umm Ghuwailina</option><option value="Umm Lekhba">Umm Lekhba</option><option value="Umm Qarn">Umm Qarn</option><option value="Umm Salal Ali">Umm Salal Ali</option><option value="Umm Salal Mohammed">Umm Salal Mohammed</option><option value="Wakrah">Wakrah</option><option value="Wukair">Wukair</option><option value="Other">Other</option>
           </select>
         </div>
         <div class="field"><label id="lbl-unit">Unit no.</label><input type="text" id="inp-unit" data-numfield="true" inputmode="numeric" placeholder="e.g. 12" data-en="e.g. 12" data-ar="مثال: ١٢"></div></div><div class="field-row" style="margin-top:10px;"><div class="field"><label id="lbl-flat">Flat / Floor</label><input type="text" id="inp-flat" placeholder="e.g. Flat 3, Floor 2" data-en="e.g. Flat 3, Floor 2" data-ar="مثال: شقة ٣، طابق ٢"></div>
@@ -481,10 +519,7 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
       <div class="radio-group">
         <label class="radio-opt"><input type="radio" name="pref-lang" value="English"><span>English</span></label>
         <label class="radio-opt"><input type="radio" name="pref-lang" value="Arabic"><span>العربية</span></label>
-        <label class="radio-opt"><input type="radio" name="pref-lang" value="Hindi"><span>हिन्दी</span></label>
         <label class="radio-opt"><input type="radio" name="pref-lang" value="Bengali"><span>বাংলা</span></label>
-        <label class="radio-opt"><input type="radio" name="pref-lang" value="Urdu"><span>اردو</span></label>
-        <label class="radio-opt"><input type="radio" name="pref-lang" value="Filipino"><span>Filipino</span></label>
       </div>
     </div>
     <div class="field">
@@ -593,6 +628,10 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
     <div class="consent-box"><input type="checkbox" id="consent1" onchange="updateSubmitBtn()"><label for="consent1" id="lbl-consent1">I confirm that I am genuinely unable to purchase sufficient food for my household and that all information provided is true and accurate.</label></div>
     <div class="consent-box"><input type="checkbox" id="consent2" onchange="updateSubmitBtn()"><label for="consent2" id="lbl-consent2">I understand that my name, contact number and location will be shared with Feed a Friend volunteers to facilitate delivery.</label></div>
     <div class="consent-box"><input type="checkbox" id="consent3" onchange="updateSubmitBtn()"><label for="consent3" id="lbl-consent3">I agree that my personal data will be stored securely and used only for Feed a Friend programme purposes, in line with Qatar data protection law.</label></div>
+    <div class="submit-error-banner" id="submit-error-banner" style="display:none;">
+      <div class="submit-error-title" id="submit-error-title">⚠️ Please fix the following before submitting:</div>
+      <ul id="submit-error-list"></ul>
+    </div>
     <button type="button" class="submit-btn" id="submit-btn" disabled onclick="submitApplication()">
       <span id="btn-submit">Submit application / تقديم الطلب</span>
     </button>
@@ -613,6 +652,7 @@ const T = {
     'lbl-rent':'How much do you pay in rent each month?',
     'lbl-hh':'How many people need food support?',
     'elig-hh-note':'Including yourself — must be 2 or more',
+    'lbl-salary-note':'Include all earners in the household — e.g. husband + wife combined',
     'sec1-title':'About you',
     'lbl-qid-upload':'Upload your QID — front and back',
     'lbl-qid-hint':"We'll read your name, QID number, expiry date, sponsor and photo automatically.",
@@ -650,6 +690,7 @@ const T = {
     'lbl-blue-plate-sub':'Tap to scan your Qatar address plate',
     'plate-scan-msg':'Scanning address plate…',
     'lbl-zone':'Zone','lbl-street':'Street','lbl-building':'Building / Villa no.','lbl-flat':'Flat / Floor',
+    'lbl-unit':'Unit no.',
     'lbl-area':'Area',
     'sec4-title':'Confirmation',
     'crm-note':'<strong style="color:var(--green-dark);">📋 Note:</strong> If you submit in Arabic, your application will be auto-translated to English. A staff member will review before approving.',
@@ -659,7 +700,8 @@ const T = {
     'btn-submit':'Submit application / تقديم الطلب',
     'opt-yes':'Yes','opt-no':'No','opt-yes2':'Yes','opt-no2':'No','opt-yes3':'Yes','opt-no3':'No',
     'opt-nat-sel':'Select…','opt-area-sel':'Select area…',
-    'opt-gender-sel':'Select…','opt-boy':'Boy','opt-girl':'Girl','opt-unknown':'Not yet known'
+    'opt-gender-sel':'Select…','opt-boy':'Boy','opt-girl':'Girl','opt-unknown':'Not yet known',
+    'submit-error-title':'⚠️ Please fix the following before submitting:'
   },
   ar: {
     'hdr-title':'طلب صندوق طعام','hdr-sub':'feedafriend.org · قطر',
@@ -669,6 +711,7 @@ const T = {
     'lbl-rent':'كم تدفع إيجاراً شهرياً؟',
     'lbl-hh':'كم عدد الأشخاص الذين يحتاجون دعماً غذائياً؟',
     'elig-hh-note':'بما فيهم أنت — يجب أن يكونوا ٢ على الأقل',
+    'lbl-salary-note':'يشمل جميع من لديه دخل في الأسرة — مثال: دخل الزوج + الزوجة مجتمعين',
     'sec1-title':'معلوماتك الشخصية',
     'lbl-qid-upload':'ارفع الهوية القطرية — الوجهان',
     'lbl-qid-hint':'سنقرأ اسمك ورقم الهوية وتاريخ الانتهاء والكفيل والصورة تلقائياً.',
@@ -686,7 +729,7 @@ const T = {
     'opt-male':'ذكر','opt-female':'أنثى',
     'lbl-role':'دورك في الأسرة',
     'opt-role-husband':'زوج','opt-role-wife':'زوجة',
-    'opt-role-single':'والد/ة منفرد/ة','opt-role-relative':'قريب آخر','opt-role-roommate':'شريك سكن',
+    'opt-role-single':'والد/ والدة منفرد/ة','opt-role-relative':'قريب آخر','opt-role-roommate':'شريك سكن',
     'lbl-pregnant':'هل أنتِ حامل؟',
     'lbl-duedate':'تاريخ الولادة المتوقع','lbl-baby-gender':'جنس المولود — إن عُرف',
     'sec2-title':'أفراد الأسرة',
@@ -706,6 +749,7 @@ const T = {
     'lbl-blue-plate-sub':'اضغط لمسح لوحة العنوان القطرية',
     'plate-scan-msg':'جاري مسح لوحة العنوان…',
     'lbl-zone':'المنطقة','lbl-street':'الشارع','lbl-building':'رقم المبنى / الفيلا','lbl-flat':'الشقة / الطابق',
+    'lbl-unit':'رقم الوحدة',
     'lbl-area':'المنطقة',
     'sec4-title':'تأكيد',
     'crm-note':'<strong style="color:var(--green-dark);">📋 ملاحظة:</strong> إذا قدمت طلبك بالعربية، سيتم ترجمته تلقائياً إلى الإنجليزية. سيراجع أحد الموظفين الترجمة قبل الموافقة.',
@@ -715,9 +759,58 @@ const T = {
     'btn-submit':'تقديم الطلب / Submit application',
     'opt-yes':'نعم','opt-no':'لا','opt-yes2':'نعم','opt-no2':'لا','opt-yes3':'نعم','opt-no3':'لا',
     'opt-nat-sel':'اختر…','opt-area-sel':'اختر المنطقة…',
-    'opt-gender-sel':'اختر…','opt-boy':'ولد','opt-girl':'بنت','opt-unknown':'غير معروف بعد'
+    'opt-gender-sel':'اختر…','opt-boy':'ولد','opt-girl':'بنت','opt-unknown':'غير معروف بعد',
+    'submit-error-title':'⚠️ يرجى تصحيح ما يلي قبل الإرسال:'
   }
 };
+
+// ── OPTION TRANSLATIONS (nationality / area dropdowns) ────────────────────────
+// These <select> options keep an English "value" always (so QID-scan matching
+// and backend submission are unaffected by language) — only the visible label
+// text switches with currentLang.
+var NAT_AR = {
+  'Algerian':'جزائري','Bangladeshi':'بنغلاديشي','British':'بريطاني','Burmese':'بورمي',
+  'Egyptian':'مصري','Eritrean':'إريتري','Ethiopian':'إثيوبي','Filipino':'فلبيني',
+  'Gambian':'غامبي','Ghanaian':'غاني','Indian':'هندي','Indonesian':'إندونيسي',
+  'Kenyan':'كيني','Lebanese':'لبناني','Nepalese':'نيبالي','Nigerian':'نيجيري',
+  'Pakistani':'باكستاني','Palestinian':'فلسطيني','Somalian':'صومالي',
+  'South African':'جنوب أفريقي','Sri Lankan':'سريلانكي','Sudanese':'سوداني',
+  'Syrian':'سوري','Tunisian':'تونسي','Ugandan':'أوغندي','Yemeni':'يمني','Other':'أخرى'
+};
+var AREA_AR = {
+  'Abu Hamour':'أبو هامور','Ain Khaled':'عين خالد','Al Asiri':'العصيري','Al Aziziya':'العزيزية',
+  'Al Bidda':'البدع','Al Dafna':'الدفنة','Al Ebb':'العب','Al Egla':'العقلة','Al Gharafa':'الغرافة',
+  'Al Kharaitiyat':'الخريطيات','Al Kheesa':'الخيسة','Al Khor':'الخور','Al Khulaifat':'الخليفات',
+  'Al Maamoura':'المعمورة','Al Mansoura':'المنصورة','Al Markhiya':'المرخية','Al Murra':'المرة',
+  'Al Nasr':'النصر','Al Sadd':'السد','Al Waab':'الوعب','Al Wajba':'الوجبة','Bani Hajer':'بني هاجر',
+  'Bin Mahmoud':'بن محمود','Bin Omran':'بن عمران','Bu Samra':'بو سمرة','Bu Sidra':'بو سدرة',
+  'Daayen':'الذعاين','Doha al Jadidah':'الدوحة الجديدة','Duhail':'الدحيل','Dukhan':'دخان',
+  'Fereej Abdel Aziz':'فريج عبد العزيز','Fereej Kulaib':'فريج كليب','Fuwairit':'فويرط',
+  'Hilal':'هلال','Hitmi':'الهتمي','Industrial Area':'المنطقة الصناعية','Izghawa':'إزغاوة',
+  'Leabaib':'اللعابيب','Luaib':'اللعيب','Luqta':'اللقطة','Lusail':'لوسيل',
+  'Madinat Khalifa North':'مدينة خليفة الشمالية','Madinat Khalifa South':'مدينة خليفة الجنوبية',
+  'Mesaieed':'مسيعيد','Mesaimeer':'مسيمير','Messila':'المسيلة','Muaither':'معيذر',
+  'Muraikh':'مريخ','Musheirib':'مشيرب','New Rayyan':'الريان الجديد','New Salata':'السلطة الجديدة',
+  'Nuaija':'النعيجة','Old Airport':'المطار القديم','Old Al Ghanim':'الغانم القديم',
+  'Old Rayyan':'الريان القديم','Old Salata':'السلطة القديمة','Onaiza':'العنيزة','Pearl':'اللؤلؤة',
+  'Ras Abu Aboud':'رأس أبو عبود','Rawdat Al Khail':'روضة الخيل','Sailiya':'السيلية',
+  'Shahaniya':'الشحانية','Soudan':'السودان','Thakhira':'الذخيرة','Themaid':'الثميد',
+  'Thumama':'الثمامة','Umm Bab':'أم باب','Umm Ghuwailina':'أم غويلينا','Umm Lekhba':'أم لخبا',
+  'Umm Qarn':'أم قرن','Umm Salal Ali':'أم صلال علي','Umm Salal Mohammed':'أم صلال محمد',
+  'Wakrah':'الوكرة','Wukair':'الوكير','Other':'أخرى'
+};
+
+// Swaps the *displayed* text of a <select>'s options between English and the
+// given Arabic map, while leaving option.value (always English) untouched.
+function translateSelectOptions(selectId, arMap, lang) {
+  var sel = document.getElementById(selectId);
+  if (!sel) return;
+  for (var i = 0; i < sel.options.length; i++) {
+    var opt = sel.options[i];
+    if (!opt.value) continue; // skip the "Select…" placeholder — handled via T dict
+    opt.textContent = lang === 'ar' ? (arMap[opt.value] || opt.value) : opt.value;
+  }
+}
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 var registeredQIDs = {};
@@ -798,6 +891,9 @@ function setLang(lang) {
     var el = document.getElementById(id);
     if (el) el.innerHTML = dict[id];
   });
+  // Nationality and area dropdown option labels (values stay English)
+  translateSelectOptions('inp-nationality', NAT_AR, lang);
+  translateSelectOptions('inp-area', AREA_AR, lang);
   // Switch all placeholders
   var allInputs = document.querySelectorAll('input[data-en], textarea[data-en]');
   allInputs.forEach(function(inp) {
@@ -1360,8 +1456,10 @@ function buildMemberCard(n) {
   h += '<div class="field"><label>' + (ar ? 'جنس المولود' : 'Baby gender') + '</label><select id="m' + n + '-baby-gender"><option value="">' + (ar ? 'اختر' : 'Select...') + '</option><option value="boy">' + (ar ? 'ولد' : 'Boy') + '</option><option value="girl">' + (ar ? 'بنت' : 'Girl') + '</option><option value="unknown">' + (ar ? 'غير معروف' : 'Not yet known') + '</option></select></div>';
   h += '</div></div>';
   h += '</div></div>';
-  h += '<button type="button" class="save-member-btn" id="m' + n + '-save-btn" onclick="saveMember(' + n + ')">' + (ar ? 'حفظ هذا الفرد ✓' : 'Save this member ✓') + '</button>';
-  h += '<div class="member-saved-banner" id="m' + n + '-saved-banner"><span>✅</span><span>' + (ar ? 'تم الحفظ! يمكنك إضافة فرد آخر.' : 'Saved! You can add another member below.') + '</span></div>';
+  h += '<div class="member-save-row" id="m' + n + '-save-row">';
+  h += '<button type="button" class="member-save-btn member-save-btn-next" id="m' + n + '-save-next-btn" onclick="saveMemberAndNext(' + n + ')">' + (ar ? '✓ حفظ الفرد والانتقال للقسم التالي' : '✓ Save member and go to next section') + '</button>';
+  h += '<button type="button" class="member-save-btn member-save-btn-add" id="m' + n + '-save-add-btn" onclick="saveMemberAndAddAnother(' + n + ')">' + (ar ? '＋ حفظ وإضافة فرد جديد' : '＋ Save and add new member') + '</button>';
+  h += '</div>';
   h += '</div>';
   return h;
 }
@@ -1370,6 +1468,9 @@ function buildMemberCard(n) {
 function removeMember(n) {
   var el = document.getElementById('member-' + n);
   if (el) el.remove();
+  var list = document.getElementById('members-list');
+  var addBtn = document.getElementById('add-member-btn');
+  if (addBtn && list && !list.children.length) addBtn.style.display = 'flex';
   updateProgress();
 }
 
@@ -1483,18 +1584,32 @@ function markProofUploaded(zoneId) {
 }
 
 // ── PROGRESS ──────────────────────────────────────────────────────────────────
-function saveMember(n) {
-  var btn = document.getElementById('m' + n + '-save-btn');
-  var banner = document.getElementById('m' + n + '-saved-banner');
+// Shared validation + "locked in" step used by both member-save buttons below.
+// Returns true once the member has at least a name and has been marked saved.
+function markMemberSaved(n) {
   var nameEl = document.getElementById('m' + n + '-name');
   if (!nameEl || !nameEl.value.trim()) {
     alert(currentLang === 'ar' ? 'يرجى إكمال الاسم على الأقل قبل الحفظ.' : 'Please complete at least the name before saving.');
-    return;
+    return false;
   }
-  if (btn) { btn.textContent = currentLang === 'ar' ? 'تم الحفظ ✓' : 'Saved ✓'; btn.classList.add('saved'); btn.disabled = true; }
-  if (banner) banner.classList.add('visible');
-  var addBtn = document.getElementById('add-member-btn');
-  if (addBtn) addBtn.style.display = 'flex';
+  var nextBtn = document.getElementById('m' + n + '-save-next-btn');
+  var addBtn = document.getElementById('m' + n + '-save-add-btn');
+  if (nextBtn) nextBtn.disabled = true;
+  if (addBtn) addBtn.disabled = true;
+  return true;
+}
+
+function saveMemberAndNext(n) {
+  if (!markMemberSaved(n)) return;
+  var sectionTitle = document.getElementById('sec3-title');
+  var target = sectionTitle ? (sectionTitle.closest('.section') || sectionTitle) : null;
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  updateProgress();
+}
+
+function saveMemberAndAddAnother(n) {
+  if (!markMemberSaved(n)) return;
+  addMember();
   updateProgress();
 }
 
@@ -1582,6 +1697,121 @@ function collectMembers() {
 
 
 
+// ── VALIDATION ────────────────────────────────────────────────────────────────
+function clearFieldErrors() {
+  document.querySelectorAll('.field-error').forEach(function(el) { el.classList.remove('field-error'); });
+}
+
+// Adds the error highlight to the nearest ".field" wrapper (falls back to the
+// element itself) and returns that wrapper so it can be used as a scroll target.
+function flagFieldError(el) {
+  if (!el) return null;
+  var wrap = el.closest ? (el.closest('.field') || el) : el;
+  wrap.classList.add('field-error');
+  return wrap;
+}
+
+// Checks every required field across the whole application (top-level answers,
+// household members, and consents) and returns a list of { label, target }
+// problems — empty array means the application is ready to submit. Also
+// applies the red field-error highlight so the person can see exactly what's
+// missing, not just be told "something went wrong" after the fact.
+function validateApplication(members, memberFormIndices) {
+  var ar = currentLang === 'ar';
+  var errors = [];
+
+  function checkVal(id, label) {
+    var el = document.getElementById(id);
+    if (!el || !el.value || !el.value.toString().trim()) {
+      errors.push({ label: label, target: flagFieldError(el) });
+    }
+  }
+  function checkRadio(name, label) {
+    var checked = document.querySelector('input[name="' + name + '"]:checked');
+    if (!checked) {
+      var anyInput = document.querySelector('input[name="' + name + '"]');
+      errors.push({ label: label, target: flagFieldError(anyInput) });
+    }
+  }
+
+  checkVal('inp-fullname', ar ? 'الاسم الكامل (ارفع الهوية أولاً)' : 'Full name (upload your QID above first)');
+  checkVal('inp-qidnum', ar ? 'رقم الهوية القطرية (ارفع الهوية أولاً)' : 'QID number (upload your QID above first)');
+  checkVal('inp-expiry', ar ? 'تاريخ انتهاء الهوية' : 'QID expiry date');
+  checkVal('inp-whatsapp', ar ? 'رقم واتساب' : 'WhatsApp number');
+  checkVal('inp-nationality', ar ? 'الجنسية (ارفع الهوية أولاً)' : 'Nationality (upload your QID above first)');
+  checkVal('inp-area', ar ? 'المنطقة' : 'Area');
+  checkRadio('applicant-gender', ar ? 'جنسك' : 'Your gender');
+  checkRadio('applicant-role', ar ? 'دورك في الأسرة' : 'Your role in the household');
+  checkRadio('pref-lang', ar ? 'اللغة المفضلة' : 'Preferred language');
+  checkRadio('working', ar ? 'هل تعمل حالياً؟' : 'Are you currently working?');
+  checkRadio('is-muslim', ar ? 'هل أنت مسلم/مسلمة؟' : 'Are you Muslim?');
+
+  var pregSection = document.getElementById('preg-section');
+  if (pregSection && pregSection.classList.contains('visible')) {
+    checkRadio('pregnant', ar ? 'هل أنتِ حامل؟' : 'Are you pregnant?');
+  }
+
+  checkVal('inp-salary', ar ? 'إجمالي دخل الأسرة الشهري' : 'Total household monthly salary');
+  checkVal('inp-rent', ar ? 'الإيجار الشهري' : 'Monthly rent');
+
+  if (members.length < 1) {
+    var warning = document.getElementById('members-min-warning');
+    if (warning) {
+      warning.style.display = 'block';
+      warning.textContent = warning.getAttribute('data-' + (ar ? 'ar' : 'en'));
+    }
+    errors.push({ label: ar ? 'أضف فرداً واحداً على الأقل من الأسرة' : 'Add at least 1 household member', target: document.getElementById('add-member-btn') });
+  } else {
+    memberFormIndices.forEach(function(idx) {
+      var card = document.getElementById('member-' + idx);
+      if (!card) return;
+      var memberLabel = ar ? ('الفرد ' + idx) : ('Member ' + idx);
+      var nameEl = document.getElementById('m' + idx + '-name');
+      if (!nameEl || !nameEl.value.trim()) errors.push({ label: memberLabel + (ar ? ' — الاسم الكامل' : ' — full name'), target: flagFieldError(nameEl) || card });
+      var dobEl = document.getElementById('m' + idx + '-dob');
+      if (!dobEl || !dobEl.value) errors.push({ label: memberLabel + (ar ? ' — تاريخ الميلاد' : ' — date of birth'), target: flagFieldError(dobEl) || card });
+      if (!card.querySelector('input[name="m' + idx + '-gender"]:checked')) {
+        var mGenderInput = card.querySelector('input[name="m' + idx + '-gender"]');
+        errors.push({ label: memberLabel + (ar ? ' — الجنس' : ' — gender'), target: flagFieldError(mGenderInput) || card });
+      }
+      if (!card.querySelector('input[name="m' + idx + '-role"]:checked')) {
+        var mRoleInput = card.querySelector('input[name="m' + idx + '-role"]');
+        errors.push({ label: memberLabel + (ar ? ' — الدور في الأسرة' : ' — role in household'), target: flagFieldError(mRoleInput) || card });
+      }
+    });
+  }
+
+  var c1 = document.getElementById('consent1'), c2 = document.getElementById('consent2'), c3 = document.getElementById('consent3');
+  if (!(c1 && c1.checked && c2 && c2.checked && c3 && c3.checked)) {
+    errors.push({ label: ar ? 'يرجى الموافقة على جميع بنود التأكيد أدناه' : 'Please agree to all the confirmation statements below', target: document.querySelector('.consent-box') });
+  }
+
+  return errors;
+}
+
+// Renders the list of problems into the error banner and scrolls it into
+// view; each item is clickable and jumps straight to the offending field.
+function showSubmitErrors(errors) {
+  var banner = document.getElementById('submit-error-banner');
+  var list = document.getElementById('submit-error-list');
+  if (!banner || !list) return;
+  list.innerHTML = '';
+  errors.forEach(function(err) {
+    var li = document.createElement('li');
+    li.textContent = err.label;
+    if (err.target) {
+      li.addEventListener('click', function() {
+        err.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        var focusable = err.target.querySelector ? err.target.querySelector('input, select, textarea') : null;
+        if (focusable && focusable.focus) focusable.focus();
+      });
+    }
+    list.appendChild(li);
+  });
+  banner.style.display = 'block';
+  banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 function submitApplication() {
   var btn = document.getElementById('submit-btn');
   if (!btn) return;
@@ -1590,15 +1820,15 @@ function submitApplication() {
   var members = collected.members;
   var memberFormIndices = collected.formIndices;
 
-  if (members.length < 1) {
-    var warning = document.getElementById('members-min-warning');
-    if (warning) {
-      warning.style.display = 'block';
-      warning.textContent = warning.getAttribute('data-' + (currentLang === 'ar' ? 'ar' : 'en'));
-      warning.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+  clearFieldErrors();
+  var banner = document.getElementById('submit-error-banner');
+
+  var errors = validateApplication(members, memberFormIndices);
+  if (errors.length) {
+    showSubmitErrors(errors);
     return;
   }
+  if (banner) banner.style.display = 'none';
 
   btn.textContent = currentLang === 'ar' ? '⏳ جاري الإرسال…' : '⏳ Submitting…';
   btn.disabled = true;
@@ -1644,12 +1874,22 @@ function submitApplication() {
       // in the background and don't block or risk the confirmation above.
       uploadAllApplicationDocuments(data.id, data.member_ids || [], memberFormIndices);
     } else {
-      btn.textContent = currentLang === 'ar' ? '❌ حدث خطأ. حاول مجدداً.' : '❌ Something went wrong. Please try again.';
+      var ar = currentLang === 'ar';
+      showSubmitErrors([{
+        label: (data.error || data.message) || (ar ? 'حدث خطأ في الخادم. يرجى المحاولة مرة أخرى أو التواصل معنا إذا استمرت المشكلة.' : 'A server error occurred. Please try again, or contact us if this keeps happening.'),
+        target: null
+      }]);
+      btn.textContent = currentLang === 'ar' ? 'تقديم الطلب / Submit application' : 'Submit application / تقديم الطلب';
       btn.disabled = false;
       btn.style.background = '';
     }
   }).catch(function() {
-    btn.textContent = currentLang === 'ar' ? '❌ تعذّر الإرسال. تحقق من اتصالك.' : '❌ Submission failed. Check your connection.';
+    var ar = currentLang === 'ar';
+    showSubmitErrors([{
+      label: ar ? 'تعذّر الإرسال — تحقق من اتصالك بالإنترنت وحاول مرة أخرى.' : 'Submission failed — check your internet connection and try again.',
+      target: null
+    }]);
+    btn.textContent = currentLang === 'ar' ? 'تقديم الطلب / Submit application' : 'Submit application / تقديم الطلب';
     btn.disabled = false;
   });
 }
@@ -1772,6 +2012,14 @@ document.addEventListener('DOMContentLoaded', function() {
   // General progress tracking
   document.addEventListener('input', updateProgress);
   document.addEventListener('change', updateProgress);
+
+  // Clear a field's red error highlight the moment the person starts fixing it
+  function clearThisFieldError(e) {
+    var wrap = e.target.closest ? e.target.closest('.field-error') : null;
+    if (wrap) wrap.classList.remove('field-error');
+  }
+  document.addEventListener('input', clearThisFieldError);
+  document.addEventListener('change', clearThisFieldError);
 });
 </script>
 </body>
