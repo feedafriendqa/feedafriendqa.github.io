@@ -1086,6 +1086,7 @@ let allFairies = [];
 let allMilestones = [];
 let allNeeds = [];
 let allDonations = [];
+let allMatchedNeeds = [];
 let currentFamilyId = null;
 let prevScreen = null;
 const AVATARS = ['av-purple','av-green','av-teal','av-amber'];
@@ -1206,18 +1207,20 @@ async function doSignUp() {
 
 // ── LOAD DATA ──
 async function loadAllData() {
-  const [fam, fair, nee, don, mil] = await Promise.all([
+  const [fam, fair, nee, don, mil, matchedNee] = await Promise.all([
     sb.from('families').select('*, babies(*)').order('created_at', {ascending:false}),
     sb.from('fairies').select('*, assignments(*)').eq('active', true),
     sb.from('needs').select('*, families(mother_name)').eq('matched', false).order('created_at'),
     sb.from('donations').select('*').eq('matched', false).order('created_at', {ascending:false}),
-    sb.from('milestones').select('*, families(mother_name)').order('due_date')
+    sb.from('milestones').select('*, families(mother_name)').order('due_date'),
+    sb.from('needs').select('*, families(mother_name, assigned_fairy_id), donations:matched_donation_id(*)').eq('matched', true).order('created_at', {ascending:false})
   ]);
   allFamilies = fam.data || [];
   allFairies = fair.data || [];
   allNeeds = nee.data || [];
   allDonations = don.data || [];
   allMilestones = mil.data || [];
+  allMatchedNeeds = matchedNee.data || [];
 }
 
 async function goConsultantDash(navEl) {
@@ -1359,7 +1362,7 @@ async function goDash(navEl) {
         var __e=document.getElementById('s-status-'+st); if(__e) __e.textContent = counts[st];
       });
     })();
-    sb.from('user_roles').select('id',{count:'exact'}).eq('approved',true).in('role',['fairy','admin','consultant']).then(({count}) => {
+    sb.from('user_roles').select('id',{count:'exact'}).eq('approved',true).in('role',['fairy','admin','consultant','super']).then(({count}) => {
       (function(){var __e=document.getElementById('s-fairies');if(__e)__e.textContent=count || 0;})(void 0);
     });
     (function(){var __e=document.getElementById('s-unassigned');if(__e)__e.textContent=unassigned.length;})(void 0);
@@ -1549,7 +1552,7 @@ async function openProfile(familyId) {
     ? '<div class="profile-pill" style="background:var(--coral-light);color:var(--coral);">🍼 Newborn — box & visit</div>'
     : (f.due_date ? '<div class="profile-pill" style="background:var(--amber-light);color:var(--amber);">🤰 Expecting</div>' : '');
   const pillItems = [
-    baby&&baby.feeding_method ? baby.feeding_method : '🤱 Breastfeeding',
+    baby&&baby.feeding_method ? baby.feeding_method : null,
     f.language || null,
     (f.status||'active').charAt(0).toUpperCase()+(f.status||'active').slice(1)
   ].filter(Boolean);
@@ -1560,7 +1563,7 @@ async function openProfile(familyId) {
   (function(){const el=document.getElementById('p-bname');if(el)el.value=baby&&baby.baby_name||'';})();
   (function(){const el=document.getElementById('p-dob');if(el){el.value=baby&&baby.dob?baby.dob:'';el.setAttribute('data-display',baby&&baby.dob?formatDate(baby.dob):'–');}})();
   (function(){const el=document.getElementById('p-weight');if(el)el.value=baby&&baby.birth_weight||'';})();
-  (function(){const el=document.getElementById('p-feeding');if(el&&el.options){const v=baby&&baby.feeding_method||'Breastfeeding';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
+  (function(){const el=document.getElementById('p-feeding');if(el&&el.options){const v=baby&&baby.feeding_method||'';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
   (function(){const el=document.getElementById('p-medical');if(el)el.value=baby&&baby.medical_conditions||'';})();
   (function(){const el=document.getElementById('p-gender');if(el&&el.options){const v=baby&&baby.gender||'';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
   (function(){const el=document.getElementById('p-mother');if(el)el.value=f.mother_name||'';})();
@@ -1929,12 +1932,12 @@ function renderReminders() {
 
 // ── FAIRIES ──
 async function renderFairies() {
-  const {data} = await sb.from('user_roles').select('*').eq('approved',true).in('role',['fairy','consultant','admin']);
+  const {data} = await sb.from('user_roles').select('*').eq('approved',true).in('role',['fairy','consultant','admin','super']);
   const el=document.getElementById('fairies-list');
   if (!el) return;
   document.getElementById('fairies-badge').textContent=(data||[]).length+' active';
   el.innerHTML=(data||[]).map(u=>{
-    const roleIcon=u.role==='consultant'?'🤱':u.role==='admin'?'👩‍💼':'🧚‍♀️';
+    const roleIcon=u.role==='consultant'?'🤱':u.role==='admin'?'👩‍💼':u.role==='super'?'👑':'🧚‍♀️';
     const roleLabel=u.role==='consultant'?'Consultant':u.role==='admin'?'Admin + Fairy':'Baby fairy';
     const firstName=(u.full_name||u.email||'').split(' ')[0];
     const famCount=allFamilies.filter(f=>f.assigned_fairy_id===u.user_id).length;
@@ -2222,6 +2225,20 @@ function renderNeeds() {
         </div>
       </div>
     </div>`).join('')||'<div class="empty-state"><div class="empty-icon">📦</div><p>No donations yet.</p></div>';
+
+  document.getElementById('matched-list').innerHTML = allMatchedNeeds.length ? allMatchedNeeds.map(n=>{
+    const d = n.donations;
+    return `<div class="need-card" style="border-color:var(--green);background:var(--green-light);">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;border-radius:12px;background:white;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">✅</div>
+        <div style="flex:1;">
+          <div class="need-title">${n.item}</div>
+          <div class="need-family">${n.families && n.families.mother_name || '–'}</div>
+          <div class="need-meta-row"><span>💚 From ${d ? d.donor_name : '–'}${d && d.donor_phone ? ' · ' + d.donor_phone : ''}</span></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty-state"><div class="empty-icon">✅</div><p>No matches yet.</p></div>';
 }
 
 async function deleteNeedAdmin(needId) {
@@ -2241,33 +2258,71 @@ async function deleteDonationAdmin(donationId) {
 }
 
 async function confirmMatch(needId,donationId) {
-  await Promise.all([
-    sb.from('needs').update({matched:true}).eq('id',needId),
-    sb.from('donations').update({matched:true}).eq('id',donationId)
-  ]);
-  // Send congratulations email to donor
+  const need = allNeeds.find(n => n.id === needId);
   const donation = allDonations.find(d => d.id === donationId);
+  const familyId = need ? need.family_id : null;
+  const family = familyId ? allFamilies.find(f => f.id === familyId) : null;
+
+  await Promise.all([
+    sb.from('needs').update({matched:true, matched_donation_id: donationId}).eq('id',needId),
+    sb.from('donations').update({matched:true, matched_need_id: needId, matched_to: familyId}).eq('id',donationId)
+  ]);
+
+  // Record the match on the family's own profile, not just in the needs/donations lists.
+  if (familyId) {
+    await sb.from('activity_log').insert([{
+      family_id: familyId, log_type: 'Donation matched',
+      note: `${donation ? donation.item : (need ? need.item : 'Item')} matched from donor ${donation ? donation.donor_name : '–'}${donation && donation.donor_phone ? ' (' + donation.donor_phone + ')' : ''}`,
+      logged_by: document.getElementById('menu-name') ? document.getElementById('menu-name').textContent : 'System'
+    }]);
+  }
+
   if (donation && donation.donor_phone) {
-    // We have phone not email for donor - just show toast to call them
     showToast('✅ Match confirmed! Call ' + donation.donor_name + ' on ' + donation.donor_phone);
   } else {
     showToast('✅ Match confirmed!');
   }
-  // If donor submitted email via form, send congrats
+
+  // Email the donor with the friend-in-need's details.
   if (donation && donation.donor_email) {
     try {
       await fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/welcome-baby-mailer', {
         method: 'POST',
         headers: {'Content-Type':'application/json','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4'},
         body: JSON.stringify({
-          type: 'donor_congrats',
+          type: 'match_friend_details',
           to: donation.donor_email,
           donor_name: donation.donor_name || 'Friend',
-          item: donation.item
+          item: donation.item,
+          friend_name: family ? family.mother_name : null,
+          friend_area: family ? family.location : null
         })
       });
     } catch(e) {}
   }
+
+  // Email the assigned fairy so there's a record of the match.
+  if (family && family.assigned_fairy_id && window.fairyCache) {
+    const fairyInfo = window.fairyCache[family.assigned_fairy_id];
+    if (fairyInfo && fairyInfo.email) {
+      try {
+        await fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/welcome-baby-mailer', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4'},
+          body: JSON.stringify({
+            type: 'match_fairy_alert',
+            to: fairyInfo.email,
+            fairy_name: fairyInfo.full_name,
+            family_name: family.mother_name,
+            item: donation ? donation.item : (need ? need.item : ''),
+            donor_name: donation ? donation.donor_name : '',
+            donor_phone: donation ? donation.donor_phone : ''
+          })
+        });
+      } catch(e) {}
+    }
+  }
+
   await loadAllData(); renderNeeds();
 }
 
@@ -2552,7 +2607,7 @@ function openAssignFairy() {
   // Load user_roles for fairies/admins
   const list = document.getElementById('assign-fairy-list');
   list.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:8px 0;">Loading fairies…</div>';
-  sb.from('user_roles').select('*').eq('approved', true).in('role', ['fairy','admin','consultant']).then(({data}) => {
+  sb.from('user_roles').select('*').eq('approved', true).in('role', ['fairy','admin','consultant','super']).then(({data}) => {
     if (!data || !data.length) { list.innerHTML = '<div style="font-size:13px;color:var(--muted);">No fairies found.</div>'; return; }
     list.innerHTML = data.map(u => {
       const isAssigned = f.assigned_fairy_id === u.user_id;
