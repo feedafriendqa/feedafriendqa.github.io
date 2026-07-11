@@ -126,6 +126,7 @@ html,body{height:100%;font-family:'Nunito Sans',sans-serif;background:#f4f7f4;co
       </div>
       <div class="top-right">
         <div class="abadge" id="adminBadge" style="display:none"><span class="blink"></span>Admin</div>
+        <button class="ib" id="pendingBtn" style="display:none;width:auto;padding:0 10px;border-radius:50px;font-family:'Nunito',sans-serif;font-size:11px;font-weight:800;background:#c0392b;color:#fff;border-color:#c0392b" title="Pending events">⏳ <span id="pendingCount">0</span></button>
         <button class="ib" id="exitAdmin" style="display:none" title="Exit admin">✕</button>
         <button class="ib" id="loginBtn" title="Project Heads">🔐</button>
       </div>
@@ -176,7 +177,7 @@ const MONTHS=["January","February","March","April","May","June","July","August",
 const DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const TLBL={volunteer:"🙋 Volunteer",meeting:"📋 Meeting",event:"🎉 Event",training:"📚 Training"};
 const NOW=new Date(),TY=NOW.getFullYear(),TM=NOW.getMonth();
-let curY=TY,curM=TM,view="month",filter="all",isAdmin=false,toastT;
+let curY=TY,curM=TM,view="month",filter="all",isAdmin=false,isSuperAdmin=false,toastT;
 let allEvents=[];
 
 const gp=id=>PROGS.find(p=>p.id===id)||PROGS[0];
@@ -539,13 +540,100 @@ function openLogin(){
 
 function doLogin(){
   const v=document.getElementById("codeIn").value.trim().toLowerCase();
-  if(v==="fafadmin"){
-    isAdmin=true;closeModal();
+  if(v==="fafsuper26"){
+    isAdmin=true;isSuperAdmin=true;closeModal();
     document.getElementById("adminBadge").style.display="flex";
+    document.getElementById("adminBadge").innerHTML='<span class="blink"></span>Super Admin';
+    document.getElementById("exitAdmin").style.display="flex";
+    document.getElementById("loginBtn").style.display="none";
+    renderContent();toast("🔓 Super Admin view active");
+    refreshPendingCount();
+  } else if(v==="fafadmin"){
+    isAdmin=true;isSuperAdmin=false;closeModal();
+    document.getElementById("adminBadge").style.display="flex";
+    document.getElementById("adminBadge").innerHTML='<span class="blink"></span>Admin';
     document.getElementById("exitAdmin").style.display="flex";
     document.getElementById("loginBtn").style.display="none";
     renderContent();toast("🔓 Project Heads view active");
   } else toast("❌ Incorrect code");
+}
+
+// ── PENDING EVENTS (super admin approval queue only) ─────────────
+async function refreshPendingCount(){
+  if(!isSuperAdmin) return;
+  try{
+    const res=await fetch(SUPA_URL+"/rest/v1/calendar_events?approved=eq.false&select=id",{headers:H});
+    const rows=res.ok?await res.json():[];
+    const el=document.getElementById("pendingCount");
+    if(el) el.textContent=rows.length;
+    const btn=document.getElementById("pendingBtn");
+    if(btn) btn.style.display=(isSuperAdmin&&rows.length>0)?"flex":"none";
+  }catch(e){console.error(e);}
+}
+
+async function openPending(){
+  if(!isSuperAdmin){toast("Super Admin access required");return;}
+  document.getElementById("modal").innerHTML='<div class="ov" id="ov"><div class="modal" style="max-width:480px">'
+    +'<div class="mh" style="background:#c0392b;color:white"><div><h2>Pending Events</h2><p>Review and approve or reject</p></div><button class="xb" style="color:white" onclick="closeModal()">✕</button></div>'
+    +'<div class="mb" id="pendingList"><div class="loading"><div class="spinner"></div>Loading…</div></div>'
+    +'<div class="mf"><button class="btn btno" onclick="closeModal()">Close</button></div>'
+    +'</div></div>';
+  document.getElementById("ov").onclick=e=>{if(e.target===e.currentTarget)closeModal();};
+  await renderPendingList();
+}
+
+async function renderPendingList(){
+  const box=document.getElementById("pendingList");
+  if(!box) return;
+  try{
+    const res=await fetch(SUPA_URL+"/rest/v1/calendar_events?approved=eq.false&order=event_date&select=*",{headers:H});
+    const rows=res.ok?await res.json():[];
+    if(!rows.length){
+      box.innerHTML='<p style="font-size:13px;color:#8a9e8c;text-align:center;padding:20px 0">No pending events 🎉</p>';
+      return;
+    }
+    box.innerHTML=rows.map(r=>{
+      const p=gp(r.programme||"faf-general");
+      return '<div style="border:2px solid #e4ede5;border-radius:10px;padding:10px 12px;margin-bottom:8px">'
+        +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">'
+        +'<div>'
+        +'<div style="font-weight:900;font-size:14px">'+(r.title||"(untitled)")+'</div>'
+        +'<div style="font-size:11px;color:#8a9e8c;margin-top:2px">'+(r.event_date||"")+(r.start_time?" · "+r.start_time.slice(0,5):"")+' · '+p.label+'</div>'
+        +(r.location?'<div style="font-size:11px;color:#8a9e8c;margin-top:2px">📍 '+r.location+'</div>':'')
+        +(r.description?'<div style="font-size:12px;margin-top:4px">'+r.description+'</div>':'')
+        +'<div style="font-size:10px;color:#8a9e8c;margin-top:4px">Submitted by: '+(r.submitted_by||"Community member")+'</div>'
+        +'</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:6px;margin-top:8px">'
+        +'<button class="btn" style="background:#2A6E35;color:#fff;flex:1;padding:6px" onclick="approvePending(\''+r.id+'\')">✓ Approve</button>'
+        +'<button class="btn btno" style="flex:1;padding:6px" onclick="rejectPending(\''+r.id+'\')">✕ Reject</button>'
+        +'</div>'
+        +'</div>';
+    }).join("");
+  }catch(e){
+    box.innerHTML='<p style="font-size:13px;color:#c0392b;text-align:center;padding:20px 0">Could not load pending events.</p>';
+    console.error(e);
+  }
+}
+
+async function approvePending(id){
+  try{
+    await fetch(SUPA_URL+"/rest/v1/calendar_events?id=eq."+id,{method:"PATCH",headers:{...H,"Prefer":"return=minimal"},body:JSON.stringify({approved:true})});
+    toast("✅ Event approved");
+    await renderPendingList();
+    await refreshPendingCount();
+    await renderContent();
+  }catch(e){toast("Could not approve. Please try again.");console.error(e);}
+}
+
+async function rejectPending(id){
+  if(!confirm("Reject and delete this event submission? This cannot be undone.")) return;
+  try{
+    await fetch(SUPA_URL+"/rest/v1/calendar_events?id=eq."+id,{method:"DELETE",headers:H});
+    toast("🗑️ Event rejected");
+    await renderPendingList();
+    await refreshPendingCount();
+  }catch(e){toast("Could not reject. Please try again.");console.error(e);}
 }
 
 // Event listeners
@@ -556,7 +644,8 @@ document.getElementById("vMonth").onclick=()=>{view="month";document.getElementB
 document.getElementById("vList").onclick=()=>{view="list";document.getElementById("vList").classList.add("on");document.getElementById("vMonth").classList.remove("on");renderContent();};
 document.getElementById("submitBtn").onclick=function(){openSubmit();};
 document.getElementById("loginBtn").onclick=openLogin;
-document.getElementById("exitAdmin").onclick=()=>{isAdmin=false;document.getElementById("adminBadge").style.display="none";document.getElementById("exitAdmin").style.display="none";document.getElementById("loginBtn").style.display="flex";renderContent();toast("Public view restored");};
+document.getElementById("exitAdmin").onclick=()=>{isAdmin=false;isSuperAdmin=false;document.getElementById("adminBadge").style.display="none";document.getElementById("exitAdmin").style.display="none";document.getElementById("pendingBtn").style.display="none";document.getElementById("loginBtn").style.display="flex";renderContent();toast("Public view restored");};
+document.getElementById("pendingBtn").onclick=openPending;
 
 // ── EXPOSE for volunteer portal ─────────────────────────────
 window.FaFCalendar={
