@@ -1091,6 +1091,23 @@ let currentFamilyId = null;
 let prevScreen = null;
 const AVATARS = ['av-purple','av-green','av-teal','av-amber'];
 const LOG_ICONS = {'Check-in':'📱','Home visit':'🏠','Home visit — confidential':'🔒','Feeding update':'🍼','Milestone':'📅','Concern flagged':'⚠️','Box delivered':'📦','Other':'📝'};
+// The full journey every case goes through, in order. Used both to render
+// the timeline (with TBD placeholders for steps not yet created) and to
+// populate the milestone picker in "Log an update", so any milestone can be
+// logged/completed even if its row was never created for this family.
+const MILESTONE_TEMPLATE = [
+  'Baby fairy assigned','WhatsApp group created','Pre-birth home visit',
+  'Baby born','Post-birth home visit','Baby box delivered',
+  '1 month — request birth certificate','6 months — emergency support only',
+  '12 months — birthday cake & gift 🎂'
+];
+function buildMilestoneTimeline(ms) {
+  const byName = {};
+  (ms||[]).forEach(m => { byName[m.milestone_name] = m; });
+  const merged = MILESTONE_TEMPLATE.map(name => byName[name] || {milestone_name:name, due_date:null, completed:false, _placeholder:true});
+  (ms||[]).forEach(m => { if (!MILESTONE_TEMPLATE.includes(m.milestone_name)) merged.push(m); });
+  return merged;
+}
 
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', async function() {
@@ -1590,21 +1607,10 @@ async function openProfile(familyId) {
   populateMilestoneDropdown();
   const today=new Date();
   (function(){const el=document.getElementById('p-milestones'); if(!el) return;
-    // The full journey every case goes through, in order. Steps that don't exist
-    // yet as real milestone rows (usually the post-birth ones, before a DOB is
-    // recorded) are shown as greyed-out "TBD" placeholders so the whole journey
-    // is always visible, not just whatever's been created so far.
-    const template = [
-      'Baby fairy assigned','WhatsApp group created','Pre-birth home visit',
-      'Baby born','Post-birth home visit','Baby box delivered',
-      '1 month — request birth certificate','6 months — emergency support only',
-      '12 months — birthday cake & gift 🎂'
-    ];
-    const byName = {};
-    (ms||[]).forEach(m => { byName[m.milestone_name] = m; });
-    const merged = template.map(name => byName[name] || {milestone_name:name, due_date:null, completed:false, _placeholder:true});
-    // Any real milestones with a custom name not in the template (rare) go at the end.
-    (ms||[]).forEach(m => { if (!template.includes(m.milestone_name)) merged.push(m); });
+    // Steps that don't exist yet as real milestone rows (usually the
+    // post-birth ones, before a DOB is recorded) are shown as greyed-out
+    // "TBD" placeholders so the whole journey is always visible.
+    const merged = buildMilestoneTimeline(ms);
 
     const totalCount = merged.length;
     const doneCount = merged.filter(m=>m.completed).length;
@@ -1807,11 +1813,35 @@ async function saveHomeVisit() {
   showToast('✅ Home visit logged');
   openProfile(currentFamilyId);
 }
+
+// Marks a milestone complete for a family, creating the row first if it
+// doesn't exist yet (e.g. legacy cases that never got the pre-birth chain
+// seeded, or admin actions like assigning a fairy that need to reflect on
+// the timeline, not just as a line of text in the activity log).
+async function ensureMilestoneCompleted(familyId, name, dueDate) {
+  const { data: existing } = await sb.from('milestones').select('id,completed').eq('family_id', familyId).eq('milestone_name', name).maybeSingle();
+  if (existing) {
+    if (!existing.completed) {
+      await sb.from('milestones').update({completed:true, completed_at:new Date().toISOString()}).eq('id', existing.id);
+    }
+    return existing.id;
+  }
+  const { data: created } = await sb.from('milestones').insert([{
+    family_id: familyId, milestone_name: name,
+    due_date: dueDate || new Date().toISOString().split('T')[0],
+    completed: true, completed_at: new Date().toISOString()
+  }]).select().single();
+  return created ? created.id : null;
+}
+
 function populateMilestoneDropdown() {
   const sel = document.getElementById('note-milestone');
   if (!sel) return;
-  const ms = window.currentMilestones || [];
-  sel.innerHTML = ms.map(m => `<option value="${m.id}">${m.milestone_name}${m.completed?' (done)':''}</option>`).join('');
+  const merged = buildMilestoneTimeline(window.currentMilestones || []);
+  // Real milestones use their DB id as the option value; ones that don't
+  // exist yet for this family use "NEW:<name>" so logNote() can create the
+  // row on the fly instead of only offering milestones already in the DB.
+  sel.innerHTML = merged.map(m => `<option value="${m.id || ('NEW:'+m.milestone_name)}">${m.milestone_name}${m.completed?' (done)':''}</option>`).join('');
   toggleMilestoneExtra();
 }
 function toggleMilestoneSelect() {
@@ -1827,12 +1857,12 @@ function toggleMilestoneExtra() {
   if (!extra) return;
   if (type !== 'Milestone') { extra.style.display = 'none'; extra.innerHTML = ''; return; }
   const sel = document.getElementById('note-milestone');
-  const chosen = (window.currentMilestones||[]).find(m => m.id === sel.value);
-  if (!chosen) { extra.style.display = 'none'; extra.innerHTML = ''; return; }
-  if (chosen.milestone_name === 'Baby born') {
+  const name = sel.value.startsWith('NEW:') ? sel.value.slice(4) : (window.currentMilestones||[]).find(m => m.id === sel.value)?.milestone_name;
+  if (!name) { extra.style.display = 'none'; extra.innerHTML = ''; return; }
+  if (name === 'Baby born') {
     extra.style.display = 'block';
     extra.innerHTML = '<label class="form-label">Baby\'s date of birth *</label><input class="form-input" id="ms-extra-dob" type="date">';
-  } else if (chosen.milestone_name === 'Baby box delivered') {
+  } else if (name === 'Baby box delivered') {
     extra.style.display = 'block';
     extra.innerHTML = '<label class="form-label">Box number *</label><input class="form-input" id="ms-extra-box" type="number" placeholder="e.g. 42">';
   } else {
@@ -1847,20 +1877,26 @@ async function logNote() {
   if(!note||!currentFamilyId){showToast('Please write a note first');return;}
   let finalNote = note;
   let milestoneId = null;
-  let chosen = null;
+  let milestoneName = null;
+  let alreadyCompleted = false;
   if (type === 'Milestone') {
     const msSel = document.getElementById('note-milestone');
     if (msSel && msSel.value) {
-      milestoneId = msSel.value;
-      chosen = (window.currentMilestones||[]).find(m=>m.id===milestoneId);
-      if (chosen) finalNote = `[${chosen.milestone_name}] ${note}`;
+      if (msSel.value.startsWith('NEW:')) {
+        milestoneName = msSel.value.slice(4);
+      } else {
+        milestoneId = msSel.value;
+        const existing = (window.currentMilestones||[]).find(m=>m.id===milestoneId);
+        if (existing) { milestoneName = existing.milestone_name; alreadyCompleted = existing.completed; }
+      }
+      if (milestoneName) finalNote = `[${milestoneName}] ${note}`;
     }
     // Milestones that need extra info before they can be marked complete.
-    if (chosen && chosen.milestone_name === 'Baby born') {
+    if (milestoneName === 'Baby born') {
       const dob = document.getElementById('ms-extra-dob') ? document.getElementById('ms-extra-dob').value : '';
       if (!dob) { showToast('Please enter the baby\'s date of birth'); return; }
       await recordBabyBorn(currentFamilyId, dob);
-    } else if (chosen && chosen.milestone_name === 'Baby box delivered') {
+    } else if (milestoneName === 'Baby box delivered') {
       const boxNum = document.getElementById('ms-extra-box') ? document.getElementById('ms-extra-box').value.trim() : '';
       if (!boxNum) { showToast('Please enter the box number'); return; }
       await sb.from('families').update({box_number: boxNum}).eq('id', currentFamilyId);
@@ -1873,10 +1909,10 @@ async function logNote() {
     logged_by: document.getElementById('menu-name').textContent
   }]);
   if(error){showToast('Error saving note');return;}
-  if (milestoneId) {
-    if (chosen && !chosen.completed) {
-      await sb.from('milestones').update({completed:true, completed_at:new Date().toISOString()}).eq('id', milestoneId);
-    }
+  if (milestoneName && !alreadyCompleted) {
+    // Creates the milestone row if it never existed for this family (legacy
+    // cases), or marks the existing one complete.
+    await ensureMilestoneCompleted(currentFamilyId, milestoneName);
   }
   document.getElementById('note-text').value='';
   showToast('✅ Note logged');
@@ -2663,13 +2699,15 @@ async function assignFairy(fairyUserId, fairyName, el) {
   }
   await loadFairyCache();
   renderFamilies(getFamilySource());
-  // Log it
+  // Log it — and actually complete the milestone so the timeline reflects
+  // it too, not just a line of text in the activity log.
   await sb.from('activity_log').insert([{
     family_id: currentFamilyId,
     log_type: 'Milestone',
     note: 'Baby fairy assigned: ' + fairyName,
     logged_by: document.getElementById('menu-name').textContent
   }]);
+  await ensureMilestoneCompleted(currentFamilyId, 'Baby fairy assigned');
 }
 
 async function unassignFairy() {
