@@ -648,9 +648,9 @@ select.inline-input { cursor:pointer; }
       <div class="info-card-header"><div class="info-card-title">👨‍👩‍👧 Family details</div></div>
       <div class="info-rows">
         <div class="info-row"><div class="info-key">Mother</div><div class="info-val"><input id="p-mother" type="text" class="inline-input" placeholder="Mother name"></div></div>
-        <div class="info-row"><div class="info-key">Mother phone</div><div class="info-val"><input id="p-mother-phone" type="tel" class="inline-input" placeholder="Phone number"></div></div>
+        <div class="info-row"><div class="info-key">Mother phone</div><div class="info-val" style="display:flex;align-items:center;gap:8px;justify-content:flex-end;"><input id="p-mother-phone" type="tel" class="inline-input" placeholder="Phone number"><a id="p-mother-phone-call" href="#" style="display:none;color:var(--green);font-weight:700;font-size:14px;text-decoration:none;">📞</a></div></div>
         <div class="info-row"><div class="info-key">Father</div><div class="info-val"><input id="p-father" type="text" class="inline-input" placeholder="Father name"></div></div>
-        <div class="info-row"><div class="info-key">Father phone</div><div class="info-val"><input id="p-father-phone" type="tel" class="inline-input" placeholder="Phone number"></div></div>
+        <div class="info-row"><div class="info-key">Father phone</div><div class="info-val" style="display:flex;align-items:center;gap:8px;justify-content:flex-end;"><input id="p-father-phone" type="tel" class="inline-input" placeholder="Phone number"><a id="p-father-phone-call" href="#" style="display:none;color:var(--green);font-weight:700;font-size:14px;text-decoration:none;">📞</a></div></div>
         <div class="info-row"><div class="info-key">Siblings</div><div class="info-val"><input id="p-siblings" type="text" class="inline-input" placeholder="–"></div></div>
         <div class="info-row"><div class="info-key">Location</div><div class="info-val"><input id="p-location" type="text" class="inline-input" placeholder="Area"></div></div>
         <div class="info-row"><div class="info-key">Language</div><div class="info-val"><select id="p-language" class="inline-input"><option value="">–</option><option>Arabic</option><option>English</option><option>Urdu</option><option>Hindi</option><option>Tagalog</option><option>English/Urdu</option><option>Other</option></select></div></div>
@@ -1584,11 +1584,19 @@ async function openProfile(familyId) {
   (function(){const el=document.getElementById('p-medical');if(el)el.value=baby&&baby.medical_conditions||'';})();
   (function(){const el=document.getElementById('p-gender');if(el&&el.options){const v=baby&&baby.gender||'';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
   (function(){const el=document.getElementById('p-mother');if(el)el.value=f.mother_name||'';})();
-  (function(){ const el=document.getElementById('p-mother-phone'); if(el) el.innerHTML=f.mother_phone?`<a href="tel:${f.mother_phone}" style="color:var(--green);font-weight:600;">${f.mother_phone}</a>`:"–"; })();
+  (function(){
+    const el=document.getElementById('p-mother-phone'); if(el) el.value=f.mother_phone||'';
+    const callEl=document.getElementById('p-mother-phone-call');
+    if (callEl) { if (f.mother_phone) { callEl.href='tel:'+f.mother_phone; callEl.style.display='inline'; } else { callEl.style.display='none'; } }
+  })();
   (function(){const el=document.getElementById('p-father');if(el)el.value=f.father_name||'';})();
-  (function(){ const el=document.getElementById('p-father-phone'); if(el) el.innerHTML=f.father_phone?`<a href="tel:${f.father_phone}" style="color:var(--green);font-weight:600;">${f.father_phone}</a>`:"–"; })();
+  (function(){
+    const el=document.getElementById('p-father-phone'); if(el) el.value=f.father_phone||'';
+    const callEl=document.getElementById('p-father-phone-call');
+    if (callEl) { if (f.father_phone) { callEl.href='tel:'+f.father_phone; callEl.style.display='inline'; } else { callEl.style.display='none'; } }
+  })();
 
-  document.getElementById('p-siblings').textContent=f.siblings||'–';
+  (function(){const el=document.getElementById('p-siblings');if(el)el.value=f.siblings||'';})();
   (function(){const el=document.getElementById('p-location');if(el)el.value=f.location||'';})();
   (function(){const el=document.getElementById('p-language');if(el&&el.options){const v=f.language||'English';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
   (function(){const el=document.getElementById('p-foodbox');if(el&&el.options){const v=f.food_box_active?'Active':'Inactive';Array.from(el.options).forEach(o=>o.selected=o.value===v||o.text===v);}})();
