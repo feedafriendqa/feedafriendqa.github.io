@@ -3034,10 +3034,21 @@ async function viewDoc(docType) {
   const viewEl = document.getElementById(docType === 'qid' ? 'p-qid-view' : 'p-cert-view');
   const path = viewEl && viewEl.getAttribute('data-path');
   let signedUrl = null;
-  if (path) {
+  // QID documents synced in from the Food Box portal live in a different
+  // bucket (food-box-private-docs), keyed by the linked application, not
+  // by this family's own id — check there first.
+  if (docType === 'qid') {
+    const f = allFamilies.find(x => x.id === currentFamilyId);
+    if (f && (f.qid_front_path || f.qid_back_path)) {
+      const fbPath = f.qid_front_path || f.qid_back_path;
+      const { data, error } = await sb.storage.from('food-box-private-docs').createSignedUrl(fbPath, 3600);
+      if (!error && data) signedUrl = data.signedUrl;
+    }
+  }
+  if (!signedUrl && path) {
     const { data, error } = await sb.storage.from('documents').createSignedUrl(path, 3600);
     if (!error && data) signedUrl = data.signedUrl;
-  } else {
+  } else if (!signedUrl) {
     for (const ext of ['jpg','jpeg','png','pdf','webp']) {
       const p = `${currentFamilyId}/${docType}.${ext}`;
       const { data, error } = await sb.storage.from('documents').createSignedUrl(p, 3600);
