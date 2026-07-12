@@ -840,16 +840,29 @@ function loadApps() {
 // household member once, grouped by application_id, so filterApps can
 // match against them too. Runs after the main app list loads and doesn't
 // block it -- search results widen once this resolves.
+//
+// Paginated in pages of 1000: Supabase's REST API enforces its own
+// server-side max-rows cap independent of the ?limit= param, so a single
+// request silently truncates once the table passes that cap (this table
+// currently has 4000+ rows) -- no error, just an incomplete result with
+// no guaranteed ordering, so whichever household got cut off would look
+// like it simply doesn't exist to the search box.
 function loadAllMembersForSearch() {
-  fetch(SUPABASE_URL + '/rest/v1/food_box_members?select=application_id,full_name,full_name_en,qid_number,whatsapp&limit=20000', {
-    headers: apiHeaders()
-  }).then(function(r) { return r.json(); }).then(function(members) {
-    members = Array.isArray(members) ? members : [];
-    membersByApp = {};
-    members.forEach(function(m) {
-      if (!membersByApp[m.application_id]) membersByApp[m.application_id] = [];
-      membersByApp[m.application_id].push(m);
+  membersByApp = {};
+  var pageSize = 1000;
+  function fetchPage(offset) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_members?select=application_id,full_name,full_name_en,qid_number,whatsapp&order=id&offset=' + offset + '&limit=' + pageSize, {
+      headers: apiHeaders()
+    }).then(function(r) { return r.json(); }).then(function(rows) {
+      rows = Array.isArray(rows) ? rows : [];
+      rows.forEach(function(m) {
+        if (!membersByApp[m.application_id]) membersByApp[m.application_id] = [];
+        membersByApp[m.application_id].push(m);
+      });
+      if (rows.length === pageSize) return fetchPage(offset + pageSize); // more pages to go
     });
+  }
+  fetchPage(0).then(function() {
     filterApps(); // re-run current search now that member data is available
   }).catch(function(e) { console.error('Failed to load members for search:', e.message); });
 }
