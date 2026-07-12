@@ -332,7 +332,7 @@ select.edit-field{cursor:pointer;}
     <div id="daily-quote" style="background:var(--green);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;color:white;"></div>
 
     <div class="filters">
-      <input class="search-box" id="search-box" placeholder="Search name, QID, WhatsApp, area…" oninput="filterApps()">
+      <input class="search-box" id="search-box" placeholder="Search name, QID, WhatsApp, area, or household member…" oninput="filterApps()">
       <button class="filter-btn active" data-status="new_pending" onclick="setFilter('new_pending',this)">New + Pending</button>
       <button class="filter-btn" data-status="all" onclick="setFilter('all',this)">All</button>
       <button class="filter-btn" data-status="new" onclick="setFilter('new',this)">New</button>
@@ -565,6 +565,7 @@ function displayAge(dob) {
 const sb = supabase.createClient(SUPABASE_URL, ANON_KEY);
 
 var allApps = [];
+var membersByApp = {}; // application_id -> [members], used so search can match household members too, not just the main applicant
 var currentFilter = 'new_pending';
 var currentAppId = null;
 var currentMembers = [];
@@ -823,6 +824,7 @@ function loadApps() {
     allApps = apps;
     updateStats();
     filterApps();
+    loadAllMembersForSearch();
     document.getElementById('table-loading').style.display = 'none';
   }).catch(function() {
     allApps = getDummyApps();
@@ -830,6 +832,26 @@ function loadApps() {
     filterApps();
     document.getElementById('table-loading').style.display = 'none';
   });
+}
+
+// Search only ever matched the main applicant's own fields, so a case
+// handler searching for a household member's name (e.g. a pregnant wife
+// listed under her husband's application) got nothing. This loads every
+// household member once, grouped by application_id, so filterApps can
+// match against them too. Runs after the main app list loads and doesn't
+// block it -- search results widen once this resolves.
+function loadAllMembersForSearch() {
+  fetch(SUPABASE_URL + '/rest/v1/food_box_members?select=application_id,full_name,full_name_en,qid_number,whatsapp&limit=20000', {
+    headers: apiHeaders()
+  }).then(function(r) { return r.json(); }).then(function(members) {
+    members = Array.isArray(members) ? members : [];
+    membersByApp = {};
+    members.forEach(function(m) {
+      if (!membersByApp[m.application_id]) membersByApp[m.application_id] = [];
+      membersByApp[m.application_id].push(m);
+    });
+    filterApps(); // re-run current search now that member data is available
+  }).catch(function(e) { console.error('Failed to load members for search:', e.message); });
 }
 
 function getDummyApps() {
@@ -1025,11 +1047,19 @@ function filterApps() {
       if ((a.assigned_to || autoAssign(a)) !== myName) return false;
     }
     if (!q) return true;
-    return (a.full_name_en||a.full_name||'').toLowerCase().includes(q) ||
-           (a.qid_number||'').includes(q) ||
-           (a.whatsapp||'').includes(q) ||
-           (a.area||'').toLowerCase().includes(q) ||
-           (a.nationality||'').toLowerCase().includes(q);
+    if ((a.full_name_en||a.full_name||'').toLowerCase().includes(q) ||
+        (a.qid_number||'').includes(q) ||
+        (a.whatsapp||'').includes(q) ||
+        (a.area||'').toLowerCase().includes(q) ||
+        (a.nationality||'').toLowerCase().includes(q)) return true;
+    // Also match household members (e.g. a pregnant wife or a child
+    // listed under the main applicant), not just the applicant themself.
+    var mems = membersByApp[a.id] || [];
+    return mems.some(function(m) {
+      return (m.full_name_en||m.full_name||'').toLowerCase().includes(q) ||
+             (m.qid_number||'').includes(q) ||
+             (m.whatsapp||'').includes(q);
+    });
   });
   renderTable(filtered);
 }
@@ -2357,27 +2387,72 @@ function saveTags(id) {
     // becomes pregnant later and the admin ticks the box at that point.
     // It does NOT fire automatically off is_pregnant or any status change.
     if (wbbJustTicked) {
-      sb.auth.getSession().then(function(res) {
-        var session = res && res.data ? res.data.session : null;
-        var token = session ? session.access_token : ANON_KEY;
-        return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ type: 'notify_welcome_baby', application_id: id })
-        });
-      }).then(function(r){ return r.json(); }).then(function(res) {
-        if (res.ok) {
-          alert('💚 A Welcome Baby follow-up case was created' + (res.assigned_fairy ? ', assigned to ' + res.assigned_fairy : ' (unassigned — check fairy names in Welcome Baby)') + '.');
-        } else if (res.error) {
-          console.error('Welcome Baby case not created:', res.error);
-          alert('Tags saved, but the Welcome Baby case could not be created: ' + res.error);
-        }
-      }).catch(function(e){
-        console.error('Welcome Baby case creation failed:', e.message);
-        alert('Tags saved, but the Welcome Baby case could not be created: ' + e.message);
-      });
+      triggerWelcomeBabyCase(id);
     }
   }).catch(function(e){ alert('Save failed: ' + e.message); });
+}
+
+// Calls notify_welcome_baby. If the applicant is pregnant but has no due
+// date on file, the edge function returns needs_due_date instead of
+// creating an incomplete case -- so this prompts for one, saves it, and
+// retries once. isRetry guards against looping if the save/retry itself
+// somehow comes back asking for a due date again.
+function triggerWelcomeBabyCase(id, isRetry) {
+  sb.auth.getSession().then(function(res) {
+    var session = res && res.data ? res.data.session : null;
+    var token = session ? session.access_token : ANON_KEY;
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ type: 'notify_welcome_baby', application_id: id })
+    });
+  }).then(function(r){ return r.json(); }).then(function(res) {
+    if (res.ok) {
+      alert('💚 A Welcome Baby follow-up case was created' + (res.assigned_fairy ? ', assigned to ' + res.assigned_fairy : ' (unassigned — check fairy names in Welcome Baby)') + '.');
+      return;
+    }
+    if (res.needs_due_date && !isRetry) {
+      promptForDueDateThenRetry(id);
+      return;
+    }
+    if (res.error) {
+      console.error('Welcome Baby case not created:', res.error);
+      alert('Tags saved, but the Welcome Baby case could not be created: ' + res.error);
+    }
+  }).catch(function(e){
+    console.error('Welcome Baby case creation failed:', e.message);
+    alert('Tags saved, but the Welcome Baby case could not be created: ' + e.message);
+  });
+}
+
+function promptForDueDateThenRetry(id) {
+  var input = prompt('This applicant is pregnant but has no due date on file.\n\nEnter the expected due date (YYYY-MM-DD) to create the Welcome Baby case:');
+  if (input === null) {
+    alert('No due date entered — the Welcome Baby case was not created. Tick the WBB tag again once the due date is on file.');
+    return;
+  }
+  var isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(input) && !isNaN(new Date(input).getTime());
+  if (!isValidDate) {
+    alert('That doesn\'t look like a valid date (expected YYYY-MM-DD) — the Welcome Baby case was not created. Tick the WBB tag again to retry.');
+    return;
+  }
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ due_date: input })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Failed to save due date (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
+    var app = allApps.find(function(a){return a.id===id;});
+    if (app) app.due_date = input;
+    triggerWelcomeBabyCase(id, true);
+  }).catch(function(e){
+    console.error('Failed to save due date:', e.message);
+    alert('Could not save the due date: ' + e.message + '. The Welcome Baby case was not created — tick the WBB tag again to retry.');
+  });
 }
 
 function saveSection(id, fieldMap) {
