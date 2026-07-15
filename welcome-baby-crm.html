@@ -785,7 +785,10 @@ select.inline-input { cursor:pointer; }
     <div class="family-list" style="padding-top:12px;" id="needs-list"><div class="empty-state"><div class="empty-icon">🛒</div><p>No needs logged yet.</p></div></div>
   </div>
   <div id="dpanel-available" style="display:none;padding-top:8px;">
-    <div style="padding:14px 20px 0;"><div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--light-text);" id="donations-count">Available</div></div>
+    <div style="padding:14px 20px 0;display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--light-text);" id="donations-count">Available</div>
+      <div style="font-size:12px;font-weight:700;color:var(--purple);cursor:pointer;" onclick="openModal('modal-donation')">+ Add donation</div>
+    </div>
     <div class="family-list" style="padding-top:12px;" id="donations-list"><div class="empty-state"><div class="empty-icon">📦</div><p>No donations yet.</p></div></div>
   </div>
   <div id="dpanel-matched" style="display:none;padding-top:8px;">
@@ -1064,6 +1067,20 @@ select.inline-input { cursor:pointer; }
     <div class="form-group"><label class="form-label">Priority</label><select class="form-input" id="n-priority"><option>Urgent</option><option>When available</option></select></div>
     <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="n-notes" style="min-height:60px;resize:none;"></textarea></div>
     <button class="btn-primary" onclick="saveNeed()">Save need</button>
+  </div>
+</div>
+<div class="modal" id="modal-donation">
+  <div class="modal-inner">
+    <div class="modal-title">Add a donation <button class="modal-close" onclick="closeModal('modal-donation')">✕</button></div>
+    <div class="form-group"><label class="form-label">Item *</label><input class="form-input" id="dn-item" type="text" placeholder="e.g. Crib, stroller…"></div>
+    <div class="form-group"><label class="form-label">Donor name *</label><input class="form-input" id="dn-donor-name" type="text"></div>
+    <div class="form-group"><label class="form-label">Donor phone</label><input class="form-input" id="dn-donor-phone" type="text"></div>
+    <div class="form-group"><label class="form-label">Donor email</label><input class="form-input" id="dn-donor-email" type="email"></div>
+    <div class="form-group"><label class="form-label">Condition</label><select class="form-input" id="dn-condition"><option>New</option><option>Like new</option><option>Good</option><option>Fair</option></select></div>
+    <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="dn-location" type="text" placeholder="Where is it being held?"></div>
+    <div class="form-group"><label class="form-label">Hold until</label><input class="form-input" id="dn-hold-until" type="date"></div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="dn-description" style="min-height:60px;resize:none;" placeholder="Any extra detail donors won't see elsewhere"></textarea></div>
+    <button class="btn-primary" onclick="saveDonation()">Save donation</button>
   </div>
 </div>
 <div class="modal" id="modal-fairy">
@@ -2197,6 +2214,28 @@ async function saveNeed() {
   }]);
   if(error){showToast('Error: '+error.message);return;}
   closeModal('modal-need'); showToast('✅ Need logged');
+  await loadAllData(); renderNeeds();
+}
+
+async function saveDonation() {
+  const item=document.getElementById('dn-item').value.trim();
+  const donorName=document.getElementById('dn-donor-name').value.trim();
+  if(!item){showToast('Item required');return;}
+  if(!donorName){showToast('Donor name required');return;}
+  const holdUntil=document.getElementById('dn-hold-until').value;
+  const {error} = await sb.from('donations').insert([{
+    item,
+    donor_name: donorName,
+    donor_phone: document.getElementById('dn-donor-phone').value.trim(),
+    donor_email: document.getElementById('dn-donor-email').value.trim(),
+    condition: document.getElementById('dn-condition').value,
+    location: document.getElementById('dn-location').value.trim(),
+    hold_until: holdUntil || null,
+    description: document.getElementById('dn-description').value.trim()
+  }]);
+  if(error){showToast('Error: '+error.message);return;}
+  ['dn-item','dn-donor-name','dn-donor-phone','dn-donor-email','dn-location','dn-hold-until','dn-description'].forEach(id=>document.getElementById(id).value='');
+  closeModal('modal-donation'); showToast('✅ Donation added');
   await loadAllData(); renderNeeds();
 }
 
