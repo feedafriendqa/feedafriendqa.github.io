@@ -2259,7 +2259,10 @@ async function saveDonation() {
   const {data, error} = await sb.from('donations').insert([row]).select();
   if(error){showToast('Error: '+error.message);return;}
 
+  let closedNeed = false;
   if (isOffline) {
+    const newDonationId = data && data[0] && data[0].id;
+    closedNeed = await closeMatchingNeed(offlineFamilyId, item, newDonationId);
     await sb.from('activity_log').insert([{
       family_id: offlineFamilyId, log_type: 'Donation matched',
       note: `${item} given directly by donor ${donorName}${donorPhone ? ' (' + donorPhone + ')' : ''} (offline donation)`,
@@ -2270,7 +2273,8 @@ async function saveDonation() {
   ['dn-item','dn-donor-name','dn-donor-phone','dn-donor-email','dn-location','dn-hold-until','dn-description'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('dn-offline').checked = false;
   toggleOfflineFamily();
-  closeModal('modal-donation'); showToast(isOffline ? '✅ Offline donation logged to family' : '✅ Donation added');
+  closeModal('modal-donation');
+  showToast(isOffline ? (closedNeed ? '✅ Logged — also closed their pending request for it' : '✅ Offline donation logged to family') : '✅ Donation added');
   await loadAllData(); renderNeeds();
 }
 
@@ -2281,6 +2285,7 @@ async function saveManualMatch() {
   const donation = allDonations.find(d => d.id === donationId);
 
   await sb.from('donations').update({matched:true, matched_to: familyId}).eq('id', donationId);
+  const closedNeed = await closeMatchingNeed(familyId, donation ? donation.item : '', donationId);
 
   await sb.from('activity_log').insert([{
     family_id: familyId, log_type: 'Donation matched',
@@ -2288,11 +2293,51 @@ async function saveManualMatch() {
     logged_by: document.getElementById('menu-name') ? document.getElementById('menu-name').textContent : 'System'
   }]);
 
-  closeModal('modal-manual-match'); showToast('✅ Match confirmed');
+  closeModal('modal-manual-match');
+  showToast(closedNeed ? '✅ Matched — also closed their pending request for it' : '✅ Match confirmed');
   await loadAllData(); renderNeeds();
 }
 
 function saveFairy() { closeModal('modal-fairy'); showToast('Ask them to sign up via the portal — then approve in Supabase.'); }
+
+// ── ITEM MATCHING (shared by needs/donations matching logic) ──
+const ITEM_SYNONYMS = {
+  crib: ['cot','bed','bassinet','crib','moses basket'],
+  stroller: ['stroller','pram','pushchair','buggy','travel system'],
+  formula: ['formula','milk','aptamil','nan','similac'],
+  bouncer: ['bouncer','rocker','swing','rocking chair'],
+  steriliser: ['steriliser','sterilizer','sterilize'],
+  carrier: ['carrier','sling','wrap'],
+  carseat: ['car seat','carseat','car-seat'],
+  highchair: ['high chair','highchair','feeding chair'],
+  monitor: ['monitor','baby monitor'],
+  bathtub: ['bath','bathtub','tub'],
+  playmat: ['play mat','playmat','gym mat','activity mat'],
+};
+function itemsMatch(itemA, itemB) {
+  const a = (itemA||'').toLowerCase();
+  const b = (itemB||'').toLowerCase();
+  if (!a || !b) return false;
+  if (a.includes(b) || b.includes(a)) return true;
+  for (const syns of Object.values(ITEM_SYNONYMS)) {
+    const aMatch = syns.some(s => a.includes(s));
+    const bMatch = syns.some(s => b.includes(s));
+    if (aMatch && bMatch) return true;
+  }
+  return false;
+}
+// If a family already had an open need for roughly this item, close it out
+// so it doesn't sit around and get separately matched a second time.
+async function closeMatchingNeed(familyId, itemText, donationId) {
+  if (!familyId || !itemText) return false;
+  const match = allNeeds.find(n => n.family_id === familyId && !n.matched && itemsMatch(n.item, itemText));
+  if (!match) return false;
+  await Promise.all([
+    sb.from('needs').update({matched:true, matched_donation_id: donationId}).eq('id', match.id),
+    sb.from('donations').update({matched_need_id: match.id}).eq('id', donationId)
+  ]);
+  return true;
+}
 
 // ── NEEDS/DONATIONS ──
 function renderNeeds() {
@@ -2300,35 +2345,8 @@ function renderNeeds() {
   document.getElementById('donations-badge').textContent=allDonations.length+' unmatched';
   document.getElementById('donations-count').textContent='Available donations — '+allDonations.length;
 
-  // Smart keyword matching
-  const SYNONYMS = {
-    crib: ['cot','bed','bassinet','crib','moses basket'],
-    stroller: ['stroller','pram','pushchair','buggy','travel system'],
-    formula: ['formula','milk','aptamil','nan','similac'],
-    bouncer: ['bouncer','rocker','swing','rocking chair'],
-    steriliser: ['steriliser','sterilizer','sterilize'],
-    carrier: ['carrier','sling','wrap'],
-    carseat: ['car seat','carseat','car-seat'],
-    highchair: ['high chair','highchair','feeding chair'],
-    monitor: ['monitor','baby monitor'],
-    bathtub: ['bath','bathtub','tub'],
-    playmat: ['play mat','playmat','gym mat','activity mat'],
-  };
-
   function findMatch(needItem, donations) {
-    const n = needItem.toLowerCase();
-    for (const d of donations) {
-      const dItem = (d.item||'').toLowerCase();
-      // Direct match
-      if (dItem.includes(n) || n.includes(dItem)) return d;
-      // Synonym match
-      for (const [key, syns] of Object.entries(SYNONYMS)) {
-        const nMatch = syns.some(s => n.includes(s));
-        const dMatch = syns.some(s => dItem.includes(s));
-        if (nMatch && dMatch) return d;
-      }
-    }
-    return null;
+    return donations.find(d => itemsMatch(needItem, d.item)) || null;
   }
 
   const canDelete = currentRole === 'super' || currentRole === 'admin';
