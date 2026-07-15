@@ -1080,7 +1080,22 @@ select.inline-input { cursor:pointer; }
     <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="dn-location" type="text" placeholder="Where is it being held?"></div>
     <div class="form-group"><label class="form-label">Hold until</label><input class="form-input" id="dn-hold-until" type="date"></div>
     <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="dn-description" style="min-height:60px;resize:none;" placeholder="Any extra detail donors won't see elsewhere"></textarea></div>
+    <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="dn-offline" onchange="toggleOfflineFamily()" style="width:16px;height:16px;">
+      <label class="form-label" style="margin:0;" for="dn-offline">This was given directly to a family already (offline donation)</label>
+    </div>
+    <div class="form-group" id="dn-offline-family-wrap" style="display:none;">
+      <label class="form-label">Given to family *</label><select class="form-input" id="dn-offline-family"></select>
+    </div>
     <button class="btn-primary" onclick="saveDonation()">Save donation</button>
+  </div>
+</div>
+<div class="modal" id="modal-manual-match">
+  <div class="modal-inner">
+    <div class="modal-title">Match donation to a family <button class="modal-close" onclick="closeModal('modal-manual-match')">✕</button></div>
+    <div class="form-group"><div id="mm-item-summary" style="font-size:13px;font-weight:700;color:var(--text);"></div></div>
+    <div class="form-group"><label class="form-label">Family *</label><select class="form-input" id="mm-family"></select></div>
+    <button class="btn-primary" onclick="saveManualMatch()">Confirm match</button>
   </div>
 </div>
 <div class="modal" id="modal-fairy">
@@ -1104,10 +1119,11 @@ let allMilestones = [];
 let allNeeds = [];
 let allDonations = [];
 let allMatchedNeeds = [];
+let allMatchedDonations = [];
 let currentFamilyId = null;
 let prevScreen = null;
 const AVATARS = ['av-purple','av-green','av-teal','av-amber'];
-const LOG_ICONS = {'Check-in':'📱','Home visit':'🏠','Home visit — confidential':'🔒','Feeding update':'🍼','Milestone':'📅','Concern flagged':'⚠️','Box delivered':'📦','Other':'📝'};
+const LOG_ICONS = {'Check-in':'📱','Home visit':'🏠','Home visit — confidential':'🔒','Feeding update':'🍼','Milestone':'📅','Concern flagged':'⚠️','Box delivered':'📦','Donation matched':'🎁','Other':'📝'};
 // The full journey every case goes through, in order. Used both to render
 // the timeline (with TBD placeholders for steps not yet created) and to
 // populate the milestone picker in "Log an update", so any milestone can be
@@ -1241,13 +1257,14 @@ async function doSignUp() {
 
 // ── LOAD DATA ──
 async function loadAllData() {
-  const [fam, fair, nee, don, mil, matchedNee] = await Promise.all([
+  const [fam, fair, nee, don, mil, matchedNee, matchedDon] = await Promise.all([
     sb.from('families').select('*, babies(*)').order('created_at', {ascending:false}),
     sb.from('fairies').select('*, assignments(*)').eq('active', true),
     sb.from('needs').select('*, families(mother_name)').eq('matched', false).order('created_at'),
     sb.from('donations').select('*').eq('matched', false).order('created_at', {ascending:false}),
     sb.from('milestones').select('*, families(mother_name)').order('due_date'),
-    sb.from('needs').select('*, families(mother_name, assigned_fairy_id), donations:matched_donation_id(*)').eq('matched', true).order('created_at', {ascending:false})
+    sb.from('needs').select('*, families(mother_name, assigned_fairy_id), donations:matched_donation_id(*)').eq('matched', true).order('created_at', {ascending:false}),
+    sb.from('donations').select('*, families:matched_to(mother_name)').eq('matched', true).is('matched_need_id', null).order('created_at', {ascending:false})
   ]);
   allFamilies = fam.data || [];
   allFairies = fair.data || [];
@@ -1255,6 +1272,7 @@ async function loadAllData() {
   allDonations = don.data || [];
   allMilestones = mil.data || [];
   allMatchedNeeds = matchedNee.data || [];
+  allMatchedDonations = matchedDon.data || [];
 }
 
 async function goConsultantDash(navEl) {
@@ -2222,20 +2240,55 @@ async function saveDonation() {
   const donorName=document.getElementById('dn-donor-name').value.trim();
   if(!item){showToast('Item required');return;}
   if(!donorName){showToast('Donor name required');return;}
+  const isOffline = document.getElementById('dn-offline').checked;
+  const offlineFamilyId = document.getElementById('dn-offline-family').value;
+  if(isOffline && !offlineFamilyId){showToast('Select which family it was given to');return;}
   const holdUntil=document.getElementById('dn-hold-until').value;
-  const {error} = await sb.from('donations').insert([{
+  const donorPhone = document.getElementById('dn-donor-phone').value.trim();
+  const row = {
     item,
     donor_name: donorName,
-    donor_phone: document.getElementById('dn-donor-phone').value.trim(),
+    donor_phone: donorPhone,
     donor_email: document.getElementById('dn-donor-email').value.trim(),
     condition: document.getElementById('dn-condition').value,
     location: document.getElementById('dn-location').value.trim(),
     hold_until: holdUntil || null,
     description: document.getElementById('dn-description').value.trim()
-  }]);
+  };
+  if (isOffline) { row.matched = true; row.matched_to = offlineFamilyId; }
+  const {data, error} = await sb.from('donations').insert([row]).select();
   if(error){showToast('Error: '+error.message);return;}
+
+  if (isOffline) {
+    await sb.from('activity_log').insert([{
+      family_id: offlineFamilyId, log_type: 'Donation matched',
+      note: `${item} given directly by donor ${donorName}${donorPhone ? ' (' + donorPhone + ')' : ''} (offline donation)`,
+      logged_by: document.getElementById('menu-name') ? document.getElementById('menu-name').textContent : 'System'
+    }]);
+  }
+
   ['dn-item','dn-donor-name','dn-donor-phone','dn-donor-email','dn-location','dn-hold-until','dn-description'].forEach(id=>document.getElementById(id).value='');
-  closeModal('modal-donation'); showToast('✅ Donation added');
+  document.getElementById('dn-offline').checked = false;
+  toggleOfflineFamily();
+  closeModal('modal-donation'); showToast(isOffline ? '✅ Offline donation logged to family' : '✅ Donation added');
+  await loadAllData(); renderNeeds();
+}
+
+async function saveManualMatch() {
+  const donationId = manualMatchDonationId;
+  const familyId = document.getElementById('mm-family').value;
+  if (!donationId || !familyId) { showToast('Select a family'); return; }
+  const donation = allDonations.find(d => d.id === donationId);
+
+  await sb.from('donations').update({matched:true, matched_to: familyId}).eq('id', donationId);
+
+  await sb.from('activity_log').insert([{
+    family_id: familyId, log_type: 'Donation matched',
+    note: `${donation ? donation.item : 'Item'} matched from donor ${donation ? donation.donor_name : '–'}${donation && donation.donor_phone ? ' (' + donation.donor_phone + ')' : ''} (manual match)`,
+    logged_by: document.getElementById('menu-name') ? document.getElementById('menu-name').textContent : 'System'
+  }]);
+
+  closeModal('modal-manual-match'); showToast('✅ Match confirmed');
   await loadAllData(); renderNeeds();
 }
 
@@ -2300,7 +2353,10 @@ function renderNeeds() {
         <div style="flex:1;">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;">
             <div class="need-title">${d.item}</div>
-            ${canDelete ? `<button onclick="deleteDonationAdmin('${d.id}')" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);padding:0 0 0 8px;" title="Delete">🗑️</button>` : ''}
+            <div style="display:flex;align-items:center;gap:4px;">
+              <button onclick="openManualMatch('${d.id}')" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--purple);padding:0 0 0 4px;" title="Match to a family">🔗</button>
+              ${canDelete ? `<button onclick="deleteDonationAdmin('${d.id}')" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);padding:0 0 0 4px;" title="Delete">🗑️</button>` : ''}
+            </div>
           </div>
           <div class="need-family">${d.condition||''} · ${d.donor_name}</div>
           <div class="need-meta-row"><span>📍 ${d.location||'–'} · Until ${formatDate(d.hold_until)}</span></div>
@@ -2309,7 +2365,7 @@ function renderNeeds() {
       </div>
     </div>`).join('')||'<div class="empty-state"><div class="empty-icon">📦</div><p>No donations yet.</p></div>';
 
-  document.getElementById('matched-list').innerHTML = allMatchedNeeds.length ? allMatchedNeeds.map(n=>{
+  const matchedNeedCards = allMatchedNeeds.map(n=>{
     const d = n.donations;
     return `<div class="need-card" style="border-color:var(--green);background:var(--green-light);">
       <div style="display:flex;align-items:center;gap:12px;">
@@ -2321,7 +2377,21 @@ function renderNeeds() {
         </div>
       </div>
     </div>`;
-  }).join('') : '<div class="empty-state"><div class="empty-icon">✅</div><p>No matches yet.</p></div>';
+  });
+  const matchedDonationCards = allMatchedDonations.map(d=>{
+    return `<div class="need-card" style="border-color:var(--green);background:var(--green-light);">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;border-radius:12px;background:white;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">✅</div>
+        <div style="flex:1;">
+          <div class="need-title">${d.item}</div>
+          <div class="need-family">${d.families && d.families.mother_name || '–'}</div>
+          <div class="need-meta-row"><span>💚 From ${d.donor_name || '–'}${d.donor_phone ? ' · ' + d.donor_phone : ''}</span></div>
+        </div>
+      </div>
+    </div>`;
+  });
+  const allMatchedCards = [...matchedNeedCards, ...matchedDonationCards];
+  document.getElementById('matched-list').innerHTML = allMatchedCards.length ? allMatchedCards.join('') : '<div class="empty-state"><div class="empty-icon">✅</div><p>No matches yet.</p></div>';
 }
 
 async function deleteNeedAdmin(needId) {
@@ -2494,7 +2564,19 @@ function setNavActive(el) {
 
 function openModal(id) {
   if(id==='modal-need') document.getElementById('n-family').innerHTML=allFamilies.map(f=>`<option value="${f.id}">${f.mother_name||'Unknown'}</option>`).join('');
+  if(id==='modal-donation') document.getElementById('dn-offline-family').innerHTML=allFamilies.map(f=>`<option value="${f.id}">${f.mother_name||'Unknown'}</option>`).join('');
   document.getElementById(id).classList.add('open');
+}
+function toggleOfflineFamily() {
+  document.getElementById('dn-offline-family-wrap').style.display = document.getElementById('dn-offline').checked ? 'block' : 'none';
+}
+let manualMatchDonationId = null;
+function openManualMatch(donationId) {
+  manualMatchDonationId = donationId;
+  const d = allDonations.find(x => x.id === donationId);
+  document.getElementById('mm-item-summary').textContent = d ? `${d.item} — from ${d.donor_name}` : '';
+  document.getElementById('mm-family').innerHTML = allFamilies.map(f=>`<option value="${f.id}">${f.mother_name||'Unknown'}</option>`).join('');
+  openModal('modal-manual-match');
 }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 function togglePw(id) { const el=document.getElementById(id); el.type=el.type==='password'?'text':'password'; }
