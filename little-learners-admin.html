@@ -270,6 +270,7 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
     <div class="nav">
       <button class="nb on" onclick="showPg('dash',this)">Dashboard</button>
       <button class="nb off" onclick="showPg('fams',this)">Families</button>
+      <button class="nb off" onclick="showPg('assess-days',this)">Assessment Days</button>
     </div>
     <span class="user-badge" id="user-badge"></span>
     <button class="logout" onclick="doLogout()">Out</button>
@@ -325,6 +326,54 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
   </div>
   <div id="fams-list"><div class="loading">Loading…</div></div>
 </div>
+
+<!-- ASSESSMENT DAYS -->
+<div class="pg" id="pg-assess-days">
+  <div style="height:12px;"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <div class="sec-title" style="margin-bottom:0;">📅 Assessment Days</div>
+    <button class="btn-teal btn-sm" onclick="toggleNewDayForm()">+ New Assessment Day</button>
+  </div>
+
+  <div id="new-day-form" class="card" style="display:none;margin-bottom:16px;">
+    <div class="af">
+      <div><label>Age Band</label>
+        <select id="nd-band" onchange="onAgeBandChange()">
+          <option value="">Select…</option>
+        </select>
+      </div>
+      <div><label>Title</label><input id="nd-title" placeholder="e.g. Ages 6–7 Assessment Day"></div>
+      <div><label>Date</label><input id="nd-date" type="date"></div>
+      <div><label>Time</label><input id="nd-time" placeholder="e.g. 9:00 AM – 12:00 PM"></div>
+      <div><label>Location</label><input id="nd-location" placeholder="e.g. Little Learners Centre, West Bay"></div>
+      <button class="btn-teal" style="width:100%;" onclick="createAssessmentDay()">Create Assessment Day</button>
+    </div>
+  </div>
+
+  <div id="assess-days-list"><div class="loading">Loading…</div></div>
+</div>
+</div>
+
+<!-- ASSESSMENT DAY MODAL -->
+<div class="overlay" id="ad-modal" onclick="closeAdBg(event)">
+<div class="modal">
+  <div class="modal-hdr">
+    <div style="flex:1;min-width:0;">
+      <div class="modal-hdr-title" id="ad-title">Assessment Day</div>
+      <div class="modal-hdr-sub" id="ad-sub"></div>
+    </div>
+    <button class="modal-close" onclick="closeAssessDayModal()">✕</button>
+  </div>
+  <div class="tab-bar">
+    <button class="tab on" onclick="switchAdTab('eligible',this)">Eligible Children</button>
+    <button class="tab" onclick="switchAdTab('attendees',this)">Attendees</button>
+  </div>
+  <div class="modal-body">
+    <div class="tpanel on" id="adp-eligible"></div>
+    <div class="tpanel" id="adp-attendees"></div>
+  </div>
+</div>
+</div>
 </div>
 
 <!-- PROFILE MODAL -->
@@ -371,6 +420,14 @@ const ZONES = {"1":"Al Jasrah","2":"Al Bidda","3":"Fereej Mohamed Bin Jasim / Mu
 
 let allFamilies = [], allChildren = [], allAdmins = [], allActivityLogs = [], allReferrals = [];
 let currentFamily = null, currentChildren = [], currentUser = null, currentUserRole = null;
+let allAssessmentDays = [], allAssessmentAttendees = [], currentAssessDay = null;
+const AGE_BANDS = [
+  {key:'3-4', label:'Ages 3–4 (FS1–FS2)', min:3, max:4},
+  {key:'5-6', label:'Ages 5–6 (Year 1–2)', min:5, max:6},
+  {key:'7-8', label:'Ages 7–8 (Year 3–4)', min:7, max:8},
+  {key:'9-10', label:'Ages 9–10 (Year 5–6)', min:9, max:10},
+  {key:'11-13', label:'Ages 11–13 (Special)', min:11, max:13},
+];
 let activePipeline = 'all';
 
 const PIPELINE_STAGES = [
@@ -451,25 +508,31 @@ db.auth.onAuthStateChange((event,session)=>{
 
 // ── DATA ──
 async function loadData() {
-  const [{data:fams},{data:kids},{data:admins},{data:logs},{data:referrals}] = await Promise.all([
+  const [{data:fams},{data:kids},{data:admins},{data:logs},{data:referrals},{data:adays},{data:attendees}] = await Promise.all([
     db.from('ll_families').select('*').order('created_at',{ascending:false}),
     db.from('ll_children').select('*'),
     db.from('ll_admins').select('*'),
     db.from('ll_activity_logs').select('*').order('created_at',{ascending:false}),
     db.from('ll_referrals').select('*').eq('status','new').order('created_at',{ascending:false}),
+    db.from('ll_assessment_days').select('*').order('event_date',{ascending:true}),
+    db.from('ll_assessment_attendees').select('*'),
   ]);
   allFamilies = fams||[];
   allChildren = kids||[];
   allAdmins = admins||[];
   allActivityLogs = logs||[];
   allReferrals = referrals||[];
+  allAssessmentDays = adays||[];
+  allAssessmentAttendees = attendees||[];
   populateHandlerFilter();
+  populateAgeBandSelect();
   renderGreeting();
   renderDash();
   renderPipelineTabs();
   renderFams();
   renderReferrals();
   renderTurning3();
+  renderAssessDaysList();
 }
 
 // ── TURNING 3 NOTIFICATIONS ──
@@ -511,6 +574,329 @@ function renderTurning3() {
         </div>
       </div>`).join('')
     : '<div class="empty"><div class="eicon">✅</div><p>No new age-eligibility cases</p></div>';
+}
+
+// ── ASSESSMENT DAYS ──
+function childAgeYears(child) {
+  if(!child.dob) return null;
+  const today = new Date();
+  const dob = new Date(child.dob);
+  let years = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if(m<0 || (m===0 && today.getDate()<dob.getDate())) years--;
+  return years;
+}
+
+function populateAgeBandSelect() {
+  const sel = document.getElementById('nd-band');
+  if(!sel || sel.options.length>1) return;
+  AGE_BANDS.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b.key; opt.textContent = b.label;
+    sel.appendChild(opt);
+  });
+}
+
+function onAgeBandChange() {
+  const band = AGE_BANDS.find(b=>b.key===document.getElementById('nd-band').value);
+  const titleEl = document.getElementById('nd-title');
+  if(band && !titleEl.value) titleEl.value = band.label.replace(/\s*\(.*\)/,'') + ' Assessment Day';
+}
+
+function toggleNewDayForm() {
+  const el = document.getElementById('new-day-form');
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+async function createAssessmentDay() {
+  const age_band = document.getElementById('nd-band').value;
+  const title = document.getElementById('nd-title').value.trim();
+  const event_date = document.getElementById('nd-date').value;
+  const event_time = document.getElementById('nd-time').value.trim();
+  const location = document.getElementById('nd-location').value.trim();
+  if(!age_band || !title || !event_date) { showToast('Please fill in age band, title and date'); return; }
+  const {data:{user}} = await db.auth.getUser();
+  const admin = allAdmins.find(a=>a.email===user?.email);
+  const {data, error} = await db.from('ll_assessment_days').insert({
+    title, age_band, event_date, event_time, location, status:'upcoming', created_by: admin?.name||user?.email||''
+  }).select().single();
+  if(error) { showToast('Error: '+error.message); return; }
+  allAssessmentDays.unshift(data);
+  toggleNewDayForm();
+  document.getElementById('nd-band').value='';
+  document.getElementById('nd-title').value='';
+  document.getElementById('nd-date').value='';
+  document.getElementById('nd-time').value='';
+  document.getElementById('nd-location').value='';
+  renderAssessDaysList();
+  showToast('✅ Assessment day created');
+}
+
+function renderAssessDaysList() {
+  const el = document.getElementById('assess-days-list');
+  if(!el) return;
+  if(!allAssessmentDays.length) {
+    el.innerHTML = '<div class="empty"><div class="eicon">📅</div><p>No assessment days yet</p></div>';
+    return;
+  }
+  el.innerHTML = allAssessmentDays.map(d => {
+    const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===d.id);
+    const confirmed = attendees.filter(a=>a.invite_status==='confirmed').length;
+    const attended = attendees.filter(a=>a.attendance==='attended').length;
+    const band = AGE_BANDS.find(b=>b.key===d.age_band);
+    return `<div class="fam-card" style="cursor:pointer;" onclick="openAssessDay('${d.id}')">
+      <div class="fam-info">
+        <div class="fam-name">${d.title} <span style="font-size:11px;color:var(--muted);">(${band?band.label:d.age_band})</span></div>
+        <div class="fam-meta">
+          <span>📆 ${d.event_date ? new Date(d.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'No date set'}</span>
+          ${d.event_time?`<span>🕐 ${d.event_time}</span>`:''}
+          ${d.location?`<span>📍 ${d.location}</span>`:''}
+          <span>👥 ${attendees.length} invited · ${confirmed} confirmed · ${attended} attended</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function closeAssessDayModal() {
+  document.getElementById('ad-modal').classList.remove('open');
+  document.body.style.overflow='';
+}
+function closeAdBg(e) { if(e.target===document.getElementById('ad-modal')) closeAssessDayModal(); }
+
+function switchAdTab(t, btn) {
+  document.querySelectorAll('#ad-modal .tab').forEach(b=>b.className='tab');
+  document.querySelectorAll('#ad-modal .tpanel').forEach(p=>p.className='tpanel');
+  btn.className='tab on';
+  document.getElementById('adp-'+t).className='tpanel on';
+}
+
+function openAssessDay(dayId) {
+  currentAssessDay = allAssessmentDays.find(d=>d.id===dayId);
+  if(!currentAssessDay) return;
+  document.getElementById('ad-title').textContent = currentAssessDay.title;
+  const band = AGE_BANDS.find(b=>b.key===currentAssessDay.age_band);
+  document.getElementById('ad-sub').innerHTML = `
+    <span>${band?band.label:currentAssessDay.age_band}</span>
+    <span>${currentAssessDay.event_date ? new Date(currentAssessDay.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : ''}</span>
+    ${currentAssessDay.location?`<span>📍 ${currentAssessDay.location}</span>`:''}`;
+  renderEligibleForDay();
+  renderAttendeesForDay();
+  switchAdTab('eligible', document.querySelector('#ad-modal .tab'));
+  document.getElementById('ad-modal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function renderEligibleForDay() {
+  const el = document.getElementById('adp-eligible');
+  const band = AGE_BANDS.find(b=>b.key===currentAssessDay.age_band);
+  if(!band) { el.innerHTML = ''; return; }
+  const alreadyIn = new Set(allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id).map(a=>a.child_id));
+  const eligible = allChildren.filter(c => {
+    const age = childAgeYears(c);
+    if(age===null || age<band.min || age>band.max) return false;
+    if(alreadyIn.has(c.id)) return false;
+    const fam = allFamilies.find(f=>f.id===c.family_id);
+    if(!fam) return false;
+    const callDone = ['pre_assessed','pre_assessment_passed','pre_assessment_failed','year_group_pending','year_group_confirmed'].includes(fam.pipeline_status);
+    return callDone;
+  });
+  if(!eligible.length) {
+    el.innerHTML = '<div class="empty"><div class="eicon">✅</div><p>No eligible children left to add — they either haven\'t completed their Introductory Call yet, are outside this age band, or are already on this list.</p></div>';
+    return;
+  }
+  el.innerHTML = `
+    <div style="margin-bottom:10px;">
+      <button class="btn-teal btn-sm" onclick="addSelectedToDay()">➕ Add Selected to This Day</button>
+    </div>
+    ${eligible.map(c => {
+      const fam = allFamilies.find(f=>f.id===c.family_id);
+      return `<label class="fam-card" style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="checkbox" class="elig-check" value="${c.id}" style="width:18px;height:18px;flex-shrink:0;">
+        <div class="fam-info">
+          <div class="fam-name">${c.full_name||'Child'} <span style="font-size:11px;color:var(--muted);">(${childAgeYears(c)}y)</span></div>
+          <div class="fam-meta"><span>👪 ${fam?.father_name||'—'}</span><span>📞 ${fam?.father_phone||'—'}</span></div>
+        </div>
+      </label>`;
+    }).join('')}`;
+}
+
+async function addSelectedToDay() {
+  const ids = [...document.querySelectorAll('.elig-check:checked')].map(el=>el.value);
+  if(!ids.length) { showToast('Select at least one child'); return; }
+  const rows = ids.map(childId => {
+    const child = allChildren.find(c=>c.id===childId);
+    return { assessment_day_id: currentAssessDay.id, family_id: child.family_id, child_id: childId, invite_status:'invited' };
+  });
+  const {data, error} = await db.from('ll_assessment_attendees').insert(rows).select();
+  if(error) { showToast('Error: '+error.message); return; }
+  allAssessmentAttendees.push(...(data||[]));
+  renderEligibleForDay();
+  renderAttendeesForDay();
+  renderAssessDaysList();
+  showToast(`✅ Added ${ids.length} child(ren)`);
+}
+
+function renderAttendeesForDay() {
+  const el = document.getElementById('adp-attendees');
+  const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id);
+  if(!attendees.length) {
+    el.innerHTML = '<div class="empty"><div class="eicon">👥</div><p>No children added yet — use the Eligible Children tab.</p></div>';
+    return;
+  }
+  el.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <button class="btn-teal btn-sm" onclick="sendAllInvites()">📧 Send Invite to All</button>
+      <button class="btn-teal btn-sm" onclick="copyWhatsAppList()">📋 Copy WhatsApp List</button>
+    </div>
+    ${attendees.map(a => {
+      const child = allChildren.find(c=>c.id===a.child_id);
+      const fam = allFamilies.find(f=>f.id===a.family_id);
+      const suggested = child ? suggestYG(child).yg : '—';
+      return `<div class="fam-card" style="flex-direction:column;align-items:stretch;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div class="fam-info">
+            <div class="fam-name">${child?.full_name||'Child'} <span style="font-size:11px;color:var(--muted);">(system YG: ${suggested})</span></div>
+            <div class="fam-meta">
+              <span>👪 ${fam?.father_name||'—'}</span><span>📞 ${fam?.father_phone||'—'}</span>
+              <span>${a.invite_status==='confirmed'?'✅ RSVP confirmed':'⏳ Awaiting RSVP'}</span>
+              ${a.photo_consent?`<span>📷 Photo: ${a.photo_consent}</span>`:''}
+              ${a.dietary_chicken?`<span>🍗 Chicken OK: ${a.dietary_chicken}</span>`:''}
+            </div>
+          </div>
+          <button class="btn-small" onclick="sendAssessmentInvite('${a.id}')">📧 Invite</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+          <label style="font-size:11px;font-weight:700;color:var(--muted);">Attendance:</label>
+          <select onchange="markAttendance('${a.id}',this.value)" style="padding:6px 10px;border-radius:8px;border:2px solid var(--border);font-size:12px;">
+            <option value="" ${!a.attendance?'selected':''}>Not marked</option>
+            <option value="attended" ${a.attendance==='attended'?'selected':''}>✅ Attended</option>
+            <option value="no_show" ${a.attendance==='no_show'?'selected':''}>❌ No-show</option>
+            <option value="rescheduled" ${a.attendance==='rescheduled'?'selected':''}>🔁 Rescheduled</option>
+          </select>
+          <button class="btn-small" onclick="toggleOutcomeForm('${a.id}')">📝 Record Outcome</button>
+        </div>
+        <div id="outcome-${a.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:2px solid var(--border);">
+          <div class="af">
+            <div><label>Assessed Year Group</label>
+              <select id="oyg-${a.id}">
+                <option value="">Select…</option>
+                <option ${a.outcome_year_group==='FS1'?'selected':''}>FS1</option>
+                <option ${a.outcome_year_group==='FS2'?'selected':''}>FS2</option>
+                <option ${a.outcome_year_group==='Year 1'?'selected':''}>Year 1</option>
+                <option ${a.outcome_year_group==='Year 2'?'selected':''}>Year 2</option>
+                <option ${a.outcome_year_group==='Year 3'?'selected':''}>Year 3</option>
+                <option ${a.outcome_year_group==='Year 4'?'selected':''}>Year 4</option>
+                <option ${a.outcome_year_group==='Year 5'?'selected':''}>Year 5</option>
+                <option ${a.outcome_year_group==='Year 6'?'selected':''}>Year 6</option>
+                <option ${a.outcome_year_group==='11-13 Special'?'selected':''}>11-13 Special</option>
+              </select>
+            </div>
+            <div><label>Learning Material Level</label><input id="oml-${a.id}" placeholder="e.g. Year 2 materials" value="${a.material_level||''}"></div>
+            <div><label>Notes</label><textarea id="on-${a.id}" placeholder="Observations from the assessment day…">${a.outcome_notes||''}</textarea></div>
+            <button class="btn-teal" style="width:100%;" onclick="saveOutcome('${a.id}')">💾 Save Outcome</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+
+function toggleOutcomeForm(attendeeId) {
+  const el = document.getElementById('outcome-'+attendeeId);
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+async function markAttendance(attendeeId, val) {
+  const {error} = await db.from('ll_assessment_attendees').update({attendance: val||null, attended_marked_at: new Date().toISOString()}).eq('id',attendeeId);
+  if(error) { showToast('Error: '+error.message); return; }
+  const a = allAssessmentAttendees.find(x=>x.id===attendeeId);
+  if(a) a.attendance = val||null;
+  renderAssessDaysList();
+  showToast('✅ Attendance updated');
+}
+
+async function saveOutcome(attendeeId) {
+  const a = allAssessmentAttendees.find(x=>x.id===attendeeId);
+  if(!a) return;
+  const outcome_year_group = document.getElementById('oyg-'+attendeeId).value;
+  const material_level = document.getElementById('oml-'+attendeeId).value.trim();
+  const outcome_notes = document.getElementById('on-'+attendeeId).value.trim();
+
+  const {error} = await db.from('ll_assessment_attendees').update({outcome_year_group, material_level, outcome_notes}).eq('id',attendeeId);
+  if(error) { showToast('Error: '+error.message); return; }
+  Object.assign(a, {outcome_year_group, material_level, outcome_notes});
+
+  // Update the child's material level directly
+  if(material_level) {
+    await db.from('ll_children').update({material_level}).eq('id', a.child_id);
+    const child = allChildren.find(c=>c.id===a.child_id);
+    if(child) child.material_level = material_level;
+  }
+
+  // If the assessed year group differs from the system suggestion, feed it into the existing
+  // override + second-admin-approval workflow so it's reviewed before becoming official.
+  const child = allChildren.find(c=>c.id===a.child_id);
+  if(child && outcome_year_group) {
+    const sys = suggestYG(child).yg;
+    if(outcome_year_group !== sys) {
+      const {data:{user}} = await db.auth.getUser();
+      const admin = allAdmins.find(x=>x.email===user?.email);
+      await db.from('ll_children').update({
+        year_group_override: outcome_year_group,
+        year_group_justification: `Assessment day outcome (${currentAssessDay.title}) — assessed by ${admin?.name||user?.email||'staff'}: ${outcome_notes||'no additional notes'}`,
+        year_group_approved: false, year_group_approved_by: null,
+      }).eq('id', child.id);
+      Object.assign(child, {year_group_override: outcome_year_group, year_group_approved:false});
+      await addActivityLog(a.family_id, a.child_id, 'note', `Assessment day result differs from system year group (${sys} → ${outcome_year_group}) — sent for approval.`, '');
+    } else {
+      await addActivityLog(a.family_id, a.child_id, 'note', `Assessment day confirmed year group ${outcome_year_group}.`, '');
+    }
+  }
+
+  renderAttendeesForDay();
+  showToast('✅ Outcome saved');
+}
+
+async function sendAssessmentInvite(attendeeId) {
+  const a = allAssessmentAttendees.find(x=>x.id===attendeeId);
+  const child = allChildren.find(c=>c.id===a.child_id);
+  const fam = allFamilies.find(f=>f.id===a.family_id);
+  if(!fam?.father_email) { showToast('No email on file for this family'); return; }
+  const rsvpLink = `https://feedafriendqa.github.io/little-learners-rsvp.html?token=${a.access_token}`;
+  const ok = await sendEmail('assessment_day_invite', fam.father_email, fam.father_name||'Parent', {
+    child_name: child?.full_name||'your child',
+    title: currentAssessDay.title,
+    event_date: currentAssessDay.event_date,
+    event_time: currentAssessDay.event_time,
+    location: currentAssessDay.location,
+    rsvp_link: rsvpLink,
+  });
+  if(ok) showToast('✅ Invite sent to '+fam.father_name);
+}
+
+async function sendAllInvites() {
+  const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id);
+  let sent = 0;
+  for(const a of attendees) {
+    const fam = allFamilies.find(f=>f.id===a.family_id);
+    if(!fam?.father_email) continue;
+    await sendAssessmentInvite(a.id);
+    sent++;
+  }
+  showToast(`✅ Sent ${sent} invite(s)`);
+}
+
+function copyWhatsAppList() {
+  const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id);
+  const lines = attendees.map(a => {
+    const fam = allFamilies.find(f=>f.id===a.family_id);
+    return `${fam?.father_name||'Parent'}: ${fam?.father_phone||'—'}`;
+  });
+  const text = `${currentAssessDay.title}\n\n` + lines.join('\n');
+  navigator.clipboard.writeText(text).then(
+    () => showToast('✅ Copied — paste into your WhatsApp group'),
+    () => showToast('⚠️ Could not copy — please copy manually')
+  );
 }
 
 // ── DAILY GREETING & QUOTE ──

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Little Learners — Assessment Day RSVP</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#0A3D1F;--forest-mid:#145C30;--lime:#5CB85C;--lime-soft:#EAF5EA;--gold:#3AAFA4;--coral:#E05252;--muted:#5A7A65;--border:#C8DFC8;--cream:#F4F9F4;--shadow:0 4px 20px rgba(10,61,31,.09);--r:14px;--rs:10px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Quicksand',sans-serif;background:var(--cream);color:var(--forest);min-height:100vh;}
+header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14px;display:flex;align-items:center;height:56px;gap:10px;}
+.logo-text{font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:white;}
+.wrap{padding:16px 14px;max-width:520px;margin:0 auto;}
+.hero{background:var(--forest);border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:center;color:white;}
+.hero h1{font-family:'Nunito',sans-serif;font-weight:900;font-size:19px;}
+.hero p{font-size:13px;opacity:.85;margin-top:8px;line-height:1.5;}
+.card{background:white;border-radius:var(--r);padding:18px;box-shadow:var(--shadow);margin-bottom:14px;}
+.detail-row{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px;}
+.detail-row:last-child{border-bottom:none;}
+.detail-icon{font-size:16px;}
+.fg{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+.fg label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.choice-row{display:flex;gap:8px;}
+.choice{flex:1;padding:12px;border-radius:var(--rs);border:2px solid var(--border);text-align:center;cursor:pointer;font-weight:700;font-size:13.5px;color:var(--muted);background:white;transition:all .15s;}
+.choice.sel{border-color:var(--lime);background:var(--lime-soft);color:var(--forest);}
+.btn-gold{background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:13px 24px;width:100%;font-family:'Quicksand',sans-serif;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-gold:disabled{background:#ccc;cursor:not-allowed;}
+.err-msg{background:#FDEAEA;border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:600;color:#8B2020;margin-top:10px;border-left:4px solid var(--coral);display:none;}
+.success-pg{text-align:center;padding:40px 20px;}
+.success-pg .sicon{font-size:56px;margin-bottom:14px;}
+.success-pg h2{font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--forest);}
+.success-pg p{font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.6;}
+.spinner{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(10,61,31,.2);border-top-color:var(--forest);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header><div class="logo-text">🌱 Little Learners</div></header>
+<div class="wrap">
+  <div id="loading-pg" class="card" style="text-align:center;padding:40px 20px;">
+    <div class="spinner" style="width:28px;height:28px;border-width:3px;"></div>
+    <p style="margin-top:12px;color:var(--muted);">Loading your invite…</p>
+  </div>
+
+  <div id="invalid-pg" class="card" style="display:none;text-align:center;">
+    <div style="font-size:48px;margin-bottom:10px;">🔗</div>
+    <h2 style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;">Invite not found</h2>
+    <p style="font-size:13.5px;color:var(--muted);margin-top:8px;">This link looks incomplete or may have expired. Please contact us directly or ask for a new invite.</p>
+  </div>
+
+  <div id="rsvp-pg" style="display:none;">
+    <div class="hero">
+      <h1 id="rp-title">Assessment Day</h1>
+      <p id="rp-child"></p>
+    </div>
+    <div class="card">
+      <div class="detail-row"><span class="detail-icon">📆</span><span id="rp-date"></span></div>
+      <div class="detail-row"><span class="detail-icon">🕐</span><span id="rp-time"></span></div>
+      <div class="detail-row"><span class="detail-icon">📍</span><span id="rp-location"></span></div>
+    </div>
+
+    <div class="card">
+      <div class="fg">
+        <label>Will you be attending?</label>
+        <div class="choice-row">
+          <div class="choice" id="att-yes" onclick="selectChoice('attendance','attended',this)">✅ Yes, we'll be there</div>
+          <div class="choice" id="att-no" onclick="selectChoice('attendance','declined',this)">❌ Can't make it</div>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Photo Consent</label>
+        <div class="choice-row">
+          <div class="choice" id="photo-yes" onclick="selectChoice('photo','Yes',this)">👍 Yes, photos OK</div>
+          <div class="choice" id="photo-no" onclick="selectChoice('photo','No',this)">🚫 No photos please</div>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Can your child eat chicken?</label>
+        <div class="choice-row">
+          <div class="choice" id="chicken-yes" onclick="selectChoice('chicken','Yes',this)">🍗 Yes</div>
+          <div class="choice" id="chicken-no" onclick="selectChoice('chicken','No',this)">🚫 No</div>
+        </div>
+      </div>
+      <div id="err" class="err-msg"></div>
+      <button class="btn-gold" id="submit-btn" onclick="submitRsvp()">Confirm RSVP</button>
+    </div>
+  </div>
+
+  <div id="success-pg" class="pg" style="display:none;">
+    <div class="success-pg">
+      <div class="sicon">🎉</div>
+      <h2>Thank You!</h2>
+      <p>Your response has been recorded. We look forward to seeing you at the assessment day.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
+let db;
+let token = null;
+let choices = { attendance: null, photo: null, chicken: null };
+
+function selectChoice(group, val, el) {
+  choices[group] = val;
+  document.querySelectorAll(`#${group==='attendance'?'att':group}-yes, #${group==='attendance'?'att':group}-no`).forEach(x=>x.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+async function init() {
+  if(window.supabase && window.supabase.createClient) {
+    db = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  } else {
+    setTimeout(init, 100);
+    return;
+  }
+  const params = new URLSearchParams(window.location.search);
+  token = params.get('token');
+  if(!token) { showInvalid(); return; }
+
+  try {
+    const { data, error } = await db.rpc('get_assessment_invite', { p_token: token });
+    if(error || !data || !data.length) { showInvalid(); return; }
+    const invite = data[0];
+    document.getElementById('rp-title').textContent = invite.title || 'Assessment Day';
+    document.getElementById('rp-child').textContent = `For ${invite.child_name || 'your child'}`;
+    document.getElementById('rp-date').textContent = invite.event_date ? new Date(invite.event_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : 'Date to be confirmed';
+    document.getElementById('rp-time').textContent = invite.event_time || 'Time to be confirmed';
+    document.getElementById('rp-location').textContent = invite.location || 'Location to be confirmed';
+
+    if(invite.invite_status === 'confirmed') {
+      document.getElementById('loading-pg').style.display='none';
+      document.getElementById('success-pg').style.display='block';
+      return;
+    }
+
+    document.getElementById('loading-pg').style.display='none';
+    document.getElementById('rsvp-pg').style.display='block';
+  } catch(e) {
+    showInvalid();
+  }
+}
+
+function showInvalid() {
+  document.getElementById('loading-pg').style.display='none';
+  document.getElementById('invalid-pg').style.display='block';
+}
+
+async function submitRsvp() {
+  const err = document.getElementById('err');
+  if(!choices.attendance) { err.textContent = '⚠️ Please let us know if you\'ll be attending.'; err.style.display='block'; return; }
+  if(choices.attendance==='attended' && (!choices.photo || !choices.chicken)) {
+    err.textContent = '⚠️ Please answer the photo consent and dietary questions.';
+    err.style.display='block';
+    return;
+  }
+  err.style.display='none';
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="border-color:rgba(255,255,255,.4);border-top-color:white;"></div> Submitting…';
+  try {
+    const { data, error } = await db.rpc('submit_assessment_rsvp', {
+      p_token: token,
+      p_attendance: choices.attendance,
+      p_photo_consent: choices.photo,
+      p_dietary_chicken: choices.chicken,
+    });
+    if(error || !data) throw new Error(error?.message || 'Could not submit RSVP');
+    document.getElementById('rsvp-pg').style.display='none';
+    document.getElementById('success-pg').style.display='block';
+  } catch(e) {
+    err.textContent = 'Something went wrong: ' + (e.message || 'please try again.');
+    err.style.display='block';
+    btn.disabled = false;
+    btn.textContent = 'Confirm RSVP';
+  }
+}
+
+init();
+</script>
+</body>
+</html>
