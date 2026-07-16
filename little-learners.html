@@ -200,7 +200,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <span class="badge" id="badge-mother">Scan QID</span>
   </div>
   <div class="qid-scan-body">
-    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;font-weight:600;">Upload mother's QID — or skip if not applicable.</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;font-weight:600;">Upload mother's QID. If there is no second parent/guardian on this application, please contact us directly rather than leaving this blank.</p>
     <div class="upload-pair">
       <div class="upload-side">
         <div class="upload-side-title">📷 Front</div>
@@ -216,7 +216,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div class="review-section" id="review-mother">
       <div class="review-title">✏️ Review &amp; complete</div>
       <div class="fg"><label>Full Name</label><input id="m_name" placeholder="As on QID"></div>
-      <div class="fg"><label>QID Number</label><input id="m_qid" placeholder="e.g. 29040403157"></div>
+      <div class="fg"><label>QID Number <span class="req-star">*</span></label><input id="m_qid" placeholder="e.g. 29040403157" required></div>
       <div class="fg-row">
         <div class="fg"><label>Nationality</label><input id="m_nat" placeholder="e.g. Kenyan"></div>
         <div class="fg"><label>Contact Number</label><input id="m_phone" placeholder="71991048"></div>
@@ -730,6 +730,7 @@ function goStep(n) {
       {id:'f_lang', label:'Father native language'},
       {id:'f_emp', label:'Father employment status'},
       {id:'f_salary', label:'Father monthly salary'},
+      {id:'m_qid', label:'Mother/Guardian 2 QID number'},
     ];
     // Clear previous errors
     required1.forEach(f => {
