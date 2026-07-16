@@ -562,6 +562,8 @@ async function loadData() {
   allReferrals = referrals||[];
   allAssessmentDays = adays||[];
   allAssessmentAttendees = attendees||[];
+  const me = allAdmins.find(a => (a.email||'').toLowerCase() === currentUserEmail.toLowerCase());
+  currentUserRole = me?.role || 'case_handler';
   populateHandlerFilter();
   populateAgeBandSelect();
   renderGreeting();
@@ -583,7 +585,7 @@ function daysUntil3rdBirthday(dob) {
 }
 function getTurning3Cases() {
   const cases = [];
-  allChildren.forEach(c => {
+  visibleChildren().forEach(c => {
     if(!c.dob) return;
     const {yg} = suggestYG(c);
     const family = allFamilies.find(f=>f.id===c.family_id);
@@ -1159,7 +1161,7 @@ function renderGreeting() {
 }
 
 function renderCheckinsDue() {
-  const due = allChildren.filter(c => {
+  const due = visibleChildren().filter(c => {
     if(c.pack_status !== 'given') return false;
     const anchor = c.last_checkin_date || c.pack_given_date;
     const d = daysSince(anchor);
@@ -1181,6 +1183,19 @@ function renderCheckinsDue() {
     : '<div class="empty"><div class="eicon">✅</div><p>No check-ins due</p></div>';
 }
 
+// ── ROLE-BASED VISIBILITY ──
+// Admins see every case. Case handlers see only cases assigned to them, plus
+// anything still unassigned (so any handler can pick it up, including the
+// Referrals queue).
+function visibleFamilies() {
+  if(currentUserRole === 'admin') return allFamilies;
+  return allFamilies.filter(f => !f.assigned_to || f.assigned_to === currentUserEmail);
+}
+function visibleChildren() {
+  const famIds = new Set(visibleFamilies().map(f=>f.id));
+  return allChildren.filter(c => famIds.has(c.family_id));
+}
+
 function referralCardHTML(r) {
   const age = r.child_dob ? Math.floor((Date.now()-new Date(r.child_dob).getTime())/(1000*60*60*24*365.25)) : null;
   return `<div class="fam-card" style="cursor:pointer;" onclick="openReferral('${r.id}')">
@@ -1197,10 +1212,28 @@ function referralCardHTML(r) {
   </div>`;
 }
 
+function referralConvertedCardHTML(f) {
+  const kids = allChildren.filter(c=>c.family_id===f.id);
+  return `<div class="fam-card" onclick="openProfile('${f.id}')">
+    <div class="urn-badge">${f.urn||'—'}</div>
+    <div class="fam-info">
+      <div class="fam-name">${f.father_name||'—'} Family</div>
+      <div class="fam-meta">
+        <span>📞 ${f.father_phone||'—'}</span>
+        ${f.area?`<span>📍 ${f.area}</span>`:''}
+        <span>👧 ${kids.length}</span>
+        <span style="color:var(--teal-mid);font-weight:700;">📋 Case opened — awaiting assignment</span>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderReferrals() {
-  document.getElementById('referrals-pill').textContent = allReferrals.length;
-  document.getElementById('referrals-list').innerHTML = allReferrals.length
-    ? allReferrals.map(referralCardHTML).join('')
+  const convertedUnassigned = allFamilies.filter(f => f.source==='Referral' && !f.assigned_to);
+  const total = allReferrals.length + convertedUnassigned.length;
+  document.getElementById('referrals-pill').textContent = total;
+  document.getElementById('referrals-list').innerHTML = total
+    ? allReferrals.map(referralCardHTML).join('') + convertedUnassigned.map(referralConvertedCardHTML).join('')
     : '<div class="empty"><div class="eicon">✅</div><p>No new referrals</p></div>';
 }
 
@@ -1282,15 +1315,18 @@ function detectDups() {
 
 // ── DASHBOARD ──
 function renderDash() {
-  const dups = detectDups();
-  const kids = allChildren;
-  document.getElementById('s-total').textContent = allFamilies.length;
+  const fams = visibleFamilies();
+  const kids = visibleChildren();
+  const famIds = new Set(fams.map(f=>f.id));
+  const dupsAll = detectDups();
+  const dups = new Set([...dupsAll].filter(id=>famIds.has(id)));
+  document.getElementById('s-total').textContent = fams.length;
   document.getElementById('s-children').textContent = kids.length;
-  document.getElementById('s-new').textContent = allFamilies.filter(f=>f.pipeline_status==='new'||!f.pipeline_status).length;
-  document.getElementById('s-pending-yg').textContent = allFamilies.filter(f=>f.pipeline_status==='year_group_pending').length;
-  document.getElementById('s-unassigned').textContent = allFamilies.filter(f=>!f.assigned_to).length;
+  document.getElementById('s-new').textContent = fams.filter(f=>f.pipeline_status==='new'||!f.pipeline_status).length;
+  document.getElementById('s-pending-yg').textContent = fams.filter(f=>f.pipeline_status==='year_group_pending').length;
+  document.getElementById('s-unassigned').textContent = fams.filter(f=>!f.assigned_to).length;
   document.getElementById('s-dups').textContent = dups.size;
-  const recent = allFamilies.slice(0,8);
+  const recent = fams.filter(f => !(f.source==='Referral' && !f.assigned_to)).slice(0,8);
   document.getElementById('recent-pill').textContent = recent.length;
   document.getElementById('recent-list').innerHTML = recent.length
     ? recent.map(f=>famCardHTML(f,dups.has(f.id))).join('')
@@ -1299,15 +1335,16 @@ function renderDash() {
 
 // ── PIPELINE TABS ──
 function renderPipelineTabs() {
+  const fams = visibleFamilies();
   const counts = {};
-  allFamilies.forEach(f=>{
+  fams.forEach(f=>{
     const s = f.pipeline_status||'new';
     counts[s]=(counts[s]||0)+1;
   });
   document.getElementById('pipeline-tabs').innerHTML = PIPELINE_STAGES.map(s=>`
     <button class="pipe-tab ${activePipeline===s.key?'on':''}" onclick="setPipeline('${s.key}')">
       ${s.icon} ${s.label}
-      <span class="cnt">${s.key==='all'?allFamilies.length:(counts[s.key]||0)}</span>
+      <span class="cnt">${s.key==='all'?fams.length:(counts[s.key]||0)}</span>
     </button>`).join('');
 }
 
@@ -1335,9 +1372,9 @@ function renderFams() {
   const q = (document.getElementById('search-input')?.value||'').toLowerCase();
   const yg = document.getElementById('filter-yg')?.value||'';
   const assigned = document.getElementById('filter-assigned')?.value||'';
-  const dups = detectDups();
+  const dupsAll = detectDups();
 
-  let list = allFamilies.filter(f=>{
+  let list = visibleFamilies().filter(f=>{
     const text = ((f.father_name||'')+(f.mother_name||'')+(f.urn||'')+(f.father_phone||'')+(f.mother_phone||'')).toLowerCase();
     const matchQ = !q||text.includes(q);
     const matchPipe = activePipeline==='all'||(f.pipeline_status||'new')===activePipeline;
@@ -1352,7 +1389,7 @@ function renderFams() {
   });
 
   document.getElementById('fams-list').innerHTML = list.length
-    ? list.map(f=>famCardHTML(f,dups.has(f.id))).join('')
+    ? list.map(f=>famCardHTML(f,dupsAll.has(f.id))).join('')
     : '<div class="empty"><div class="eicon">🔍</div><p>No families found</p></div>';
 }
 
@@ -1705,7 +1742,7 @@ async function assignHandler(email) {
   currentFamily.assigned_to_name = name;
   const idx = allFamilies.findIndex(f=>f.id===currentFamily.id);
   if(idx>=0) { allFamilies[idx].assigned_to=email||null; allFamilies[idx].assigned_to_name=name; }
-  renderDash(); renderFams();
+  renderDash(); renderFams(); renderReferrals();
   showToast(email?'✅ Assigned to '+name:'Case unassigned');
 }
 
