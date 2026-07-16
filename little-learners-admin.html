@@ -304,7 +304,7 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
 <div class="bottombar">
   <button class="bb-item on" onclick="showPg('dash',this)"><div class="bb-ic">🏠</div><div class="bb-tx">Dashboard</div></button>
   <button class="bb-item" onclick="showPg('fams',this)"><div class="bb-ic">👪</div><div class="bb-tx">Families</div></button>
-  <button class="bb-item" onclick="showPg('assess-days',this)"><div class="bb-ic">📅</div><div class="bb-tx">Assess. Days</div></button>
+  <button class="bb-item" id="bb-assess-days" onclick="showPg('assess-days',this)"><div class="bb-ic">📅</div><div class="bb-tx">Assess. Days</div></button>
   <button class="bb-item" onclick="toggleProfileMenu()"><div class="bb-ic">👤</div><div class="bb-tx" id="bb-profile-name">Profile</div></button>
 </div>
 
@@ -564,6 +564,11 @@ async function loadData() {
   allAssessmentAttendees = attendees||[];
   const me = allAdmins.find(a => (a.email||'').toLowerCase() === currentUserEmail.toLowerCase());
   currentUserRole = me?.role || 'case_handler';
+  const assessTabBtn = document.getElementById('bb-assess-days');
+  if(assessTabBtn) assessTabBtn.style.display = currentUserRole==='admin' ? 'flex' : 'none';
+  if(currentUserRole!=='admin' && document.getElementById('pg-assess-days')?.classList.contains('active')) {
+    showPg('dash', document.querySelector('.bb-item'));
+  }
   populateHandlerFilter();
   populateAgeBandSelect();
   renderGreeting();
