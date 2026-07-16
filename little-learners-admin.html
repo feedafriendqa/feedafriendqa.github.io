@@ -51,6 +51,10 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
 
 /* STATS */
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px;width:100%;}
+.greet-banner{background:linear-gradient(135deg,var(--forest),#1f4d3d);border-radius:16px;padding:18px 20px;margin-bottom:18px;color:white;}
+.greet-hello{font-family:'Nunito',sans-serif;font-weight:900;font-size:19px;margin-bottom:8px;}
+.greet-quote{font-size:13px;line-height:1.55;font-style:italic;color:rgba(255,255,255,.92);border-left:3px solid var(--gold);padding-left:10px;}
+.greet-quote-src{display:block;margin-top:6px;font-size:11px;font-style:normal;font-weight:700;color:var(--gold);}
 .stat{background:white;border-radius:var(--r);padding:22px 20px;box-shadow:var(--shadow);border-top:5px solid var(--teal);display:flex;flex-direction:column;justify-content:space-between;width:100%;}
 .stat.lime{border-top-color:var(--lime);}
 .stat.coral{border-top-color:var(--coral);}
@@ -275,6 +279,7 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
 <!-- DASHBOARD -->
 <div class="pg active" id="pg-dash">
   <div style="height:12px;"></div>
+  <div id="greeting-banner"></div>
   <div class="stats" id="dash-stats">
     <div class="stat"><div class="stat-num" id="s-total">—</div><div class="stat-lbl">Total Families</div></div>
     <div class="stat teal"><div class="stat-num" id="s-children">—</div><div class="stat-lbl">Children</div></div>
@@ -459,6 +464,7 @@ async function loadData() {
   allActivityLogs = logs||[];
   allReferrals = referrals||[];
   populateHandlerFilter();
+  renderGreeting();
   renderDash();
   renderPipelineTabs();
   renderFams();
@@ -505,6 +511,49 @@ function renderTurning3() {
         </div>
       </div>`).join('')
     : '<div class="empty"><div class="eicon">✅</div><p>No new age-eligibility cases</p></div>';
+}
+
+// ── DAILY GREETING & QUOTE ──
+const DAILY_QUOTES = [
+  { text: "Education is the most powerful weapon which you can use to change the world.", src: "Nelson Mandela" },
+  { text: "The Prophet ﷺ taught that seeking knowledge is a duty upon every Muslim, man and woman alike.", src: "Hadith — Sunan Ibn Majah" },
+  { text: "Give a man a fish and you feed him for a day; teach a man to fish and you feed him for a lifetime.", src: "Proverb" },
+  { text: "Whoever eases a hardship for someone in need, Allah will ease their hardships in this life and the next.", src: "Hadith — Sahih Muslim" },
+  { text: "Children are not things to be molded, but people to be unfolded.", src: "Jess Lair" },
+  { text: "The Prophet ﷺ said the best among people are those who bring the most benefit to others.", src: "Hadith — Al-Mu'jam al-Awsat" },
+  { text: "An investment in knowledge always pays the best interest.", src: "Benjamin Franklin" },
+  { text: "The giving hand is better than the receiving one — generosity toward the needy is beloved to Allah.", src: "Hadith — Sahih al-Bukhari" },
+  { text: "Every child deserves the chance to learn, to dream, and to grow — no matter where they start.", src: "Little Learners" },
+  { text: "The Qur'an teaches that true righteousness includes giving of one's wealth to orphans, the needy, and travelers.", src: "Qur'an 2:177" },
+  { text: "A child miseducated is a child lost.", src: "John F. Kennedy" },
+  { text: "The Prophet ﷺ said that whoever cares for an orphan will be as close to him in Paradise as two fingers side by side.", src: "Hadith — Sahih al-Bukhari" },
+  { text: "Educating the mind without educating the heart is no education at all.", src: "Aristotle" },
+  { text: "Moses asked his Lord to increase him in knowledge — a reminder that learning is a lifelong pursuit.", src: "Qur'an 20:114" },
+  { text: "The future of every child begins with someone who believed in them first.", src: "Little Learners" },
+  { text: "The best among you are those who learn and teach the Qur'an.", src: "Hadith — Sahih al-Bukhari" },
+  { text: "Do not wait until tomorrow to plant the seed of knowledge in a young mind — today is what they remember.", src: "Little Learners" },
+];
+
+function dayOfYear() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  return Math.floor((now - start) / (1000*60*60*24));
+}
+
+function renderGreeting() {
+  const el = document.getElementById('greeting-banner');
+  if(!el) return;
+  const q = DAILY_QUOTES[dayOfYear() % DAILY_QUOTES.length];
+  const hour = new Date().getHours();
+  const timeGreeting = hour<12 ? 'Good morning' : hour<17 ? 'Good afternoon' : 'Good evening';
+  const email = document.getElementById('user-badge')?.textContent || '';
+  const adminMatch = allAdmins.find(a => (a.email||'').split('@')[0] === email);
+  const displayName = adminMatch?.name?.split(' ')[0] || email || 'there';
+  el.innerHTML = `
+    <div class="greet-banner">
+      <div class="greet-hello">${timeGreeting}, ${displayName}! 👋</div>
+      <div class="greet-quote">"${q.text}"<span class="greet-quote-src">— ${q.src}</span></div>
+    </div>`;
 }
 
 function referralCardHTML(r) {
