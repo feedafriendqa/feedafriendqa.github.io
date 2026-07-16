@@ -1209,6 +1209,7 @@ async function openReferral(referralId) {
     father_native_lang: r.language || '',
     status: 'pending',
     pipeline_status: 'new',
+    source: 'Referral',
   };
   const { error: fErr } = await db.from('ll_families').insert(familyData);
   if(fErr) { showToast('Error: '+fErr.message); return; }
@@ -1330,6 +1331,7 @@ function famCardHTML(f,isDup) {
         <span>📞 ${f.father_phone||f.mother_phone||'—'}</span>
         ${f.area?`<span>📍 ${f.area}</span>`:''}
         <span>👧 ${kids.length}</span>
+        ${f.source==='Referral'?'<span style="color:var(--teal);font-weight:700;">📋 From Referral</span>':''}
         ${f.assigned_to_name?`<span>👤 ${f.assigned_to_name}</span>`:'<span style="color:var(--coral);font-weight:700;">Unassigned</span>'}
       </div>
     </div>
