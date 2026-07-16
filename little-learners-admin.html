@@ -404,7 +404,7 @@ async function doLogin() {
     
     if(error) throw error;
     document.getElementById('user-badge').textContent = email.split('@')[0];
-    showApp();
+    await showApp();
   } catch(e) {
     err.textContent = e.message || 'Login failed. Please try again.';
     err.style.display='block';
@@ -420,6 +420,18 @@ async function doLogout() {
 }
 
 async function showApp() {
+  const { data: isAdmin } = await db.rpc('is_ll_admin');
+  if(!isAdmin) {
+    await db.auth.signOut();
+    document.getElementById('app').style.display='none';
+    document.getElementById('login-wrap').style.display='flex';
+    const err = document.getElementById('login-err');
+    err.textContent = 'This account does not have access to the admin portal.';
+    err.style.display='block';
+    const btn = document.getElementById('login-btn');
+    btn.disabled=false; btn.innerHTML='Sign In';
+    return;
+  }
   document.getElementById('login-wrap').style.display='none';
   document.getElementById('app').style.display='block';
   await loadData();
@@ -497,7 +509,7 @@ function renderTurning3() {
 
 function referralCardHTML(r) {
   const age = r.child_dob ? Math.floor((Date.now()-new Date(r.child_dob).getTime())/(1000*60*60*24*365.25)) : null;
-  return `<div class="fam-card" style="cursor:default;">
+  return `<div class="fam-card" style="cursor:pointer;" onclick="openReferral('${r.id}')">
     <div class="fam-info">
       <div class="fam-name">${r.child_name||'—'}${age!==null?` (${age})`:''}</div>
       <div class="fam-meta">
@@ -507,7 +519,7 @@ function referralCardHTML(r) {
         ${r.language?`<span>🗣 ${r.language}</span>`:''}
       </div>
     </div>
-    <button class="btn-small" onclick="dismissReferral('${r.id}')" style="margin-left:8px;">Mark contacted</button>
+    <button class="btn-small" onclick="event.stopPropagation();dismissReferral('${r.id}')" style="margin-left:8px;">Mark contacted</button>
   </div>`;
 }
 
@@ -522,6 +534,61 @@ async function dismissReferral(id) {
   await db.from('ll_referrals').update({ status: 'contacted' }).eq('id', id);
   allReferrals = allReferrals.filter(r => r.id !== id);
   renderReferrals();
+}
+
+function normPhone(p) { return (p||'').replace(/\D/g,'').slice(-8); }
+
+async function openReferral(referralId) {
+  const r = allReferrals.find(x=>x.id===referralId);
+  if(!r) return;
+
+  // 1) Look for an existing application that matches this referral (by phone or child name)
+  let match = null;
+  if(r.parent_phone) {
+    const np = normPhone(r.parent_phone);
+    match = allFamilies.find(f => np && (normPhone(f.father_phone)===np || normPhone(f.mother_phone)===np));
+  }
+  if(!match && r.child_name) {
+    const childMatch = allChildren.find(c => (c.full_name||'').trim().toLowerCase() === r.child_name.trim().toLowerCase());
+    if(childMatch) match = allFamilies.find(f=>f.id===childMatch.family_id);
+  }
+
+  if(match) {
+    await dismissReferral(referralId);
+    openProfile(match.id, 'assess');
+    return;
+  }
+
+  // 2) No existing application — quick-create a minimal record from the referral so a case can be opened immediately
+  const familyId = crypto.randomUUID();
+  const { data: urn, error: urnErr } = await db.rpc('next_family_urn');
+  if(urnErr) { showToast('Error: '+urnErr.message); return; }
+  const familyData = {
+    id: familyId,
+    urn,
+    father_name: r.parent_name || 'Unknown',
+    father_phone: r.parent_phone || '',
+    area: r.area || '',
+    father_native_lang: r.language || '',
+    status: 'pending',
+    pipeline_status: 'new',
+  };
+  const { error: fErr } = await db.from('ll_families').insert(familyData);
+  if(fErr) { showToast('Error: '+fErr.message); return; }
+  if(r.child_name) {
+    await db.from('ll_children').insert({
+      family_id: familyId,
+      urn: urn + '.1',
+      full_name: r.child_name,
+      dob: r.child_dob || null,
+      lang_home: r.language || '',
+    });
+  }
+  await addActivityLog(familyId, null, 'note', 'Case opened from a Feed a Friend referral.', '');
+  await dismissReferral(referralId);
+  await loadData();
+  openProfile(familyId, 'assess');
+  showToast('✅ Case opened from referral');
 }
 
 function detectDups() {
@@ -658,7 +725,7 @@ function suggestYG(child) {
 }
 
 // ── PROFILE ──
-async function openProfile(id) {
+async function openProfile(id, tab) {
   currentFamily = allFamilies.find(f=>f.id===id);
   if(!currentFamily) return;
   currentChildren = allChildren.filter(c=>c.family_id===id);
@@ -677,7 +744,9 @@ async function openProfile(id) {
   renderAssessment(f,currentChildren);
   renderChecklist(f);
   renderActivityLog(f.id);
-  switchTab('overview',document.querySelector('.tab'));
+  const targetTab = tab || 'overview';
+  const tabBtn = [...document.querySelectorAll('.tab')].find(b => b.getAttribute('onclick')?.includes(`'${targetTab}'`));
+  switchTab(targetTab, tabBtn || document.querySelector('.tab'));
   document.getElementById('modal').classList.add('open');
   document.body.style.overflow='hidden';
 }

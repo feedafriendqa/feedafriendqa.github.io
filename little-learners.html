@@ -799,10 +799,12 @@ async function submitForm() {
     const rent = parseFloat(document.getElementById('rent').value)||0;
     const devices = [...document.querySelectorAll('#devices .dev.sel')].map(d => d.childNodes[1].textContent.trim());
 
-    const {count} = await db.from('ll_families').select('*',{count:'exact',head:true});
-    const urn = 'LL' + String((count||0)+1).padStart(3,'0');
+    const {data: urn, error: urnErr} = await db.rpc('next_family_urn');
+    if(urnErr) throw urnErr;
+    const familyId = crypto.randomUUID();
 
     const familyData = {
+      id: familyId,
       urn,
       father_name: document.getElementById('f_name').value.trim(),
       father_qid: document.getElementById('f_qid').value.trim(),
@@ -856,7 +858,7 @@ async function submitForm() {
     } catch (e) { console.warn('find_or_create_friend failed, continuing without it:', e); }
     if (friendId) familyData.friend_id = friendId;
 
-    const {data: family, error: fErr} = await db.from('ll_families').insert(familyData).select().single();
+    const {error: fErr} = await db.from('ll_families').insert(familyData);
     if(fErr) throw fErr;
 
     // Insert children
@@ -865,7 +867,7 @@ async function submitForm() {
       const b = blocks[i];
       const cidx = i+1;
       const child = {
-        family_id: family.id,
+        family_id: familyId,
         urn: urn + '.' + cidx,
         full_name: b.querySelector('.cname').value.trim(),
         dob: b.querySelector('.cdob').value,
@@ -889,11 +891,11 @@ async function submitForm() {
     // Upload QID files to Supabase Storage
     for(const [fileKey, {file, label}] of Object.entries(uploadedFiles)) {
       const ext = file.name.split('.').pop();
-      const path = family.id + '/' + fileKey + '.' + ext;
+      const path = familyId + '/' + fileKey + '.' + ext;
       const {error: uErr} = await db.storage.from('ll-documents').upload(path, file);
       if(!uErr) {
         await db.from('ll_documents').insert({
-          family_id: family.id,
+          family_id: familyId,
           file_name: label,
           file_path: path,
           doc_type: fileKey,
