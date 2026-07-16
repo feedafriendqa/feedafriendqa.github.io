@@ -294,6 +294,10 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
   <div style="font-size:12px;color:#6b7280;margin:-8px 0 10px;">Children under 3 at the time of application who have now reached (or will soon reach) eligible age. Open a case to move them into the pipeline.</div>
   <div id="turning3-list"><div class="loading">Loading…</div></div>
 
+  <div class="sec-title">📞 Quarterly Check-ins Due <span class="pill" id="checkins-pill">0</span></div>
+  <div style="font-size:12px;color:#6b7280;margin:-8px 0 10px;">Children with a learning pack who haven't had a check-in logged in 90+ days.</div>
+  <div id="checkins-list"><div class="loading">Loading…</div></div>
+
   <div class="sec-title">📋 Referrals from Feed a Friend <span class="pill" id="referrals-pill">0</span></div>
   <div style="font-size:12px;color:#6b7280;margin:-8px 0 10px;">Children flagged as out of school during a food box application. These are a heads-up only — not a full registration, since we don't collect income/employment/QID details on that form. Reach out and run a full registration when the family's ready.</div>
   <div id="referrals-list"><div class="loading">Loading…</div></div>
@@ -395,6 +399,7 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
       <button class="tab" onclick="switchTab('children',this)">Children</button>
       <button class="tab" onclick="switchTab('documents',this)">Documents</button>
       <button class="tab" onclick="switchTab('assess',this)">Introductory Call</button>
+      <button class="tab" onclick="switchTab('pack',this)">Learning Pack</button>
       <button class="tab" onclick="switchTab('checklist',this)">Checklist</button>
       <button class="tab" onclick="switchTab('activity',this)">Activity Log</button>
     </div>
@@ -402,6 +407,7 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
     <div class="tpanel" id="tp-children"></div>
     <div class="tpanel" id="tp-documents"></div>
     <div class="tpanel" id="tp-assess"></div>
+    <div class="tpanel" id="tp-pack"></div>
     <div class="tpanel" id="tp-checklist"></div>
     <div class="tpanel" id="tp-activity"></div>
   </div>
@@ -532,6 +538,7 @@ async function loadData() {
   renderFams();
   renderReferrals();
   renderTurning3();
+  renderCheckinsDue();
   renderAssessDaysList();
 }
 
@@ -899,6 +906,177 @@ function copyWhatsAppList() {
   );
 }
 
+// ── LEARNING PACK ──
+const YG_SEQUENCE = ['FS1','FS2','Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'];
+function nextYearGroupLevel(cur) {
+  const i = YG_SEQUENCE.indexOf(cur);
+  if(i===-1 || i===YG_SEQUENCE.length-1) return null;
+  return YG_SEQUENCE[i+1];
+}
+function daysSince(dateStr) {
+  if(!dateStr) return null;
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000*60*60*24));
+}
+function packLevelOptions(selected) {
+  return YG_SEQUENCE.map(y=>`<option ${y===selected?'selected':''}>${y}</option>`).join('')
+    + `<option ${selected==='11-13 Special'?'selected':''}>11-13 Special</option>`;
+}
+
+function renderPackTab(f, children) {
+  const el = document.getElementById('tp-pack');
+  if(!children.length) { el.innerHTML = '<div class="empty"><div class="eicon">📚</div><p>No children on this application yet</p></div>'; return; }
+
+  el.innerHTML = children.map(c => {
+    const status = c.pack_status || 'pending';
+    const defaultLevel = c.material_level || c.final_year_group || suggestYG(c).yg;
+    let body = '';
+
+    if(status==='given') {
+      const lastCheckin = c.last_checkin_date;
+      const anchorDate = lastCheckin || c.pack_given_date;
+      const overdue = daysSince(anchorDate) !== null && daysSince(anchorDate) >= 90;
+      body = `
+        <div class="fam-meta" style="margin-bottom:8px;">
+          <span>📦 Level: <strong>${c.material_level||'—'}</strong></span>
+          <span>📅 Given: ${c.pack_given_date ? new Date(c.pack_given_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '—'}</span>
+          <span>${lastCheckin ? '📞 Last check-in: '+new Date(lastCheckin).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '📞 No check-in logged yet'}</span>
+          ${overdue?'<span style="color:var(--coral);font-weight:700;">⏰ Quarterly check-in due</span>':''}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-small" onclick="toggleCheckinForm('${c.id}')">📞 Log Check-in</button>
+          <button class="btn-small" onclick="toggleBooksCheckedForm('${c.id}')">📖 Books Checked</button>
+        </div>
+        <div id="checkin-${c.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:2px solid var(--border);">
+          <div class="af">
+            <div><label>Check-in Notes</label><textarea id="checkin-notes-${c.id}" placeholder="How is the child progressing at home?"></textarea></div>
+            <button class="btn-teal" style="width:100%;" onclick="logQuarterlyCheckin('${c.id}')">💾 Save Check-in</button>
+          </div>
+        </div>
+        <div id="booksck-${c.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:2px solid var(--border);">
+          <div class="af">
+            <div><label>Outcome</label>
+              <select id="booksck-outcome-${c.id}">
+                <option value="additional_material">Needs more practice — give additional material at ${c.material_level||'current'} level</option>
+                <option value="next_level" ${!nextYearGroupLevel(c.material_level)?'disabled':''}>Ready — progress to ${nextYearGroupLevel(c.material_level)||'next level (unavailable — already at top level)'}</option>
+              </select>
+            </div>
+            <div><label>Notes</label><textarea id="booksck-notes-${c.id}" placeholder="Observations from checking their booklet…"></textarea></div>
+            <button class="btn-teal" style="width:100%;" onclick="recordBooksChecked('${c.id}')">💾 Save Outcome</button>
+          </div>
+        </div>`;
+    } else if(status==='not_given') {
+      body = `
+        <div class="fam-meta" style="margin-bottom:8px;"><span style="color:var(--muted);">🚫 Not given a learning pack${c.pack_declined_reason?': '+c.pack_declined_reason:''}</span></div>
+        <button class="btn-small" onclick="toggleGivePackForm('${c.id}')">🎁 Give Learning Pack</button>
+        <div id="givepack-${c.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:2px solid var(--border);">
+          <div class="af">
+            <div><label>Pack Level</label><select id="pack-level-${c.id}">${packLevelOptions(defaultLevel)}</select></div>
+            <button class="btn-teal" style="width:100%;" onclick="giveLearningPack('${c.id}')">💾 Confirm Pack Given</button>
+          </div>
+        </div>`;
+    } else {
+      body = `
+        <div class="fam-meta" style="margin-bottom:8px;"><span style="color:var(--muted);">Not yet assessed for a learning pack</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-small" onclick="toggleGivePackForm('${c.id}')">🎁 Give Learning Pack</button>
+          <button class="btn-small" onclick="toggleDeclinePackForm('${c.id}')">🚫 Mark Not Given</button>
+        </div>
+        <div id="givepack-${c.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:2px solid var(--border);">
+          <div class="af">
+            <div><label>Pack Level</label><select id="pack-level-${c.id}">${packLevelOptions(defaultLevel)}</select></div>
+            <button class="btn-teal" style="width:100%;" onclick="giveLearningPack('${c.id}')">💾 Confirm Pack Given</button>
+          </div>
+        </div>
+        <div id="declinepack-${c.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:2px solid var(--border);">
+          <div class="af">
+            <div><label>Reason</label><textarea id="decline-reason-${c.id}" placeholder="Why isn't a pack being given right now?"></textarea></div>
+            <button class="btn-teal" style="width:100%;" onclick="declineLearningPack('${c.id}')">💾 Confirm Not Given</button>
+          </div>
+        </div>`;
+    }
+
+    return `<div class="fam-card" style="flex-direction:column;align-items:stretch;">
+      <div class="fam-name" style="margin-bottom:8px;">${c.full_name||'Child'}</div>
+      ${body}
+    </div>`;
+  }).join('');
+}
+
+function toggleGivePackForm(childId) { const el=document.getElementById('givepack-'+childId); el.style.display = el.style.display==='none'?'block':'none'; }
+function toggleDeclinePackForm(childId) { const el=document.getElementById('declinepack-'+childId); el.style.display = el.style.display==='none'?'block':'none'; }
+function toggleCheckinForm(childId) { const el=document.getElementById('checkin-'+childId); el.style.display = el.style.display==='none'?'block':'none'; }
+function toggleBooksCheckedForm(childId) { const el=document.getElementById('booksck-'+childId); el.style.display = el.style.display==='none'?'block':'none'; }
+
+async function giveLearningPack(childId) {
+  const level = document.getElementById('pack-level-'+childId).value;
+  const updates = { pack_status:'given', pack_given_date: new Date().toISOString().slice(0,10), material_level: level };
+  const {error} = await db.from('ll_children').update(updates).eq('id',childId);
+  if(error) { showToast('Error: '+error.message); return; }
+  const idx = allChildren.findIndex(c=>c.id===childId);
+  if(idx>=0) Object.assign(allChildren[idx], updates);
+  currentChildren = allChildren.filter(c=>c.family_id===currentFamily.id);
+  await addActivityLog(currentFamily.id, childId, 'note', `Learning pack given at ${level} level.`, 'pack_given');
+  renderPackTab(currentFamily, currentChildren);
+  renderActivityLog(currentFamily.id);
+  showToast('✅ Learning pack recorded');
+}
+
+async function declineLearningPack(childId) {
+  const reason = document.getElementById('decline-reason-'+childId).value.trim();
+  const updates = { pack_status:'not_given', pack_declined_reason: reason };
+  const {error} = await db.from('ll_children').update(updates).eq('id',childId);
+  if(error) { showToast('Error: '+error.message); return; }
+  const idx = allChildren.findIndex(c=>c.id===childId);
+  if(idx>=0) Object.assign(allChildren[idx], updates);
+  currentChildren = allChildren.filter(c=>c.family_id===currentFamily.id);
+  await addActivityLog(currentFamily.id, childId, 'note', `Learning pack not given.${reason?' Reason: '+reason:''}`, 'pack_not_given');
+  renderPackTab(currentFamily, currentChildren);
+  renderActivityLog(currentFamily.id);
+  showToast('✅ Recorded');
+}
+
+async function logQuarterlyCheckin(childId) {
+  const notes = document.getElementById('checkin-notes-'+childId).value.trim();
+  const today = new Date().toISOString().slice(0,10);
+  const {error} = await db.from('ll_children').update({ last_checkin_date: today }).eq('id',childId);
+  if(error) { showToast('Error: '+error.message); return; }
+  const idx = allChildren.findIndex(c=>c.id===childId);
+  if(idx>=0) allChildren[idx].last_checkin_date = today;
+  currentChildren = allChildren.filter(c=>c.family_id===currentFamily.id);
+  await addActivityLog(currentFamily.id, childId, 'note', `Quarterly check-in: ${notes||'no notes added'}`, 'quarterly_checkin');
+  renderPackTab(currentFamily, currentChildren);
+  renderActivityLog(currentFamily.id);
+  showToast('✅ Check-in logged');
+}
+
+async function recordBooksChecked(childId) {
+  const outcome = document.getElementById('booksck-outcome-'+childId).value;
+  const notes = document.getElementById('booksck-notes-'+childId).value.trim();
+  const child = allChildren.find(c=>c.id===childId);
+  const updates = {};
+  let logNote = '';
+
+  if(outcome==='next_level') {
+    const next = nextYearGroupLevel(child.material_level);
+    if(!next) { showToast('Already at the top level'); return; }
+    updates.material_level = next;
+    logNote = `Books checked — progressed from ${child.material_level} to ${next} materials.${notes?' '+notes:''}`;
+  } else {
+    logNote = `Books checked — staying at ${child.material_level||'current'} level with additional material.${notes?' '+notes:''}`;
+  }
+
+  if(Object.keys(updates).length) {
+    const {error} = await db.from('ll_children').update(updates).eq('id',childId);
+    if(error) { showToast('Error: '+error.message); return; }
+    Object.assign(child, updates);
+  }
+  currentChildren = allChildren.filter(c=>c.family_id===currentFamily.id);
+  await addActivityLog(currentFamily.id, childId, 'note', logNote, outcome==='next_level'?'pack_progressed':'additional_material_given');
+  renderPackTab(currentFamily, currentChildren);
+  renderActivityLog(currentFamily.id);
+  showToast(outcome==='next_level' ? '✅ Progressed to next level' : '✅ Additional material recorded');
+}
+
 // ── DAILY GREETING & QUOTE ──
 const DAILY_QUOTES = [
   { text: "Education is the most powerful weapon which you can use to change the world.", src: "Nelson Mandela" },
@@ -940,6 +1118,29 @@ function renderGreeting() {
       <div class="greet-hello">${timeGreeting}, ${displayName}! 👋</div>
       <div class="greet-quote">"${q.text}"<span class="greet-quote-src">— ${q.src}</span></div>
     </div>`;
+}
+
+function renderCheckinsDue() {
+  const due = allChildren.filter(c => {
+    if(c.pack_status !== 'given') return false;
+    const anchor = c.last_checkin_date || c.pack_given_date;
+    const d = daysSince(anchor);
+    return d !== null && d >= 90;
+  });
+  document.getElementById('checkins-pill').textContent = due.length;
+  document.getElementById('checkins-list').innerHTML = due.length
+    ? due.map(c => {
+        const family = allFamilies.find(f=>f.id===c.family_id);
+        if(!family) return '';
+        const anchor = c.last_checkin_date || c.pack_given_date;
+        return `<div class="fam-card" style="cursor:pointer;" onclick="openProfile('${family.id}','pack')">
+          <div class="fam-info">
+            <div class="fam-name">${c.full_name||'Child'} <span style="font-size:11px;color:var(--muted);">(${family.urn||'—'})</span></div>
+            <div class="fam-meta"><span>📦 Level: ${c.material_level||'—'}</span><span>⏰ ${daysSince(anchor)} days since last contact</span></div>
+          </div>
+        </div>`;
+      }).join('')
+    : '<div class="empty"><div class="eicon">✅</div><p>No check-ins due</p></div>';
 }
 
 function referralCardHTML(r) {
@@ -1177,6 +1378,7 @@ async function openProfile(id, tab) {
   renderChildren(currentChildren,f);
   await renderDocs(f);
   renderAssessment(f,currentChildren);
+  renderPackTab(f,currentChildren);
   renderChecklist(f);
   renderActivityLog(f.id);
   const targetTab = tab || 'overview';
