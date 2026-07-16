@@ -284,6 +284,10 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
     <div class="stat forest"><div class="stat-num" id="s-dups">—</div><div class="stat-lbl">⚠️ Duplicates</div></div>
   </div>
 
+  <div class="sec-title">🎂 Turning 3 — New Cases Needed <span class="pill" id="turning3-pill">0</span></div>
+  <div style="font-size:12px;color:#6b7280;margin:-8px 0 10px;">Children under 3 at the time of application who have now reached (or will soon reach) eligible age. Open a case to move them into the pipeline.</div>
+  <div id="turning3-list"><div class="loading">Loading…</div></div>
+
   <div class="sec-title">📋 Referrals from Feed a Friend <span class="pill" id="referrals-pill">0</span></div>
   <div style="font-size:12px;color:#6b7280;margin:-8px 0 10px;">Children flagged as out of school during a food box application. These are a heads-up only — not a full registration, since we don't collect income/employment/QID details on that form. Reach out and run a full registration when the family's ready.</div>
   <div id="referrals-list"><div class="loading">Loading…</div></div>
@@ -336,7 +340,7 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
       <button class="tab on" onclick="switchTab('overview',this)">Overview</button>
       <button class="tab" onclick="switchTab('children',this)">Children</button>
       <button class="tab" onclick="switchTab('documents',this)">Documents</button>
-      <button class="tab" onclick="switchTab('assess',this)">Pre-Assessment</button>
+      <button class="tab" onclick="switchTab('assess',this)">Introductory Call</button>
       <button class="tab" onclick="switchTab('checklist',this)">Checklist</button>
       <button class="tab" onclick="switchTab('activity',this)">Activity Log</button>
     </div>
@@ -368,7 +372,7 @@ const PIPELINE_STAGES = [
   {key:'all', label:'All', icon:'📋'},
   {key:'new', label:'New', icon:'🆕'},
   {key:'pre_assessment_scheduled', label:'Call Scheduled', icon:'📅'},
-  {key:'pre_assessed', label:'Pre-assessed', icon:'✅'},
+  {key:'pre_assessed', label:'Call Completed', icon:'✅'},
   {key:'year_group_pending', label:'YG Pending', icon:'⏳'},
   {key:'year_group_confirmed', label:'YG Confirmed', icon:'📚'},
   {key:'pack_sent', label:'Pack Sent', icon:'📦'},
@@ -377,7 +381,7 @@ const PIPELINE_STAGES = [
 ];
 
 const STATUS_LABELS = {
-  new:'New',pre_assessment_scheduled:'Call Scheduled',pre_assessed:'Pre-assessed',
+  new:'New',pre_assessment_scheduled:'Call Scheduled',pre_assessed:'Call Completed',
   year_group_pending:'YG Pending Approval',year_group_confirmed:'YG Confirmed',
   pack_sent:'Pack Sent',assessment_day:'Assessment Day',completed:'Completed'
 };
@@ -447,6 +451,48 @@ async function loadData() {
   renderPipelineTabs();
   renderFams();
   renderReferrals();
+  renderTurning3();
+}
+
+// ── TURNING 3 NOTIFICATIONS ──
+function daysUntil3rdBirthday(dob) {
+  const d = new Date(dob);
+  const today = new Date();
+  const next3 = new Date(d.getFullYear()+3, d.getMonth(), d.getDate());
+  return Math.round((next3 - today) / (1000*60*60*24));
+}
+function getTurning3Cases() {
+  const cases = [];
+  allChildren.forEach(c => {
+    if(!c.dob) return;
+    const {yg} = suggestYG(c);
+    const family = allFamilies.find(f=>f.id===c.family_id);
+    if(!family) return;
+    const days = daysUntil3rdBirthday(c.dob);
+    if(days <= 0 && days > -60 && yg !== 'Not eligible') {
+      // Just turned 3 in the last ~2 months — needs a case opened if still sitting as 'new'/not progressed
+      if((family.pipeline_status||'new')==='new') {
+        cases.push({child:c, family, type:'just_turned', days:Math.abs(days)});
+      }
+    } else if(days > 0 && days <= 30) {
+      cases.push({child:c, family, type:'upcoming', days});
+    }
+  });
+  return cases;
+}
+function renderTurning3() {
+  const cases = getTurning3Cases();
+  document.getElementById('turning3-pill').textContent = cases.length;
+  document.getElementById('turning3-list').innerHTML = cases.length
+    ? cases.map(({child,family,type,days})=>`<div class="fam-card" style="cursor:pointer;" onclick="openProfile('${family.id}')">
+        <div class="fam-info">
+          <div class="fam-name">${child.full_name||'Child'} <span style="font-size:11px;color:var(--muted);">(${family.urn||'—'})</span></div>
+          <div class="fam-meta">
+            ${type==='just_turned' ? `<span>🎂 Turned 3 — ${days} day(s) ago. Open a case.</span>` : `<span>⏳ Turns 3 in ${days} day(s)</span>`}
+          </div>
+        </div>
+      </div>`).join('')
+    : '<div class="empty"><div class="eicon">✅</div><p>No new age-eligibility cases</p></div>';
 }
 
 function referralCardHTML(r) {
@@ -607,7 +653,7 @@ function suggestYG(child) {
   if(years===8) return {yg:'Year 4',reason:`Age ${years}y ${rem}m`};
   if(years===9) return {yg:'Year 5',reason:`Age ${years}y ${rem}m`};
   if(years===10) return {yg:'Year 6',reason:`Age ${years}y ${rem}m`};
-  if(years>=11&&years<=13) return {yg:'11-13 Special',reason:`Age ${years}y ${rem}m — needs pre-assessment`};
+  if(years>=11&&years<=13) return {yg:'11-13 Special',reason:`Age ${years}y ${rem}m — needs introductory call`};
   return {yg:'Over age limit',reason:`Age ${years}y — over 13`};
 }
 
@@ -780,6 +826,18 @@ function renderChildren(children, f) {
           ${c.special_needs_detail?`<div class="irow" style="grid-column:span 2"><div class="ikey">SN Detail</div><div class="ival">${c.special_needs_detail}</div></div>`:''}
         </div>
         ${c.qid?`<div class="qid-pill" style="margin-top:8px;">🪪 ${c.qid}</div>`:''}
+
+        <!-- INTRO CALL AVAILABILITY -->
+        <div style="margin-top:12px;padding-top:12px;border-top:2px solid var(--border);">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Introductory Call Status</div>
+          <select id="ics-${c.id}" style="padding:8px 10px;border-radius:var(--rs);border:2px solid var(--border);font-family:Quicksand,sans-serif;font-size:12.5px;width:100%;" onchange="onIntroCallStatusChange('${c.id}','${f.id}',this.value)">
+            <option value="Available" ${!c.intro_call_status||c.intro_call_status==='Available'?'selected':''}>✅ Available for introductory call</option>
+            <option value="Already in school" ${c.intro_call_status==='Already in school'?'selected':''}>🏫 Already in school</option>
+            <option value="Not in country" ${c.intro_call_status==='Not in country'?'selected':''}>✈️ Not currently in country</option>
+            <option value="Other" ${c.intro_call_status==='Other'?'selected':''}>❓ Other — unavailable</option>
+          </select>
+          ${c.intro_call_status && c.intro_call_status!=='Available' ? `<div style="font-size:11px;color:var(--coral);font-weight:700;margin-top:6px;">🚫 Excluded from introductory call — family notified, child archived.</div>` : ''}
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -788,6 +846,36 @@ function renderChildren(children, f) {
   children.forEach(c=>{
     if(c.profile_photo_path) loadChildPhoto(c.id, c.profile_photo_path);
   });
+}
+
+async function onIntroCallStatusChange(childId, familyId, status) {
+  const {error} = await db.from('ll_children').update({ intro_call_status: status }).eq('id', childId);
+  if(error) { showToast('Error: '+error.message); return; }
+  const child = allChildren.find(c=>c.id===childId);
+  if(child) child.intro_call_status = status;
+  const idxc = currentChildren.findIndex(c=>c.id===childId);
+  if(idxc>=0) currentChildren[idxc].intro_call_status = status;
+
+  if(status !== 'Available') {
+    // Send a targeted email for this child only
+    const familyEmail = currentFamily.father_email || currentFamily.mother_email;
+    if(familyEmail) {
+      await sendEmail('child_unavailable_archived', familyEmail, currentFamily.father_name||'Parent', {
+        urn: currentFamily.urn,
+        child_name: child?.full_name || 'your child',
+        reason: status
+      });
+    }
+    await addActivityLog(familyId, childId, 'note', `${child?.full_name||'Child'} marked "${status}" — excluded from introductory call, family notified.`, 'archived');
+    showToast('✅ '+(child?.full_name||'Child')+' archived from introductory call'+(familyEmail?' — email sent':''));
+  } else {
+    await addActivityLog(familyId, childId, 'note', `${child?.full_name||'Child'} marked available for introductory call again.`, '');
+    showToast('✅ '+(child?.full_name||'Child')+' available again');
+  }
+
+  renderChildren(currentChildren, currentFamily);
+  renderAssessment(currentFamily, currentChildren);
+  renderActivityLog(familyId);
 }
 
 async function loadChildPhoto(childId, path) {
@@ -911,28 +999,43 @@ async function viewDoc(path) {
 }
 
 // ── ASSESSMENT ──
+let assessSelectedChildId = '';
+
 function renderAssessment(f, children) {
   const iar = f.income_after_rent||0;
   const hasKids = children.length>0;
   const notFullTime = children.some(c=>c.school_status&&c.school_status!=='Enrolled full-time');
+  const childAssessments = f.child_assessments || {};
+  const availableChildren = children.filter(c => !c.intro_call_status || c.intro_call_status==='Available');
+  if(!assessSelectedChildId || !availableChildren.some(c=>c.id===assessSelectedChildId)) {
+    assessSelectedChildId = availableChildren[0]?.id || '';
+  }
+  const cur = childAssessments[assessSelectedChildId] || {};
+
   document.getElementById('tp-assess').innerHTML = `
-    <div class="note">✏️ Complete this section during or after the pre-assessment video call.</div>
+    <div class="note">✏️ Complete this section during or after the introductory call.</div>
 
     <div class="criteria-list">
       <div class="crit"><div class="cdot ${hasKids?'pass':'fail'}">${hasKids?'✓':'✗'}</div>Child registered in Qatar</div>
-      <div class="crit"><div class="cdot ${iar<=5000&&iar>=0?'pass':'fail'}">${iar<=5000&&iar>=0?'✓':'✗'}</div>Income after rent: QAR ${iar.toLocaleString()} (limit QAR 5,000)</div>
+      <div class="crit"><div class="cdot ${iar<=5000?'pass':'fail'}">${iar<=5000?'✓':'✗'}</div>Income after rent: QAR ${iar.toLocaleString()} (limit QAR 5,000${iar<0?' — negative is still eligible':''})</div>
       <div class="crit"><div class="cdot ${notFullTime?'pass':'warn'}">${notFullTime?'✓':'!'}</div>Child not in full-time school</div>
-      <div class="crit"><div class="cdot ${f.assessor?'pass':'fail'}">${f.assessor?'✓':'✗'}</div>${f.assessor?'Pre-assessment completed by '+f.assessor:'Not yet assessed'}</div>
+      <div class="crit"><div class="cdot ${f.assessor?'pass':'fail'}">${f.assessor?'✓':'✗'}</div>${f.assessor?'Introductory call completed by '+f.assessor:'Not yet assessed'}</div>
     </div>
+
+    ${children.some(c=>c.intro_call_status && c.intro_call_status!=='Available') ? `
+    <div class="warn" style="margin-bottom:10px;">
+      ${children.filter(c=>c.intro_call_status && c.intro_call_status!=='Available').map(c=>`🚫 ${c.full_name||'Child'}: ${c.intro_call_status} — excluded from introductory call`).join('<br>')}
+    </div>` : ''}
 
     <div class="af">
 
       <div>
         <label>Which child is being assessed?</label>
-        <select id="a-child-id">
+        <select id="a-child-id" onchange="onAssessChildSelect(this.value)">
           <option value="">Select child…</option>
-          ${children.map(c=>`<option value="${c.id}">${c.full_name||'Child'} — ${suggestYG(c).yg}</option>`).join('')}
+          ${availableChildren.map(c=>`<option value="${c.id}" ${c.id===assessSelectedChildId?'selected':''}>${c.full_name||'Child'} — ${suggestYG(c).yg}${childAssessments[c.id]?' ✅ saved':''}</option>`).join('')}
         </select>
+        ${!availableChildren.length ? '<div style="font-size:12px;color:var(--muted);margin-top:6px;">No children currently available for an introductory call.</div>' : ''}
       </div>
 
       <div>
@@ -943,76 +1046,169 @@ function renderAssessment(f, children) {
         <label>Date &amp; Time of Call</label>
         <input id="a-zoom-dt" type="datetime-local" value="${f.zoom_datetime||''}">
       </div>
-      <button class="btn-teal btn-sm" onclick="saveAndSendCallDetails()" style="width:100%;margin-bottom:4px;">📧 Save Link &amp; Email Family</button>
+      <div style="display:flex;gap:6px;margin-bottom:4px;">
+        <button class="btn-teal btn-sm" onclick="saveAndSendCallDetails()" style="flex:1;">📧 Save Link &amp; Email Family</button>
+        <button class="btn-teal btn-sm" onclick="copyCallDetails()" style="flex:0 0 auto;padding:8px 12px;" title="Copy invite details">📋 Copy</button>
+      </div>
 
+      <fieldset id="a-child-fields" style="border:none;padding:0;margin:0;" ${!assessSelectedChildId?'disabled':''}>
       <div>
         <label>Method</label>
         <select id="a-method">
           <option value="">Select…</option>
-          <option ${f.assess_method==='Video Call'?'selected':''}>Video Call</option>
-          <option ${f.assess_method==='Phone Call'?'selected':''}>Phone Call</option>
-          <option ${f.assess_method==='In-person'?'selected':''}>In-person</option>
+          <option ${cur.assess_method==='Video Call'?'selected':''}>Video Call</option>
+          <option ${cur.assess_method==='In-person'?'selected':''}>In-person</option>
         </select>
       </div>
 
       <div>
         <label>Date of Assessment</label>
-        <input type="date" id="a-date" value="${f.assess_date||''}">
+        <input type="date" id="a-date" value="${cur.assess_date||''}">
       </div>
 
       <div>
         <label>English Level Confirmed</label>
-        <select id="a-english">
+        <select id="a-english" onchange="onAssessEnglishChange(this.value)">
           <option value="">Select…</option>
-          <option ${f.english_confirmed==='Fluent'?'selected':''}>Fluent</option>
-          <option ${f.english_confirmed==='Good'?'selected':''}>Good</option>
-          <option ${f.english_confirmed==='Basic'?'selected':''}>Basic</option>
-          <option ${f.english_confirmed==='None'?'selected':''}>None</option>
+          <option ${cur.english_confirmed==='Fluent'?'selected':''}>Fluent</option>
+          <option ${cur.english_confirmed==='Good'?'selected':''}>Good</option>
+          <option ${cur.english_confirmed==='Basic'?'selected':''}>Basic</option>
+          <option ${cur.english_confirmed==='None'?'selected':''}>None</option>
         </select>
       </div>
 
+      <div id="a-pref-lang-block" style="display:${cur.english_confirmed==='None'?'block':'none'};">
+        <label>Preferred Language <span class="req-star">*</span></label>
+        <input id="a-pref-lang" placeholder="e.g. Swahili, Amharic, Tigrinya…" value="${cur.preferred_language||''}" onchange="onAssessPrefLangChange()">
+        <div style="font-size:11px;color:var(--muted);margin-top:3px;">Since the child has no English, the introductory call ends here — we'll follow up in their preferred language.</div>
+      </div>
+
+      <fieldset id="a-rest-fields" style="border:none;padding:0;margin:0;${cur.english_confirmed==='None'&&cur.preferred_language?'opacity:0.4;pointer-events:none;':''}" ${cur.english_confirmed==='None'&&cur.preferred_language?'disabled':''}>
       <div>
         <label>Learning Difficulties</label>
         <select id="a-ld">
           <option value="">Select…</option>
-          <option ${f.learning_difficulties==='No'?'selected':''}>No</option>
-          <option ${f.learning_difficulties==='Yes – manageable'?'selected':''}>Yes – manageable</option>
-          <option ${f.learning_difficulties==='Yes – severe'?'selected':''}>Yes – severe</option>
+          <option ${cur.learning_difficulties==='No'?'selected':''}>No</option>
+          <option ${cur.learning_difficulties==='Yes – manageable'?'selected':''}>Yes – manageable</option>
+          <option ${cur.learning_difficulties==='Yes – severe'?'selected':''}>Yes – severe</option>
         </select>
       </div>
 
       <div>
         <label>Who will support the child's learning at home?</label>
-        <input id="a-support-person" placeholder="e.g. Mother, older sister Fatima…" value="${f.support_person||''}">
+        <input id="a-support-person" placeholder="e.g. Mother, older sister Fatima…" value="${cur.support_person||''}">
       </div>
 
       <div>
         <label>Support person's English level</label>
         <select id="a-support-english">
           <option value="">Select…</option>
-          <option ${f.support_person_english==='Fluent'?'selected':''}>Fluent</option>
-          <option ${f.support_person_english==='Good'?'selected':''}>Good</option>
-          <option ${f.support_person_english==='Basic'?'selected':''}>Basic</option>
-          <option ${f.support_person_english==='None'?'selected':''}>None</option>
+          <option ${cur.support_person_english==='Fluent'?'selected':''}>Fluent</option>
+          <option ${cur.support_person_english==='Good'?'selected':''}>Good</option>
+          <option ${cur.support_person_english==='Basic'?'selected':''}>Basic</option>
+          <option ${cur.support_person_english==='None'?'selected':''}>None</option>
         </select>
       </div>
 
       <div>
         <label>Assessment Notes</label>
-        <textarea id="a-notes" placeholder="Observations about the child's level, home environment, family commitment…">${f.assess_notes||''}</textarea>
+        <textarea id="a-notes" placeholder="Observations about the child's level, home environment, family commitment…">${cur.assess_notes||''}</textarea>
       </div>
+      </fieldset>
 
-      <button class="btn-teal" onclick="saveAssessment()" style="width:100%;">💾 Save Pre-Assessment</button>
+      <button class="btn-teal" onclick="saveAssessment()" style="width:100%;">💾 Save Introductory Call<span id="a-saved-badge" style="margin-left:6px;${cur.saved_at?'':'display:none;'}">✅</span></button>
+      </fieldset>
     </div>
 
     <div style="margin-top:16px;padding-top:14px;border-top:2px solid var(--border);">
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Application Decision</div>
       <div class="decision-btns">
-        <button class="btn-accept" onclick="setPipelineStatus('year_group_confirmed')">✅ Accept</button>
-        <button class="btn-reject" onclick="setStatus('rejected')">❌ Reject</button>
-        <button class="btn-archive" onclick="setStatus('archived')">🗄 Archive</button>
+        <button class="btn-accept" onclick="decideApplication('accepted')">✅ Accept</button>
+        <button class="btn-reject" onclick="decideApplication('rejected')">❌ Reject</button>
+        <button class="btn-archive" onclick="decideApplication('archived')">🗄 Archive</button>
       </div>
     </div>`;
+}
+
+function readAssessFieldsFromForm() {
+  return {
+    assess_method: document.getElementById('a-method')?.value || '',
+    assess_date: document.getElementById('a-date')?.value || '',
+    english_confirmed: document.getElementById('a-english')?.value || '',
+    preferred_language: document.getElementById('a-pref-lang')?.value.trim() || '',
+    learning_difficulties: document.getElementById('a-ld')?.value || '',
+    support_person: document.getElementById('a-support-person')?.value.trim() || '',
+    support_person_english: document.getElementById('a-support-english')?.value || '',
+    assess_notes: document.getElementById('a-notes')?.value.trim() || '',
+  };
+}
+
+function onAssessEnglishChange(val) {
+  const block = document.getElementById('a-pref-lang-block');
+  block.style.display = val==='None' ? 'block' : 'none';
+  if(val !== 'None') {
+    const rest = document.getElementById('a-rest-fields');
+    rest.style.opacity = '1';
+    rest.style.pointerEvents = 'auto';
+    rest.disabled = false;
+  }
+}
+
+async function onAssessPrefLangChange() {
+  const val = document.getElementById('a-pref-lang').value.trim();
+  const rest = document.getElementById('a-rest-fields');
+  if(val) {
+    rest.style.opacity = '0.4';
+    rest.style.pointerEvents = 'none';
+    rest.disabled = true;
+    showToast('English level is None — introductory call ends here for this child');
+    // Auto-save and finish this child's assessment
+    await saveAssessment();
+  } else {
+    rest.style.opacity = '1';
+    rest.style.pointerEvents = 'auto';
+    rest.disabled = false;
+  }
+}
+
+async function onAssessChildSelect(newChildId) {
+  // Auto-save the child we're navigating away from, so nothing is lost
+  if(assessSelectedChildId) {
+    const draft = readAssessFieldsFromForm();
+    const hasContent = Object.values(draft).some(v=>v);
+    if(hasContent) {
+      await persistChildAssessment(assessSelectedChildId, draft, false);
+      showToast('✅ Saved draft for previous child');
+    }
+  }
+  assessSelectedChildId = newChildId;
+  renderAssessment(currentFamily, currentChildren);
+}
+
+async function persistChildAssessment(childId, fields, markSaved) {
+  if(!childId) return;
+  const {data:{user}} = await db.auth.getUser();
+  const admin = allAdmins.find(a=>a.email===user?.email);
+  const assessorName = admin?.name||user?.email||'Unknown';
+  const childAssessments = { ...(currentFamily.child_assessments||{}) };
+  childAssessments[childId] = { ...childAssessments[childId], ...fields, assessor: assessorName, saved_at: markSaved ? new Date().toISOString() : (childAssessments[childId]?.saved_at||null) };
+  const updates = { child_assessments: childAssessments, assessor: assessorName };
+  const {error} = await db.from('ll_families').update(updates).eq('id',currentFamily.id);
+  if(error) { showToast('Error: '+error.message); return; }
+  Object.assign(currentFamily, updates);
+  const idx = allFamilies.findIndex(f=>f.id===currentFamily.id);
+  if(idx>=0) Object.assign(allFamilies[idx], updates);
+}
+
+async function saveAssessment() {
+  if(!assessSelectedChildId) { showToast('Please select a child first'); return; }
+  const fields = readAssessFieldsFromForm();
+  await persistChildAssessment(assessSelectedChildId, fields, true);
+  await addActivityLog(currentFamily.id, assessSelectedChildId, 'call_completed', fields.assess_notes, 'completed');
+  await setPipelineStatus('pre_assessed', false);
+  renderActivityLog(currentFamily.id);
+  renderAssessment(currentFamily, currentChildren);
+  showToast('✅ Introductory call saved for this child');
 }
 
 // ── EMAIL ──
@@ -1080,8 +1276,8 @@ function renderActivityLog(familyId) {
         <option value="call_completed">✅ Call Completed</option>
         <option value="no_show">❌ No Show</option>
         <option value="rescheduled">🔄 Rescheduled</option>
-        <option value="pre_assessment_passed">🎓 Pre-Assessment Passed</option>
-        <option value="pre_assessment_failed">❌ Pre-Assessment Failed</option>
+        <option value="pre_assessment_passed">🎓 Introductory Call Passed</option>
+        <option value="pre_assessment_failed">❌ Introductory Call Failed</option>
         <option value="documents_received">📄 Documents Received</option>
         <option value="resources_sent">📦 Resources Sent</option>
         <option value="note">📝 General Note</option>
@@ -1097,7 +1293,7 @@ function renderActivityLog(familyId) {
       const actionLabels = {
         call_scheduled:'📅 Call Scheduled',call_completed:'✅ Call Completed',
         no_show:'❌ No Show',rescheduled:'🔄 Rescheduled',
-        pre_assessment_passed:'🎓 Pre-Assessment Passed',pre_assessment_failed:'❌ Pre-Assessment Failed',
+        pre_assessment_passed:'🎓 Introductory Call Passed',pre_assessment_failed:'❌ Introductory Call Failed',
         documents_received:'📄 Documents Received',resources_sent:'📦 Resources Sent',note:'📝 Note'
       };
       const isNoShow = l.outcome==='no_show'||l.action==='no_show';
@@ -1133,30 +1329,17 @@ async function submitLog(familyId) {
   showToast('✅ Activity logged');
 }
 
-async function saveAssessment() {
-  const {data:{user}} = await db.auth.getUser();
-  const admin = allAdmins.find(a=>a.email===user?.email);
-  const assessorName = admin?.name||user?.email||'Unknown';
-  const updates = {
-    assess_method:document.getElementById('a-method').value,
-    assess_date:document.getElementById('a-date').value,
-    assessor:assessorName,
-    english_confirmed:document.getElementById('a-english').value,
-    learning_difficulties:document.getElementById('a-ld').value,
-    support_person:document.getElementById('a-support-person').value.trim(),
-    support_person_english:document.getElementById('a-support-english').value,
-    assess_notes:document.getElementById('a-notes').value.trim(),
-  };
-  const {error} = await db.from('ll_families').update(updates).eq('id',currentFamily.id);
-  if(error) { showToast('Error: '+error.message); return; }
-  Object.assign(currentFamily,updates);
-  const idx = allFamilies.findIndex(f=>f.id===currentFamily.id);
-  if(idx>=0) Object.assign(allFamilies[idx],updates);
-  // Log the assessment
-  await addActivityLog(currentFamily.id, null, 'call_completed', updates.assess_notes, 'completed');
-  await setPipelineStatus('pre_assessed', false);
-  renderActivityLog(currentFamily.id);
-  showToast('✅ Assessment saved');
+async function copyCallDetails() {
+  const zoom = document.getElementById('a-zoom').value.trim();
+  const dt = document.getElementById('a-zoom-dt').value;
+  const dtFormatted = dt ? new Date(dt).toLocaleString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'To be confirmed';
+  const text = `Introductory Call Details\nFamily: ${currentFamily?.father_name||''} (${currentFamily?.urn||''})\nDate/Time: ${dtFormatted}\nLink: ${zoom||'—'}`;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('✅ Copied invite details');
+  } catch(e) {
+    showToast('⚠️ Could not copy — please copy manually');
+  }
 }
 
 async function saveAndSendCallDetails() {
@@ -1204,11 +1387,30 @@ async function setStatus(status) {
   showToast('✅ Status: '+status);
 }
 
+async function decideApplication(decision) {
+  const family = currentFamily;
+  if(!family) return;
+  if(decision==='accepted') {
+    await setPipelineStatus('year_group_confirmed', false);
+  } else {
+    await setStatus(decision);
+  }
+  const emailTypeMap = { accepted:'application_accepted', rejected:'application_rejected', archived:'application_archived' };
+  const familyEmail = family.father_email || family.mother_email;
+  if(familyEmail) {
+    await sendEmail(emailTypeMap[decision], familyEmail, family.father_name||'Parent', { urn: family.urn });
+  }
+  await addActivityLog(family.id, null, 'note', 'Application '+decision+' — family notified by email.', '');
+  showToast('✅ Application '+decision+(familyEmail?' — email sent':' — no email on file'));
+  closeModal();
+  renderDash(); renderPipelineTabs(); renderFams();
+}
+
 // ── CHECKLIST ──
 const CHECKLIST_ITEMS = [
   'Pre-call message sent to family',
   'Zoom / video call scheduled',
-  'Pre-assessment call completed',
+  'Introductory call completed',
   'QIDs requested from family',
   'QID documents received',
   'Year group suggested',

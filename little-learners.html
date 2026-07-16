@@ -173,6 +173,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
           <div class="fl" onclick="flSel(this,'f_eng')">Good</div>
           <div class="fl" onclick="flSel(this,'f_eng')">Fluent</div>
         </div>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.4;">None = no English · Basic = able to have a simple conversation · Good = confident in most situations · Fluent = fully fluent</div>
       </div>
       <div class="fg"><label>Arabic Fluency</label>
         <div class="fluency-row" id="f_ara">
@@ -228,6 +229,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
           <div class="fl" onclick="flSel(this,'m_eng')">Good</div>
           <div class="fl" onclick="flSel(this,'m_eng')">Fluent</div>
         </div>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.4;">None = no English · Basic = able to have a simple conversation · Good = confident in most situations · Fluent = fully fluent</div>
       </div>
       <div class="fg"><label>Arabic Fluency</label>
         <div class="fluency-row" id="m_ara">
@@ -272,10 +274,21 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
   <div id="children-container"></div>
   <button class="add-child" onclick="addChild()">➕ Add another child</button>
 </div>
+<div id="ineligible-banner" class="err-msg" style="display:none;"></div>
 <div id="err2" class="err-msg"></div>
-<div class="btn-row">
+<div class="btn-row" id="s2-btn-row">
   <button class="btn-outline" onclick="goStep(1)">← Back</button>
-  <button class="btn-gold" style="flex:2;" onclick="goStep(3)">Next: Household →</button>
+  <button class="btn-gold" style="flex:2;" id="s2-next-btn" onclick="goStep(3)">Next: Household →</button>
+</div>
+</div>
+
+<!-- NOT ELIGIBLE -->
+<div class="pg" id="s-ineligible">
+<div class="success-pg">
+  <div class="sicon">🙁</div>
+  <h2>We're unable to proceed</h2>
+  <p>Based on the ages entered, none of the children on this application currently meet our eligibility criteria (age 3–13).<br><br>If you believe this is incorrect, please double-check the dates of birth entered, or contact us directly for guidance.</p>
+  <button class="btn-outline" style="margin-top:16px;max-width:220px;margin-left:auto;margin-right:auto;" onclick="goStep(2)">← Back to Children</button>
 </div>
 </div>
 
@@ -354,8 +367,9 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
   <h2>Application Submitted!</h2>
   <p>Thank you for applying to Little Learners.<br>Your reference number is:</p>
   <div class="urn-box" id="success-urn">LL---</div>
-  <p>A case handler will contact you within a few days to arrange a short video call.</p>
-  <div class="note" style="margin-top:18px;text-align:left;">📚 While you wait — your case handler will send you our free resource library link.</div>
+  <p>A case handler will contact you within a few days to arrange a short introductory call.</p>
+  <div class="warn" style="margin-top:18px;text-align:left;">📧 Please check your email (including spam/junk folder) for your application invitation and confirmation.</div>
+  <div class="note" style="margin-top:12px;text-align:left;">📚 While you wait — your case handler will send you our free resource library link.</div>
 </div>
 </div>
 
@@ -562,11 +576,11 @@ function addChild() {
         <div class="review-title">✏️ Review &amp; complete</div>
         <div class="fg"><label>Full Name *</label><input class="cname" placeholder="As on ID" required></div>
         <div class="fg-row">
-          <div class="fg"><label>Date of Birth</label><input class="cdob" type="date" required></div>
+          <div class="fg"><label>Date of Birth</label><input class="cdob" type="date" required onchange="onChildDobChange(this)"></div>
           <div class="fg"><label>Gender</label><select class="cgender" required><option value="">Select…</option><option>Girl</option><option>Boy</option></select></div>
         </div>
         <div class="fg-row">
-          <div class="fg"><label>QID / Passport No.</label><input class="cqid" placeholder="e.g. C053961"></div>
+          <div class="fg"><label>QID / Passport / Birth Certificate No. <span class="cqid-req" style="display:none;color:var(--coral);">*</span></label><input class="cqid" placeholder="e.g. C053961"><div style="font-size:11px;color:var(--muted);margin-top:2px;">Under 4? A birth certificate number is fine. Age 4+, a QID is required.</div></div>
           <div class="fg"><label>Nationality</label><input class="cnat" placeholder="e.g. Kenyan"></div>
         </div>
         <div class="fg"><label>Language(s) spoken at home</label><input class="clang" placeholder="e.g. Swahili, English"></div>
@@ -577,6 +591,7 @@ function addChild() {
             <div class="fl" onclick="flSel(this,'cef${idx}')">Good</div>
             <div class="fl" onclick="flSel(this,'cef${idx}')">Fluent</div>
           </div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.4;">None = no English · Basic = able to have a simple conversation · Good = confident in most situations · Fluent = fully fluent</div>
         </div>
         <div class="fg"><label>Arabic Fluency</label>
           <div class="fluency-row" id="caf${idx}">
@@ -589,13 +604,13 @@ function addChild() {
         <div class="fg"><label>Current School Status</label>
           <select class="cschool" required><option value="">Select…</option><option>Never attended school</option><option>Previously attended — left</option><option>On waiting list</option><option>Online school only</option><option>Part-time (≤2.5 days/week)</option><option>Enrolled full-time</option></select>
         </div>
-        <div class="fg"><label>If previously attended — how many years ago did they leave?</label>
-          <select class="cyears"><option value="">Select…</option><option>Never attended</option><option>Less than 1 year ago</option><option>1–2 years ago</option><option>2–3 years ago</option><option>3–4 years ago</option><option>4+ years ago</option></select>
+        <div class="fg"><label>If previously attended — when did they leave? (Month &amp; Year)</label>
+          <input type="month" class="cyears" placeholder="e.g. 2023-06">
         </div>
         <div class="fg"><label>Any known special needs?</label>
           <select class="csn" onchange="toggleSND(this,${idx})"><option value="">Select…</option><option>No</option><option>Yes — please describe below</option></select>
         </div>
-        <div class="fg" id="snd-${idx}" style="display:none;"><label>Special needs details</label>
+        <div class="fg" id="snd-${idx}" style="display:none;"><label>Special needs details <span class="req-star">*</span></label>
           <textarea class="csnd" placeholder="e.g. Dyslexia suspected, speech delay, ADHD…"></textarea>
         </div>
       </div>
@@ -618,6 +633,43 @@ function addChild() {
 function removeChild(idx) { document.getElementById('cb-'+idx)?.remove(); }
 function toggleSND(sel, idx) {
   document.getElementById('snd-'+idx).style.display = sel.value.startsWith('Yes') ? 'block' : 'none';
+}
+
+// ── AGE HELPERS ──
+function ageInYears(dobStr) {
+  if(!dobStr) return null;
+  const today = new Date();
+  const dob = new Date(dobStr);
+  let years = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if(m<0 || (m===0 && today.getDate()<dob.getDate())) years--;
+  return years;
+}
+function isEligibleAge(dobStr) {
+  const y = ageInYears(dobStr);
+  return y!==null && y>=3 && y<=13;
+}
+function onChildDobChange(el) {
+  const block = el.closest('.child-block');
+  const age = ageInYears(el.value);
+  const reqStar = block.querySelector('.cqid-req');
+  if(reqStar) reqStar.style.display = (age!==null && age>=4) ? 'inline' : 'none';
+  checkEligibilityBanner();
+}
+function checkEligibilityBanner() {
+  const blocks = [...document.querySelectorAll('.child-block')];
+  const dobs = blocks.map(b=>b.querySelector('.cdob').value).filter(Boolean);
+  const banner = document.getElementById('ineligible-banner');
+  if(!banner) return true;
+  if(!dobs.length) { banner.style.display='none'; return true; }
+  const anyEligible = dobs.some(isEligibleAge);
+  if(!anyEligible) {
+    banner.style.display='block';
+    banner.textContent = '⚠️ None of the children entered fall within our eligible age range (3–13). You will not be able to continue this application.';
+  } else {
+    banner.style.display='none';
+  }
+  return anyEligible;
 }
 
 // ── FLUENCY ──
@@ -705,8 +757,19 @@ function goStep(n) {
       if(!b.querySelector('.cgender').value) missing = missing||'Child '+(i+1)+' gender';
       if(!b.querySelector('.cdob').value) missing = missing||'Child '+(i+1)+' date of birth';
       if(!b.querySelector('.cschool').value) missing = missing||'Child '+(i+1)+' school status';
+      const dobVal = b.querySelector('.cdob').value;
+      const ageYrs = dobVal ? ageInYears(dobVal) : null;
+      if(ageYrs!==null && ageYrs>=4 && !b.querySelector('.cqid').value.trim()) missing = missing||'Child '+(i+1)+' QID number (required from age 4)';
+      const snVal = b.querySelector('.csn').value;
+      if(snVal.startsWith('Yes') && !b.querySelector('.csnd').value.trim()) missing = missing||'Child '+(i+1)+' special needs details';
     });
     if(missing) { showErr('err2','⚠️ Please fill in: '+missing); return; }
+    if(!checkEligibilityBanner()) {
+      document.querySelectorAll('.pg').forEach(p => p.classList.remove('active'));
+      document.getElementById('s-ineligible').classList.add('active');
+      window.scrollTo(0,0);
+      return;
+    }
   }
   if(n===4) {
     if(!document.getElementById('zone').value.trim()) { showErr('err3','⚠️ Please enter your zone number.'); return; }
