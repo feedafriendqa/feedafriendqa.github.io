@@ -34,57 +34,80 @@ html{overflow-x:hidden;}
 .login-err{background:#FDEAEA;border-radius:var(--rs);padding:9px 12px;font-size:13px;font-weight:600;color:#8B2020;margin-top:10px;display:none;border-left:3px solid var(--coral);}
 
 /* HEADER */
-header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:58px;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 14px rgba(10,61,31,.25);width:100%;}
+header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16px;display:flex;align-items:center;height:56px;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 14px rgba(10,61,31,.25);width:100%;}
 .logo{display:flex;align-items:center;gap:9px;}
-.logo img{height:36px;width:auto;}
+.logo img{height:32px;width:auto;}
 .logo-text{font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:white;white-space:nowrap;}
-.hdr-right{display:flex;align-items:center;gap:6px;min-width:0;flex:1;justify-content:flex-end;}
-.user-badge{background:rgba(255,255,255,.15);color:white;border-radius:50px;padding:5px 10px;font-size:11px;font-weight:700;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.nav{display:flex;gap:4px;overflow-x:auto;min-width:0;}
-.nb{padding:6px 11px;border-radius:50px;border:none;cursor:pointer;font-family:'Quicksand',sans-serif;font-weight:700;font-size:11px;white-space:nowrap;transition:all .2s;}
-.nb.on{background:var(--teal);color:white;}
-.nb.off{background:rgba(255,255,255,.13);color:rgba(255,255,255,.85);}
-.logout{background:rgba(255,255,255,.13);color:rgba(255,255,255,.7);border:none;border-radius:50px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Quicksand',sans-serif;}
-.logout:hover{background:var(--coral);color:white;}
+
+/* BOTTOM TAB BAR */
+.bottombar{position:fixed;left:0;right:0;bottom:0;background:white;border-top:2px solid var(--border);display:flex;padding:6px 4px calc(8px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 16px rgba(10,61,31,.08);z-index:100;}
+.bb-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 2px;border-radius:12px;color:var(--muted);cursor:pointer;background:none;border:none;font-family:'Quicksand',sans-serif;transition:all .15s;}
+.bb-item.on{color:var(--teal-mid);background:var(--teal-soft);}
+.bb-item .bb-ic{font-size:19px;}
+.bb-item .bb-tx{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.2px;margin-top:1px;}
+.profile-pop{position:fixed;left:14px;right:14px;bottom:70px;background:white;border-radius:16px;box-shadow:0 10px 34px rgba(10,61,31,.22);padding:14px;z-index:101;display:none;}
+.profile-pop.open{display:block;}
+.profile-pop-name{font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:var(--forest);margin-bottom:2px;}
+.profile-pop-email{font-size:11.5px;color:var(--muted);margin-bottom:12px;}
+.profile-pop button{width:100%;background:var(--coral);color:white;border:none;border-radius:50px;padding:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:'Quicksand',sans-serif;}
+.profile-overlay{position:fixed;inset:0;background:rgba(10,61,31,.25);z-index:99;display:none;}
+.profile-overlay.open{display:block;}
 
 /* PAGES */
-.pg{display:none;padding:16px;max-width:100%;margin:0;}.pg.active{display:block;}
+.pg{display:none;padding:16px;padding-bottom:86px;max-width:100%;margin:0;}.pg.active{display:block;}
 
-/* STATS */
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px;width:100%;}
-.greet-banner{background:linear-gradient(135deg,var(--forest),#1f4d3d);border-radius:16px;padding:18px 20px;margin-bottom:18px;color:white;}
-.greet-hello{font-family:'Nunito',sans-serif;font-weight:900;font-size:19px;margin-bottom:8px;}
-.greet-quote{font-size:13px;line-height:1.55;font-style:italic;color:rgba(255,255,255,.92);border-left:3px solid var(--gold);padding-left:10px;}
-.greet-quote-src{display:block;margin-top:6px;font-size:11px;font-style:normal;font-weight:700;color:var(--gold);}
-.stat{background:white;border-radius:var(--r);padding:22px 20px;box-shadow:var(--shadow);border-top:5px solid var(--teal);display:flex;flex-direction:column;justify-content:space-between;width:100%;}
-.stat.lime{border-top-color:var(--lime);}
-.stat.coral{border-top-color:var(--coral);}
-.stat.gold{border-top-color:var(--gold);}
-.stat.sky{border-top-color:var(--sky);}
-.stat.forest{border-top-color:var(--forest);}
-.stat-num{font-family:'Nunito',sans-serif;font-size:48px;font-weight:900;color:var(--forest);line-height:1;}
-.stat-lbl{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:6px;}
+/* HERO + STATS (Growth Path) */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px;width:100%;}
+.greet-banner{position:relative;background:linear-gradient(135deg,var(--forest) 0%,var(--forest-mid) 55%,#1a6b40 100%);border-radius:20px;padding:22px 20px 28px;margin-bottom:20px;color:white;overflow:hidden;}
+.greet-banner::before{content:'';position:absolute;right:-30px;top:-30px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(245,166,35,.18),transparent 70%);}
+.greet-banner::after{content:'🌿';position:absolute;right:6px;bottom:-10px;font-size:76px;opacity:.13;transform:rotate(-12deg);}
+.greet-hello{font-family:'Nunito',sans-serif;font-weight:900;font-size:19px;margin-bottom:10px;position:relative;}
+.greet-quote{font-size:13px;line-height:1.6;font-style:italic;color:rgba(255,255,255,.92);border-left:3px solid var(--gold);padding-left:10px;position:relative;}
+.greet-quote-src{display:block;margin-top:6px;font-size:11px;font-style:normal;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.3px;}
+.stat{background:white;border-radius:18px 18px 18px 4px;padding:16px 15px;box-shadow:0 6px 16px rgba(10,61,31,.09);display:flex;flex-direction:column;justify-content:flex-start;width:100%;position:relative;overflow:hidden;}
+.stat::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--teal);}
+.stat.lime::before{background:var(--lime);}
+.stat.coral::before{background:var(--coral);}
+.stat.gold::before{background:var(--gold);}
+.stat.sky::before{background:var(--sky);}
+.stat.forest::before{background:var(--forest);}
+.stat-ic{font-size:16px;margin-bottom:6px;display:block;}
+.stat-num{font-family:'Nunito',sans-serif;font-size:30px;font-weight:900;color:var(--forest);line-height:1;}
+.stat-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:5px;}
+
+/* SECTION HEADERS + GROWTH PATH */
+.gp-sect{display:flex;align-items:center;gap:9px;margin:22px 0 4px;}
+.gp-badge{width:32px;height:32px;border-radius:50%;background:var(--lime-soft);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.gp-path{position:relative;padding-left:22px;margin-top:12px;}
+.gp-path::before{content:'';position:absolute;left:6px;top:2px;bottom:2px;width:2px;background:repeating-linear-gradient(to bottom,var(--border) 0,var(--border) 4px,transparent 4px,transparent 8px);}
+.gp-path .fam-card,.gp-path .empty{position:relative;}
+.gp-path .fam-card::after{content:'';position:absolute;left:-22px;top:18px;width:9px;height:9px;border-radius:50%;background:var(--lime);border:2px solid var(--cream);}
+.gp-path .empty::before{content:'';position:absolute;left:-22px;top:24px;width:9px;height:9px;border-radius:50%;background:var(--border);border:2px solid var(--cream);}
 
 /* PIPELINE TABS */
-.pipeline{display:flex;gap:0;overflow-x:auto;margin-bottom:16px;background:white;border-radius:var(--r);box-shadow:var(--shadow);padding:4px;width:100%;}
-.pipe-tab{padding:8px 14px;border:none;background:transparent;cursor:pointer;font-family:'Quicksand',sans-serif;font-weight:700;font-size:12px;color:var(--muted);border-radius:var(--rs);white-space:nowrap;transition:all .2s;display:flex;align-items:center;gap:5px;}
-.pipe-tab.on{background:var(--forest);color:white;}
+.pipeline{display:flex;gap:2px;overflow-x:auto;margin-bottom:16px;background:white;border-radius:18px;box-shadow:0 4px 14px rgba(10,61,31,.08);padding:5px;width:100%;}
+.pipe-tab{padding:8px 14px;border:none;background:transparent;cursor:pointer;font-family:'Quicksand',sans-serif;font-weight:700;font-size:12px;color:var(--muted);border-radius:14px;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:5px;}
+.pipe-tab.on{background:var(--teal);color:white;}
 .pipe-tab .cnt{background:rgba(255,255,255,.25);border-radius:50px;padding:1px 7px;font-size:10px;}
-.pipe-tab:not(.on) .cnt{background:var(--border);color:var(--muted);}
+.pipe-tab:not(.on) .cnt{background:var(--lime-soft);color:var(--forest);}
 
 /* FAMILY CARDS */
-.fam-card{background:white;border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .2s;border-left:5px solid var(--teal);margin-bottom:10px;width:100%;}
+.card{background:white;border-radius:18px 18px 18px 4px;padding:18px;box-shadow:0 6px 18px rgba(10,61,31,.09);margin-bottom:14px;}
+.card-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:14.5px;color:var(--forest);margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+.fam-card{background:white;border-radius:16px;padding:16px 18px 16px 20px;box-shadow:0 4px 14px rgba(10,61,31,.08);display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .15s;margin-bottom:10px;width:100%;position:relative;}
+.fam-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--teal);border-radius:16px 0 0 16px;}
 .btn-small{background:var(--teal);color:white;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .btn-small:hover{opacity:0.85;}
-.fam-card:hover{transform:translateX(3px);box-shadow:var(--shadow-lg);}
-.fam-card.new{border-left-color:var(--teal);}
-.fam-card.pre_assessment_scheduled{border-left-color:var(--sky);}
-.fam-card.pre_assessed{border-left-color:var(--gold);}
-.fam-card.year_group_pending{border-left-color:var(--lav);}
-.fam-card.year_group_confirmed{border-left-color:var(--lime);}
-.fam-card.pack_sent{border-left-color:var(--forest);}
-.fam-card.assessment_day{border-left-color:var(--coral);}
-.fam-card.completed{border-left-color:#888;}
+.fam-card:hover{box-shadow:0 6px 20px rgba(10,61,31,.14);}
+.fam-card:active{transform:scale(.985);}
+.fam-card.new::before{background:var(--teal);}
+.fam-card.pre_assessment_scheduled::before{background:var(--sky);}
+.fam-card.pre_assessed::before{background:var(--gold);}
+.fam-card.year_group_pending::before{background:var(--lav);}
+.fam-card.year_group_confirmed::before{background:var(--lime);}
+.fam-card.pack_sent::before{background:var(--forest);}
+.fam-card.assessment_day::before{background:var(--coral);}
+.fam-card.completed::before{background:#888;}
 .urn-badge{background:var(--forest);color:var(--teal);font-family:'Nunito',sans-serif;font-weight:900;font-size:12px;padding:6px 12px;border-radius:8px;white-space:nowrap;flex-shrink:0;}
 .fam-info{flex:1;min-width:0;}
 .fam-name{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -112,8 +135,9 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
 .overlay.open{display:flex;align-items:flex-start;justify-content:center;}
 .modal{background:white;border-radius:20px;width:100%;max-width:680px;box-shadow:var(--shadow-lg);animation:up .22s ease;margin:auto;}
 @keyframes up{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
-.modal-hdr{background:var(--forest);border-radius:20px 20px 0 0;padding:16px 18px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
-.modal-hdr-title{color:white;font-family:'Nunito',sans-serif;font-weight:900;font-size:16px;}
+.modal-hdr{position:relative;background:linear-gradient(135deg,var(--forest) 0%,var(--forest-mid) 60%,#1a6b40 100%);border-radius:20px 20px 0 0;padding:16px 18px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;overflow:hidden;}
+.modal-hdr::after{content:'🌿';position:absolute;right:-4px;bottom:-14px;font-size:64px;opacity:.12;transform:rotate(-12deg);pointer-events:none;}
+.modal-hdr-title{color:white;font-family:'Nunito',sans-serif;font-weight:900;font-size:16px;position:relative;}
 .modal-hdr-sub{color:rgba(255,255,255,.65);font-size:11.5px;margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 .close-btn{background:rgba(255,255,255,.15);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .close-btn:hover{background:var(--coral);}
@@ -236,12 +260,13 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
 .pill{background:var(--forest);color:white;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:50px;}
 
 /* TOAST */
-.toast{position:fixed;bottom:20px;right:16px;z-index:999;background:var(--forest);color:white;padding:12px 20px;border-radius:12px;font-weight:700;font-size:13px;box-shadow:var(--shadow-lg);transform:translateY(80px);opacity:0;transition:all .3s;border-left:4px solid var(--teal);}
+.toast{position:fixed;bottom:76px;right:16px;left:16px;z-index:999;background:var(--forest);color:white;padding:12px 20px;border-radius:12px;font-weight:700;font-size:13px;box-shadow:var(--shadow-lg);transform:translateY(80px);opacity:0;transition:all .3s;border-left:4px solid var(--teal);}
 .toast.show{transform:translateY(0);opacity:1;}
 .spinner{display:inline-block;width:15px;height:15px;border:2.5px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
-.empty{text-align:center;padding:40px 20px;color:var(--muted);}
-.empty .eicon{font-size:44px;margin-bottom:10px;}
+.empty{text-align:center;padding:34px 20px;color:var(--muted);}
+.empty .eicon{font-size:26px;margin-bottom:10px;width:52px;height:52px;border-radius:50%;background:var(--lime-soft);display:flex;align-items:center;justify-content:center;margin-left:auto;margin-right:auto;}
+.empty p{font-size:13px;font-weight:600;max-width:280px;margin:0 auto;line-height:1.5;}
 .loading{text-align:center;padding:30px;color:var(--muted);font-weight:600;}
 </style>
 </head>
@@ -267,44 +292,49 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
     <img src="data:image/png;base64,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" alt="Feed a Friend">
     <div class="logo-text">Little Learners</div>
   </div>
-  <div class="hdr-right">
-    <div class="nav">
-      <button class="nb on" onclick="showPg('dash',this)">Dashboard</button>
-      <button class="nb off" onclick="showPg('fams',this)">Families</button>
-      <button class="nb off" onclick="showPg('assess-days',this)">Assessment Days</button>
-    </div>
-    <span class="user-badge" id="user-badge"></span>
-    <button class="logout" onclick="doLogout()">Out</button>
-  </div>
 </header>
+
+<div class="profile-overlay" id="profile-overlay" onclick="toggleProfileMenu()"></div>
+<div class="profile-pop" id="profile-pop">
+  <div class="profile-pop-name" id="profile-pop-name">—</div>
+  <div class="profile-pop-email" id="profile-pop-email">—</div>
+  <button onclick="doLogout()">🚪 Log Out</button>
+</div>
+
+<div class="bottombar">
+  <button class="bb-item on" onclick="showPg('dash',this)"><div class="bb-ic">🏠</div><div class="bb-tx">Dashboard</div></button>
+  <button class="bb-item" onclick="showPg('fams',this)"><div class="bb-ic">👪</div><div class="bb-tx">Families</div></button>
+  <button class="bb-item" onclick="showPg('assess-days',this)"><div class="bb-ic">📅</div><div class="bb-tx">Assess. Days</div></button>
+  <button class="bb-item" onclick="toggleProfileMenu()"><div class="bb-ic">👤</div><div class="bb-tx" id="bb-profile-name">Profile</div></button>
+</div>
 
 <!-- DASHBOARD -->
 <div class="pg active" id="pg-dash">
   <div style="height:12px;"></div>
   <div id="greeting-banner"></div>
   <div class="stats" id="dash-stats">
-    <div class="stat"><div class="stat-num" id="s-total">—</div><div class="stat-lbl">Total Families</div></div>
-    <div class="stat teal"><div class="stat-num" id="s-children">—</div><div class="stat-lbl">Children</div></div>
-    <div class="stat lime"><div class="stat-num" id="s-new">—</div><div class="stat-lbl">New Applications</div></div>
-    <div class="stat gold"><div class="stat-num" id="s-pending-yg">—</div><div class="stat-lbl">Awaiting YG Approval</div></div>
-    <div class="stat coral"><div class="stat-num" id="s-unassigned">—</div><div class="stat-lbl">Unassigned</div></div>
-    <div class="stat forest"><div class="stat-num" id="s-dups">—</div><div class="stat-lbl">⚠️ Duplicates</div></div>
+    <div class="stat"><span class="stat-ic">👪</span><div class="stat-num" id="s-total">—</div><div class="stat-lbl">Total Families</div></div>
+    <div class="stat teal"><span class="stat-ic">🧒</span><div class="stat-num" id="s-children">—</div><div class="stat-lbl">Children</div></div>
+    <div class="stat lime"><span class="stat-ic">🌱</span><div class="stat-num" id="s-new">—</div><div class="stat-lbl">New Applications</div></div>
+    <div class="stat gold"><span class="stat-ic">📚</span><div class="stat-num" id="s-pending-yg">—</div><div class="stat-lbl">Awaiting YG Approval</div></div>
+    <div class="stat coral"><span class="stat-ic">❗</span><div class="stat-num" id="s-unassigned">—</div><div class="stat-lbl">Unassigned</div></div>
+    <div class="stat forest"><span class="stat-ic">⚠️</span><div class="stat-num" id="s-dups">—</div><div class="stat-lbl">Duplicates</div></div>
   </div>
 
-  <div class="sec-title">🎂 Turning 3 — New Cases Needed <span class="pill" id="turning3-pill">0</span></div>
-  <div style="font-size:12px;color:#6b7280;margin:-8px 0 10px;">Children under 3 at the time of application who have now reached (or will soon reach) eligible age. Open a case to move them into the pipeline.</div>
-  <div id="turning3-list"><div class="loading">Loading…</div></div>
+  <div class="gp-sect"><div class="gp-badge">🎂</div><div class="sec-title" style="margin-bottom:0;">Turning 3 — New Cases Needed <span class="pill" id="turning3-pill">0</span></div></div>
+  <div style="font-size:12px;color:#6b7280;margin:6px 0 0 41px;">Children under 3 at the time of application who have now reached (or will soon reach) eligible age. Open a case to move them into the pipeline.</div>
+  <div class="gp-path" id="turning3-list"><div class="loading">Loading…</div></div>
 
-  <div class="sec-title">📞 Quarterly Check-ins Due <span class="pill" id="checkins-pill">0</span></div>
-  <div style="font-size:12px;color:#6b7280;margin:-8px 0 10px;">Children with a learning pack who haven't had a check-in logged in 90+ days.</div>
-  <div id="checkins-list"><div class="loading">Loading…</div></div>
+  <div class="gp-sect"><div class="gp-badge">📞</div><div class="sec-title" style="margin-bottom:0;">Quarterly Check-ins Due <span class="pill" id="checkins-pill">0</span></div></div>
+  <div style="font-size:12px;color:#6b7280;margin:6px 0 0 41px;">Children with a learning pack who haven't had a check-in logged in 90+ days.</div>
+  <div class="gp-path" id="checkins-list"><div class="loading">Loading…</div></div>
 
-  <div class="sec-title">📋 Referrals from Feed a Friend <span class="pill" id="referrals-pill">0</span></div>
-  <div style="font-size:12px;color:#6b7280;margin:-8px 0 10px;">Children flagged as out of school during a food box application. These are a heads-up only — not a full registration, since we don't collect income/employment/QID details on that form. Reach out and run a full registration when the family's ready.</div>
-  <div id="referrals-list"><div class="loading">Loading…</div></div>
+  <div class="gp-sect"><div class="gp-badge">📋</div><div class="sec-title" style="margin-bottom:0;">Referrals from Feed a Friend <span class="pill" id="referrals-pill">0</span></div></div>
+  <div style="font-size:12px;color:#6b7280;margin:6px 0 0 41px;">Children flagged as out of school during a food box application. These are a heads-up only — not a full registration, since we don't collect income/employment/QID details on that form. Reach out and run a full registration when the family's ready.</div>
+  <div class="gp-path" id="referrals-list"><div class="loading">Loading…</div></div>
 
-  <div class="sec-title">Recent Applications <span class="pill" id="recent-pill">0</span></div>
-  <div id="recent-list"><div class="loading">Loading…</div></div>
+  <div class="gp-sect"><div class="gp-badge">👋</div><div class="sec-title" style="margin-bottom:0;">Recent Applications <span class="pill" id="recent-pill">0</span></div></div>
+  <div class="gp-path" id="recent-list"><div class="loading">Loading…</div></div>
 </div>
 
 <!-- FAMILIES -->
@@ -335,12 +365,13 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
 <!-- ASSESSMENT DAYS -->
 <div class="pg" id="pg-assess-days">
   <div style="height:12px;"></div>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-    <div class="sec-title" style="margin-bottom:0;">📅 Assessment Days</div>
-    <button class="btn-teal btn-sm" onclick="toggleNewDayForm()">+ New Assessment Day</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+    <div class="gp-sect" style="margin:0;"><div class="gp-badge">📅</div><div class="sec-title" style="margin-bottom:0;">Assessment Days</div></div>
+    <button class="btn-teal btn-sm" onclick="toggleNewDayForm()">+ New</button>
   </div>
 
-  <div id="new-day-form" class="card" style="display:none;margin-bottom:16px;">
+  <div id="new-day-form" class="card" style="display:none;margin:14px 0 16px;">
+    <div class="card-title">🌱 New Assessment Day</div>
     <div class="af">
       <div><label>Age Band</label>
         <select id="nd-band" onchange="onAgeBandChange()">
@@ -355,7 +386,7 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
     </div>
   </div>
 
-  <div id="assess-days-list"><div class="loading">Loading…</div></div>
+  <div class="gp-path" id="assess-days-list" style="margin-top:16px;"><div class="loading">Loading…</div></div>
 </div>
 </div>
 
@@ -426,7 +457,7 @@ const db = createClient(SUPA_URL, SUPA_KEY);
 const ZONES = {"1":"Al Jasrah","2":"Al Bidda","3":"Fereej Mohamed Bin Jasim / Mushayrib","4":"Mushayrib","5":"Al Najada / Barahat Al Jufairi","6":"Old Al Ghanim","7":"Al Souq","10":"Wadi Al Sail","11":"Rumeilah","12":"Al Bidda","13":"Mushayrib","14":"Fereej Abdel Aziz","15":"Ad Dawhah al Jadidah","16":"Old Al Ghanim","17":"Al Rufaa / Old Al Hitmi","18":"As Salatah / Al Mirqab","19":"Doha Port","20":"Wadi Al Sail","21":"Rumeilah","22":"Fereej Bin Mahmoud","23":"Fereej Bin Mahmoud","24":"Rawdat Al Khail","25":"Fereej Bin Durham / Al Mansoura","26":"Najma","27":"Umm Ghuwailina","28":"Al Khulaifat / Ras Abu Aboud","30":"Duhail","31":"Umm Lekhba","32":"Madinat Khalifa North / Dahl Al Hamam","33":"Al Markhiya","34":"Madinat Khalifa South","35":"Fereej Kulaib","36":"Al Messila","37":"Fereej Bin Omran / New Al Hitmi","38":"Al Sadd","39":"Al Sadd / New Al Mirqab / Fereej Al Nasr","40":"New Salatah","41":"Nuaija","42":"Al Hilal","43":"Nuaija","44":"Nuaija","45":"Old Airport","46":"Al Thumama","47":"Al Thumama","48":"Doha International Airport","49":"Ras Abu Fontas","50":"Al Thumama","51":"Al Gharrafa / Gharrafat Al Rayyan","52":"Al Luqta / Old Al Rayyan","53":"New Al Rayyan / Al Wajbah / Muaither","54":"Fereej Al Amir / Luaib / Muraikh","55":"Al Waab / Al Aziziya / Abu Hamour","56":"Abu Samra / Al Mamoura / Mesaimeer","57":"Industrial Area","58":"Wholesale Market","61":"Al Dafna / Al Qassar","63":"Onaiza","64":"Lejbailat","65":"Onaiza","66":"Onaiza / Leqtaifiya / Al Qassar","67":"Hazm Al Markhiya","68":"Jelaiah / Al Tarfa","69":"Lusail / Al Egla","70":"Leabaib / Al Kheesa / Rawdat Al Hamama","71":"Umm Salal Ali / Umm Salal Mohammed","72":"Al Utouriya","73":"Al Jemailiya","74":"Simaisma / Al Khor City","75":"Al Thakhira / Ras Laffan","76":"Al Ghuwariyah","77":"Ain Sinan / Fuwayrit","78":"Abu Dhalouf / Zubarah","79":"Madinat ash Shamal / Ar Ru'ays","80":"Al-Shahaniya City","81":"Mebaireek","82":"Rawdat Rashed","83":"Al Karaana","84":"Umm Bab","85":"Al Nasraniya","86":"Dukhan","90":"Al Wakrah","91":"Al Wukair / Al Mashaf","92":"Mesaieed","93":"Mesaieed Industrial Area","94":"Shagra","95":"Al Kharrara","96":"Abu Samra","97":"Sawda Natheel","98":"Khor Al Adaid"};
 
 let allFamilies = [], allChildren = [], allAdmins = [], allActivityLogs = [], allReferrals = [];
-let currentFamily = null, currentChildren = [], currentUser = null, currentUserRole = null;
+let currentFamily = null, currentChildren = [], currentUser = null, currentUserRole = null, currentUserEmail = '';
 let allAssessmentDays = [], allAssessmentAttendees = [], currentAssessDay = null;
 const AGE_BANDS = [
   {key:'3-4', label:'Ages 3–4 (FS1–FS2)', min:3, max:4},
@@ -472,7 +503,7 @@ async function doLogin() {
     const {data, error} = await Promise.race([loginPromise, timeoutPromise]);
     
     if(error) throw error;
-    document.getElementById('user-badge').textContent = email.split('@')[0];
+    currentUserEmail = email;
     await showApp();
   } catch(e) {
     err.textContent = e.message || 'Login failed. Please try again.';
@@ -508,7 +539,7 @@ async function showApp() {
 
 db.auth.onAuthStateChange((event,session)=>{
   if(event==='SIGNED_IN'&&session){
-    document.getElementById('user-badge').textContent = session.user.email.split('@')[0];
+    currentUserEmail = session.user.email;
     showApp();
   }
 });
@@ -1111,14 +1142,20 @@ function renderGreeting() {
   const q = DAILY_QUOTES[dayOfYear() % DAILY_QUOTES.length];
   const hour = new Date().getHours();
   const timeGreeting = hour<12 ? 'Good morning' : hour<17 ? 'Good afternoon' : 'Good evening';
-  const email = document.getElementById('user-badge')?.textContent || '';
-  const adminMatch = allAdmins.find(a => (a.email||'').split('@')[0] === email);
-  const displayName = adminMatch?.name?.split(' ')[0] || email || 'there';
+  const adminMatch = allAdmins.find(a => (a.email||'').toLowerCase() === currentUserEmail.toLowerCase());
+  const displayName = adminMatch?.name?.split(' ')[0] || currentUserEmail.split('@')[0] || 'there';
   el.innerHTML = `
     <div class="greet-banner">
       <div class="greet-hello">${timeGreeting}, ${displayName}! 👋</div>
       <div class="greet-quote">"${q.text}"<span class="greet-quote-src">— ${q.src}</span></div>
     </div>`;
+
+  const bbName = document.getElementById('bb-profile-name');
+  if(bbName) bbName.textContent = displayName;
+  const popName = document.getElementById('profile-pop-name');
+  const popEmail = document.getElementById('profile-pop-email');
+  if(popName) popName.textContent = adminMatch?.name || displayName;
+  if(popEmail) popEmail.textContent = currentUserEmail;
 }
 
 function renderCheckinsDue() {
@@ -2165,8 +2202,19 @@ function switchTab(t,btn) {
 function showPg(p,btn) {
   document.querySelectorAll('.pg').forEach(x=>x.classList.remove('active'));
   document.getElementById('pg-'+p).classList.add('active');
-  document.querySelectorAll('.nb').forEach(b=>b.className='nb off');
-  if(btn) btn.className='nb on';
+  document.querySelectorAll('.bb-item').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  closeProfileMenu();
+  window.scrollTo(0,0);
+}
+
+function toggleProfileMenu() {
+  document.getElementById('profile-pop').classList.toggle('open');
+  document.getElementById('profile-overlay').classList.toggle('open');
+}
+function closeProfileMenu() {
+  document.getElementById('profile-pop').classList.remove('open');
+  document.getElementById('profile-overlay').classList.remove('open');
 }
 
 // ── DELETE FAMILY ──
