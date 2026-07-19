@@ -33,6 +33,7 @@ const {useState, useEffect} = React;
 const sb = supabase.createClient("https://xbxagukdvgyaoqvbqoic.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4");
 const LOGO = "https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/avatars/Faflogowhite.png";
 const EDGE = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder";
+const EDGE_ROLE_AI = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/generate-role-description";
 const DK="#0A3D1F",GN="#15803D",MD="#22C55E",PL="#F0FDF4",BR="#BBF7D0",MT="#4B7C5A";
 const HF="'League Spartan',sans-serif",BF="'Poppins',sans-serif";
 const inp = {width:"100%",padding:"12px 14px",border:"1.5px solid #BBF7D0",borderRadius:10,fontSize:15,fontFamily:BF,outline:"none",boxSizing:"border-box",background:"#fff",color:DK};
@@ -45,6 +46,7 @@ const PROJECTS = [
   {id:"giving-garden",label:"Giving Garden",emoji:"🌱",bg:"#8E44AD",light:"#EDE9FE",text:"#4C1D95"},
 ];
 const gp = id => PROJECTS.find(p=>p.id===id)||PROJECTS[0];
+const commitLabel = o => o.commitment_hours ? " · ⏱ "+o.commitment_hours+" hrs/"+(o.commitment_frequency==="month"?"month":"week") : "";
 
 async function sendEmail(type,name,email,adminEmail="",eventTitle=""){
   try{ await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"},body:JSON.stringify({type,name,email,adminEmail,eventTitle})});}
@@ -399,7 +401,8 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   const [manualHours,setManualHours]=useState(null);
   const [celebrate,setCelebrate]=useState(false);
   const [celebrateHours,setCelebrateHours]=useState(0);
-  const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),type:"event",date:"",end_date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
+  const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),type:"event",date:"",end_date:"",start_time:"",end_time:"",spots:"",hours:"",commitment_hours:"",commitment_frequency:"week",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
+  const [aiLoading,setAiLoading]=useState(false);
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
   const calcHours=(s,e)=>{
@@ -499,14 +502,14 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   };
   const addOpp=async()=>{
     if(!no.title||!no.date||!no.location){st("Fill title, "+(no.type==="ongoing"?"start date":"date")+" and location.");return;}
-    const {error}=await sb.from("opportunities").insert({...no,spots:Number(no.spots)||10,hours:Number(no.hours)||2,created_by:profile.id});
+    const {error}=await sb.from("opportunities").insert({...no,end_date:no.end_date||null,spots:Number(no.spots)||10,hours:Number(no.hours)||2,commitment_hours:no.type==="ongoing"&&no.commitment_hours?Number(no.commitment_hours):null,commitment_frequency:no.type==="ongoing"?(no.commitment_frequency||"week"):null,created_by:profile.id});
     if(error){st("Error: "+error.message);return;}
-    setNo({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),type:"event",date:"",end_date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
+    setNo({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),type:"event",date:"",end_date:"",start_time:"",end_time:"",spots:"",hours:"",commitment_hours:"",commitment_frequency:"week",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
     st("✓ Published!"); setTab("opps"); load();
   };
   const saveEditOpp=async()=>{
     if(!editOpp.title||!editOpp.date||!editOpp.location){st("Fill title, "+(editOpp.type==="ongoing"?"start date":"date")+" and location.");return;}
-    const {error}=await sb.from("opportunities").update({title:editOpp.title,description:editOpp.description,type:editOpp.type||"event",date:editOpp.date,end_date:editOpp.end_date||null,location:editOpp.location,spots:Number(editOpp.spots)||10,hours:Number(editOpp.hours)||2,start_time:editOpp.start_time,end_time:editOpp.end_time,students_only:editOpp.students_only,project:editOpp.project,questions:editOpp.questions||[]}).eq("id",editOpp.id);
+    const {error}=await sb.from("opportunities").update({title:editOpp.title,description:editOpp.description,type:editOpp.type||"event",date:editOpp.date,end_date:editOpp.end_date||null,location:editOpp.location,spots:Number(editOpp.spots)||10,hours:Number(editOpp.hours)||2,commitment_hours:editOpp.commitment_hours?Number(editOpp.commitment_hours):null,commitment_frequency:editOpp.type==="ongoing"?(editOpp.commitment_frequency||"week"):null,start_time:editOpp.start_time,end_time:editOpp.end_time,students_only:editOpp.students_only,project:editOpp.project,questions:editOpp.questions||[]}).eq("id",editOpp.id);
     if(error){st("Error: "+error.message);return;}
     st("✓ Updated!"); setEditOpp(null); load();
   };
@@ -514,6 +517,36 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     const {error}=await sb.from("profiles").update({admin_projects:projects}).eq("id",adminId);
     if(error){st("Error: "+error.message);return;}
     st("✓ Admin projects updated!"); load();
+  };
+  const generateDescription=async(target,setTarget)=>{
+    if(!target.title){st("Add a role title first.");return;}
+    if(!target.description){st("Add a few brief notes about the role first.");return;}
+    setAiLoading(true);
+    try{
+      const hc=target.commitment_hours?target.commitment_hours+" hours per "+(target.commitment_frequency||"week"):"";
+      const res=await fetch(EDGE_ROLE_AI,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({role_title:target.title,brief:target.description,hours_commitment:hc,has_end_date:!!target.end_date,end_date:target.end_date})});
+      const json=await res.json();
+      if(!res.ok||json.error) throw new Error(json.error||"AI generation failed.");
+      setTarget(t=>{return{...t,description:json.description};} );
+      st("✓ Description generated — feel free to edit it!");
+    }catch(e){
+      st("AI error: "+e.message);
+    }finally{
+      setAiLoading(false);
+    }
+  };
+  const SUGGESTED_QUESTIONS=[
+    {q:"Have you ever volunteered with Feed a Friend in the past?",type:"yesno"},
+    {q:"Why would you like to volunteer for this role?",type:"text"},
+    {q:"Do you have any skills that could add value to this role?",type:"text"},
+    {q:"Any other comments?",type:"text"},
+  ];
+  const addSuggestedQuestions=(target,setTarget)=>{
+    setTarget(t=>{
+      const existing=(t.questions||[]).map(q=>q.q);
+      const toAdd=SUGGESTED_QUESTIONS.filter(sq=>!existing.includes(sq.q));
+      return{...t,questions:[...(t.questions||[]),...toAdd]};
+    });
   };
 
   const TABS=[
@@ -633,12 +666,25 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
             </div>
           </Field>
           <Field label="Title *"><input type="text" value={editOpp.title} onChange={e=>setEditOpp(o=>{return{...o,title:e.target.value};} )} style={inp}/></Field>
-          <Field label="Description"><textarea value={editOpp.description||""} onChange={e=>setEditOpp(o=>{return{...o,description:e.target.value};} )} rows={4} style={{...inp,resize:"vertical"}}/></Field>
+          <Field label={editOpp.type==="ongoing"?"Brief notes about the role":"Description"}>
+            <textarea value={editOpp.description||""} onChange={e=>setEditOpp(o=>{return{...o,description:e.target.value};} )} rows={4} style={{...inp,resize:"vertical"}}/>
+          </Field>
+          {editOpp.type==="ongoing"&&<div>
+            <button onClick={()=>generateDescription(editOpp,setEditOpp)} disabled={aiLoading} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:700,cursor:"pointer",opacity:aiLoading?.6:1}}>{aiLoading?"✨ Generating...":"✨ Generate Full Description with AI"}</button>
+            <p style={{fontSize:11,color:MT,marginTop:6,fontFamily:BF}}>Writes a full role description from your notes above — you can edit it after.</p>
+          </div>}
           {editOpp.type==="ongoing"
-            ? <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                <Field label="Start Date *"><input type="date" value={editOpp.date} onChange={e=>setEditOpp(o=>{return{...o,date:e.target.value};} )} style={inp}/></Field>
-                <Field label="End Date (optional)"><input type="date" value={editOpp.end_date||""} onChange={e=>setEditOpp(o=>{return{...o,end_date:e.target.value};} )} style={inp}/></Field>
-              </div>
+            ? <>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <Field label="Start Date *"><input type="date" value={editOpp.date} onChange={e=>setEditOpp(o=>{return{...o,date:e.target.value};} )} style={inp}/></Field>
+                  <Field label="End Date (optional)"><input type="date" value={editOpp.end_date||""} onChange={e=>setEditOpp(o=>{return{...o,end_date:e.target.value};} )} style={inp}/></Field>
+                </div>
+                <p style={{fontSize:11,color:MT,marginTop:-6,fontFamily:BF}}>Leave End Date blank for an ongoing role with no fixed end.</p>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <Field label="Time Commitment"><input type="number" min="0" step="0.5" placeholder="e.g. 5" value={editOpp.commitment_hours||""} onChange={e=>setEditOpp(o=>{return{...o,commitment_hours:e.target.value};} )} style={inp}/></Field>
+                  <Field label="Per"><select value={editOpp.commitment_frequency||"week"} onChange={e=>setEditOpp(o=>{return{...o,commitment_frequency:e.target.value};} )} style={inp}><option value="week">Hours / week</option><option value="month">Hours / month</option></select></Field>
+                </div>
+              </>
             : <>
                 <Field label="Date *"><input type="date" value={editOpp.date} onChange={e=>setEditOpp(o=>{return{...o,date:e.target.value};} )} style={inp}/></Field>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -869,7 +915,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                 {o.students_only&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700,marginLeft:6}}>🎓 Students Only</span>}
                 {o.type==="ongoing"&&<span style={{background:"#7C3AED",color:"#fff",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700,marginLeft:6}}>🤝 Join the FAF Team</span>}
                 <div style={{fontWeight:700,fontSize:15,marginTop:6,color:DK,fontFamily:BF}}>{o.title}</div>
-                <div style={{fontSize:12,color:MT,marginTop:2}}>{o.type==="ongoing"?"🤝 "+(o.end_date?"Runs "+o.date+" – "+o.end_date:"Ongoing since "+o.date):"📅 "+o.date+(o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):"")} · 📍 {o.location}{o.type!=="ongoing"?" · "+o.hours+"h":""}</div>
+                <div style={{fontSize:12,color:MT,marginTop:2}}>{o.type==="ongoing"?"🤝 "+(o.end_date?"Runs "+o.date+" – "+o.end_date:"Ongoing since "+o.date):"📅 "+o.date+(o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):"")} · 📍 {o.location}{o.type!=="ongoing"?" · "+o.hours+"h":commitLabel(o)}</div>
                 <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
                   {pendingSups.length>0&&<span style={{background:"#FEF3C7",color:"#D97706",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>⏳ {pendingSups.length} pending</span>}
                   {approvedSups.length>0&&<span style={{background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✓ {approvedSups.length} approved</span>}
@@ -950,13 +996,26 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                   <button key={opt.val} onClick={()=>setNo(n=>{return{...n,type:opt.val};} )} style={{flex:1,background:no.type===opt.val?DK:"#fff",color:no.type===opt.val?"#fff":DK,border:"1.5px solid "+(no.type===opt.val?DK:BR),borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>{opt.label}</button>)}
               </div>
             </Field>
-            <Field label="Title *"><input type="text" placeholder="e.g. Box Packing Day" value={no.title} onChange={e=>setNo(n=>{return{...n,title:e.target.value};} )} style={inp}/></Field>
-            <Field label="Description"><textarea value={no.description} onChange={e=>setNo(n=>{return{...n,description:e.target.value};} )} rows={3} placeholder="What will volunteers do?" style={{...inp,resize:"vertical"}}/></Field>
+            <Field label="Title *"><input type="text" placeholder={no.type==="ongoing"?"e.g. Delivery Driver":"e.g. Box Packing Day"} value={no.title} onChange={e=>setNo(n=>{return{...n,title:e.target.value};} )} style={inp}/></Field>
+            <Field label={no.type==="ongoing"?"Brief notes about the role":"Description"}>
+              <textarea value={no.description} onChange={e=>setNo(n=>{return{...n,description:e.target.value};} )} rows={no.type==="ongoing"?3:3} placeholder={no.type==="ongoing"?"e.g. Drives collected food donations from pickup points to our warehouse, twice a week":"What will volunteers do?"} style={{...inp,resize:"vertical"}}/>
+            </Field>
+            {no.type==="ongoing"&&<div>
+              <button onClick={()=>generateDescription(no,setNo)} disabled={aiLoading} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:700,cursor:"pointer",opacity:aiLoading?.6:1,display:"flex",alignItems:"center",gap:6}}>{aiLoading?"✨ Generating...":"✨ Generate Full Description with AI"}</button>
+              <p style={{fontSize:11,color:MT,marginTop:6,fontFamily:BF}}>Writes a full role description from your notes above — you can edit it after.</p>
+            </div>}
             {no.type==="ongoing"
-              ? <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                  <Field label="Start Date *"><input type="date" value={no.date} onChange={e=>setNo(n=>{return{...n,date:e.target.value};} )} style={inp}/></Field>
-                  <Field label="End Date (optional)"><input type="date" value={no.end_date} onChange={e=>setNo(n=>{return{...n,end_date:e.target.value};} )} style={inp}/></Field>
-                </div>
+              ? <>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    <Field label="Start Date *"><input type="date" value={no.date} onChange={e=>setNo(n=>{return{...n,date:e.target.value};} )} style={inp}/></Field>
+                    <Field label="End Date (optional)"><input type="date" value={no.end_date} onChange={e=>setNo(n=>{return{...n,end_date:e.target.value};} )} style={inp}/></Field>
+                  </div>
+                  <p style={{fontSize:11,color:MT,marginTop:-6,fontFamily:BF}}>Leave End Date blank for an ongoing role with no fixed end.</p>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    <Field label="Time Commitment"><input type="number" min="0" step="0.5" placeholder="e.g. 5" value={no.commitment_hours} onChange={e=>setNo(n=>{return{...n,commitment_hours:e.target.value};} )} style={inp}/></Field>
+                    <Field label="Per"><select value={no.commitment_frequency} onChange={e=>setNo(n=>{return{...n,commitment_frequency:e.target.value};} )} style={inp}><option value="week">Hours / week</option><option value="month">Hours / month</option></select></Field>
+                  </div>
+                </>
               : <>
                   <Field label="Date *"><input type="date" value={no.date} onChange={e=>setNo(n=>{return{...n,date:e.target.value};} )} style={inp}/></Field>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -983,7 +1042,10 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
             <div style={{borderTop:"1px solid "+BR,paddingTop:14}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <label style={{fontWeight:700,fontSize:13,color:DK}}>Qualifying Questions</label>
-                <button onClick={()=>setNo(n=>{return{...n,questions:[...n.questions,{q:"",type:"text"}]};} )} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"5px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>+ Add</button>
+                <div style={{display:"flex",gap:6}}>
+                  {no.type==="ongoing"&&<button onClick={()=>addSuggestedQuestions(no,setNo)} style={{background:"#EDE9FE",color:"#5B21B6",border:"1px solid #D8B4FE",borderRadius:8,padding:"5px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>✨ Suggest Questions</button>}
+                  <button onClick={()=>setNo(n=>{return{...n,questions:[...n.questions,{q:"",type:"text"}]};} )} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"5px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>+ Add</button>
+                </div>
               </div>
               {no.questions.map((q,i)=><div key={i} style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
                 <input type="text" placeholder={`Question ${i+1}...`} value={q.q} onChange={e=>setNo(n=>{const qs=[...n.questions];qs[i]={...qs[i],q:e.target.value};return{...n,questions:qs};} )} style={{...inp,flex:1}}/>
@@ -1092,7 +1154,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
       </div>
       <div style={{fontFamily:HF,fontWeight:900,fontSize:15,textTransform:"uppercase",color:DK,marginBottom:4}}>{o.title}</div>
       <div style={{fontSize:12,color:MT,lineHeight:1.5,marginBottom:8,fontFamily:BF}}>{o.description}</div>
-      <div style={{fontSize:11,color:MT,marginBottom:10,fontFamily:BF}}>{isOngoing?"🤝 "+(o.end_date?"Runs "+o.date+" – "+o.end_date:"Ongoing since "+o.date):"📅 "+o.date+(o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):"")} · 📍 {o.location}</div>
+      <div style={{fontSize:11,color:MT,marginBottom:10,fontFamily:BF}}>{isOngoing?"🤝 "+(o.end_date?"Runs "+o.date+" – "+o.end_date:"Ongoing since "+o.date)+commitLabel(o):"📅 "+o.date+(o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):"")} · 📍 {o.location}</div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <span style={{fontSize:11,background:p.light,color:p.text,padding:"2px 8px",borderRadius:20,fontWeight:600,fontFamily:BF}}>{o.spots} spots</span>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
@@ -1174,7 +1236,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
                   <div style={{width:36,height:36,borderRadius:10,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{p.emoji}</div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:700,fontSize:13,fontFamily:BF,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{o.title}</div>
-                    <div style={{fontSize:11,color:MT,fontFamily:BF}}>{o.type==="ongoing"?"🤝 "+(o.end_date?"Runs "+o.date+" – "+o.end_date:"Ongoing since "+o.date):"📅 "+o.date+(o.start_time?" · ⏰ "+o.start_time:"")} · 📍 {o.location}</div>
+                    <div style={{fontSize:11,color:MT,fontFamily:BF}}>{o.type==="ongoing"?"🤝 "+(o.end_date?"Runs "+o.date+" – "+o.end_date:"Ongoing since "+o.date)+commitLabel(o):"📅 "+o.date+(o.start_time?" · ⏰ "+o.start_time:"")} · 📍 {o.location}</div>
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0,alignItems:"flex-end"}}>
                     <span style={{fontSize:11,background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"3px 8px",fontWeight:700}}>✓ Approved</span>
