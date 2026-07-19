@@ -399,7 +399,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   const [manualHours,setManualHours]=useState(null);
   const [celebrate,setCelebrate]=useState(false);
   const [celebrateHours,setCelebrateHours]=useState(0);
-  const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
+  const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),type:"event",date:"",end_date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
   const calcHours=(s,e)=>{
@@ -498,15 +498,15 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     st("Event cancelled & emails sent."); load();
   };
   const addOpp=async()=>{
-    if(!no.title||!no.date||!no.location){st("Fill title, date and location.");return;}
+    if(!no.title||!no.date||!no.location){st("Fill title, "+(no.type==="ongoing"?"start date":"date")+" and location.");return;}
     const {error}=await sb.from("opportunities").insert({...no,spots:Number(no.spots)||10,hours:Number(no.hours)||2,created_by:profile.id});
     if(error){st("Error: "+error.message);return;}
-    setNo({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
+    setNo({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),type:"event",date:"",end_date:"",start_time:"",end_time:"",spots:"",hours:"",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
     st("✓ Published!"); setTab("opps"); load();
   };
   const saveEditOpp=async()=>{
-    if(!editOpp.title||!editOpp.date||!editOpp.location){st("Fill title, date and location.");return;}
-    const {error}=await sb.from("opportunities").update({title:editOpp.title,description:editOpp.description,date:editOpp.date,location:editOpp.location,spots:Number(editOpp.spots)||10,hours:Number(editOpp.hours)||2,start_time:editOpp.start_time,end_time:editOpp.end_time,students_only:editOpp.students_only,project:editOpp.project,questions:editOpp.questions||[]}).eq("id",editOpp.id);
+    if(!editOpp.title||!editOpp.date||!editOpp.location){st("Fill title, "+(editOpp.type==="ongoing"?"start date":"date")+" and location.");return;}
+    const {error}=await sb.from("opportunities").update({title:editOpp.title,description:editOpp.description,type:editOpp.type||"event",date:editOpp.date,end_date:editOpp.end_date||null,location:editOpp.location,spots:Number(editOpp.spots)||10,hours:Number(editOpp.hours)||2,start_time:editOpp.start_time,end_time:editOpp.end_time,students_only:editOpp.students_only,project:editOpp.project,questions:editOpp.questions||[]}).eq("id",editOpp.id);
     if(error){st("Error: "+error.message);return;}
     st("✓ Updated!"); setEditOpp(null); load();
   };
@@ -626,14 +626,28 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
       <div style={{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           <Field label="Project"><select value={editOpp.project} onChange={e=>setEditOpp(o=>{return{...o,project:e.target.value};} )} style={inp}>{PROJECTS.map(p=><option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}</select></Field>
+          <Field label="Vacancy Type">
+            <div style={{display:"flex",gap:8}}>
+              {[{val:"event",label:"📅 Event"},{val:"ongoing",label:"🤝 Join the FAF Team"}].map(opt=>
+                <button key={opt.val} onClick={()=>setEditOpp(o=>{return{...o,type:opt.val};} )} style={{flex:1,background:(editOpp.type||"event")===opt.val?DK:"#fff",color:(editOpp.type||"event")===opt.val?"#fff":DK,border:"1.5px solid "+((editOpp.type||"event")===opt.val?DK:BR),borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>{opt.label}</button>)}
+            </div>
+          </Field>
           <Field label="Title *"><input type="text" value={editOpp.title} onChange={e=>setEditOpp(o=>{return{...o,title:e.target.value};} )} style={inp}/></Field>
           <Field label="Description"><textarea value={editOpp.description||""} onChange={e=>setEditOpp(o=>{return{...o,description:e.target.value};} )} rows={4} style={{...inp,resize:"vertical"}}/></Field>
-          <Field label="Date *"><input type="date" value={editOpp.date} onChange={e=>setEditOpp(o=>{return{...o,date:e.target.value};} )} style={inp}/></Field>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            <Field label="Start Time"><input type="time" value={editOpp.start_time||""} onChange={e=>setEditOpp(o=>{const h=calcHours(e.target.value,o.end_time);return{...o,start_time:e.target.value,hours:h||o.hours};} )} style={inp}/></Field>
-            <Field label="End Time"><input type="time" value={editOpp.end_time||""} onChange={e=>setEditOpp(o=>{const h=calcHours(o.start_time,e.target.value);return{...o,end_time:e.target.value,hours:h||o.hours};} )} style={inp}/></Field>
-          </div>
-          {editOpp.start_time&&editOpp.end_time&&editOpp.hours&&<div style={{background:"#DCFCE7",borderRadius:10,padding:"10px 14px",fontSize:13,color:DK,fontWeight:600}}>⏱ Duration: <strong>{editOpp.hours} hours</strong></div>}
+          {editOpp.type==="ongoing"
+            ? <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <Field label="Start Date *"><input type="date" value={editOpp.date} onChange={e=>setEditOpp(o=>{return{...o,date:e.target.value};} )} style={inp}/></Field>
+                <Field label="End Date (optional)"><input type="date" value={editOpp.end_date||""} onChange={e=>setEditOpp(o=>{return{...o,end_date:e.target.value};} )} style={inp}/></Field>
+              </div>
+            : <>
+                <Field label="Date *"><input type="date" value={editOpp.date} onChange={e=>setEditOpp(o=>{return{...o,date:e.target.value};} )} style={inp}/></Field>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <Field label="Start Time"><input type="time" value={editOpp.start_time||""} onChange={e=>setEditOpp(o=>{const h=calcHours(e.target.value,o.end_time);return{...o,start_time:e.target.value,hours:h||o.hours};} )} style={inp}/></Field>
+                  <Field label="End Time"><input type="time" value={editOpp.end_time||""} onChange={e=>setEditOpp(o=>{const h=calcHours(o.start_time,e.target.value);return{...o,end_time:e.target.value,hours:h||o.hours};} )} style={inp}/></Field>
+                </div>
+                {editOpp.start_time&&editOpp.end_time&&editOpp.hours&&<div style={{background:"#DCFCE7",borderRadius:10,padding:"10px 14px",fontSize:13,color:DK,fontWeight:600}}>⏱ Duration: <strong>{editOpp.hours} hours</strong></div>}
+              </>
+          }
           <Field label="Location *"><input type="text" value={editOpp.location} onChange={e=>setEditOpp(o=>{return{...o,location:e.target.value};} )} style={inp}/></Field>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <Field label="Hours"><input type="number" value={editOpp.hours} onChange={e=>setEditOpp(o=>{return{...o,hours:e.target.value};} )} style={inp}/></Field>
@@ -853,8 +867,9 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
               <div style={{flex:1}}>
                 <Tag pid={o.project} sm/>
                 {o.students_only&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700,marginLeft:6}}>🎓 Students Only</span>}
+                {o.type==="ongoing"&&<span style={{background:"#7C3AED",color:"#fff",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700,marginLeft:6}}>🤝 Join the FAF Team</span>}
                 <div style={{fontWeight:700,fontSize:15,marginTop:6,color:DK,fontFamily:BF}}>{o.title}</div>
-                <div style={{fontSize:12,color:MT,marginTop:2}}>📅 {o.date}{o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):""} · 📍 {o.location} · {o.hours}h</div>
+                <div style={{fontSize:12,color:MT,marginTop:2}}>{o.type==="ongoing"?"🤝 "+(o.end_date?"Runs "+o.date+" – "+o.end_date:"Ongoing since "+o.date):"📅 "+o.date+(o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):"")} · 📍 {o.location}{o.type!=="ongoing"?" · "+o.hours+"h":""}</div>
                 <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
                   {pendingSups.length>0&&<span style={{background:"#FEF3C7",color:"#D97706",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>⏳ {pendingSups.length} pending</span>}
                   {approvedSups.length>0&&<span style={{background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✓ {approvedSups.length} approved</span>}
@@ -929,14 +944,28 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
         <div style={{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             <Field label="Project"><select value={no.project} onChange={e=>setNo(n=>{return{...n,project:e.target.value};} )} style={inp}>{(isSuperAdmin?PROJECTS:PROJECTS.filter(p=>(profile.admin_projects||[]).includes(p.id))).map(p=><option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}</select></Field>
+            <Field label="Vacancy Type">
+              <div style={{display:"flex",gap:8}}>
+                {[{val:"event",label:"📅 Event"},{val:"ongoing",label:"🤝 Join the FAF Team"}].map(opt=>
+                  <button key={opt.val} onClick={()=>setNo(n=>{return{...n,type:opt.val};} )} style={{flex:1,background:no.type===opt.val?DK:"#fff",color:no.type===opt.val?"#fff":DK,border:"1.5px solid "+(no.type===opt.val?DK:BR),borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>{opt.label}</button>)}
+              </div>
+            </Field>
             <Field label="Title *"><input type="text" placeholder="e.g. Box Packing Day" value={no.title} onChange={e=>setNo(n=>{return{...n,title:e.target.value};} )} style={inp}/></Field>
             <Field label="Description"><textarea value={no.description} onChange={e=>setNo(n=>{return{...n,description:e.target.value};} )} rows={3} placeholder="What will volunteers do?" style={{...inp,resize:"vertical"}}/></Field>
-            <Field label="Date *"><input type="date" value={no.date} onChange={e=>setNo(n=>{return{...n,date:e.target.value};} )} style={inp}/></Field>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <Field label="Start Time"><input type="time" value={no.start_time} onChange={e=>{const h=calcHours(e.target.value,no.end_time);setNo(n=>{return{...n,start_time:e.target.value,hours:h||n.hours};} );}} style={inp}/></Field>
-              <Field label="End Time"><input type="time" value={no.end_time} onChange={e=>{const h=calcHours(no.start_time,e.target.value);setNo(n=>{return{...n,end_time:e.target.value,hours:h||n.hours};} );}} style={inp}/></Field>
-            </div>
-            {no.start_time&&no.end_time&&no.hours&&<div style={{background:"#DCFCE7",borderRadius:10,padding:"10px 14px",fontSize:13,color:DK,fontWeight:600}}>⏱ Duration: <strong>{no.hours} hours</strong></div>}
+            {no.type==="ongoing"
+              ? <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <Field label="Start Date *"><input type="date" value={no.date} onChange={e=>setNo(n=>{return{...n,date:e.target.value};} )} style={inp}/></Field>
+                  <Field label="End Date (optional)"><input type="date" value={no.end_date} onChange={e=>setNo(n=>{return{...n,end_date:e.target.value};} )} style={inp}/></Field>
+                </div>
+              : <>
+                  <Field label="Date *"><input type="date" value={no.date} onChange={e=>setNo(n=>{return{...n,date:e.target.value};} )} style={inp}/></Field>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    <Field label="Start Time"><input type="time" value={no.start_time} onChange={e=>{const h=calcHours(e.target.value,no.end_time);setNo(n=>{return{...n,start_time:e.target.value,hours:h||n.hours};} );}} style={inp}/></Field>
+                    <Field label="End Time"><input type="time" value={no.end_time} onChange={e=>{const h=calcHours(no.start_time,e.target.value);setNo(n=>{return{...n,end_time:e.target.value,hours:h||n.hours};} );}} style={inp}/></Field>
+                  </div>
+                  {no.start_time&&no.end_time&&no.hours&&<div style={{background:"#DCFCE7",borderRadius:10,padding:"10px 14px",fontSize:13,color:DK,fontWeight:600}}>⏱ Duration: <strong>{no.hours} hours</strong></div>}
+                </>
+            }
             <Field label="Location *"><input type="text" placeholder="e.g. Feed a Friend HQ" value={no.location} onChange={e=>setNo(n=>{return{...n,location:e.target.value};} )} style={inp}/></Field>
             <Field label="Spots"><input type="number" placeholder="10" value={no.spots} onChange={e=>setNo(n=>{return{...n,spots:e.target.value};} )} style={inp}/></Field>
             <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:no.students_only?"#EDE9FE":"#F9FAFB",border:"1.5px solid "+(no.students_only?"#9B59B6":"#E5E7EB")}}>
@@ -1046,7 +1075,45 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   const getOppCounts=(oId)=>{const sups=signups.filter(s=>s.opportunity_id===oId);return{approved:sups.filter(s=>s.status==="approved").length,waitlist:sups.filter(s=>s.status==="waitlist").length};};
   const visibleOpps=opps.filter(o=>!o.students_only||profile.is_student);
   const fo=fp==="all"?visibleOpps:visibleOpps.filter(o=>o.project===fp);
+  const foEvents=fo.filter(o=>o.type!=="ongoing");
+  const foOngoing=fo.filter(o=>o.type==="ongoing");
   const NAV=[{id:"dashboard",label:"Home"},{id:"opportunities",label:"Opportunities"},{id:"log",label:"Log Hours"},{id:"history",label:"My Hours"}];
+
+  const renderOppCard=o=>{
+    const p=gp(o.project); const signup=su.find(x=>x.opportunity_id===o.id); const done=!!signup; const isOngoing=o.type==="ongoing";
+    return <div key={o.id} className="card" style={{background:"#fff",borderRadius:16,border:"1px solid "+BR,borderLeft:"5px solid "+(isOngoing?"#7C3AED":p.bg),padding:"14px 14px 12px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+        <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+          <Tag pid={o.project}/>
+          {o.students_only&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>🎓 Students Only</span>}
+          {isOngoing&&<span style={{background:"#7C3AED",color:"#fff",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>🤝 Join the FAF Team</span>}
+        </div>
+        {!isOngoing&&<span style={{fontFamily:HF,fontWeight:800,fontSize:13,color:p.bg}}>{o.hours}h</span>}
+      </div>
+      <div style={{fontFamily:HF,fontWeight:900,fontSize:15,textTransform:"uppercase",color:DK,marginBottom:4}}>{o.title}</div>
+      <div style={{fontSize:12,color:MT,lineHeight:1.5,marginBottom:8,fontFamily:BF}}>{o.description}</div>
+      <div style={{fontSize:11,color:MT,marginBottom:10,fontFamily:BF}}>{isOngoing?"🤝 "+(o.end_date?"Runs "+o.date+" – "+o.end_date:"Ongoing since "+o.date):"📅 "+o.date+(o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):"")} · 📍 {o.location}</div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{fontSize:11,background:p.light,color:p.text,padding:"2px 8px",borderRadius:20,fontWeight:600,fontFamily:BF}}>{o.spots} spots</span>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          {!done&&<button onClick={()=>signUp(o)} style={{background:isOngoing?"#7C3AED":p.bg,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:BF}}>{isOngoing?"Join the FAF Team →":"Sign Up →"}</button>}
+          {done&&signup?.status==="pending"&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
+            <span style={{background:"#FEF3C7",color:"#D97706",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>⏳ Pending</span>
+            <button onClick={async()=>{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Signup cancelled.");loadData();}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>
+          </div>}
+          {done&&signup?.status==="waitlist"&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
+            <span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>⏸ Waitlist</span>
+            <button onClick={async()=>{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Removed from waitlist.");loadData();}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>
+          </div>}
+          {done&&signup?.status==="approved"&&!signup?.checked_in&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
+            <span style={{background:p.light,color:p.text,borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>✓ Approved</span>
+            <button onClick={async()=>{if(window.confirm("Cancel your attendance?")){{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Attendance cancelled.");loadData();}}}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>
+          </div>}
+          {done&&signup?.checked_in&&<span style={{background:p.light,color:p.text,borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>📍 Checked In</span>}
+        </div>
+      </div>
+    </div>;
+  };
 
   if(editingProfile) return <ProfileEdit profile={profile} onSave={p=>{
     setProfile(p); onUpdateProfile(p); setEditingProfile(false); st("✓ Profile saved!");
@@ -1107,7 +1174,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
                   <div style={{width:36,height:36,borderRadius:10,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{p.emoji}</div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:700,fontSize:13,fontFamily:BF,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{o.title}</div>
-                    <div style={{fontSize:11,color:MT,fontFamily:BF}}>📅 {o.date}{o.start_time?" · ⏰ "+o.start_time:""} · 📍 {o.location}</div>
+                    <div style={{fontSize:11,color:MT,fontFamily:BF}}>{o.type==="ongoing"?"🤝 "+(o.end_date?"Runs "+o.date+" – "+o.end_date:"Ongoing since "+o.date):"📅 "+o.date+(o.start_time?" · ⏰ "+o.start_time:"")} · 📍 {o.location}</div>
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0,alignItems:"flex-end"}}>
                     <span style={{fontSize:11,background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"3px 8px",fontWeight:700}}>✓ Approved</span>
@@ -1148,41 +1215,19 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
           <button onClick={()=>setFp("all")} style={{padding:"5px 12px",borderRadius:20,border:"2px solid "+(fp==="all"?GN:BR),background:fp==="all"?GN:"#fff",color:fp==="all"?"#fff":DK,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:BF}}>All</button>
           {PROJECTS.map(p=><button key={p.id} onClick={()=>setFp(p.id)} style={{padding:"5px 10px",borderRadius:20,border:"2px solid "+(fp===p.id?p.bg:BR),background:fp===p.id?p.bg:"#fff",color:fp===p.id?"#fff":DK,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:BF}}>{p.emoji} {p.label}</button>)}
         </div>
-        <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          {fo.map(o=>{const p=gp(o.project);const signup=su.find(x=>x.opportunity_id===o.id);const done=!!signup;return <div key={o.id} className="card" style={{background:"#fff",borderRadius:16,border:"1px solid "+BR,borderLeft:"5px solid "+p.bg,padding:"14px 14px 12px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-              <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-                <Tag pid={o.project}/>
-                {o.students_only&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>🎓 Students Only</span>}
-              </div>
-              <span style={{fontFamily:HF,fontWeight:800,fontSize:13,color:p.bg}}>{o.hours}h</span>
-            </div>
-            <div style={{fontFamily:HF,fontWeight:900,fontSize:15,textTransform:"uppercase",color:DK,marginBottom:4}}>{o.title}</div>
-            <div style={{fontSize:12,color:MT,lineHeight:1.5,marginBottom:8,fontFamily:BF}}>{o.description}</div>
-            <div style={{fontSize:11,color:MT,marginBottom:10,fontFamily:BF}}>📅 {o.date}{o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):""} · 📍 {o.location}</div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontSize:11,background:p.light,color:p.text,padding:"2px 8px",borderRadius:20,fontWeight:600,fontFamily:BF}}>{o.spots} spots</span>
-              <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              {!done&&<button onClick={()=>signUp(o)} style={{background:p.bg,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:BF}}>Sign Up →</button>}
-              {done&&signup?.status==="pending"&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
-                <span style={{background:"#FEF3C7",color:"#D97706",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>⏳ Pending</span>
-                <button onClick={async()=>{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Signup cancelled.");loadData();}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>
-              </div>}
-              {done&&signup?.status==="waitlist"&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
-                <span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>⏸ Waitlist</span>
-                <button onClick={async()=>{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Removed from waitlist.");loadData();}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>
-              </div>}
-              {done&&signup?.status==="approved"&&!signup?.checked_in&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
-                <span style={{background:p.light,color:p.text,borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>✓ Approved</span>
-                <button onClick={async()=>{if(window.confirm("Cancel your attendance?")){{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Attendance cancelled.");loadData();}}}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>
-              </div>}
-              {done&&signup?.checked_in&&<span style={{background:p.light,color:p.text,borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>📍 Checked In</span>}
-            </div>
-            </div>
-            </div>
-          </div>;})}
-        </div>
+        {foOngoing.length>0&&<div style={{marginBottom:20}}>
+          <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:"#7C3AED",marginBottom:10}}>🤝 Join the FAF Team</h2>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {foOngoing.map(renderOppCard)}
+          </div>
+        </div>}
+        {foEvents.length>0&&<div>
+          {foOngoing.length>0&&<h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>📅 Upcoming Events</h2>}
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {foEvents.map(renderOppCard)}
+          </div>
+        </div>}
+        {foOngoing.length===0&&foEvents.length===0&&<p style={{color:MT,fontSize:14,textAlign:"center",padding:24,fontFamily:BF}}>No opportunities match this filter yet.</p>}
       </div>}
 
       {view==="log"&&<div className="fade">
