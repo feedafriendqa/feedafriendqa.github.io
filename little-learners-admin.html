@@ -115,6 +115,7 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
 .fam-meta{font-size:12px;color:var(--muted);margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
 .status-tag{font-size:12px;font-weight:700;padding:5px 12px;border-radius:50px;white-space:nowrap;flex-shrink:0;}
 .st-new{background:var(--teal-soft);color:var(--teal-mid);}
+.st-waiting_for_assessment{background:#DFF0E4;color:#1E6B3A;}
 .st-pre_assessment_scheduled{background:#E8F4FD;color:#1a5c8b;}
 .st-pre_assessed{background:#FEF3D6;color:#8B6000;}
 .st-year_group_pending{background:#F0EBF8;color:#5B3A8A;}
@@ -478,6 +479,7 @@ let showDupOnly = false;
 const PIPELINE_STAGES = [
   {key:'all', label:'All', icon:'📋'},
   {key:'new', label:'New', icon:'🆕'},
+  {key:'waiting_for_assessment', label:'Waiting for Assessment', icon:'🗓️'},
   {key:'pre_assessment_scheduled', label:'Call Scheduled', icon:'📅'},
   {key:'pre_assessed', label:'Call Completed', icon:'✅'},
   {key:'year_group_pending', label:'YG Pending', icon:'⏳'},
@@ -488,7 +490,7 @@ const PIPELINE_STAGES = [
 ];
 
 const STATUS_LABELS = {
-  new:'New',pre_assessment_scheduled:'Call Scheduled',pre_assessed:'Call Completed',
+  new:'New',waiting_for_assessment:'Waiting for Assessment',pre_assessment_scheduled:'Call Scheduled',pre_assessed:'Call Completed',
   year_group_pending:'YG Pending Approval',year_group_confirmed:'YG Confirmed',
   pack_sent:'Pack Sent',assessment_day:'Assessment Day',completed:'Completed'
 };
