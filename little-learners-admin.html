@@ -892,7 +892,8 @@ function renderAttendeesForDay() {
   }
   el.innerHTML = `
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-      <button class="btn-teal btn-sm" onclick="copyGenericRsvpLink()">🔗 Copy Generic RSVP Link</button>
+      <button class="btn-teal btn-sm" onclick="copyGenericRsvpLink()">🔗 Copy Link for This Day</button>
+      <button class="btn-teal btn-sm" onclick="copyUniversalRsvpLink()">🌐 Copy Universal Link (all days)</button>
       <button class="btn-teal btn-sm" onclick="sendAllInvites()">📧 Send Invite to All</button>
       <button class="btn-teal btn-sm" onclick="copyWhatsAppList()">📋 Copy WhatsApp List</button>
     </div>
@@ -902,16 +903,19 @@ function renderAttendeesForDay() {
       const suggested = child ? suggestYG(child).yg : '—';
       return `<div class="fam-card" style="flex-direction:column;align-items:stretch;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          ${child?.profile_photo_path?`<img id="rsvp-photo-${a.id}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;" alt="">`:''}
           <div class="fam-info">
-            <div class="fam-name">${child?.full_name||'Child'} <span style="font-size:11px;color:var(--muted);">(system YG: ${suggested})</span></div>
+            <div class="fam-name">${child?.full_name||'Child'}${child?.preferred_name?` <span style="color:var(--teal-mid);">"${child.preferred_name}"</span>`:''} <span style="font-size:11px;color:var(--muted);">(system YG: ${suggested})</span></div>
             <div class="fam-meta">
               <span>👪 ${fam?.father_name||fam?.mother_name||'—'}</span><span>📞 ${fam?.father_phone||fam?.mother_phone||'—'}</span>
               <span>${a.invite_status==='confirmed'?'✅ RSVP confirmed':'⏳ Awaiting RSVP'}</span>
               ${a.attending_guardian_name?`<span>👤 ${a.attending_guardian_name} (${a.attending_guardian_relation||'—'})</span>`:''}
               ${a.qid_scanned_at?'<span>🪪 QID verified</span>':'<span style="color:var(--coral);font-weight:700;">🪪 QID not yet on file</span>'}
-              ${a.photo_consent?`<span>📷 Photo: ${a.photo_consent}</span>`:''}
+              ${a.photo_consent?`<span>📷 Media consent: ${a.photo_consent}</span>`:''}
               ${a.dietary_chicken?`<span>🍗 Chicken OK: ${a.dietary_chicken}</span>`:''}
             </div>
+            ${a.aspiration_response?`<div style="margin-top:6px;font-size:12px;color:var(--muted);background:var(--cream);padding:6px 10px;border-radius:8px;">🌟 "When I'm older…" — ${a.aspiration_response}</div>`:''}
+            ${a.decline_reason?`<div style="margin-top:6px;font-size:12px;color:var(--coral);background:#FDEAEA;padding:6px 10px;border-radius:8px;">❌ Reason for declining: ${a.decline_reason}</div>`:''}
           </div>
           <button class="btn-small" onclick="sendAssessmentInvite('${a.id}')">📧 Invite</button>
         </div>
@@ -948,6 +952,18 @@ function renderAttendeesForDay() {
         </div>
       </div>`;
     }).join('')}`;
+  attendees.forEach(a => {
+    const child = allChildren.find(c=>c.id===a.child_id);
+    if(child?.profile_photo_path) loadAttendeePhoto(a.id, child.profile_photo_path);
+  });
+}
+
+async function loadAttendeePhoto(attendeeId, path) {
+  const {data} = await db.storage.from('ll-documents').createSignedUrl(path, 300);
+  if(data?.signedUrl) {
+    const img = document.getElementById('rsvp-photo-'+attendeeId);
+    if(img) img.src = data.signedUrl;
+  }
 }
 
 function toggleOutcomeForm(attendeeId) {
@@ -1041,6 +1057,14 @@ function copyGenericRsvpLink() {
   const link = `https://feedafriendqa.github.io/little-learners-rsvp.html?day=${currentAssessDay.id}`;
   navigator.clipboard.writeText(link).then(
     () => showToast('✅ Link copied — share this with anyone invited to this day. They\'ll enter their child\'s QID to RSVP.'),
+    () => showToast('⚠️ Could not copy — please copy manually: '+link)
+  );
+}
+
+function copyUniversalRsvpLink() {
+  const link = `https://feedafriendqa.github.io/little-learners-rsvp.html`;
+  navigator.clipboard.writeText(link).then(
+    () => showToast('✅ Universal link copied — parents pick their assessment day, then enter QID to RSVP.'),
     () => showToast('⚠️ Could not copy — please copy manually: '+link)
   );
 }

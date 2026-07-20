@@ -49,6 +49,10 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 .link-btn{background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;display:block;margin:0 auto;}
 .fg select{padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);background:white;}
 .fg input[type=text]{padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);}
+.day-pick{background:white;border-radius:var(--r);padding:16px;box-shadow:var(--shadow);margin-bottom:12px;cursor:pointer;transition:all .15s;}
+.day-pick:active{transform:scale(.98);}
+.day-pick h3{font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;color:var(--forest);}
+.day-pick p{font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.5;}
 </style>
 </head>
 <body>
@@ -63,6 +67,20 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div style="font-size:48px;margin-bottom:10px;">🔗</div>
     <h2 style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;">Invite not found</h2>
     <p style="font-size:13.5px;color:var(--muted);margin-top:8px;">This link looks incomplete or may have expired. Please contact us directly or ask for a new invite.</p>
+  </div>
+
+  <div id="no-days-pg" class="card" style="display:none;text-align:center;">
+    <div style="font-size:48px;margin-bottom:10px;">📅</div>
+    <h2 style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;">No assessment days open right now</h2>
+    <p style="font-size:13.5px;color:var(--muted);margin-top:8px;">Please check back later or contact us directly.</p>
+  </div>
+
+  <div id="picker-pg" style="display:none;">
+    <div class="hero">
+      <h1>Little Learners</h1>
+      <p>Select the assessment day you were invited to:</p>
+    </div>
+    <div id="picker-list"></div>
   </div>
 
   <div id="qid-gate-pg" style="display:none;">
@@ -126,38 +144,62 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
         </div>
       </div>
 
-      <div id="guardian-fields" style="display:none;">
-        <div class="warn-note">⚠️ Due to space, only <b>one guardian</b> may accompany <span id="gf-child-name">the child</span>. Please do not bring siblings or other family members on the day.</div>
+      <div id="decline-fields" style="display:none;">
         <div class="fg">
-          <label>Name of the guardian attending</label>
-          <input type="text" id="guardian-name" placeholder="Full name">
-        </div>
-        <div class="fg">
-          <label>Relationship to child</label>
-          <select id="guardian-relation">
-            <option value="">Select…</option>
-            <option>Mother</option>
-            <option>Father</option>
-            <option>Guardian</option>
-            <option>Other</option>
-          </select>
+          <label>Please let us know why you can't make it</label>
+          <textarea id="decline-reason-input" rows="3" style="padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);resize:vertical;" placeholder="e.g. schedule conflict, illness, transport…"></textarea>
         </div>
       </div>
 
-      <div class="fg">
-        <label>Photo Consent</label>
-        <div class="choice-row">
-          <div class="choice" id="photo-yes" onclick="selectChoice('photo','Yes',this)">👍 Yes, photos OK</div>
-          <div class="choice" id="photo-no" onclick="selectChoice('photo','No',this)">🚫 No photos please</div>
+      <div id="guardian-fields" style="display:none;">
+        <div class="warn-note">⚠️ Due to space, only <b>one guardian</b> may accompany <span class="gf-child-name">the child</span>. Please do not bring siblings or other family members on the day.</div>
+
+        <div class="fg">
+          <label>Who will be attending with <span class="gf-child-name">the child</span>?</label>
+          <select id="guardian-select" onchange="onGuardianSelectChange(this)">
+            <option value="">Select…</option>
+          </select>
+        </div>
+        <div class="fg" id="guardian-other-wrap" style="display:none;">
+          <label>Guardian's name</label>
+          <input type="text" id="guardian-other-name" placeholder="Full name">
+        </div>
+
+        <div class="fg">
+          <label>Preferred name for <span class="gf-child-name">the child</span></label>
+          <input type="text" id="preferred-name" placeholder="What does your child like to be called?">
+        </div>
+
+        <div class="fg">
+          <label>Photo of the Little Learner — <span class="gf-child-name">the child</span></label>
+          <div class="note" style="margin-bottom:8px;">A recent, clear photo of your child's face — not the guardian attending. This becomes their profile photo in our system.</div>
+          <input type="file" accept="image/*" class="file-input-styled" id="child-photo-input" onchange="previewChildPhoto(this)">
+          <div id="child-photo-preview" style="display:none;margin-top:8px;"><img id="child-photo-preview-img" style="width:90px;height:90px;object-fit:cover;border-radius:12px;border:2px solid var(--lime);"></div>
+        </div>
+
+        <div class="fg">
+          <label>What would <span class="gf-child-name">the child</span> like to be when they're older, and why?</label>
+          <textarea id="aspiration-input" rows="3" style="padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);resize:vertical;" placeholder="In their own words, if possible!"></textarea>
+        </div>
+
+        <div class="fg">
+          <label>Photo &amp; Media Consent</label>
+          <div class="note" style="margin-bottom:8px;">By selecting "Yes", you give <b>Feed a Friend</b> and <b>Together for Good</b> permission to photograph or film your child during Little Learners activities, and to use these images on social media, our websites, and in reports to our donors and partners, to support and promote the program. You can withdraw this consent at any time by contacting us.</div>
+          <div class="choice-row">
+            <div class="choice" id="photo-yes" onclick="selectChoice('photo','Yes',this)">👍 Yes, I consent</div>
+            <div class="choice" id="photo-no" onclick="selectChoice('photo','No',this)">🚫 No, I don't consent</div>
+          </div>
+        </div>
+
+        <div class="fg">
+          <label>Can your child eat chicken?</label>
+          <div class="choice-row">
+            <div class="choice" id="chicken-yes" onclick="selectChoice('chicken','Yes',this)">🍗 Yes</div>
+            <div class="choice" id="chicken-no" onclick="selectChoice('chicken','No',this)">🚫 No</div>
+          </div>
         </div>
       </div>
-      <div class="fg">
-        <label>Can your child eat chicken?</label>
-        <div class="choice-row">
-          <div class="choice" id="chicken-yes" onclick="selectChoice('chicken','Yes',this)">🍗 Yes</div>
-          <div class="choice" id="chicken-no" onclick="selectChoice('chicken','No',this)">🚫 No</div>
-        </div>
-      </div>
+
       <div id="err" class="err-msg"></div>
       <button class="btn-gold" id="submit-btn" onclick="submitRsvp()">Confirm RSVP</button>
     </div>
@@ -179,6 +221,7 @@ const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 let db;
 let token = null;
 let choices = { attendance: null, photo: null, chicken: null };
+let currentInvite = null;
 let qidFiles = {};
 let currentChildName = 'your child';
 
@@ -188,6 +231,7 @@ function selectChoice(group, val, el) {
   el.classList.add('sel');
   if(group==='attendance') {
     document.getElementById('guardian-fields').style.display = (val==='attended') ? 'block' : 'none';
+    document.getElementById('decline-fields').style.display = (val==='declined') ? 'block' : 'none';
   }
 }
 
@@ -205,27 +249,60 @@ async function init() {
   dayId = params.get('day');
 
   if(dayId && !token) {
-    // Generic, shareable link — anyone can open it, QID number gates access to a specific invite
-    try {
-      const { data, error } = await db.rpc('get_assessment_day_public', { p_day_id: dayId });
-      if(error || !data || !data.length) { showInvalid(); return; }
-      const day = data[0];
-      document.getElementById('gate-title').textContent = day.title || 'Assessment Day';
-      document.getElementById('gate-sub').textContent = [
-        day.event_date ? new Date(day.event_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '',
-        day.event_time || '',
-        day.location || ''
-      ].filter(Boolean).join(' · ');
-      document.getElementById('loading-pg').style.display='none';
-      document.getElementById('qid-gate-pg').style.display='block';
-    } catch(e) {
-      showInvalid();
-    }
+    await loadDayGate(dayId);
     return;
   }
 
-  if(!token) { showInvalid(); return; }
+  if(!token) {
+    await loadDayPicker();
+    return;
+  }
   await loadInviteByToken();
+}
+
+async function loadDayGate(id) {
+  // Generic, shareable link — anyone can open it, QID number gates access to a specific invite
+  try {
+    const { data, error } = await db.rpc('get_assessment_day_public', { p_day_id: id });
+    if(error || !data || !data.length) { showInvalid(); return; }
+    const day = data[0];
+    dayId = id;
+    document.getElementById('gate-title').textContent = day.title || 'Assessment Day';
+    document.getElementById('gate-sub').textContent = [
+      day.event_date ? new Date(day.event_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '',
+      day.event_time || '',
+      day.location || ''
+    ].filter(Boolean).join(' · ');
+    document.getElementById('loading-pg').style.display='none';
+    document.getElementById('picker-pg').style.display='none';
+    document.getElementById('qid-gate-pg').style.display='block';
+  } catch(e) {
+    showInvalid();
+  }
+}
+
+async function loadDayPicker() {
+  try {
+    const { data, error } = await db.rpc('list_upcoming_assessment_days');
+    document.getElementById('loading-pg').style.display='none';
+    if(error || !data || !data.length) {
+      document.getElementById('no-days-pg').style.display='block';
+      return;
+    }
+    const el = document.getElementById('picker-list');
+    el.innerHTML = data.map(d => `
+      <div class="day-pick" onclick="loadDayGate('${d.id}')">
+        <h3>${d.title || 'Assessment Day'}</h3>
+        <p>${[
+          d.event_date ? new Date(d.event_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '',
+          d.event_time || '',
+          d.location || ''
+        ].filter(Boolean).join(' · ')}</p>
+      </div>`).join('');
+    document.getElementById('picker-pg').style.display='block';
+  } catch(e) {
+    showInvalid();
+  }
 }
 
 async function submitQidGate() {
@@ -269,13 +346,48 @@ async function submitQidGate() {
 }
 
 function applyInvite(invite) {
+  currentInvite = invite;
   currentChildName = invite.child_name || 'your child';
   document.getElementById('rp-title').textContent = invite.title || 'Assessment Day';
   document.getElementById('rp-child').textContent = `For ${currentChildName}`;
   document.getElementById('rp-date').textContent = invite.event_date ? new Date(invite.event_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : 'Date to be confirmed';
   document.getElementById('rp-time').textContent = invite.event_time || 'Time to be confirmed';
   document.getElementById('rp-location').textContent = invite.location || 'Location to be confirmed';
-  document.getElementById('gf-child-name').textContent = currentChildName;
+  document.querySelectorAll('.gf-child-name').forEach(el => el.textContent = currentChildName);
+
+  // Build the guardian dropdown from the parents already on file
+  const sel = document.getElementById('guardian-select');
+  sel.innerHTML = '<option value="">Select…</option>';
+  if(invite.father_name) sel.innerHTML += `<option value="Father|${invite.father_name}">Father — ${invite.father_name}</option>`;
+  if(invite.mother_name) sel.innerHTML += `<option value="Mother|${invite.mother_name}">Mother — ${invite.mother_name}</option>`;
+  sel.innerHTML += `<option value="Other|">Someone else</option>`;
+
+  // If they already answered before (e.g. came back to finish), preselect/prefill
+  if(invite.attending_guardian_name && invite.attending_guardian_relation) {
+    const match = [...sel.options].find(o => o.value.startsWith(invite.attending_guardian_relation+'|'+invite.attending_guardian_name));
+    if(match) sel.value = match.value;
+    else { sel.value = 'Other|'; document.getElementById('guardian-other-wrap').style.display='block'; document.getElementById('guardian-other-name').value = invite.attending_guardian_name; }
+  }
+  if(invite.preferred_name) document.getElementById('preferred-name').value = invite.preferred_name;
+  if(invite.aspiration_response) document.getElementById('aspiration-input').value = invite.aspiration_response;
+  if(invite.decline_reason) document.getElementById('decline-reason-input').value = invite.decline_reason;
+}
+
+function onGuardianSelectChange(sel) {
+  document.getElementById('guardian-other-wrap').style.display = sel.value.startsWith('Other|') ? 'block' : 'none';
+}
+
+let childPhotoFile = null;
+function previewChildPhoto(input) {
+  const file = input.files[0];
+  if(!file) return;
+  childPhotoFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('child-photo-preview-img').src = e.target.result;
+    document.getElementById('child-photo-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
 }
 
 async function loadInviteByToken() {
@@ -389,17 +501,43 @@ async function submitRsvp() {
   const err = document.getElementById('err');
   if(!choices.attendance) { err.textContent = '⚠️ Please let us know if you\'ll be attending.'; err.style.display='block'; return; }
 
-  let guardianName = '', guardianRelation = '';
+  let guardianName = '', guardianRelation = '', preferredName = '', aspiration = '', declineReason = '';
   if(choices.attendance==='attended') {
-    guardianName = document.getElementById('guardian-name').value.trim();
-    guardianRelation = document.getElementById('guardian-relation').value;
-    if(!guardianName || !guardianRelation) {
-      err.textContent = '⚠️ Please tell us the name and relationship of the one guardian attending.';
+    const selVal = document.getElementById('guardian-select').value;
+    if(!selVal) { err.textContent = '⚠️ Please select who will be attending.'; err.style.display='block'; return; }
+    const [relation, name] = selVal.split('|');
+    guardianRelation = relation;
+    guardianName = relation==='Other' ? document.getElementById('guardian-other-name').value.trim() : name;
+    if(relation==='Other' && !guardianName) {
+      err.textContent = '⚠️ Please tell us the name of the guardian attending.';
       err.style.display='block';
       return;
     }
+
+    preferredName = document.getElementById('preferred-name').value.trim();
+    if(!preferredName) { err.textContent = '⚠️ Please tell us your child\'s preferred name.'; err.style.display='block'; return; }
+
+    if(!childPhotoFile) {
+      err.textContent = '⚠️ Please upload a recent, clear photo of your child (the Little Learner).';
+      err.style.display='block';
+      return;
+    }
+
     if(!choices.photo || !choices.chicken) {
-      err.textContent = '⚠️ Please answer the photo consent and dietary questions.';
+      err.textContent = '⚠️ Please answer the consent and dietary questions.';
+      err.style.display='block';
+      return;
+    }
+    aspiration = document.getElementById('aspiration-input').value.trim();
+    if(!aspiration) {
+      err.textContent = '⚠️ Please answer what your child would like to be when they\'re older.';
+      err.style.display='block';
+      return;
+    }
+  } else if(choices.attendance==='declined') {
+    declineReason = document.getElementById('decline-reason-input').value.trim();
+    if(!declineReason) {
+      err.textContent = '⚠️ Please let us know why you can\'t make it.';
       err.style.display='block';
       return;
     }
@@ -409,6 +547,14 @@ async function submitRsvp() {
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner" style="border-color:rgba(255,255,255,.4);border-top-color:white;"></div> Submitting…';
   try {
+    let photoPath = null;
+    if(childPhotoFile) {
+      const ext = (childPhotoFile.name.split('.').pop() || 'jpg').toLowerCase();
+      photoPath = `rsvp/${currentInvite.child_id}/photo_${Date.now()}.${ext}`;
+      const { error: upErr } = await db.storage.from('ll-documents').upload(photoPath, childPhotoFile, { upsert: true });
+      if(upErr) throw new Error('Could not upload photo: ' + upErr.message);
+    }
+
     const { data, error } = await db.rpc('submit_assessment_rsvp', {
       p_token: token,
       p_attendance: choices.attendance,
@@ -416,6 +562,10 @@ async function submitRsvp() {
       p_dietary_chicken: choices.chicken,
       p_guardian_name: guardianName || null,
       p_guardian_relation: guardianRelation || null,
+      p_preferred_name: preferredName || null,
+      p_photo_path: photoPath,
+      p_aspiration_response: aspiration || null,
+      p_decline_reason: declineReason || null,
     });
     if(error || !data) throw new Error(error?.message || 'Could not submit RSVP');
     document.getElementById('rsvp-pg').style.display='none';
