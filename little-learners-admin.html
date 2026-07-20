@@ -162,6 +162,24 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
 .ikey{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
 .ival{font-size:13px;font-weight:600;}
 .qid-pill{display:inline-flex;align-items:center;gap:5px;background:var(--forest);color:var(--teal);padding:3px 11px;border-radius:8px;font-family:'Nunito',sans-serif;font-weight:900;font-size:11.5px;margin-top:3px;}
+.qid-scan-btn-sm{background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:5px 12px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-left:8px;}
+.qid-scan-btn-sm:hover{background:#2B9990;color:white;}
+.qid-diff-row{display:grid;grid-template-columns:auto 1fr 1fr;gap:10px;align-items:center;padding:10px 12px;border-radius:var(--rs);border:2px solid var(--border);margin-bottom:6px;}
+.qid-diff-row.same{opacity:.55;}
+.qid-diff-row.diff{border-color:var(--gold);background:#FFFBF0;}
+.qid-diff-label{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.qid-diff-old{font-size:12.5px;color:var(--muted);text-decoration:line-through;}
+.qid-diff-new{font-size:12.5px;font-weight:700;color:var(--forest);}
+.qid-diff-field{display:flex;flex-direction:column;gap:2px;}
+.preferred-name-input{width:100%;padding:8px 10px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:12.5px;font-weight:600;outline:none;background:white;}
+.preferred-name-input:focus{border-color:var(--lime);}
+.upload-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.upload-side-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:flex;align-items:center;gap:5px;}
+.file-input-styled{width:100%;padding:14px 8px;border-radius:var(--rs);border:2.5px dashed var(--border);background:var(--cream);font-family:'Quicksand',sans-serif;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;text-align:center;transition:all .2s;}
+.file-input-styled::-webkit-file-upload-button{background:var(--forest);color:white;border:none;padding:6px 14px;border-radius:50px;font-family:'Quicksand',sans-serif;font-weight:700;font-size:12px;cursor:pointer;margin-right:8px;}
+.scan-btn{width:100%;background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:12px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;margin-bottom:12px;}
+.scan-btn:hover{background:#2B9990;color:white;}
+.scan-btn:disabled{background:#ccc;color:#888;cursor:not-allowed;}
 .income-badge{display:inline-block;padding:3px 11px;border-radius:50px;font-weight:700;font-size:12.5px;}
 .income-badge.ok{background:var(--lime-soft);color:var(--forest);}
 .income-badge.over{background:#FDEAEA;color:#8B2020;}
@@ -415,6 +433,36 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
     <div class="tpanel" id="adp-attendees"></div>
   </div>
 </div>
+</div>
+</div>
+
+<!-- QID SCAN MODAL -->
+<div class="overlay" id="qid-modal" onclick="closeQidBg(event)">
+<div class="modal">
+  <div class="modal-hdr">
+    <div style="flex:1;min-width:0;">
+      <div class="modal-hdr-title" id="qid-title">Scan QID</div>
+      <div class="modal-hdr-sub" id="qid-sub"></div>
+    </div>
+    <button class="modal-close" onclick="closeQidScanModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div id="qid-upload-step">
+      <p style="font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:12px;">Upload a photo of the QID card — front and back. We'll read it automatically and show you what's changed before saving anything.</p>
+      <div class="upload-pair">
+        <div class="upload-side">
+          <div class="upload-side-title">📷 Front</div>
+          <input type="file" accept="image/*" class="file-input-styled" id="qid-file-front" onchange="handleQidScanFile(event,'front')">
+        </div>
+        <div class="upload-side">
+          <div class="upload-side-title">📷 Back</div>
+          <input type="file" accept="image/*" class="file-input-styled" id="qid-file-back" onchange="handleQidScanFile(event,'back')">
+        </div>
+      </div>
+      <button class="scan-btn" id="qid-scan-btn" onclick="runQidScan()" disabled>🤖 Scan &amp; Compare</button>
+    </div>
+    <div id="qid-diff-step" style="display:none;"></div>
+  </div>
 </div>
 </div>
 
@@ -757,7 +805,7 @@ function renderEligibleForDay() {
     if(alreadyIn.has(c.id)) return false;
     const fam = allFamilies.find(f=>f.id===c.family_id);
     if(!fam) return false;
-    const callDone = ['pre_assessed','pre_assessment_passed','pre_assessment_failed','year_group_pending','year_group_confirmed'].includes(fam.pipeline_status);
+    const callDone = ['waiting_for_assessment','pre_assessed','pre_assessment_passed','pre_assessment_failed','year_group_pending','year_group_confirmed'].includes(fam.pipeline_status);
     return callDone;
   });
   if(!eligible.length) {
@@ -774,7 +822,7 @@ function renderEligibleForDay() {
         <input type="checkbox" class="elig-check" value="${c.id}" style="width:18px;height:18px;flex-shrink:0;">
         <div class="fam-info">
           <div class="fam-name">${c.full_name||'Child'} <span style="font-size:11px;color:var(--muted);">(${childAgeYears(c)}y)</span></div>
-          <div class="fam-meta"><span>👪 ${fam?.father_name||'—'}</span><span>📞 ${fam?.father_phone||'—'}</span></div>
+          <div class="fam-meta"><span>👪 ${fam?.father_name||fam?.mother_name||'—'}</span><span>📞 ${fam?.father_phone||fam?.mother_phone||'—'}</span></div>
         </div>
       </label>`;
     }).join('')}`;
@@ -817,8 +865,10 @@ function renderAttendeesForDay() {
           <div class="fam-info">
             <div class="fam-name">${child?.full_name||'Child'} <span style="font-size:11px;color:var(--muted);">(system YG: ${suggested})</span></div>
             <div class="fam-meta">
-              <span>👪 ${fam?.father_name||'—'}</span><span>📞 ${fam?.father_phone||'—'}</span>
+              <span>👪 ${fam?.father_name||fam?.mother_name||'—'}</span><span>📞 ${fam?.father_phone||fam?.mother_phone||'—'}</span>
               <span>${a.invite_status==='confirmed'?'✅ RSVP confirmed':'⏳ Awaiting RSVP'}</span>
+              ${a.attending_guardian_name?`<span>👤 ${a.attending_guardian_name} (${a.attending_guardian_relation||'—'})</span>`:''}
+              ${a.qid_scanned_at?'<span>🪪 QID verified</span>':'<span style="color:var(--coral);font-weight:700;">🪪 QID not yet on file</span>'}
               ${a.photo_consent?`<span>📷 Photo: ${a.photo_consent}</span>`:''}
               ${a.dietary_chicken?`<span>🍗 Chicken OK: ${a.dietary_chicken}</span>`:''}
             </div>
@@ -920,9 +970,11 @@ async function sendAssessmentInvite(attendeeId) {
   const a = allAssessmentAttendees.find(x=>x.id===attendeeId);
   const child = allChildren.find(c=>c.id===a.child_id);
   const fam = allFamilies.find(f=>f.id===a.family_id);
-  if(!fam?.father_email) { showToast('No email on file for this family'); return; }
+  const guardianEmail = fam?.father_email || fam?.mother_email;
+  const guardianName = fam?.father_name || fam?.mother_name || 'Parent';
+  if(!guardianEmail) { showToast('No email on file for this family'); return; }
   const rsvpLink = `https://feedafriendqa.github.io/little-learners-rsvp.html?token=${a.access_token}`;
-  const ok = await sendEmail('assessment_day_invite', fam.father_email, fam.father_name||'Parent', {
+  const ok = await sendEmail('assessment_day_invite', guardianEmail, guardianName, {
     child_name: child?.full_name||'your child',
     title: currentAssessDay.title,
     event_date: currentAssessDay.event_date,
@@ -930,32 +982,253 @@ async function sendAssessmentInvite(attendeeId) {
     location: currentAssessDay.location,
     rsvp_link: rsvpLink,
   });
-  if(ok) showToast('✅ Invite sent to '+fam.father_name);
+  if(ok) showToast('✅ Invite sent to '+guardianName);
 }
 
 async function sendAllInvites() {
   const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id);
-  let sent = 0;
+  let sent = 0, skipped = 0;
   for(const a of attendees) {
     const fam = allFamilies.find(f=>f.id===a.family_id);
-    if(!fam?.father_email) continue;
+    if(!fam?.father_email && !fam?.mother_email) { skipped++; continue; }
     await sendAssessmentInvite(a.id);
     sent++;
   }
-  showToast(`✅ Sent ${sent} invite(s)`);
+  showToast(`✅ Sent ${sent} invite(s)${skipped?`, ${skipped} skipped (no email on file — use Copy WhatsApp List instead)`:''}`);
 }
 
 function copyWhatsAppList() {
   const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id);
   const lines = attendees.map(a => {
     const fam = allFamilies.find(f=>f.id===a.family_id);
-    return `${fam?.father_name||'Parent'}: ${fam?.father_phone||'—'}`;
+    return `${fam?.father_name||fam?.mother_name||'Parent'}: ${fam?.father_phone||fam?.mother_phone||'—'}`;
   });
   const text = `${currentAssessDay.title}\n\n` + lines.join('\n');
   navigator.clipboard.writeText(text).then(
     () => showToast('✅ Copied — paste into your WhatsApp group'),
     () => showToast('⚠️ Could not copy — please copy manually')
   );
+}
+
+// ── QID SCAN & COMPARE ──
+// Reuses the same scan-qid Edge Function as the public application form
+let qidScanTarget = null; // { type: 'father'|'mother'|'child', familyId, childId }
+let qidScanFiles = {};    // { front: File, back: File }
+let qidScanExtracted = null;
+
+const QID_FIELD_MAPS = {
+  father: [
+    {label:'Full Name', dbField:'father_name', scanKey:'name'},
+    {label:'QID Number', dbField:'father_qid', scanKey:'qid_number'},
+    {label:'Nationality', dbField:'father_nationality', scanKey:'nationality'},
+    {label:'Date of Birth', dbField:'father_dob', scanKey:'dob'},
+    {label:'QID Expiry', dbField:'father_qid_expiry', scanKey:'expiry'},
+    {label:'Sponsor', dbField:'father_sponsor', scanKey:'sponsor'},
+  ],
+  mother: [
+    {label:'Full Name', dbField:'mother_name', scanKey:'name'},
+    {label:'QID Number', dbField:'mother_qid', scanKey:'qid_number'},
+    {label:'Nationality', dbField:'mother_nationality', scanKey:'nationality'},
+    {label:'Date of Birth', dbField:'mother_dob', scanKey:'dob'},
+    {label:'QID Expiry', dbField:'mother_qid_expiry', scanKey:'expiry'},
+    {label:'Sponsor', dbField:'mother_sponsor', scanKey:'sponsor'},
+  ],
+  child: [
+    {label:'Full Name', dbField:'full_name', scanKey:'name'},
+    {label:'QID Number', dbField:'qid', scanKey:'qid_number'},
+    {label:'Nationality', dbField:'nationality', scanKey:'nationality'},
+    {label:'Date of Birth', dbField:'dob', scanKey:'dob'},
+    {label:'Gender', dbField:'gender', scanKey:'gender'},
+    {label:'QID Expiry', dbField:'qid_expiry', scanKey:'expiry'},
+    {label:'Sponsor', dbField:'qid_sponsor', scanKey:'sponsor'},
+  ],
+};
+
+function openQidScan(type, familyId, childId) {
+  qidScanTarget = {type, familyId, childId: childId||null};
+  qidScanFiles = {};
+  qidScanExtracted = null;
+  const fam = allFamilies.find(f=>f.id===familyId);
+  const child = childId ? allChildren.find(c=>c.id===childId) : null;
+  const who = type==='child' ? (child?.full_name||'Child') : (type==='father' ? (fam?.father_name||'Father / Guardian 1') : (fam?.mother_name||'Mother / Guardian 2'));
+  document.getElementById('qid-title').textContent = '🪪 Scan QID — '+who;
+  document.getElementById('qid-sub').innerHTML = `<span>${fam?.urn||''}</span>`;
+  document.getElementById('qid-upload-step').style.display = 'block';
+  document.getElementById('qid-diff-step').style.display = 'none';
+  document.getElementById('qid-diff-step').innerHTML = '';
+  ['front','back'].forEach(side=>{
+    const inp = document.getElementById('qid-file-'+side);
+    if(inp) inp.value = '';
+  });
+  document.getElementById('qid-scan-btn').disabled = true;
+  document.getElementById('qid-scan-btn').innerHTML = '🤖 Scan &amp; Compare';
+  document.getElementById('qid-modal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeQidScanModal() {
+  document.getElementById('qid-modal').classList.remove('open');
+  document.body.style.overflow='';
+}
+function closeQidBg(e) { if(e.target===document.getElementById('qid-modal')) closeQidScanModal(); }
+
+function handleQidScanFile(e, side) {
+  const file = e.target.files[0];
+  if(!file) return;
+  qidScanFiles[side] = file;
+  const btn = document.getElementById('qid-scan-btn');
+  if(qidScanFiles.front || qidScanFiles.back) btn.disabled = false;
+}
+
+function fileToBase64Qid(file) {
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+async function runQidScan() {
+  const btn = document.getElementById('qid-scan-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Reading QID…';
+  try {
+    const images = {};
+    if(qidScanFiles.front) images.front = {data: await fileToBase64Qid(qidScanFiles.front), type: qidScanFiles.front.type||'image/jpeg'};
+    if(qidScanFiles.back) images.back = {data: await fileToBase64Qid(qidScanFiles.back), type: qidScanFiles.back.type||'image/jpeg'};
+
+    const resp = await fetch(SUPA_URL+'/functions/v1/scan-qid', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+      body: JSON.stringify({images}),
+    });
+    const data = await resp.json();
+    if(data.error) throw new Error(data.error);
+    qidScanExtracted = data;
+    renderQidDiff();
+  } catch(e) {
+    showToast('⚠️ Scan failed: '+e.message);
+    btn.disabled = false;
+    btn.innerHTML = '🤖 Scan &amp; Compare';
+  }
+}
+
+function renderQidDiff() {
+  const {type, familyId, childId} = qidScanTarget;
+  const fields = QID_FIELD_MAPS[type];
+  const record = type==='child' ? allChildren.find(c=>c.id===childId) : allFamilies.find(f=>f.id===familyId);
+
+  const rows = fields.map((f,i) => {
+    const oldVal = record?.[f.dbField] || '';
+    const newVal = qidScanExtracted[f.scanKey] || '';
+    const isDiff = newVal && String(newVal).trim() !== String(oldVal).trim();
+    const hasNew = !!newVal;
+    return `<div class="qid-diff-row ${isDiff?'diff':'same'}">
+      <input type="checkbox" class="qid-diff-check" data-idx="${i}" ${isDiff?'checked':''} ${!hasNew?'disabled':''} style="width:18px;height:18px;">
+      <div class="qid-diff-field">
+        <span class="qid-diff-label">${f.label}</span>
+        <span class="qid-diff-old">${oldVal||'—'}</span>
+      </div>
+      <div class="qid-diff-field">
+        <span class="qid-diff-label">From QID</span>
+        <span class="qid-diff-new">${newVal||'— not found on card —'}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('qid-upload-step').style.display = 'none';
+  const diffEl = document.getElementById('qid-diff-step');
+  diffEl.style.display = 'block';
+  diffEl.innerHTML = `
+    <p style="font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:10px;">Fields that differ from what's on file are pre-checked and highlighted. Uncheck anything you don't want to overwrite.</p>
+    ${rows}
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn-outline" onclick="cancelQidDiff()">← Re-scan</button>
+      <button class="btn-teal" style="flex:1;" onclick="applyQidScan()">💾 Save Selected Fields</button>
+    </div>`;
+}
+
+function cancelQidDiff() {
+  qidScanExtracted = null;
+  document.getElementById('qid-diff-step').style.display = 'none';
+  document.getElementById('qid-upload-step').style.display = 'block';
+  const btn = document.getElementById('qid-scan-btn');
+  btn.disabled = false;
+  btn.innerHTML = '🤖 Scan &amp; Compare';
+}
+
+async function applyQidScan() {
+  const {type, familyId, childId} = qidScanTarget;
+  const fields = QID_FIELD_MAPS[type];
+  const checks = [...document.querySelectorAll('.qid-diff-check')];
+  const updates = {};
+  checks.forEach(chk => {
+    if(!chk.checked) return;
+    const f = fields[+chk.dataset.idx];
+    const val = qidScanExtracted[f.scanKey];
+    if(val) updates[f.dbField] = val;
+  });
+
+  if(!Object.keys(updates).length && !qidScanFiles.front && !qidScanFiles.back) {
+    showToast('Nothing selected to save');
+    return;
+  }
+
+  try {
+    if(Object.keys(updates).length) {
+      const table = type==='child' ? 'll_children' : 'll_families';
+      const id = type==='child' ? childId : familyId;
+      const {error} = await db.from(table).update(updates).eq('id', id);
+      if(error) throw error;
+      if(type==='child') {
+        const idx = allChildren.findIndex(c=>c.id===id);
+        if(idx>=0) Object.assign(allChildren[idx], updates);
+      } else {
+        const idx = allFamilies.findIndex(f=>f.id===id);
+        if(idx>=0) Object.assign(allFamilies[idx], updates);
+      }
+    }
+
+    // Upload the QID images as documents, same storage convention as the application form
+    for(const side of ['front','back']) {
+      const file = qidScanFiles[side];
+      if(!file) continue;
+      const ext = file.name.split('.').pop();
+      const docKey = type+(childId?'_'+childId:'')+'_qid_'+side;
+      const path = familyId+'/'+docKey+'.'+ext;
+      const {error: uErr} = await db.storage.from('ll-documents').upload(path, file, {upsert:true});
+      if(!uErr) {
+        await db.from('ll_documents').insert({
+          family_id: familyId, child_id: childId||null,
+          file_name: (type==='child'?'Child':type)+' QID '+side,
+          file_path: path, doc_type: docKey,
+        });
+      }
+    }
+
+    await addActivityLog(familyId, childId||null, 'note', `QID scanned — updated: ${Object.keys(updates).join(', ')||'(documents only)'}`, '');
+
+    showToast('✅ QID info saved');
+    closeQidScanModal();
+    if(currentFamily && currentFamily.id===familyId) {
+      renderOverview(currentFamily);
+      renderChildren(currentChildren, currentFamily);
+      await renderDocs(currentFamily);
+      renderActivityLog(currentFamily.id);
+    }
+  } catch(e) {
+    showToast('⚠️ Save failed: '+e.message);
+  }
+}
+
+async function savePreferredName(childId, val) {
+  const name = val.trim();
+  const {error} = await db.from('ll_children').update({preferred_name: name||null}).eq('id', childId);
+  if(error) { showToast('Error: '+error.message); return; }
+  const idx = allChildren.findIndex(c=>c.id===childId);
+  if(idx>=0) allChildren[idx].preferred_name = name||null;
+  showToast('✅ Preferred name saved');
 }
 
 // ── LEARNING PACK ──
@@ -1546,7 +1819,7 @@ function renderOverview(f) {
     </div>
 
         <div class="info-sec">
-      <h3>Father / Guardian 1</h3>
+      <h3>Father / Guardian 1 <button class="qid-scan-btn-sm" onclick="openQidScan('father','${f.id}')">🪪 Scan QID</button></h3>
       <div class="info-grid">
         <div class="irow"><div class="ikey">Name</div><div class="ival">${f.father_name||'—'}</div></div>
         <div class="irow"><div class="ikey">Phone</div><div class="ival">${f.father_phone||'—'}</div></div>
@@ -1556,13 +1829,14 @@ function renderOverview(f) {
         <div class="irow"><div class="ikey">Arabic</div><div class="ival">${f.father_arabic||'—'}</div></div>
         <div class="irow"><div class="ikey">Employment</div><div class="ival">${f.father_employment||'—'}</div></div>
         <div class="irow"><div class="ikey">Salary</div><div class="ival">QAR ${(f.father_salary||0).toLocaleString()}</div></div>
+        ${f.father_dob?`<div class="irow"><div class="ikey">Date of Birth</div><div class="ival">${f.father_dob}</div></div>`:''}
         ${f.father_sponsor?`<div class="irow"><div class="ikey">Sponsor</div><div class="ival">${f.father_sponsor}</div></div>`:''}
         ${f.father_qid_expiry?`<div class="irow"><div class="ikey">QID Expiry</div><div class="ival">${f.father_qid_expiry}</div></div>`:''}
       </div>
       ${f.father_qid?`<div class="qid-pill">🪪 ${f.father_qid}</div>`:''}
 
       ${f.mother_name?`
-      <h3>Mother / Guardian 2</h3>
+      <h3>Mother / Guardian 2 <button class="qid-scan-btn-sm" onclick="openQidScan('mother','${f.id}')">🪪 Scan QID</button></h3>
       <div class="info-grid">
         <div class="irow"><div class="ikey">Name</div><div class="ival">${f.mother_name}</div></div>
         <div class="irow"><div class="ikey">Phone</div><div class="ival">${f.mother_phone||'—'}</div></div>
@@ -1572,11 +1846,15 @@ function renderOverview(f) {
         <div class="irow"><div class="ikey">Arabic</div><div class="ival">${f.mother_arabic||'—'}</div></div>
         <div class="irow"><div class="ikey">Employment</div><div class="ival">${f.mother_employment||'—'}</div></div>
         <div class="irow"><div class="ikey">Salary</div><div class="ival">QAR ${(f.mother_salary||0).toLocaleString()}</div></div>
+        ${f.mother_dob?`<div class="irow"><div class="ikey">Date of Birth</div><div class="ival">${f.mother_dob}</div></div>`:''}
         ${f.mother_sponsor?`<div class="irow"><div class="ikey">Sponsor</div><div class="ival">${f.mother_sponsor}</div></div>`:''}
         ${f.mother_qid_expiry?`<div class="irow"><div class="ikey">QID Expiry</div><div class="ival">${f.mother_qid_expiry}</div></div>`:''}
       </div>
       ${f.mother_qid?`<div class="qid-pill">🪪 ${f.mother_qid}</div>`:''}
-      `:''}
+      `:`
+      <h3>Mother / Guardian 2 <button class="qid-scan-btn-sm" onclick="openQidScan('mother','${f.id}')">🪪 Add via QID Scan</button></h3>
+      <p style="font-size:12px;color:var(--muted);font-weight:600;">No mother/guardian 2 on file yet — scan a QID to add one.</p>
+      `}
 
       <h3>Household</h3>
       <div class="info-grid">
@@ -1612,14 +1890,15 @@ function renderChildren(children, f) {
             : (c.gender==='Girl'?'👧':'👦')}
         </div>
         <div class="child-header-info">
-          <div class="child-header-name">${c.full_name||'Child '+(i+1)}</div>
+          <div class="child-header-name">${c.full_name||'Child '+(i+1)}${c.preferred_name?` <span style="font-size:12px;font-weight:700;color:var(--gold);">"${c.preferred_name}"</span>`:''}</div>
           <div class="child-header-sub">
             <span>${c.urn||f.urn+'.'+(i+1)}</span>
             ${c.gender?`<span class="gc ${gcClass}">${c.gender}</span>`:''}
             ${c.dob?`<span>DOB: ${c.dob}</span>`:''}
           </div>
         </div>
-        <div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <button class="qid-scan-btn-sm" style="margin-left:0;" onclick="openQidScan('child','${f.id}','${c.id}')">🪪 Scan QID</button>
           <label style="cursor:pointer;background:rgba(255,255,255,.15);color:white;border-radius:50px;padding:5px 12px;font-size:11px;font-weight:700;font-family:Quicksand,sans-serif;">
             📸 Photo
             <input type="file" accept="image/*" style="display:none;" onchange="uploadChildPhoto(event,'${c.id}','${f.id}')">
@@ -1656,6 +1935,10 @@ function renderChildren(children, f) {
         </div>
 
         <div class="info-grid" style="margin-top:10px;">
+          <div class="irow" style="grid-column:span 2;">
+            <div class="ikey">Preferred Name <span style="text-transform:none;font-weight:600;color:var(--muted);">(what the child likes to be called, if different)</span></div>
+            <input class="preferred-name-input" style="margin-top:4px;" placeholder="e.g. Bebo" value="${c.preferred_name||''}" onblur="savePreferredName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          </div>
           <div class="irow"><div class="ikey">Nationality</div><div class="ival">${c.nationality||'—'}</div></div>
           <div class="irow"><div class="ikey">Language at Home</div><div class="ival">${c.lang_home||'—'}</div></div>
           <div class="irow"><div class="ikey">English</div><div class="ival">${c.english_fluency||'—'}</div></div>
@@ -1664,6 +1947,8 @@ function renderChildren(children, f) {
           <div class="irow"><div class="ikey">Years Since School</div><div class="ival">${c.years_since_school||'—'}</div></div>
           <div class="irow"><div class="ikey">Special Needs</div><div class="ival">${c.special_needs||'—'}</div></div>
           ${c.special_needs_detail?`<div class="irow" style="grid-column:span 2"><div class="ikey">SN Detail</div><div class="ival">${c.special_needs_detail}</div></div>`:''}
+          ${c.qid_sponsor?`<div class="irow"><div class="ikey">Sponsor</div><div class="ival">${c.qid_sponsor}</div></div>`:''}
+          ${c.qid_expiry?`<div class="irow"><div class="ikey">QID Expiry</div><div class="ival">${c.qid_expiry}</div></div>`:''}
         </div>
         ${c.qid?`<div class="qid-pill" style="margin-top:8px;">🪪 ${c.qid}</div>`:''}
 

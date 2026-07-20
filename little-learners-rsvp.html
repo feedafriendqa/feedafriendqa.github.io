@@ -35,6 +35,20 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 .success-pg p{font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.6;}
 .spinner{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(10,61,31,.2);border-top-color:var(--forest);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
+.note{background:var(--lime-soft);border-radius:var(--rs);padding:10px 14px;font-size:12.5px;font-weight:600;color:var(--forest-mid);margin-bottom:14px;border-left:4px solid var(--lime);line-height:1.5;}
+.warn-note{background:#FEF3D6;border-radius:var(--rs);padding:10px 14px;font-size:12.5px;font-weight:700;color:#7A5000;margin-bottom:14px;border-left:4px solid var(--gold);line-height:1.5;}
+.upload-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.upload-side-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.file-input-styled{width:100%;padding:12px 8px;border-radius:var(--rs);border:2.5px dashed var(--border);background:var(--cream);font-family:'Quicksand',sans-serif;font-size:11.5px;font-weight:700;color:var(--muted);cursor:pointer;text-align:center;}
+.file-input-styled::-webkit-file-upload-button{background:var(--forest);color:white;border:none;padding:5px 12px;border-radius:50px;font-family:'Quicksand',sans-serif;font-weight:700;font-size:11px;cursor:pointer;margin-right:6px;}
+.scan-btn{width:100%;background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:12px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;}
+.scan-btn:disabled{background:#ccc;color:#888;cursor:not-allowed;}
+.scan-result{background:var(--lime-soft);border-radius:var(--rs);border:2px solid var(--lime);padding:10px 12px;margin-bottom:12px;font-size:12.5px;}
+.scan-field{display:flex;justify-content:space-between;padding:3px 0;}
+.scan-field-key{color:var(--muted);font-weight:700;}
+.link-btn{background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;display:block;margin:0 auto;}
+.fg select{padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);background:white;}
+.fg input[type=text]{padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);}
 </style>
 </head>
 <body>
@@ -49,6 +63,31 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div style="font-size:48px;margin-bottom:10px;">🔗</div>
     <h2 style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;">Invite not found</h2>
     <p style="font-size:13.5px;color:var(--muted);margin-top:8px;">This link looks incomplete or may have expired. Please contact us directly or ask for a new invite.</p>
+  </div>
+
+  <div id="qid-pg" style="display:none;">
+    <div class="hero">
+      <h1>Verify Your Child's ID</h1>
+      <p id="qid-child"></p>
+    </div>
+    <div class="card">
+      <div class="note">📷 Please photograph your child's QID (or birth certificate if they don't have one yet) so we can confirm we have the right child on file before the assessment day.</div>
+      <div class="upload-pair">
+        <div>
+          <div class="upload-side-title">Front</div>
+          <input type="file" accept="image/*" class="file-input-styled" id="qid-front">
+        </div>
+        <div>
+          <div class="upload-side-title">Back</div>
+          <input type="file" accept="image/*" class="file-input-styled" id="qid-back">
+        </div>
+      </div>
+      <button class="scan-btn" id="qid-scan-btn" onclick="scanChildQid()" disabled>🤖 Scan &amp; Verify</button>
+      <div id="qid-scan-result" style="display:none;"></div>
+      <div id="qid-err" class="err-msg"></div>
+      <button class="btn-gold" id="qid-continue-btn" onclick="goToRsvpForm()" disabled>Continue →</button>
+      <button class="link-btn" style="margin-top:10px;" onclick="skipQidScan()">I don't have it on me — I'll bring it on the day</button>
+    </div>
   </div>
 
   <div id="rsvp-pg" style="display:none;">
@@ -70,6 +109,25 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
           <div class="choice" id="att-no" onclick="selectChoice('attendance','declined',this)">❌ Can't make it</div>
         </div>
       </div>
+
+      <div id="guardian-fields" style="display:none;">
+        <div class="warn-note">⚠️ Due to space, only <b>one guardian</b> may accompany <span id="gf-child-name">the child</span>. Please do not bring siblings or other family members on the day.</div>
+        <div class="fg">
+          <label>Name of the guardian attending</label>
+          <input type="text" id="guardian-name" placeholder="Full name">
+        </div>
+        <div class="fg">
+          <label>Relationship to child</label>
+          <select id="guardian-relation">
+            <option value="">Select…</option>
+            <option>Mother</option>
+            <option>Father</option>
+            <option>Guardian</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
       <div class="fg">
         <label>Photo Consent</label>
         <div class="choice-row">
@@ -105,11 +163,16 @@ const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 let db;
 let token = null;
 let choices = { attendance: null, photo: null, chicken: null };
+let qidFiles = {};
+let currentChildName = 'your child';
 
 function selectChoice(group, val, el) {
   choices[group] = val;
   document.querySelectorAll(`#${group==='attendance'?'att':group}-yes, #${group==='attendance'?'att':group}-no`).forEach(x=>x.classList.remove('sel'));
   el.classList.add('sel');
+  if(group==='attendance') {
+    document.getElementById('guardian-fields').style.display = (val==='attended') ? 'block' : 'none';
+  }
 }
 
 async function init() {
@@ -127,11 +190,13 @@ async function init() {
     const { data, error } = await db.rpc('get_assessment_invite', { p_token: token });
     if(error || !data || !data.length) { showInvalid(); return; }
     const invite = data[0];
+    currentChildName = invite.child_name || 'your child';
     document.getElementById('rp-title').textContent = invite.title || 'Assessment Day';
-    document.getElementById('rp-child').textContent = `For ${invite.child_name || 'your child'}`;
+    document.getElementById('rp-child').textContent = `For ${currentChildName}`;
     document.getElementById('rp-date').textContent = invite.event_date ? new Date(invite.event_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : 'Date to be confirmed';
     document.getElementById('rp-time').textContent = invite.event_time || 'Time to be confirmed';
     document.getElementById('rp-location').textContent = invite.location || 'Location to be confirmed';
+    document.getElementById('gf-child-name').textContent = currentChildName;
 
     if(invite.invite_status === 'confirmed') {
       document.getElementById('loading-pg').style.display='none';
@@ -140,7 +205,12 @@ async function init() {
     }
 
     document.getElementById('loading-pg').style.display='none';
-    document.getElementById('rsvp-pg').style.display='block';
+    if(!invite.has_qid) {
+      document.getElementById('qid-child').textContent = `For ${currentChildName}`;
+      document.getElementById('qid-pg').style.display='block';
+    } else {
+      document.getElementById('rsvp-pg').style.display='block';
+    }
   } catch(e) {
     showInvalid();
   }
@@ -151,13 +221,101 @@ function showInvalid() {
   document.getElementById('invalid-pg').style.display='block';
 }
 
+// ── QID SCAN STEP ──
+function handleQidFile(side, input) {
+  const file = input.files[0];
+  if(!file) return;
+  qidFiles[side] = file;
+  const btn = document.getElementById('qid-scan-btn');
+  if(qidFiles.front || qidFiles.back) btn.disabled = false;
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('qid-front')?.addEventListener('change', function(){ handleQidFile('front', this); });
+  document.getElementById('qid-back')?.addEventListener('change', function(){ handleQidFile('back', this); });
+});
+
+async function fileToBase64(file) {
+  return new Promise((res,rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+async function scanChildQid() {
+  const btn = document.getElementById('qid-scan-btn');
+  const err = document.getElementById('qid-err');
+  err.style.display = 'none';
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Reading ID…';
+  try {
+    const images = {};
+    if(qidFiles.front) images.front = { data: await fileToBase64(qidFiles.front), type: qidFiles.front.type || 'image/jpeg' };
+    if(qidFiles.back) images.back = { data: await fileToBase64(qidFiles.back), type: qidFiles.back.type || 'image/jpeg' };
+
+    const resp = await fetch(SUPA_URL + '/functions/v1/scan-qid', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPA_KEY },
+      body: JSON.stringify({ images })
+    });
+    const data = await resp.json();
+    if(data.error) throw new Error(data.error);
+
+    const { error: saveErr } = await db.rpc('save_assessment_qid_scan', {
+      p_token: token,
+      p_qid_number: data.qid_number || null,
+      p_full_name: data.name || null,
+      p_dob: data.dob || null,
+      p_nationality: data.nationality || null,
+    });
+    if(saveErr) throw new Error(saveErr.message);
+
+    const resultDiv = document.getElementById('qid-scan-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `<div class="scan-result">
+      ${data.name ? `<div class="scan-field"><span class="scan-field-key">Name</span><span>${data.name}</span></div>` : ''}
+      ${data.qid_number ? `<div class="scan-field"><span class="scan-field-key">QID No.</span><span>${data.qid_number}</span></div>` : ''}
+      ${data.dob ? `<div class="scan-field"><span class="scan-field-key">Date of Birth</span><span>${data.dob}</span></div>` : ''}
+    </div>`;
+    document.getElementById('qid-continue-btn').disabled = false;
+    btn.textContent = '✅ Verified';
+  } catch(e) {
+    err.textContent = 'Could not read the ID: ' + (e.message || 'please try again or use the skip option below.');
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = '🤖 Scan &amp; Verify';
+  }
+}
+
+function skipQidScan() {
+  document.getElementById('qid-pg').style.display = 'none';
+  document.getElementById('rsvp-pg').style.display = 'block';
+}
+
+function goToRsvpForm() {
+  document.getElementById('qid-pg').style.display = 'none';
+  document.getElementById('rsvp-pg').style.display = 'block';
+}
+
 async function submitRsvp() {
   const err = document.getElementById('err');
   if(!choices.attendance) { err.textContent = '⚠️ Please let us know if you\'ll be attending.'; err.style.display='block'; return; }
-  if(choices.attendance==='attended' && (!choices.photo || !choices.chicken)) {
-    err.textContent = '⚠️ Please answer the photo consent and dietary questions.';
-    err.style.display='block';
-    return;
+
+  let guardianName = '', guardianRelation = '';
+  if(choices.attendance==='attended') {
+    guardianName = document.getElementById('guardian-name').value.trim();
+    guardianRelation = document.getElementById('guardian-relation').value;
+    if(!guardianName || !guardianRelation) {
+      err.textContent = '⚠️ Please tell us the name and relationship of the one guardian attending.';
+      err.style.display='block';
+      return;
+    }
+    if(!choices.photo || !choices.chicken) {
+      err.textContent = '⚠️ Please answer the photo consent and dietary questions.';
+      err.style.display='block';
+      return;
+    }
   }
   err.style.display='none';
   const btn = document.getElementById('submit-btn');
@@ -169,6 +327,8 @@ async function submitRsvp() {
       p_attendance: choices.attendance,
       p_photo_consent: choices.photo,
       p_dietary_chicken: choices.chicken,
+      p_guardian_name: guardianName || null,
+      p_guardian_relation: guardianRelation || null,
     });
     if(error || !data) throw new Error(error?.message || 'Could not submit RSVP');
     document.getElementById('rsvp-pg').style.display='none';
