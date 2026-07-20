@@ -181,6 +181,10 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
 .scan-btn{width:100%;background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:12px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;margin-bottom:12px;}
 .scan-btn:hover{background:#2B9990;color:white;}
 .scan-btn:disabled{background:#ccc;color:#888;cursor:not-allowed;}
+.scan-result{background:var(--lime-soft);border-radius:var(--rs);border:2px solid var(--lime);padding:10px 12px;margin-bottom:10px;font-size:12.5px;}
+.scan-field{display:flex;justify-content:space-between;padding:3px 0;}
+.scan-field-key{color:var(--muted);font-weight:700;}
+.link-btn{background:none;border:none;color:var(--muted);font-size:11px;font-weight:700;text-decoration:underline;cursor:pointer;}
 .income-badge{display:inline-block;padding:3px 11px;border-radius:50px;font-weight:700;font-size:12.5px;}
 .income-badge.ok{background:var(--lime-soft);color:var(--forest);}
 .income-badge.over{background:#FDEAEA;color:#8B2020;}
@@ -329,6 +333,7 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
   <button class="bb-item on" onclick="showPg('dash',this)"><div class="bb-ic">🏠</div><div class="bb-tx">Dashboard</div></button>
   <button class="bb-item" onclick="showPg('fams',this)"><div class="bb-ic">👪</div><div class="bb-tx">Families</div></button>
   <button class="bb-item" id="bb-assess-days" onclick="showPg('assess-days',this)"><div class="bb-ic">📅</div><div class="bb-tx">Assess. Days</div></button>
+  <button class="bb-item" onclick="showPg('qid-signin',this)"><div class="bb-ic">🪪</div><div class="bb-tx">QID Sign-In</div></button>
   <button class="bb-item" onclick="toggleProfileMenu()"><div class="bb-ic">👤</div><div class="bb-tx" id="bb-profile-name">Profile</div></button>
 </div>
 
@@ -414,6 +419,15 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
   </div>
 
   <div class="gp-path" id="assess-days-list" style="margin-top:16px;"><div class="loading">Loading…</div></div>
+</div>
+
+<!-- QID SIGN-IN -->
+<div class="pg" id="pg-qid-signin">
+  <div style="height:12px;"></div>
+  <div class="gp-sect" style="margin:0 0 6px;"><div class="gp-badge">🪪</div><div class="sec-title" style="margin-bottom:0;">QID Sign-In Queue</div></div>
+  <div class="note" style="margin-bottom:14px;">For imported children with no QID on file yet. Photograph the front (and back, if available) of the child's QID or birth certificate — it'll be read automatically and saved to their record.</div>
+  <input class="search" id="qid-signin-search" placeholder="🔍 Search child, guardian, URN…" oninput="renderQidSignin()" style="margin-bottom:14px;">
+  <div id="qid-signin-list"><div class="loading">Loading…</div></div>
 </div>
 </div>
 
@@ -643,6 +657,7 @@ async function loadData() {
   renderTurning3();
   renderCheckinsDue();
   renderAssessDaysList();
+  renderQidSignin();
 }
 
 // ── TURNING 3 NOTIFICATIONS ──
@@ -877,6 +892,7 @@ function renderAttendeesForDay() {
   }
   el.innerHTML = `
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <button class="btn-teal btn-sm" onclick="copyGenericRsvpLink()">🔗 Copy Generic RSVP Link</button>
       <button class="btn-teal btn-sm" onclick="sendAllInvites()">📧 Send Invite to All</button>
       <button class="btn-teal btn-sm" onclick="copyWhatsAppList()">📋 Copy WhatsApp List</button>
     </div>
@@ -1019,6 +1035,14 @@ async function sendAllInvites() {
     sent++;
   }
   showToast(`✅ Sent ${sent} invite(s)${skipped?`, ${skipped} skipped (no email on file — use Copy WhatsApp List instead)`:''}`);
+}
+
+function copyGenericRsvpLink() {
+  const link = `https://feedafriendqa.github.io/little-learners-rsvp.html?day=${currentAssessDay.id}`;
+  navigator.clipboard.writeText(link).then(
+    () => showToast('✅ Link copied — share this with anyone invited to this day. They\'ll enter their child\'s QID to RSVP.'),
+    () => showToast('⚠️ Could not copy — please copy manually: '+link)
+  );
 }
 
 function copyWhatsAppList() {
@@ -1253,6 +1277,114 @@ async function savePreferredName(childId, val) {
   const idx = allChildren.findIndex(c=>c.id===childId);
   if(idx>=0) allChildren[idx].preferred_name = name||null;
   showToast('✅ Preferred name saved');
+}
+
+// ── QID SIGN-IN QUEUE ──
+let qidSigninFiles = {}; // childId_front / childId_back
+
+function renderQidSignin() {
+  const el = document.getElementById('qid-signin-list');
+  if(!el) return;
+  const q = (document.getElementById('qid-signin-search')?.value||'').toLowerCase();
+  const missing = allChildren.filter(c => !c.qid || c.qid.trim()==='').filter(c => {
+    if(!q) return true;
+    const fam = allFamilies.find(f=>f.id===c.family_id);
+    const text = ((c.full_name||'')+(fam?.father_name||'')+(fam?.mother_name||'')+(fam?.urn||'')).toLowerCase();
+    return text.includes(q);
+  });
+  if(!missing.length) {
+    el.innerHTML = '<div class="empty"><div class="eicon">✅</div><p>No children waiting on a QID — everyone on file is verified.</p></div>';
+    return;
+  }
+  el.innerHTML = `
+    <div style="font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:10px;">${missing.length} child(ren) waiting</div>
+    ${missing.map(c => {
+      const fam = allFamilies.find(f=>f.id===c.family_id);
+      const key = c.id;
+      return `<div class="card" id="qidsi-${key}" style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;">
+          <div>
+            <div class="fam-name">${c.full_name||'Child'} <span style="font-size:11px;color:var(--muted);">(${childAgeYears(c)!==null?childAgeYears(c)+'y':'—'})</span></div>
+            <div class="fam-meta"><span>${fam?.urn||'—'}</span><span>👪 ${fam?.father_name||fam?.mother_name||'—'}</span><span>📞 ${fam?.father_phone||fam?.mother_phone||'—'}</span></div>
+          </div>
+          <button class="link-btn" style="font-size:11px;color:var(--muted);text-decoration:underline;background:none;border:none;cursor:pointer;" onclick="openProfile('${fam?.id}')">Open family →</button>
+        </div>
+        <div class="upload-pair" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+          <input type="file" accept="image/*" class="file-input-styled" onchange="handleQidSigninFile('${key}','front',this)">
+          <input type="file" accept="image/*" class="file-input-styled" onchange="handleQidSigninFile('${key}','back',this)">
+        </div>
+        <button class="scan-btn" id="qidsi-btn-${key}" onclick="scanChildQidSignin('${key}')" disabled>🤖 Scan &amp; Save</button>
+        <div id="qidsi-result-${key}" style="display:none;"></div>
+      </div>`;
+    }).join('')}`;
+}
+
+function handleQidSigninFile(childId, side, input) {
+  const file = input.files[0];
+  if(!file) return;
+  qidSigninFiles[childId+'_'+side] = file;
+  const btn = document.getElementById('qidsi-btn-'+childId);
+  if(btn && (qidSigninFiles[childId+'_front'] || qidSigninFiles[childId+'_back'])) btn.disabled = false;
+}
+
+async function scanChildQidSignin(childId) {
+  const btn = document.getElementById('qidsi-btn-'+childId);
+  const resultDiv = document.getElementById('qidsi-result-'+childId);
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Reading…';
+  try {
+    const images = {};
+    const front = qidSigninFiles[childId+'_front'];
+    const back = qidSigninFiles[childId+'_back'];
+    if(front) images.front = { data: await fileToBase64Generic(front), type: front.type || 'image/jpeg' };
+    if(back) images.back = { data: await fileToBase64Generic(back), type: back.type || 'image/jpeg' };
+
+    const resp = await fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/scan-qid', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4' },
+      body: JSON.stringify({ images })
+    });
+    const data = await resp.json();
+    if(data.error) throw new Error(data.error);
+
+    const child = allChildren.find(c=>c.id===childId);
+    const updates = { qid_verified_at: new Date().toISOString() };
+    if(data.qid_number) updates.qid = data.qid_number;
+    if(data.nationality && !child.nationality) updates.nationality = data.nationality;
+    if(data.dob && !child.dob) updates.dob = data.dob;
+    if(data.gender && !child.gender) updates.gender = data.gender;
+
+    const { error: updErr } = await db.from('ll_children').update(updates).eq('id', childId);
+    if(updErr) throw new Error(updErr.message);
+
+    Object.assign(child, updates);
+    if(child.family_id) {
+      await addActivityLog(child.family_id, childId, 'note', `QID scanned and saved via QID Sign-In queue (${data.qid_number||'no number read'}).`, '');
+    }
+
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `<div class="scan-result">
+      ${data.name?`<div class="scan-field"><span class="scan-field-key">Name</span><span>${data.name}</span></div>`:''}
+      ${data.qid_number?`<div class="scan-field"><span class="scan-field-key">QID No.</span><span>${data.qid_number}</span></div>`:''}
+      ${data.dob?`<div class="scan-field"><span class="scan-field-key">DOB</span><span>${data.dob}</span></div>`:''}
+    </div>`;
+    showToast('✅ QID saved for '+(child.full_name||'child'));
+    setTimeout(() => renderQidSignin(), 900);
+  } catch(e) {
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `<div class="err-msg" style="display:block;">Could not read the ID: ${e.message||'please try again.'}</div>`;
+    btn.disabled = false;
+    btn.innerHTML = '🤖 Scan &amp; Save';
+  }
+}
+
+function fileToBase64Generic(file) {
+  return new Promise((res,rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
 }
 
 // ── LEARNING PACK ──

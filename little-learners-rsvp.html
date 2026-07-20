@@ -65,6 +65,22 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <p style="font-size:13.5px;color:var(--muted);margin-top:8px;">This link looks incomplete or may have expired. Please contact us directly or ask for a new invite.</p>
   </div>
 
+  <div id="qid-gate-pg" style="display:none;">
+    <div class="hero">
+      <h1 id="gate-title">Assessment Day</h1>
+      <p id="gate-sub"></p>
+    </div>
+    <div class="card">
+      <div class="note">🪪 Enter your child's QID number to find your invite and RSVP.</div>
+      <div class="fg">
+        <label>Child's QID Number</label>
+        <input type="text" id="gate-qid" placeholder="e.g. 28740400336" inputmode="numeric">
+      </div>
+      <div id="gate-err" class="err-msg"></div>
+      <button class="btn-gold" id="gate-btn" onclick="submitQidGate()">Find My Invite →</button>
+    </div>
+  </div>
+
   <div id="qid-pg" style="display:none;">
     <div class="hero">
       <h1>Verify Your Child's ID</h1>
@@ -175,6 +191,8 @@ function selectChoice(group, val, el) {
   }
 }
 
+let dayId = null;
+
 async function init() {
   if(window.supabase && window.supabase.createClient) {
     db = window.supabase.createClient(SUPA_URL, SUPA_KEY);
@@ -184,19 +202,88 @@ async function init() {
   }
   const params = new URLSearchParams(window.location.search);
   token = params.get('token');
-  if(!token) { showInvalid(); return; }
+  dayId = params.get('day');
 
+  if(dayId && !token) {
+    // Generic, shareable link — anyone can open it, QID number gates access to a specific invite
+    try {
+      const { data, error } = await db.rpc('get_assessment_day_public', { p_day_id: dayId });
+      if(error || !data || !data.length) { showInvalid(); return; }
+      const day = data[0];
+      document.getElementById('gate-title').textContent = day.title || 'Assessment Day';
+      document.getElementById('gate-sub').textContent = [
+        day.event_date ? new Date(day.event_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '',
+        day.event_time || '',
+        day.location || ''
+      ].filter(Boolean).join(' · ');
+      document.getElementById('loading-pg').style.display='none';
+      document.getElementById('qid-gate-pg').style.display='block';
+    } catch(e) {
+      showInvalid();
+    }
+    return;
+  }
+
+  if(!token) { showInvalid(); return; }
+  await loadInviteByToken();
+}
+
+async function submitQidGate() {
+  const qid = document.getElementById('gate-qid').value.trim();
+  const err = document.getElementById('gate-err');
+  err.style.display = 'none';
+  if(!qid) { err.textContent = '⚠️ Please enter the QID number.'; err.style.display='block'; return; }
+  const btn = document.getElementById('gate-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="border-color:rgba(255,255,255,.4);border-top-color:white;"></div> Searching…';
+  try {
+    const { data, error } = await db.rpc('find_assessment_invite_by_qid', { p_day_id: dayId, p_qid: qid });
+    if(error || !data || !data.length) {
+      err.textContent = "⚠️ We couldn't find an invite for that QID for this event. Please check the number, or contact us directly.";
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Find My Invite →';
+      return;
+    }
+    const invite = data[0];
+    token = invite.access_token;
+
+    // If this child had no QID on file yet, save the one just entered — closes the gap for imported records
+    if(!invite.has_qid) {
+      await db.rpc('save_assessment_qid_scan', { p_token: token, p_qid_number: qid });
+    }
+
+    applyInvite(invite);
+    document.getElementById('qid-gate-pg').style.display='none';
+    if(invite.invite_status === 'confirmed') {
+      document.getElementById('success-pg').style.display='block';
+    } else {
+      document.getElementById('rsvp-pg').style.display='block';
+    }
+  } catch(e) {
+    err.textContent = 'Something went wrong: ' + (e.message || 'please try again.');
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Find My Invite →';
+  }
+}
+
+function applyInvite(invite) {
+  currentChildName = invite.child_name || 'your child';
+  document.getElementById('rp-title').textContent = invite.title || 'Assessment Day';
+  document.getElementById('rp-child').textContent = `For ${currentChildName}`;
+  document.getElementById('rp-date').textContent = invite.event_date ? new Date(invite.event_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : 'Date to be confirmed';
+  document.getElementById('rp-time').textContent = invite.event_time || 'Time to be confirmed';
+  document.getElementById('rp-location').textContent = invite.location || 'Location to be confirmed';
+  document.getElementById('gf-child-name').textContent = currentChildName;
+}
+
+async function loadInviteByToken() {
   try {
     const { data, error } = await db.rpc('get_assessment_invite', { p_token: token });
     if(error || !data || !data.length) { showInvalid(); return; }
     const invite = data[0];
-    currentChildName = invite.child_name || 'your child';
-    document.getElementById('rp-title').textContent = invite.title || 'Assessment Day';
-    document.getElementById('rp-child').textContent = `For ${currentChildName}`;
-    document.getElementById('rp-date').textContent = invite.event_date ? new Date(invite.event_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : 'Date to be confirmed';
-    document.getElementById('rp-time').textContent = invite.event_time || 'Time to be confirmed';
-    document.getElementById('rp-location').textContent = invite.location || 'Location to be confirmed';
-    document.getElementById('gf-child-name').textContent = currentChildName;
+    applyInvite(invite);
 
     if(invite.invite_status === 'confirmed') {
       document.getElementById('loading-pg').style.display='none';
