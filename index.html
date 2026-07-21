@@ -425,7 +425,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
       sb.from("profiles").select("*").eq("approved",true).eq("role","volunteer"),
       isSuperAdmin ? sb.from("profiles").select("*").in("role",["admin","superadmin"]) : Promise.resolve({data:[]}),
       oppQuery,
-      sb.from("signups").select("*,profiles(id,first_name,surname,email,photo_url,is_student,student_level,student_school,is_working,profession,projects,approved,dob,role,admin_projects)"),
+      sb.from("signups").select("*,profiles(id,first_name,surname,email,phone,photo_url,is_student,student_level,student_school,is_working,profession,projects,approved,dob,role,admin_projects)"),
       sb.from("hour_logs").select("*,profiles(first_name,surname,email)").eq("status","pending").order("created_at",{ascending:false}),
       sb.from("hour_logs").select("*").eq("status","approved").order("date",{ascending:false}),
     ]);
@@ -683,7 +683,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                 <p style={{fontSize:11,color:MT,marginTop:-6,fontFamily:BF}}>Leave End Date blank for an ongoing role with no fixed end.</p>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                   <Field label="Time Commitment"><input type="number" min="0" step="0.5" placeholder="e.g. 5" value={editOpp.commitment_hours||""} onChange={e=>setEditOpp(o=>{return{...o,commitment_hours:e.target.value};} )} style={inp}/></Field>
-                  <Field label="Per"><select value={editOpp.commitment_frequency||"week"} onChange={e=>setEditOpp(o=>{return{...o,commitment_frequency:e.target.value};} )} style={inp}><option value="day">Hours / day</option><option value="week">Hours / week</option><option value="month">Hours / month</option></select></Field>
+                  <Field label="Per"><select value={editOpp.commitment_frequency||"week"} onChange={e=>setEditOpp(o=>{return{...o,commitment_frequency:e.target.value};} )} style={inp}><option value="day">Hours / day</option><option value="week">Hours / week</option><option value="month">Hours / month</option><option value="year">Hours / year</option></select></Field>
                 </div>
               </>
             : <>
@@ -696,8 +696,8 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
               </>
           }
           <Field label="Location *"><input type="text" value={editOpp.location} onChange={e=>setEditOpp(o=>{return{...o,location:e.target.value};} )} style={inp}/></Field>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            <Field label="Hours"><input type="number" value={editOpp.hours} onChange={e=>setEditOpp(o=>{return{...o,hours:e.target.value};} )} style={inp}/></Field>
+          <div style={{display:"grid",gridTemplateColumns:editOpp.type==="ongoing"?"1fr":"1fr 1fr",gap:10}}>
+            {editOpp.type!=="ongoing"&&<Field label="Hours"><input type="number" value={editOpp.hours} onChange={e=>setEditOpp(o=>{return{...o,hours:e.target.value};} )} style={inp}/></Field>}
             <Field label="Spots"><input type="number" value={editOpp.spots} onChange={e=>setEditOpp(o=>{return{...o,spots:e.target.value};} )} style={inp}/></Field>
           </div>
           <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:editOpp.students_only?"#EDE9FE":"#F9FAFB",border:"1.5px solid "+(editOpp.students_only?"#9B59B6":"#E5E7EB")}}>
@@ -953,7 +953,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                   <Avtr u={s.profiles} sz={32}/>
                   <div>
                     <div style={{fontSize:13,fontWeight:700,color:DK,fontFamily:BF}}>{s.profiles?.first_name} {s.profiles?.surname}</div>
-                    <div style={{fontSize:11,color:MT}}>{s.profiles?.email}</div>
+                    <div style={{fontSize:11,color:MT}}>{s.profiles?.email}{s.profiles?.phone?" · 📞 "+s.profiles.phone:""}</div>
                   </div>
                 </button>
                 {s.answers?.length>0&&<div style={{width:"100%",marginTop:4,marginLeft:40,background:PL,borderRadius:8,padding:"6px 10px"}}>
@@ -1014,7 +1014,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                   <p style={{fontSize:11,color:MT,marginTop:-6,fontFamily:BF}}>Leave End Date blank for an ongoing role with no fixed end.</p>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                     <Field label="Time Commitment"><input type="number" min="0" step="0.5" placeholder="e.g. 5" value={no.commitment_hours} onChange={e=>setNo(n=>{return{...n,commitment_hours:e.target.value};} )} style={inp}/></Field>
-                    <Field label="Per"><select value={no.commitment_frequency} onChange={e=>setNo(n=>{return{...n,commitment_frequency:e.target.value};} )} style={inp}><option value="day">Hours / day</option><option value="week">Hours / week</option><option value="month">Hours / month</option></select></Field>
+                    <Field label="Per"><select value={no.commitment_frequency} onChange={e=>setNo(n=>{return{...n,commitment_frequency:e.target.value};} )} style={inp}><option value="day">Hours / day</option><option value="week">Hours / week</option><option value="month">Hours / month</option><option value="year">Hours / year</option></select></Field>
                   </div>
                 </>
               : <>
