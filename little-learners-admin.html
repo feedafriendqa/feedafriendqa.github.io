@@ -1354,22 +1354,33 @@ function handleQidSigninFile(childId, side, input) {
 async function scanChildQidSignin(childId) {
   const btn = document.getElementById('qidsi-btn-'+childId);
   const resultDiv = document.getElementById('qidsi-result-'+childId);
+  if(!btn || !resultDiv) { console.error('QID sign-in: could not find button/result element for', childId); return; }
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Reading…';
+  resultDiv.style.display = 'none';
+  console.log('[QID Sign-In] starting scan for child', childId);
   try {
     const images = {};
     const front = qidSigninFiles[childId+'_front'];
     const back = qidSigninFiles[childId+'_back'];
+    console.log('[QID Sign-In] files:', {front: front?.name, back: back?.name});
     if(front) images.front = { data: await fileToBase64Generic(front), type: front.type || 'image/jpeg' };
     if(back) images.back = { data: await fileToBase64Generic(back), type: back.type || 'image/jpeg' };
+    console.log('[QID Sign-In] images encoded, calling scan-qid…');
 
     const resp = await fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/scan-qid', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4' },
       body: JSON.stringify({ images })
     });
-    const data = await resp.json();
+    console.log('[QID Sign-In] scan-qid HTTP status:', resp.status);
+    const rawText = await resp.text();
+    console.log('[QID Sign-In] scan-qid raw response:', rawText);
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch(parseErr) { throw new Error('Server returned something unexpected (HTTP '+resp.status+'): '+rawText.slice(0,200)); }
     if(data.error) throw new Error(data.error);
+    if(!data.qid_number && !data.name) throw new Error('Could not read any details from that photo — try a clearer, well-lit shot of the QID.');
 
     const child = allChildren.find(c=>c.id===childId);
     const updates = { qid_verified_at: new Date().toISOString() };
@@ -1378,8 +1389,11 @@ async function scanChildQidSignin(childId) {
     if(data.dob && !child.dob) updates.dob = data.dob;
     if(data.gender && !child.gender) updates.gender = data.gender;
 
-    const { error: updErr } = await db.from('ll_children').update(updates).eq('id', childId);
-    if(updErr) throw new Error(updErr.message);
+    console.log('[QID Sign-In] saving to ll_children:', updates);
+    const { data: updRows, error: updErr } = await db.from('ll_children').update(updates).eq('id', childId).select();
+    console.log('[QID Sign-In] update result:', {updRows, updErr});
+    if(updErr) throw new Error('Database error: ' + updErr.message);
+    if(!updRows || !updRows.length) throw new Error('The database did not update any rows — this child record may not be accessible to your account. Please contact an admin.');
 
     Object.assign(child, updates);
     if(child.family_id) {
@@ -1395,8 +1409,10 @@ async function scanChildQidSignin(childId) {
     showToast('✅ QID saved for '+(child.full_name||'child'));
     setTimeout(() => renderQidSignin(), 900);
   } catch(e) {
+    console.error('[QID Sign-In] scan failed:', e);
     resultDiv.style.display = 'block';
     resultDiv.innerHTML = `<div class="err-msg" style="display:block;">Could not read the ID: ${e.message||'please try again.'}</div>`;
+  } finally {
     btn.disabled = false;
     btn.innerHTML = '🤖 Scan &amp; Save';
   }
