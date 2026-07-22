@@ -614,7 +614,13 @@ async function showApp() {
 db.auth.onAuthStateChange((event,session)=>{
   if(event==='SIGNED_IN'&&session){
     currentUserEmail = session.user.email;
-    showApp();
+    // Supabase re-fires SIGNED_IN when the tab regains focus (e.g. returning from the
+    // camera app to take a QID photo) — only (re)load the app if it isn't already up,
+    // so in-progress work like the QID Sign-In queue doesn't get wiped mid-task.
+    const appEl = document.getElementById('app');
+    if(!appEl || appEl.style.display !== 'block') {
+      showApp();
+    }
   }
 });
 
@@ -1337,7 +1343,7 @@ function renderQidSignin() {
           <input type="file" accept="image/*" class="file-input-styled" onchange="handleQidSigninFile('${key}','front',this)">
           <input type="file" accept="image/*" class="file-input-styled" onchange="handleQidSigninFile('${key}','back',this)">
         </div>
-        <button class="scan-btn" id="qidsi-btn-${key}" onclick="scanChildQidSignin('${key}')" disabled>🤖 Scan &amp; Save</button>
+        <button class="scan-btn" id="qidsi-btn-${key}" onclick="scanChildQidSignin('${key}')" ${(qidSigninFiles[key+'_front']||qidSigninFiles[key+'_back'])?'':'disabled'}>🤖 Scan &amp; Save</button>
         <div id="qidsi-result-${key}" style="display:none;"></div>
       </div>`;
     }).join('')}`;
