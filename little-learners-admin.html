@@ -173,6 +173,8 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
 .qid-diff-new{font-size:12.5px;font-weight:700;color:var(--forest);}
 .qid-diff-field{display:flex;flex-direction:column;gap:2px;}
 .preferred-name-input{width:100%;padding:8px 10px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:12.5px;font-weight:600;outline:none;background:white;}
+.ival-input,.ival-select{width:100%;margin-top:3px;padding:7px 9px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:12.5px;font-weight:600;outline:none;background:white;color:var(--forest);}
+.ival-select{cursor:pointer;}
 .preferred-name-input:focus{border-color:var(--lime);}
 .upload-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
 .upload-side-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:flex;align-items:center;gap:5px;}
@@ -1309,6 +1311,16 @@ async function savePreferredName(childId, val) {
   showToast('✅ Preferred name saved');
 }
 
+async function saveChildField(childId, field, val, refresh) {
+  const value = (typeof val === 'string') ? val.trim() : val;
+  const {error} = await db.from('ll_children').update({[field]: value||null}).eq('id', childId);
+  if(error) { showToast('Error: '+error.message); return; }
+  const idx = allChildren.findIndex(c=>c.id===childId);
+  if(idx>=0) allChildren[idx][field] = value||null;
+  showToast('✅ Saved');
+  if(refresh) openProfile(currentFamily.id);
+}
+
 // ── QID SIGN-IN QUEUE ──
 let qidSigninFiles = {}; // childId_front / childId_back
 
@@ -2142,14 +2154,59 @@ function renderChildren(children, f) {
             <div class="ikey">Preferred Name <span style="text-transform:none;font-weight:600;color:var(--muted);">(what the child likes to be called, if different)</span></div>
             <input class="preferred-name-input" style="margin-top:4px;" placeholder="e.g. Bebo" value="${c.preferred_name||''}" onblur="savePreferredName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
           </div>
-          <div class="irow"><div class="ikey">Nationality</div><div class="ival">${c.nationality||'—'}</div></div>
-          <div class="irow"><div class="ikey">Language at Home</div><div class="ival">${c.lang_home||'—'}</div></div>
-          <div class="irow"><div class="ikey">English</div><div class="ival">${c.english_fluency||'—'}</div></div>
-          <div class="irow"><div class="ikey">Arabic</div><div class="ival">${c.arabic_fluency||'—'}</div></div>
-          <div class="irow"><div class="ikey">School Status</div><div class="ival">${c.school_status||'—'}</div></div>
-          <div class="irow"><div class="ikey">Years Since School</div><div class="ival">${c.years_since_school||'—'}</div></div>
-          <div class="irow"><div class="ikey">Special Needs</div><div class="ival">${c.special_needs||'—'}</div></div>
-          ${c.special_needs_detail?`<div class="irow" style="grid-column:span 2"><div class="ikey">SN Detail</div><div class="ival">${c.special_needs_detail}</div></div>`:''}
+          <div class="irow">
+            <div class="ikey">Nationality</div>
+            <input class="ival-input" placeholder="e.g. Kenyan" value="${c.nationality||''}" onblur="saveChildField('${c.id}','nationality',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          </div>
+          <div class="irow">
+            <div class="ikey">Language at Home</div>
+            <input class="ival-input" placeholder="e.g. Swahili" value="${c.lang_home||''}" onblur="saveChildField('${c.id}','lang_home',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          </div>
+          <div class="irow">
+            <div class="ikey">English</div>
+            <select class="ival-select" onchange="saveChildField('${c.id}','english_fluency',this.value)">
+              <option value="" ${!c.english_fluency?'selected':''}>Select…</option>
+              <option ${c.english_fluency==='None'?'selected':''}>None</option>
+              <option ${c.english_fluency==='Basic'?'selected':''}>Basic</option>
+              <option ${c.english_fluency==='Good'?'selected':''}>Good</option>
+              <option ${c.english_fluency==='Fluent'?'selected':''}>Fluent</option>
+            </select>
+          </div>
+          <div class="irow">
+            <div class="ikey">Arabic</div>
+            <select class="ival-select" onchange="saveChildField('${c.id}','arabic_fluency',this.value)">
+              <option value="" ${!c.arabic_fluency?'selected':''}>Select…</option>
+              <option ${c.arabic_fluency==='None'?'selected':''}>None</option>
+              <option ${c.arabic_fluency==='Basic'?'selected':''}>Basic</option>
+              <option ${c.arabic_fluency==='Good'?'selected':''}>Good</option>
+              <option ${c.arabic_fluency==='Fluent'?'selected':''}>Fluent</option>
+            </select>
+          </div>
+          <div class="irow">
+            <div class="ikey">School Status</div>
+            <select class="ival-select" onchange="saveChildField('${c.id}','school_status',this.value)">
+              <option value="" ${!c.school_status?'selected':''}>Select…</option>
+              <option ${c.school_status==='Never attended school'?'selected':''}>Never attended school</option>
+              <option ${c.school_status==='Previously attended — left'?'selected':''}>Previously attended — left</option>
+              <option ${c.school_status==='On waiting list'?'selected':''}>On waiting list</option>
+              <option ${c.school_status==='Online school only'?'selected':''}>Online school only</option>
+              <option ${c.school_status==='Part-time (≤2.5 days/week)'?'selected':''}>Part-time (≤2.5 days/week)</option>
+              <option ${c.school_status==='Enrolled full-time'?'selected':''}>Enrolled full-time</option>
+            </select>
+          </div>
+          <div class="irow">
+            <div class="ikey">Years Since School</div>
+            <input class="ival-input" placeholder="e.g. 2" value="${c.years_since_school||''}" onblur="saveChildField('${c.id}','years_since_school',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          </div>
+          <div class="irow">
+            <div class="ikey">Special Needs</div>
+            <select class="ival-select" onchange="saveChildField('${c.id}','special_needs',this.value,true)">
+              <option value="" ${!c.special_needs?'selected':''}>Select…</option>
+              <option ${c.special_needs==='No'?'selected':''}>No</option>
+              <option ${c.special_needs==='Yes — please describe below'?'selected':''}>Yes — please describe below</option>
+            </select>
+          </div>
+          ${c.special_needs==='Yes — please describe below'?`<div class="irow" style="grid-column:span 2"><div class="ikey">SN Detail</div><textarea class="ival-input" style="min-height:60px;" placeholder="Describe the special need…" onblur="saveChildField('${c.id}','special_needs_detail',this.value)">${c.special_needs_detail||''}</textarea></div>`:''}
           ${c.qid_sponsor?`<div class="irow"><div class="ikey">Sponsor</div><div class="ival">${c.qid_sponsor}</div></div>`:''}
           ${c.qid_expiry?`<div class="irow"><div class="ikey">QID Expiry</div><div class="ival">${c.qid_expiry}</div></div>`:''}
         </div>
