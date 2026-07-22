@@ -152,16 +152,16 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
       </div>
 
       <div id="guardian-fields" style="display:none;">
-        <div class="warn-note">⚠️ Due to space, only <b>one guardian</b> may accompany <span class="gf-child-name">the child</span>. Please do not bring siblings or other family members on the day.</div>
+        <div class="warn-note">⚠️ Because of limited space, only <b>one parent</b> can join <span class="gf-child-name">the child</span>. Please don't bring brothers, sisters, or other family members on the day.</div>
 
         <div class="fg">
-          <label>Who will be attending with <span class="gf-child-name">the child</span>?</label>
+          <label>Which parent will come with <span class="gf-child-name">the child</span>?</label>
           <select id="guardian-select" onchange="onGuardianSelectChange(this)">
             <option value="">Select…</option>
           </select>
         </div>
         <div class="fg" id="guardian-other-wrap" style="display:none;">
-          <label>Guardian's name</label>
+          <label>Their name</label>
           <input type="text" id="guardian-other-name" placeholder="Full name">
         </div>
 
@@ -172,7 +172,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 
         <div class="fg">
           <label>Photo of the Little Learner — <span class="gf-child-name">the child</span></label>
-          <div class="note" style="margin-bottom:8px;">A recent, clear photo of your child's face — not the guardian attending. This becomes their profile photo in our system.</div>
+          <div class="note" style="margin-bottom:8px;">A recent, clear photo of your child's face — not the parent attending. This becomes their profile photo in our system.</div>
           <input type="file" accept="image/*" class="file-input-styled" id="child-photo-input" onchange="previewChildPhoto(this)">
           <div id="child-photo-preview" style="display:none;margin-top:8px;"><img id="child-photo-preview-img" style="width:90px;height:90px;object-fit:cover;border-radius:12px;border:2px solid var(--lime);"></div>
         </div>
@@ -509,7 +509,7 @@ async function submitRsvp() {
     guardianRelation = relation;
     guardianName = relation==='Other' ? document.getElementById('guardian-other-name').value.trim() : name;
     if(relation==='Other' && !guardianName) {
-      err.textContent = '⚠️ Please tell us the name of the guardian attending.';
+      err.textContent = '⚠️ Please tell us the name of the parent attending.';
       err.style.display='block';
       return;
     }
@@ -550,7 +550,7 @@ async function submitRsvp() {
     let photoPath = null;
     if(childPhotoFile) {
       const ext = (childPhotoFile.name.split('.').pop() || 'jpg').toLowerCase();
-      photoPath = `rsvp/${currentInvite.child_id}/photo_${Date.now()}.${ext}`;
+      photoPath = `${currentInvite.family_id}/rsvp_photo_${currentInvite.child_id}_${Date.now()}.${ext}`;
       const { error: upErr } = await db.storage.from('ll-documents').upload(photoPath, childPhotoFile, { upsert: true });
       if(upErr) throw new Error('Could not upload photo: ' + upErr.message);
     }
