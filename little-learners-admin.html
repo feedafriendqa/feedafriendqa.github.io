@@ -378,7 +378,7 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
   <!-- YEAR GROUP FILTER -->
   <div class="toolbar">
     <div class="search-row">
-      <input class="search" id="search-input" placeholder="🔍 Search parent, child, URN, phone…" oninput="renderFams()">
+      <input class="search" id="search-input" placeholder="🔍 Search parent, child, QID, URN, phone…" oninput="renderFams()">
     </div>
     <select class="fsel" id="filter-yg" onchange="renderFams()">
       <option value="">All Year Groups</option>
@@ -1899,7 +1899,7 @@ function renderFams() {
 
   let list = visibleFamilies().filter(f=>{
     const fkidsAll = allChildren.filter(c=>c.family_id===f.id);
-    const childNames = fkidsAll.map(c=>c.full_name||'').join(' ');
+    const childNames = fkidsAll.map(c=>(c.full_name||'')+' '+(c.qid||'')).join(' ');
     const text = ((f.father_name||'')+(f.mother_name||'')+(f.urn||'')+(f.father_phone||'')+(f.mother_phone||'')+' '+childNames).toLowerCase();
     const matchQ = !q||text.includes(q);
     const matchPipe = activePipeline==='all'||(f.pipeline_status||'new')===activePipeline;
@@ -2154,6 +2154,10 @@ function renderChildren(children, f) {
             <div class="ikey">Preferred Name <span style="text-transform:none;font-weight:600;color:var(--muted);">(what the child likes to be called, if different)</span></div>
             <input class="preferred-name-input" style="margin-top:4px;" placeholder="e.g. Bebo" value="${c.preferred_name||''}" onblur="savePreferredName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
           </div>
+          <div class="irow" style="grid-column:span 2;">
+            <div class="ikey">QID Number <span style="text-transform:none;font-weight:600;color:var(--muted);">(auto-filled by Scan QID, or enter/correct manually)</span></div>
+            <input class="ival-input" placeholder="e.g. 28740400336" value="${c.qid||''}" onblur="saveChildField('${c.id}','qid',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          </div>
           <div class="irow">
             <div class="ikey">Nationality</div>
             <input class="ival-input" placeholder="e.g. Kenyan" value="${c.nationality||''}" onblur="saveChildField('${c.id}','nationality',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
@@ -2210,7 +2214,6 @@ function renderChildren(children, f) {
           ${c.qid_sponsor?`<div class="irow"><div class="ikey">Sponsor</div><div class="ival">${c.qid_sponsor}</div></div>`:''}
           ${c.qid_expiry?`<div class="irow"><div class="ikey">QID Expiry</div><div class="ival">${c.qid_expiry}</div></div>`:''}
         </div>
-        ${c.qid?`<div class="qid-pill" style="margin-top:8px;">🪪 ${c.qid}</div>`:''}
 
         <!-- INTRO CALL AVAILABILITY -->
         <div style="margin-top:12px;padding-top:12px;border-top:2px solid var(--border);">
