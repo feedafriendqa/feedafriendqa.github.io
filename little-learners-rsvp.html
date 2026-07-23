@@ -145,6 +145,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
       </div>
 
       <div id="decline-fields" style="display:none;">
+        <div class="warn-note">⚠️ Please note: not attending an assessment day may mean your child loses their place on the Little Learners programme.</div>
         <div class="fg">
           <label>Please let us know why you can't make it</label>
           <textarea id="decline-reason-input" rows="3" style="padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);resize:vertical;" placeholder="e.g. schedule conflict, illness, transport…"></textarea>
@@ -198,6 +199,18 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
             <div class="choice" id="chicken-no" onclick="selectChoice('chicken','No',this)">🚫 No</div>
           </div>
         </div>
+
+        <div class="fg">
+          <label>Does your child have any allergies?</label>
+          <div class="choice-row">
+            <div class="choice" id="allergy-yes" onclick="selectChoice('allergy','Yes',this)">⚠️ Yes</div>
+            <div class="choice" id="allergy-no" onclick="selectChoice('allergy','No',this)">✅ No</div>
+          </div>
+        </div>
+        <div class="fg" id="allergy-detail-wrap" style="display:none;">
+          <label>What is the allergy?</label>
+          <input type="text" id="allergy-detail-input" placeholder="e.g. peanuts, eggs, dairy…">
+        </div>
       </div>
 
       <div id="err" class="err-msg"></div>
@@ -220,7 +233,7 @@ const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
 let db;
 let token = null;
-let choices = { attendance: null, photo: null, chicken: null };
+let choices = { attendance: null, photo: null, chicken: null, allergy: null };
 let currentInvite = null;
 let qidFiles = {};
 let currentChildName = 'your child';
@@ -232,6 +245,19 @@ function selectChoice(group, val, el) {
   if(group==='attendance') {
     document.getElementById('guardian-fields').style.display = (val==='attended') ? 'block' : 'none';
     document.getElementById('decline-fields').style.display = (val==='declined') ? 'block' : 'none';
+    const btn = document.getElementById('submit-btn');
+    if(val==='declined') {
+      btn.textContent = "Confirm — We Can't Attend";
+      btn.style.background = 'var(--coral)';
+      btn.style.color = 'white';
+    } else {
+      btn.textContent = 'Confirm RSVP';
+      btn.style.background = 'var(--gold)';
+      btn.style.color = 'var(--forest)';
+    }
+  }
+  if(group==='allergy') {
+    document.getElementById('allergy-detail-wrap').style.display = (val==='Yes') ? 'block' : 'none';
   }
 }
 
@@ -371,6 +397,11 @@ function applyInvite(invite) {
   if(invite.preferred_name) document.getElementById('preferred-name').value = invite.preferred_name;
   if(invite.aspiration_response) document.getElementById('aspiration-input').value = invite.aspiration_response;
   if(invite.decline_reason) document.getElementById('decline-reason-input').value = invite.decline_reason;
+  if(invite.has_allergies) {
+    const allergyBtn = document.getElementById(invite.has_allergies==='Yes'?'allergy-yes':'allergy-no');
+    if(allergyBtn) allergyBtn.click();
+  }
+  if(invite.allergy_detail) document.getElementById('allergy-detail-input').value = invite.allergy_detail;
 }
 
 function onGuardianSelectChange(sel) {
@@ -501,7 +532,7 @@ async function submitRsvp() {
   const err = document.getElementById('err');
   if(!choices.attendance) { err.textContent = '⚠️ Please let us know if you\'ll be attending.'; err.style.display='block'; return; }
 
-  let guardianName = '', guardianRelation = '', preferredName = '', aspiration = '', declineReason = '';
+  let guardianName = '', guardianRelation = '', preferredName = '', aspiration = '', declineReason = '', allergyDetail = '';
   if(choices.attendance==='attended') {
     const selVal = document.getElementById('guardian-select').value;
     if(!selVal) { err.textContent = '⚠️ Please select who will be attending.'; err.style.display='block'; return; }
@@ -523,10 +554,18 @@ async function submitRsvp() {
       return;
     }
 
-    if(!choices.photo || !choices.chicken) {
-      err.textContent = '⚠️ Please answer the consent and dietary questions.';
+    if(!choices.photo || !choices.chicken || !choices.allergy) {
+      err.textContent = '⚠️ Please answer the consent, dietary, and allergy questions.';
       err.style.display='block';
       return;
+    }
+    if(choices.allergy==='Yes') {
+      allergyDetail = document.getElementById('allergy-detail-input').value.trim();
+      if(!allergyDetail) {
+        err.textContent = '⚠️ Please tell us what the allergy is.';
+        err.style.display='block';
+        return;
+      }
     }
     aspiration = document.getElementById('aspiration-input').value.trim();
     if(!aspiration) {
@@ -566,6 +605,8 @@ async function submitRsvp() {
       p_photo_path: photoPath,
       p_aspiration_response: aspiration || null,
       p_decline_reason: declineReason || null,
+      p_has_allergies: choices.allergy || null,
+      p_allergy_detail: allergyDetail || null,
     });
     if(error || !data) throw new Error(error?.message || 'Could not submit RSVP');
     document.getElementById('rsvp-pg').style.display='none';
