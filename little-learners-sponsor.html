@@ -89,6 +89,9 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:10px
 .status-pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:50px;}
 .status-pill.pending{background:#FFF7E0;color:#7A5000;}
 .status-pill.proof_submitted{background:#E0F0FF;color:#0A5FA0;}
+.status-pill.expired{background:#FDEAEA;color:#8B2020;}
+.next-steps{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
+.ns-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:12.5px;color:var(--forest);margin-bottom:4px;}
 .countdown-box{background:#FDEAEA;border-left:4px solid var(--coral);border-radius:var(--rs);padding:10px 14px;font-size:12.5px;font-weight:600;color:#8B2020;margin-bottom:14px;}
 .countdown-box b{font-family:'Nunito',sans-serif;font-weight:900;}
 </style>
@@ -170,23 +173,29 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:10px
         </div>
       </div>
       <div class="modal-err" id="pledge-err"></div>
+      <div class="sub" style="margin-bottom:0;">Tapping below reserves this Little Learner for you and starts your 48-hour payment window.</div>
       <div class="modal-actions">
         <button class="btn-cancel" onclick="closePledgeModal()">Cancel</button>
-        <button class="btn-submit" id="pledge-submit-btn" onclick="submitPledge()">Continue →</button>
+        <button class="btn-submit" id="pledge-submit-btn" onclick="submitPledge()">Confirm Sponsorship →</button>
       </div>
     </div>
 
     <div id="bank-transfer-view" style="display:none;">
       <h3>Send Your Sponsorship</h3>
-      <div class="sub">Please transfer your sponsorship amount using the details below.</div>
-      <div class="countdown-box" id="payment-countdown-box">⏱️ You have <b id="payment-countdown">48:00:00</b> to complete payment and attach your receipt, or this Little Learner will be released to another sponsor.</div>
+      <div class="sub">Please arrange your transfer within <b>2 working days</b> using the details below.</div>
       <div class="bank-box">
-        <div class="bank-row"><span>Bank Name</span><b>[ADD BANK NAME]</b></div>
-        <div class="bank-row"><span>Account Name</span><b>[ADD ACCOUNT NAME]</b></div>
-        <div class="bank-row"><span>Account / IBAN</span><b>[ADD ACCOUNT NUMBER / IBAN]</b></div>
-        <div class="bank-row"><span>Reference</span><b id="bank-ref">[LOADING…]</b></div>
+        <div class="bank-row"><span>Bank Name</span><b>QNB</b></div>
+        <div class="bank-row"><span>Account Name</span><b>Together for Good Events</b></div>
+        <div class="bank-row"><span>Account Number</span><b>0250227446001</b></div>
+        <div class="bank-row"><span>IBAN</span><b>QA21QNBA000000000250227446001</b></div>
+        <div class="bank-row"><span>SWIFT Code</span><b>QNBAQAQAXXX</b></div>
       </div>
-      <div class="modal-err" style="display:block;background:#FFF7E0;border-left-color:var(--gold);color:#7A5000;">⚠️ Please use the reference above so we can match your transfer to the right Little Learner.</div>
+      <div class="bank-box">
+        <div class="bank-row"><span>Fawran — Account Type</span><b>Corporate / Business</b></div>
+        <div class="bank-row"><span>Fawran — CR Number</span><b>229085</b></div>
+      </div>
+      <div class="modal-err" style="display:block;background:#FFF7E0;border-left-color:var(--gold);color:#7A5000;">⚠️ On Fawran: select <b>Corporate/Business</b> (not Individual), then enter the Commercial Registration number above.</div>
+      <div class="modal-err" style="display:block;background:#FFF7E0;border-left-color:var(--gold);color:#7A5000;">⚠️ Important: if your payment method asks for a purpose or category, please select <b>"Goods and Services"</b> / <b>"Online Payment for Goods and Services"</b> — not Friends & Family or Personal.</div>
       <div class="modal-actions">
         <button class="btn-cancel" onclick="closePledgeModal()">Cancel</button>
         <button class="btn-submit" onclick="goToProofUpload()">I've Sent It →</button>
@@ -196,7 +205,6 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:10px
     <div id="proof-upload-view" style="display:none;">
       <h3>Attach Your Transfer Receipt</h3>
       <div class="sub">Upload a screenshot or photo of your transfer confirmation.</div>
-      <div class="countdown-box" id="payment-countdown-box-2">⏱️ You have <b id="payment-countdown-2">48:00:00</b> left to submit this.</div>
       <div class="fg">
         <label>Proof of Transfer</label>
         <input type="file" accept="image/*,.pdf" id="proof-file-input">
@@ -441,7 +449,7 @@ function startPledgeDetailsStep(child) {
   showStep('pledge-form-view', 'Step 1 of 3 — A Couple of Questions');
   const btn = document.getElementById('pledge-submit-btn');
   btn.disabled = false;
-  btn.textContent = 'Continue →';
+  btn.textContent = 'Confirm Sponsorship →';
   startReserveCountdown();
 }
 
@@ -527,16 +535,75 @@ async function openMySponsorships() {
       el.innerHTML = `<div class="empty"><div class="eicon">💚</div><p>You haven't sponsored anyone yet.</p></div>`;
       return;
     }
-    el.innerHTML = data.map(s => `
+    el.innerHTML = data.map(s => {
+      const statusLabel = s.payment_status === 'proof_submitted' ? 'Proof received'
+        : s.payment_status === 'expired' ? 'Expired'
+        : 'Awaiting payment';
+      const canPay = s.program === 'Little Learners' && (!s.payment_status || s.payment_status === 'pending');
+      return `
       <div class="mysponsor-row">
         <div class="top"><span>${escapeHtml(s.program)} — ${escapeHtml(s.beneficiary_display_name || s.beneficiary_name || '')}</span>
-          <span class="status-pill ${s.payment_status||'pending'}">${s.payment_status === 'proof_submitted' ? 'Proof received' : 'Awaiting payment'}</span>
+          <span class="status-pill ${s.payment_status||'pending'}">${statusLabel}</span>
         </div>
         <div class="sub">${new Date(s.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>
-      </div>`).join('');
+        ${canPay ? `
+        <div class="next-steps">
+          <div class="ns-title">Next Steps — Send Payment</div>
+          <div class="bank-box" style="margin:8px 0;">
+            <div class="bank-row"><span>Bank Name</span><b>QNB</b></div>
+            <div class="bank-row"><span>Account Name</span><b>Together for Good Events</b></div>
+            <div class="bank-row"><span>Account Number</span><b>0250227446001</b></div>
+            <div class="bank-row"><span>IBAN</span><b>QA21QNBA000000000250227446001</b></div>
+            <div class="bank-row"><span>SWIFT Code</span><b>QNBAQAQAXXX</b></div>
+          </div>
+          <div class="bank-box" style="margin:8px 0;">
+            <div class="bank-row"><span>Fawran — Account Type</span><b>Corporate / Business</b></div>
+            <div class="bank-row"><span>Fawran — CR Number</span><b>229085</b></div>
+          </div>
+          <div class="modal-err" style="display:block;background:#FFF7E0;border-left-color:var(--gold);color:#7A5000;font-size:11.5px;">⚠️ Select <b>Corporate/Business</b> on Fawran, and <b>"Goods and Services"</b> if your method asks for a purpose.</div>
+          <div class="fg" style="margin-top:10px;margin-bottom:8px;">
+            <label>Upload Transfer Confirmation</label>
+            <input type="file" accept="image/*,.pdf" id="ns-file-${s.id}">
+          </div>
+          <div class="modal-err" id="ns-err-${s.id}"></div>
+          <button class="btn-submit" style="width:100%;" id="ns-btn-${s.id}" onclick="submitProofFromList('${s.id}')">Submit</button>
+        </div>` : ''}
+      </div>`;
+    }).join('');
   } catch(e) {
     el.innerHTML = `<div class="empty"><div class="eicon">⚠️</div><p>Could not load your sponsorships right now.</p></div>`;
     console.error(e);
+  }
+}
+
+async function submitProofFromList(pledgeId) {
+  const err = document.getElementById('ns-err-'+pledgeId);
+  const file = document.getElementById('ns-file-'+pledgeId).files[0];
+  err.style.display = 'none';
+  if(!file) {
+    err.textContent = '⚠️ Please attach a screenshot or photo of your transfer.';
+    err.style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('ns-btn-'+pledgeId);
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+  try {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${pledgeId}/proof_${Date.now()}.${ext}`;
+    const { error: upErr } = await db.storage.from('sponsorship-proofs').upload(path, file, { upsert: true, contentType: file.type || 'application/octet-stream' });
+    if(upErr) throw new Error(upErr.message);
+
+    const { data, error } = await db.rpc('attach_sponsor_proof', { p_pledge_id: pledgeId, p_proof_path: path });
+    if(error) throw new Error(error.message);
+    if(!data?.success) throw new Error(data?.error || 'Could not save your proof — please try again.');
+
+    openMySponsorships();
+  } catch(e) {
+    err.textContent = 'Something went wrong: ' + (e.message || 'please try again.');
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Submit';
   }
 }
 
@@ -568,19 +635,17 @@ async function submitPledge() {
       err.textContent = '⚠️ ' + (data?.error || 'Could not process your sponsorship — please try again.');
       err.style.display = 'block';
       btn.disabled = false;
-      btn.textContent = 'Continue →';
+      btn.textContent = 'Confirm Sponsorship →';
       return;
     }
     currentPledgeId = data.pledge_id;
     stopReserveCountdown();
-    document.getElementById('bank-ref').textContent = `LL-${currentPledgeChild.display_name}-${currentPledgeId.slice(0,8)}`.toUpperCase();
     showStep('bank-transfer-view', 'Step 2 of 3 — Send Payment');
-    startPaymentCountdown(data.expires_at);
   } catch(e) {
     err.textContent = 'Something went wrong: ' + (e.message || 'please try again.');
     err.style.display = 'block';
     btn.disabled = false;
-    btn.textContent = 'Continue →';
+    btn.textContent = 'Confirm Sponsorship →';
   }
 }
 
