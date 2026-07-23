@@ -31,43 +31,250 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 .empty .eicon{font-size:44px;margin-bottom:10px;}
 .spinner{display:inline-block;width:26px;height:26px;border:3px solid rgba(10,61,31,.2);border-top-color:var(--forest);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+.hiw{background:white;border-radius:var(--r);box-shadow:var(--shadow);padding:16px 18px;margin-bottom:24px;}
+.hiw-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.hiw-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:14.5px;}
+.hiw-pct{font-size:11.5px;font-weight:700;color:var(--forest-mid);background:#FFF7E0;border-radius:50px;padding:4px 10px;white-space:nowrap;}
+.hiw-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+.hiw-chip{flex:1;min-width:110px;background:var(--lime-soft);border-radius:var(--rs);padding:10px 8px;text-align:center;}
+.hiw-chip .ic{font-size:20px;}
+.hiw-chip .t{font-weight:700;font-size:11.5px;color:var(--forest);margin-top:4px;line-height:1.3;}
+.hiw-more{margin-top:10px;font-size:12px;font-weight:700;color:var(--forest-mid);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;}
+.hiw-detail{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12.5px;color:var(--muted);line-height:1.6;}
+.hiw-detail.open{display:block;}
+.hiw-detail p{margin-bottom:8px;}
+
+.sponsor-btn{margin-top:12px;width:100%;background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:11px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:13px;cursor:pointer;}
+.sponsored-tag{margin-top:12px;text-align:center;font-weight:700;font-size:12.5px;color:var(--lime);}
+
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(10,61,31,.55);z-index:50;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 14px;}
+.modal-bg.open{display:flex;}
+.modal{background:white;border-radius:var(--r);max-width:440px;width:100%;padding:22px;margin-top:20px;}
+.modal h3{font-family:'Nunito',sans-serif;font-weight:900;font-size:17px;margin-bottom:4px;}
+.modal .sub{font-size:12.5px;color:var(--muted);margin-bottom:16px;}
+.fg{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.fg label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.fg input[type=text],.fg input[type=email],.fg input[type=tel]{padding:11px 13px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);}
+.choice-row{display:flex;gap:8px;}
+.choice{flex:1;padding:10px;border-radius:var(--rs);border:2px solid var(--border);text-align:center;cursor:pointer;font-weight:700;font-size:13px;color:var(--muted);background:white;}
+.choice.sel{border-color:var(--lime);background:var(--lime-soft);color:var(--forest);}
+.modal-err{background:#FDEAEA;border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:600;color:#8B2020;margin-top:4px;margin-bottom:10px;border-left:4px solid var(--coral);display:none;}
+.modal-actions{display:flex;gap:10px;margin-top:6px;}
+.btn-cancel{flex:1;background:var(--cream);color:var(--muted);border:none;border-radius:50px;padding:12px;font-family:'Quicksand',sans-serif;font-weight:700;font-size:13.5px;cursor:pointer;}
+.btn-submit{flex:2;background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:12px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:13.5px;cursor:pointer;}
+.pledge-success{text-align:center;padding:20px 0;}
+.pledge-success .sicon{font-size:48px;margin-bottom:10px;}
+.step-indicator{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.bank-box{background:var(--lime-soft);border-radius:var(--rs);padding:14px;margin:14px 0;}
+.bank-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid rgba(10,61,31,.1);font-size:13px;}
+.bank-row:last-child{border-bottom:none;}
+.bank-row span{color:var(--muted);font-weight:600;}
+.bank-row b{color:var(--forest);text-align:right;}
+.acct-chip{background:rgba(255,255,255,.12);border-radius:50px;padding:5px 12px;cursor:pointer;font-weight:700;}
+.auth-tabs{display:flex;gap:8px;margin-bottom:16px;}
+.auth-tab{flex:1;text-align:center;padding:9px;border-radius:50px;font-weight:700;font-size:12.5px;cursor:pointer;background:var(--cream);color:var(--muted);}
+.auth-tab.sel{background:var(--forest);color:white;}
+.fg input[type=password]{padding:11px 13px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);}
+.mysponsor-row{background:var(--lime-soft);border-radius:var(--rs);padding:12px 14px;margin-bottom:10px;}
+.mysponsor-row .top{display:flex;justify-content:space-between;font-weight:700;font-size:13px;color:var(--forest);}
+.mysponsor-row .sub{font-size:11.5px;color:var(--muted);margin-top:3px;}
+.status-pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:50px;}
+.status-pill.pending{background:#FFF7E0;color:#7A5000;}
+.status-pill.proof_submitted{background:#E0F0FF;color:#0A5FA0;}
 </style>
 </head>
 <body>
-<header><div class="logo"><img src="data:image/png;base64,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" alt="Feed a Friend"><div class="logo-text">Little Learners</div></div></header>
+<header>
+  <div class="logo"><img src="data:image/png;base64,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" alt="Feed a Friend"><div class="logo-text">Little Learners</div></div>
+  <div style="flex:1;"></div>
+  <div id="header-account" style="color:white;font-size:12px;"></div>
+</header>
 <div class="wrap">
   <div class="hero">
     <h1>Meet the Children Who Need a Sponsor</h1>
     <p>Every child on this page is waiting for someone to sponsor their place on the Little Learners programme. Their names shown are first names or nicknames only, to protect their privacy.</p>
   </div>
+
+  <div class="hiw">
+    <div class="hiw-top">
+      <div class="hiw-title">💚 How It Works</div>
+      <div class="hiw-pct">💯 100% goes to your Little Learner</div>
+    </div>
+    <div class="hiw-row">
+      <div class="hiw-chip"><div class="ic">📚</div><div class="t">Curriculum Booklets</div></div>
+      <div class="hiw-chip"><div class="ic">🎨</div><div class="t">Stationery Bag</div></div>
+      <div class="hiw-chip"><div class="ic">🍽️</div><div class="t">Assessment Day Lunch</div></div>
+    </div>
+    <button class="hiw-more" onclick="document.getElementById('hiw-detail').classList.toggle('open')">Learn more ▾</button>
+    <div class="hiw-detail" id="hiw-detail">
+      <p><b>📚 Curriculum Booklets</b> — printed booklets curated for our Little Learners, covering every strand of the British curriculum, to help them transition smoothly back into school once a place is offered.</p>
+      <p><b>🎨 Stationery Bag</b> — all the essentials, including tools that help develop fine motor skills.</p>
+      <p><b>🍽️ Assessment Day Lunch</b> — a lunch on their assessment day.</p>
+    </div>
+  </div>
+
   <div id="content"><div class="loading"><div class="spinner"></div><p style="margin-top:10px;">Loading profiles…</p></div></div>
+</div>
+
+<div class="modal-bg" id="pledge-modal">
+  <div class="modal">
+    <div class="step-indicator" id="step-indicator">Step 1 of 3 — Log In</div>
+
+    <div id="auth-gate-view" style="display:none;">
+      <h3>Log In or Sign Up to Sponsor</h3>
+      <div class="sub">You'll need an account so you can track your sponsorship and payment. It's the same login used for our volunteer portal.</div>
+      <div class="auth-tabs">
+        <div class="auth-tab sel" id="auth-tab-login" onclick="switchAuthTab('login')">Log In</div>
+        <div class="auth-tab" id="auth-tab-signup" onclick="switchAuthTab('signup')">Sign Up</div>
+      </div>
+      <div id="signup-extra-fields" style="display:none;">
+        <div class="fg"><label>First Name</label><input type="text" id="auth-first-name" placeholder="First name"></div>
+        <div class="fg"><label>Surname</label><input type="text" id="auth-surname" placeholder="Surname"></div>
+        <div class="fg"><label>Contact Number</label><input type="tel" id="auth-phone" placeholder="e.g. 5xxxxxxx"></div>
+      </div>
+      <div class="fg"><label>Email</label><input type="email" id="auth-email" placeholder="you@example.com"></div>
+      <div class="fg"><label>Password</label><input type="password" id="auth-password" placeholder="••••••••"></div>
+      <div class="modal-err" id="auth-err"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closePledgeModal()">Cancel</button>
+        <button class="btn-submit" id="auth-submit-btn" onclick="submitAuth()">Log In →</button>
+      </div>
+    </div>
+
+    <div id="pledge-form-view" style="display:none;">
+      <h3 id="pledge-title">Sponsor a Little Learner</h3>
+      <div class="sub">Just two quick questions.</div>
+      <div class="fg">
+        <label>Would you like to meet the Little Learner, should the parents agree?</label>
+        <div class="choice-row">
+          <div class="choice" id="meet-yes" onclick="selectSpChoice('meet','Yes',this)">Yes</div>
+          <div class="choice" id="meet-no" onclick="selectSpChoice('meet','No',this)">No</div>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Would you like updates on your Little Learner?</label>
+        <div class="choice-row">
+          <div class="choice" id="updates-yes" onclick="selectSpChoice('updates','Yes',this)">Yes</div>
+          <div class="choice" id="updates-no" onclick="selectSpChoice('updates','No',this)">No</div>
+        </div>
+      </div>
+      <div class="modal-err" id="pledge-err"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closePledgeModal()">Cancel</button>
+        <button class="btn-submit" id="pledge-submit-btn" onclick="submitPledge()">Continue →</button>
+      </div>
+    </div>
+
+    <div id="bank-transfer-view" style="display:none;">
+      <h3>Send Your Sponsorship</h3>
+      <div class="sub">Please transfer your sponsorship amount using the details below.</div>
+      <div class="bank-box">
+        <div class="bank-row"><span>Bank Name</span><b>[ADD BANK NAME]</b></div>
+        <div class="bank-row"><span>Account Name</span><b>[ADD ACCOUNT NAME]</b></div>
+        <div class="bank-row"><span>Account / IBAN</span><b>[ADD ACCOUNT NUMBER / IBAN]</b></div>
+        <div class="bank-row"><span>Reference</span><b id="bank-ref">[LOADING…]</b></div>
+      </div>
+      <div class="modal-err" style="display:block;background:#FFF7E0;border-left-color:var(--gold);color:#7A5000;">⚠️ Please use the reference above so we can match your transfer to the right Little Learner.</div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closePledgeModal()">Cancel</button>
+        <button class="btn-submit" onclick="goToProofUpload()">I've Sent It →</button>
+      </div>
+    </div>
+
+    <div id="proof-upload-view" style="display:none;">
+      <h3>Attach Your Transfer Receipt</h3>
+      <div class="sub">Upload a screenshot or photo of your transfer confirmation.</div>
+      <div class="fg">
+        <label>Proof of Transfer</label>
+        <input type="file" accept="image/*,.pdf" id="proof-file-input">
+      </div>
+      <div class="modal-err" id="proof-err"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="goBackToBankView()">Back</button>
+        <button class="btn-submit" id="proof-submit-btn" onclick="submitProof()">Submit</button>
+      </div>
+    </div>
+
+    <div id="pledge-success-view" style="display:none;">
+      <div class="pledge-success">
+        <div class="sicon">🎉</div>
+        <h3>Thank You!</h3>
+        <p style="font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.6;">You're now sponsoring this Little Learner. We've received your transfer proof and will confirm by email shortly.</p>
+        <button class="btn-submit" style="width:100%;margin-top:16px;" onclick="closePledgeModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="mysponsor-modal">
+  <div class="modal">
+    <h3>My Sponsorships</h3>
+    <div class="sub">Everything you're sponsoring, across all our programmes.</div>
+    <div id="mysponsor-list"><div class="loading"><div class="spinner"></div></div></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" style="flex:1;" onclick="document.getElementById('mysponsor-modal').classList.remove('open')">Close</button>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
+let db;
+let currentPledgeChild = null;
+let spChoices = { meet: null, updates: null };
+let currentSession = null;
 
 async function init() {
   if(!(window.supabase && window.supabase.createClient)) { setTimeout(init, 100); return; }
-  const db = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  db = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  const { data } = await db.auth.getSession();
+  currentSession = data?.session || null;
+  db.auth.onAuthStateChange((_event, session) => { currentSession = session; renderAccountHeader(); });
+  renderAccountHeader();
+  await loadProfiles();
+}
+
+function renderAccountHeader() {
+  const el = document.getElementById('header-account');
+  if(currentSession) {
+    el.innerHTML = `<span class="acct-chip" onclick="openMySponsorships()">💚 My Sponsorships</span> &nbsp; <span class="acct-chip" onclick="logOut()">Log Out</span>`;
+  } else {
+    el.innerHTML = `<span class="acct-chip" onclick="openAuthGateStandalone()">Log In</span>`;
+  }
+}
+
+async function logOut() {
+  await db.auth.signOut();
+  currentSession = null;
+  renderAccountHeader();
+}
+
+let currentProfiles = [];
+
+async function loadProfiles() {
   const el = document.getElementById('content');
+  el.innerHTML = `<div class="loading"><div class="spinner"></div><p style="margin-top:10px;">Loading profiles…</p></div>`;
   try {
     const { data, error } = await db.rpc('get_sponsor_profiles');
     if(error) throw new Error(error.message);
-    if(!data || !data.length) {
+    currentProfiles = data || [];
+    if(!currentProfiles.length) {
       el.innerHTML = `<div class="empty"><div class="eicon">💚</div><p>All children currently have a sponsor — thank you! Please check back soon.</p></div>`;
       return;
     }
-    const cards = data.map(p => {
+    const cards = currentProfiles.map(p => {
       const { data: urlData } = db.storage.from('donor-photos').getPublicUrl(p.sponsor_photo_path);
       const photo = urlData?.publicUrl || '';
       return `<div class="pcard">
-        <img class="photo" src="${photo}" alt="${p.display_name}" loading="lazy">
+        <img class="photo" src="${photo}" alt="${escapeHtml(p.display_name)}" loading="lazy">
         <div class="body">
-          <div class="pname">${p.display_name}</div>
+          <div class="pname">${escapeHtml(p.display_name)}</div>
           <div class="page">${p.age != null ? 'Age ' + p.age : ''}</div>
-          <div class="quote">${p.aspiration}</div>
+          <div class="quote">${escapeHtml(p.aspiration)}</div>
+          <button class="sponsor-btn" onclick="openPledgeModal('${p.child_id}')">💚 Sponsor ${escapeHtml(p.display_name)}</button>
         </div>
       </div>`;
     });
@@ -77,6 +284,256 @@ async function init() {
     console.error(e);
   }
 }
+
+function escapeHtml(s) {
+  if(s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+let currentPledgeId = null;
+let pendingChildIdAfterAuth = null;
+
+function openPledgeModal(childId) {
+  const child = currentProfiles.find(p => p.child_id === childId);
+  if(!child) return;
+  currentPledgeChild = child;
+  currentPledgeId = null;
+  document.getElementById('pledge-modal').classList.add('open');
+
+  if(!currentSession) {
+    pendingChildIdAfterAuth = childId;
+    resetAuthForm();
+    showStep('auth-gate-view', 'Before You Start — Log In');
+    return;
+  }
+  startPledgeDetailsStep(child);
+}
+
+function openAuthGateStandalone() {
+  pendingChildIdAfterAuth = null;
+  currentPledgeChild = null;
+  resetAuthForm();
+  document.getElementById('pledge-modal').classList.add('open');
+  showStep('auth-gate-view', 'Log In');
+}
+
+function resetAuthForm() {
+  document.getElementById('auth-email').value = '';
+  document.getElementById('auth-password').value = '';
+  document.getElementById('auth-first-name').value = '';
+  document.getElementById('auth-surname').value = '';
+  document.getElementById('auth-phone').value = '';
+  document.getElementById('auth-err').style.display = 'none';
+  switchAuthTab('login');
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('auth-tab-login').classList.toggle('sel', tab==='login');
+  document.getElementById('auth-tab-signup').classList.toggle('sel', tab==='signup');
+  document.getElementById('signup-extra-fields').style.display = tab==='signup' ? 'block' : 'none';
+  document.getElementById('auth-submit-btn').textContent = tab==='signup' ? 'Sign Up →' : 'Log In →';
+  document.getElementById('auth-submit-btn').dataset.mode = tab;
+}
+
+async function submitAuth() {
+  const err = document.getElementById('auth-err');
+  const mode = document.getElementById('auth-submit-btn').dataset.mode || 'login';
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  if(!email || !password) {
+    err.textContent = '⚠️ Please enter your email and password.';
+    err.style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('auth-submit-btn');
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2.5px;border-color:rgba(10,61,31,.3);border-top-color:var(--forest);display:inline-block;"></div>';
+  try {
+    if(mode === 'signup') {
+      const firstName = document.getElementById('auth-first-name').value.trim();
+      const surname = document.getElementById('auth-surname').value.trim();
+      const phone = document.getElementById('auth-phone').value.trim();
+      if(!firstName || !surname || !phone) {
+        throw new Error('Please fill in your first name, surname, and contact number.');
+      }
+      const { data, error } = await db.auth.signUp({ email, password });
+      if(error) throw new Error(error.message);
+      const uid = data?.user?.id;
+      if(!uid) throw new Error('Could not create your account — please try again.');
+      const { error: profErr } = await db.from('profiles').insert({
+        id: uid, first_name: firstName, surname, email, phone,
+        role: null, approved: true, is_sponsor: true,
+      });
+      if(profErr) throw new Error(profErr.message);
+      const { data: sessData } = await db.auth.getSession();
+      currentSession = sessData?.session || null;
+      if(!currentSession) {
+        renderAccountHeader();
+        err.style.display = 'block';
+        err.style.background = '#EAF5EA';
+        err.style.borderLeftColor = 'var(--lime)';
+        err.style.color = 'var(--forest)';
+        err.textContent = '✅ Account created! Please check your email to confirm it, then log in to continue sponsoring.';
+        switchAuthTab('login');
+        btn.disabled = false;
+        btn.textContent = 'Log In →';
+        return;
+      }
+    } else {
+      const { data, error } = await db.auth.signInWithPassword({ email, password });
+      if(error) throw new Error(error.message);
+      currentSession = data?.session || null;
+      // Ensure existing volunteer accounts logging in for the first time to sponsor get flagged
+      if(currentSession) {
+        await db.from('profiles').update({ is_sponsor: true }).eq('id', currentSession.user.id);
+      }
+    }
+    renderAccountHeader();
+    if(pendingChildIdAfterAuth) {
+      const child = currentProfiles.find(p => p.child_id === pendingChildIdAfterAuth);
+      pendingChildIdAfterAuth = null;
+      if(child) { startPledgeDetailsStep(child); return; }
+    }
+    closePledgeModal();
+  } catch(e) {
+    err.textContent = '⚠️ ' + (e.message || 'Something went wrong — please try again.');
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+function startPledgeDetailsStep(child) {
+  spChoices = { meet: null, updates: null };
+  document.querySelectorAll('#pledge-form-view .choice').forEach(x=>x.classList.remove('sel'));
+  document.getElementById('pledge-err').style.display = 'none';
+  document.getElementById('pledge-title').textContent = `Sponsor ${child.display_name}`;
+  showStep('pledge-form-view', 'Step 1 of 3 — A Couple of Questions');
+  const btn = document.getElementById('pledge-submit-btn');
+  btn.disabled = false;
+  btn.textContent = 'Continue →';
+}
+
+function showStep(viewId, indicatorText) {
+  ['auth-gate-view','pledge-form-view','bank-transfer-view','proof-upload-view','pledge-success-view'].forEach(id => {
+    document.getElementById(id).style.display = (id === viewId) ? 'block' : 'none';
+  });
+  document.getElementById('step-indicator').textContent = indicatorText || '';
+}
+
+function closePledgeModal() {
+  document.getElementById('pledge-modal').classList.remove('open');
+  loadProfiles();
+}
+
+async function openMySponsorships() {
+  document.getElementById('mysponsor-modal').classList.add('open');
+  const el = document.getElementById('mysponsor-list');
+  el.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+  try {
+    const { data, error } = await db.from('my_sponsorships').select('*').order('created_at', { ascending: false });
+    if(error) throw new Error(error.message);
+    if(!data || !data.length) {
+      el.innerHTML = `<div class="empty"><div class="eicon">💚</div><p>You haven't sponsored anyone yet.</p></div>`;
+      return;
+    }
+    el.innerHTML = data.map(s => `
+      <div class="mysponsor-row">
+        <div class="top"><span>${escapeHtml(s.program)} — ${escapeHtml(s.beneficiary_display_name || s.beneficiary_name || '')}</span>
+          <span class="status-pill ${s.payment_status||'pending'}">${s.payment_status === 'proof_submitted' ? 'Proof received' : 'Awaiting payment'}</span>
+        </div>
+        <div class="sub">${new Date(s.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>
+      </div>`).join('');
+  } catch(e) {
+    el.innerHTML = `<div class="empty"><div class="eicon">⚠️</div><p>Could not load your sponsorships right now.</p></div>`;
+    console.error(e);
+  }
+}
+
+function selectSpChoice(group, val, el) {
+  spChoices[group] = val;
+  document.querySelectorAll(`#${group}-yes, #${group}-no`).forEach(x=>x.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+async function submitPledge() {
+  const err = document.getElementById('pledge-err');
+  if(!spChoices.meet || !spChoices.updates) {
+    err.textContent = '⚠️ Please answer both questions above.';
+    err.style.display = 'block';
+    return;
+  }
+  err.style.display = 'none';
+  const btn = document.getElementById('pledge-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2.5px;border-color:rgba(10,61,31,.3);border-top-color:var(--forest);display:inline-block;"></div>';
+  try {
+    const { data, error } = await db.rpc('create_sponsor_pledge', {
+      p_child_id: currentPledgeChild.child_id,
+      p_wants_to_meet: spChoices.meet,
+      p_wants_updates: spChoices.updates,
+    });
+    if(error) throw new Error(error.message);
+    if(!data?.success) {
+      err.textContent = '⚠️ ' + (data?.error || 'Could not process your sponsorship — please try again.');
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Continue →';
+      return;
+    }
+    currentPledgeId = data.pledge_id;
+    document.getElementById('bank-ref').textContent = `LL-${currentPledgeChild.display_name}-${currentPledgeId.slice(0,8)}`.toUpperCase();
+    showStep('bank-transfer-view', 'Step 2 of 3 — Send Payment');
+  } catch(e) {
+    err.textContent = 'Something went wrong: ' + (e.message || 'please try again.');
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Continue →';
+  }
+}
+
+function goToProofUpload() {
+  document.getElementById('proof-err').style.display = 'none';
+  document.getElementById('proof-file-input').value = '';
+  showStep('proof-upload-view', 'Step 3 of 3 — Attach Receipt');
+}
+
+function goBackToBankView() {
+  showStep('bank-transfer-view', 'Step 2 of 3 — Send Payment');
+}
+
+async function submitProof() {
+  const err = document.getElementById('proof-err');
+  const file = document.getElementById('proof-file-input').files[0];
+  if(!file) {
+    err.textContent = '⚠️ Please attach a screenshot or photo of your transfer.';
+    err.style.display = 'block';
+    return;
+  }
+  err.style.display = 'none';
+  const btn = document.getElementById('proof-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2.5px;border-color:rgba(10,61,31,.3);border-top-color:var(--forest);display:inline-block;"></div>';
+  try {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${currentPledgeId}/proof_${Date.now()}.${ext}`;
+    const { error: upErr } = await db.storage.from('sponsorship-proofs').upload(path, file, { upsert: true, contentType: file.type || 'application/octet-stream' });
+    if(upErr) throw new Error(upErr.message);
+
+    const { data, error } = await db.rpc('attach_sponsor_proof', { p_pledge_id: currentPledgeId, p_proof_path: path });
+    if(error) throw new Error(error.message);
+    if(!data) throw new Error('Could not save your proof — please try again.');
+
+    showStep('pledge-success-view', '');
+  } catch(e) {
+    err.textContent = 'Something went wrong: ' + (e.message || 'please try again.');
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Submit';
+  }
+}
+
 init();
 </script>
 </body>
