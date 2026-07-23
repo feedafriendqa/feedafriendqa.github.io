@@ -82,6 +82,8 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 .status-pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:50px;}
 .status-pill.pending{background:#FFF7E0;color:#7A5000;}
 .status-pill.proof_submitted{background:#E0F0FF;color:#0A5FA0;}
+.countdown-box{background:#FDEAEA;border-left:4px solid var(--coral);border-radius:var(--rs);padding:10px 14px;font-size:12.5px;font-weight:600;color:#8B2020;margin-bottom:14px;}
+.countdown-box b{font-family:'Nunito',sans-serif;font-weight:900;}
 </style>
 </head>
 <body>
@@ -145,6 +147,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div id="pledge-form-view" style="display:none;">
       <h3 id="pledge-title">Sponsor a Little Learner</h3>
       <div class="sub">Just two quick questions.</div>
+      <div class="countdown-box" id="reserve-countdown-box">⏱️ Please finish within <b id="reserve-countdown">5:00</b> or this Little Learner may become available to another sponsor.</div>
       <div class="fg">
         <label>Would you like to meet the Little Learner, should the parents agree?</label>
         <div class="choice-row">
@@ -169,6 +172,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div id="bank-transfer-view" style="display:none;">
       <h3>Send Your Sponsorship</h3>
       <div class="sub">Please transfer your sponsorship amount using the details below.</div>
+      <div class="countdown-box" id="payment-countdown-box">⏱️ You have <b id="payment-countdown">48:00:00</b> to complete payment and attach your receipt, or this Little Learner will be released to another sponsor.</div>
       <div class="bank-box">
         <div class="bank-row"><span>Bank Name</span><b>[ADD BANK NAME]</b></div>
         <div class="bank-row"><span>Account Name</span><b>[ADD ACCOUNT NAME]</b></div>
@@ -185,6 +189,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div id="proof-upload-view" style="display:none;">
       <h3>Attach Your Transfer Receipt</h3>
       <div class="sub">Upload a screenshot or photo of your transfer confirmation.</div>
+      <div class="countdown-box" id="payment-countdown-box-2">⏱️ You have <b id="payment-countdown-2">48:00:00</b> left to submit this.</div>
       <div class="fg">
         <label>Proof of Transfer</label>
         <input type="file" accept="image/*,.pdf" id="proof-file-input">
@@ -413,6 +418,64 @@ function startPledgeDetailsStep(child) {
   const btn = document.getElementById('pledge-submit-btn');
   btn.disabled = false;
   btn.textContent = 'Continue →';
+  startReserveCountdown();
+}
+
+let reserveTimerHandle = null;
+function startReserveCountdown() {
+  stopReserveCountdown();
+  let secondsLeft = 5 * 60;
+  const box = document.getElementById('reserve-countdown-box');
+  const disp = document.getElementById('reserve-countdown');
+  box.style.display = 'block';
+  const tick = () => {
+    const m = Math.floor(secondsLeft / 60), s = secondsLeft % 60;
+    disp.textContent = `${m}:${String(s).padStart(2,'0')}`;
+    if(secondsLeft <= 0) {
+      stopReserveCountdown();
+      const err = document.getElementById('pledge-err');
+      err.textContent = "⏱️ Time's up — please start again to sponsor this Little Learner.";
+      err.style.display = 'block';
+      document.getElementById('pledge-submit-btn').disabled = true;
+      return;
+    }
+    secondsLeft--;
+  };
+  tick();
+  reserveTimerHandle = setInterval(tick, 1000);
+}
+function stopReserveCountdown() {
+  if(reserveTimerHandle) { clearInterval(reserveTimerHandle); reserveTimerHandle = null; }
+}
+
+let paymentTimerHandle = null;
+function startPaymentCountdown(expiresAtIso) {
+  stopPaymentCountdown();
+  const expiresAt = new Date(expiresAtIso).getTime();
+  const disp1 = document.getElementById('payment-countdown');
+  const disp2 = document.getElementById('payment-countdown-2');
+  const tick = () => {
+    const secondsLeft = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+    const h = Math.floor(secondsLeft / 3600), m = Math.floor((secondsLeft % 3600) / 60), s = secondsLeft % 60;
+    const text = `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if(disp1) disp1.textContent = text;
+    if(disp2) disp2.textContent = text;
+    if(secondsLeft <= 0) {
+      stopPaymentCountdown();
+      const err = document.getElementById('proof-err') || document.getElementById('pledge-err');
+      if(err) {
+        err.textContent = '⏱️ The 48-hour window has passed — this Little Learner may now be available to another sponsor.';
+        err.style.display = 'block';
+      }
+      const sbtn = document.getElementById('proof-submit-btn');
+      if(sbtn) sbtn.disabled = true;
+    }
+  };
+  tick();
+  paymentTimerHandle = setInterval(tick, 1000);
+}
+function stopPaymentCountdown() {
+  if(paymentTimerHandle) { clearInterval(paymentTimerHandle); paymentTimerHandle = null; }
 }
 
 function showStep(viewId, indicatorText) {
@@ -424,6 +487,8 @@ function showStep(viewId, indicatorText) {
 
 function closePledgeModal() {
   document.getElementById('pledge-modal').classList.remove('open');
+  stopReserveCountdown();
+  stopPaymentCountdown();
   loadProfiles();
 }
 
@@ -483,8 +548,10 @@ async function submitPledge() {
       return;
     }
     currentPledgeId = data.pledge_id;
+    stopReserveCountdown();
     document.getElementById('bank-ref').textContent = `LL-${currentPledgeChild.display_name}-${currentPledgeId.slice(0,8)}`.toUpperCase();
     showStep('bank-transfer-view', 'Step 2 of 3 — Send Payment');
+    startPaymentCountdown(data.expires_at);
   } catch(e) {
     err.textContent = 'Something went wrong: ' + (e.message || 'please try again.');
     err.style.display = 'block';
@@ -523,8 +590,9 @@ async function submitProof() {
 
     const { data, error } = await db.rpc('attach_sponsor_proof', { p_pledge_id: currentPledgeId, p_proof_path: path });
     if(error) throw new Error(error.message);
-    if(!data) throw new Error('Could not save your proof — please try again.');
+    if(!data?.success) throw new Error(data?.error || 'Could not save your proof — please try again.');
 
+    stopPaymentCountdown();
     showStep('pledge-success-view', '');
   } catch(e) {
     err.textContent = 'Something went wrong: ' + (e.message || 'please try again.');
