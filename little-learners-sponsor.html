@@ -10,7 +10,7 @@
 :root{--forest:#0A3D1F;--forest-mid:#145C30;--lime:#5CB85C;--lime-soft:#EAF5EA;--gold:#3AAFA4;--coral:#E05252;--muted:#5A7A65;--border:#C8DFC8;--cream:#F4F9F4;--shadow:0 4px 20px rgba(10,61,31,.09);--r:14px;--rs:10px;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Quicksand',sans-serif;background:var(--cream);color:var(--forest);min-height:100vh;}
-header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14px;display:flex;align-items:center;height:56px;gap:10px;}
+header{background:var(--forest);border-bottom:3px solid var(--gold);padding:10px 14px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-height:56px;position:relative;}
 .logo{display:flex;align-items:center;gap:9px;}
 .logo img{height:32px;width:auto;}
 .logo-text{font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:white;}
@@ -72,6 +72,13 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 .bank-row span{color:var(--muted);font-weight:600;}
 .bank-row b{color:var(--forest);text-align:right;}
 .acct-chip{background:rgba(255,255,255,.12);border-radius:50px;padding:5px 12px;cursor:pointer;font-weight:700;}
+.acct-menu-wrap{position:relative;}
+.acct-menu-btn{background:rgba(255,255,255,.12);border-radius:50px;padding:6px 14px;cursor:pointer;font-weight:700;color:white;font-size:12px;white-space:nowrap;}
+.acct-dropdown{display:none;position:absolute;top:calc(100% + 6px);right:0;background:white;border-radius:var(--rs);box-shadow:var(--shadow);min-width:170px;overflow:hidden;z-index:20;}
+.acct-dropdown.open{display:block;}
+.acct-dropdown div{padding:11px 14px;font-size:13px;font-weight:600;color:var(--forest);cursor:pointer;}
+.acct-dropdown div:hover{background:var(--lime-soft);}
+.acct-dropdown div:first-child{border-bottom:1px solid var(--border);}
 .auth-tabs{display:flex;gap:8px;margin-bottom:16px;}
 .auth-tab{flex:1;text-align:center;padding:9px;border-radius:50px;font-weight:700;font-size:12.5px;cursor:pointer;background:var(--cream);color:var(--muted);}
 .auth-tab.sel{background:var(--forest);color:white;}
@@ -245,11 +252,28 @@ async function init() {
 function renderAccountHeader() {
   const el = document.getElementById('header-account');
   if(currentSession) {
-    el.innerHTML = `<span class="acct-chip" onclick="openMySponsorships()">💚 My Sponsorships</span> &nbsp; <span class="acct-chip" onclick="logOut()">Log Out</span>`;
+    el.innerHTML = `
+      <div class="acct-menu-wrap">
+        <div class="acct-menu-btn" onclick="toggleAcctMenu()">👤 Account ▾</div>
+        <div class="acct-dropdown" id="acct-dropdown">
+          <div onclick="toggleAcctMenu();openMySponsorships();">💚 My Sponsorships</div>
+          <div onclick="toggleAcctMenu();logOut();">Log Out</div>
+        </div>
+      </div>`;
   } else {
-    el.innerHTML = `<span class="acct-chip" onclick="openAuthGateStandalone()">Log In</span>`;
+    el.innerHTML = `<span class="acct-menu-btn" onclick="openAuthGateStandalone()">Log In</span>`;
   }
 }
+
+function toggleAcctMenu() {
+  document.getElementById('acct-dropdown')?.classList.toggle('open');
+}
+document.addEventListener('click', (e) => {
+  const wrap = document.querySelector('.acct-menu-wrap');
+  if(wrap && !wrap.contains(e.target)) {
+    document.getElementById('acct-dropdown')?.classList.remove('open');
+  }
+});
 
 async function logOut() {
   await db.auth.signOut();
