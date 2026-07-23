@@ -967,6 +967,26 @@ function renderAttendeesForDay() {
   });
 }
 
+async function approveSponsorPhoto(childId) {
+  const child = allChildren.find(c=>c.id===childId);
+  if(!child?.profile_photo_path) { showToast('No profile photo on file yet'); return; }
+  try {
+    const { data: fileBlob, error: dlErr } = await db.storage.from('ll-documents').download(child.profile_photo_path);
+    if(dlErr) throw new Error(dlErr.message);
+    const ext = (child.profile_photo_path.split('.').pop() || 'jpg').toLowerCase();
+    const publicPath = `little-learners/${childId}_${Date.now()}.${ext}`;
+    const { error: upErr } = await db.storage.from('donor-photos').upload(publicPath, fileBlob, { upsert: true, contentType: fileBlob.type || 'image/jpeg' });
+    if(upErr) throw new Error(upErr.message);
+    const { error: saveErr } = await db.from('ll_children').update({ sponsor_photo_path: publicPath }).eq('id', childId);
+    if(saveErr) throw new Error(saveErr.message);
+    child.sponsor_photo_path = publicPath;
+    showToast('✅ Photo approved for sponsor page');
+    openProfile(currentFamily.id);
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  }
+}
+
 async function loadAttendeePhoto(attendeeId, path) {
   const {data} = await db.storage.from('ll-documents').createSignedUrl(path, 300);
   if(data?.signedUrl) {
@@ -2226,6 +2246,32 @@ function renderChildren(children, f) {
             <option value="Other" ${c.intro_call_status==='Other'?'selected':''}>❓ Other — unavailable</option>
           </select>
           ${c.intro_call_status && c.intro_call_status!=='Available' ? `<div style="font-size:11px;color:var(--coral);font-weight:700;margin-top:6px;">🚫 Excluded from introductory call — family notified, child archived.</div>` : ''}
+        </div>
+
+        <!-- SPONSORSHIP -->
+        <div style="margin-top:12px;padding-top:12px;border-top:2px solid var(--border);">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Sponsorship</div>
+          <select id="spons-${c.id}" style="padding:8px 10px;border-radius:var(--rs);border:2px solid var(--border);font-family:Quicksand,sans-serif;font-size:12.5px;width:100%;" onchange="saveChildField('${c.id}','sponsorship_status',this.value,true)">
+            <option value="" ${!c.sponsorship_status?'selected':''}>Not set</option>
+            <option value="needs_sponsor" ${c.sponsorship_status==='needs_sponsor'?'selected':''}>🙋 Needs Sponsor</option>
+            <option value="sponsored" ${c.sponsorship_status==='sponsored'?'selected':''}>✅ Sponsored</option>
+          </select>
+          ${c.sponsorship_status==='needs_sponsor' ? (
+            c.media_consent!=='Yes'
+              ? `<div style="font-size:11px;color:var(--coral);font-weight:700;margin-top:6px;">⚠️ No media consent on file — cannot show on the public sponsor page until a parent consents (via RSVP or manually below).</div>
+                 <select style="margin-top:6px;padding:6px 10px;border-radius:8px;border:2px solid var(--border);font-size:12px;" onchange="saveChildField('${c.id}','media_consent',this.value,true)">
+                   <option value="">Set media consent…</option>
+                   <option value="Yes">Yes, consent given</option>
+                   <option value="No">No consent</option>
+                 </select>`
+              : (!c.profile_photo_path
+                  ? `<div style="font-size:11px;color:var(--coral);font-weight:700;margin-top:6px;">⚠️ No profile photo on file yet — upload one first (via 📷 Photo button above).</div>`
+                  : c.sponsor_photo_path
+                    ? `<div style="font-size:11px;color:var(--lime);font-weight:700;margin-top:6px;">✅ Live on the sponsor page.</div>
+                       <button class="btn-small" style="margin-top:6px;" onclick="approveSponsorPhoto('${c.id}')">🔄 Refresh Sponsor Photo</button>`
+                    : `<button class="btn-small" style="margin-top:6px;" onclick="approveSponsorPhoto('${c.id}')">📸 Approve Photo for Sponsor Page</button>`
+                )
+          ) : ''}
         </div>
       </div>
     </div>`;

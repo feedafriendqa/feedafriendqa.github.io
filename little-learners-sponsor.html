@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Little Learners — Meet the Children Who Need a Sponsor</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#0A3D1F;--forest-mid:#145C30;--lime:#5CB85C;--lime-soft:#EAF5EA;--gold:#3AAFA4;--coral:#E05252;--muted:#5A7A65;--border:#C8DFC8;--cream:#F4F9F4;--shadow:0 4px 20px rgba(10,61,31,.09);--r:14px;--rs:10px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Quicksand',sans-serif;background:var(--cream);color:var(--forest);min-height:100vh;}
+header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14px;display:flex;align-items:center;height:56px;gap:10px;}
+.logo{display:flex;align-items:center;gap:9px;}
+.logo img{height:32px;width:auto;}
+.logo-text{font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:white;}
+.wrap{padding:16px 14px;max-width:1000px;margin:0 auto;}
+.hero{background:var(--forest);border-radius:var(--r);padding:24px 20px;margin-bottom:20px;text-align:center;color:white;}
+.hero h1{font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;}
+.hero p{font-size:13.5px;opacity:.85;margin-top:8px;line-height:1.6;max-width:560px;margin-left:auto;margin-right:auto;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;}
+.pcard{background:white;border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;}
+.pcard .photo{width:100%;aspect-ratio:1;object-fit:cover;background:var(--lime-soft);}
+.pcard .body{padding:14px;flex:1;display:flex;flex-direction:column;}
+.pcard .pname{font-family:'Nunito',sans-serif;font-weight:900;font-size:16px;color:var(--forest);}
+.pcard .page{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px;}
+.pcard .quote{font-size:13px;color:#3d5c46;margin-top:10px;line-height:1.5;flex:1;font-style:italic;}
+.pcard .quote::before{content:"“";}
+.pcard .quote::after{content:"”";}
+.empty,.loading{text-align:center;padding:60px 20px;color:var(--muted);}
+.empty .eicon{font-size:44px;margin-bottom:10px;}
+.spinner{display:inline-block;width:26px;height:26px;border:3px solid rgba(10,61,31,.2);border-top-color:var(--forest);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header><div class="logo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEEAAAA0CAYAAADVGFU3AAAKv0lEQVR42uWaeaxdVRXGf+ve+15LJ0q1gEWmFihWpjIIhAJNgUAIEcJkwBhRpIoYBCVVEAWFRgY1NAroHyZinEABwTBFaUKRBGQILRSElrFQICAUWjq8d+/5/KPfbncP5w6FCjXdyc25Z689rr3Wt4Z9gg+xSKpFRCHpDGAi8AJwT0TM69KvHhGtLm0iIsTGXiTV/Txaa8sySddImiVp76ztAZK+IGl0D+NGekqqS2qkuTZGJqTFDpH0oqRWxoxvevF9bnOC65+XdKykUYlWNWYn6dsYGVHz8x5JhX8nJ5oZEZJOljSYMekiSUPdpuYT73e/cyU9JGknSV+SdKWkI6sYkfWPbgz8MJhwuzd3pd/7vbAkCTNNf8GSUK8ScUvVvyUdJ+l7WrfMlrRDtvn6+xbhTM/Sr/5BdM6ivUDSYknD0+nk2CHpGdPH53ji/+MlHSzpQEkXS7oho71iBiz382lJW2WquI+kG/3brFIaMpFsbGg8kNQn6Q5Jr3qBdyeGet7hku6U9JikFZJ2S6ft5+clPShpZenEl0p6RNIPLEFvlOgXe/6rJDWz+mMAGpmI1oBWRBRAkS1+S2AHYCdgR2AbYBzwH+DMiBjoZp6SiZM0GTjK1S1gGnADcGJESNJ5QNLlZcBYm9VVki4AZubDZs8RwGT/3gJmA48AhwJbAZ8EbgWOcfuV3vt2legqaYI5fq2kf0l6W9VlaTJfPSB0YvaFtgirshOZYynYwWM2s5M+y/0mGUCb/hWltRQeNwfSL7rvjpLmum7AzzT38fkiJ0k6X9K9XmBeWpLe9f/BbAMLMjFvrIdFSItICz7btD/6Pc3/cIb+38jm71aaGaAeIum5Ut9kll+RNEZSIOnq0iArjbZ3S7rJOnyXpPs9QJENdEob3a9lAJpM3jg7RvlCmq7fs3TSkjQtmTGbx6JHJijbdKs0X34AR6YDSif4KvAUsBh4E1gKvAG8CCwAXgOGANcBhxgzBPzBInsV8FegMKYoxxVPNgUYbixI5ZGIWCzpeqCsUvtGxGz3XVZB71bS3grjXcKPuvFsoqSRwC2NiDhL0iJgJPA0MA94MiJW2jwdBRwH7AsM82D1bIKDgAOBERGxQtJWwCeAfRwbvGrGHl0CNICrJR0GTDFz6qYLuEzScOAaYPn7NUoZA8gY+TFglv9PS+I7vgSMF1gnu5Ukwu9K+omkByqAtDDgraoAslNtDouSyOZliaTXteFLUq0jIpk3SacCXwMOLnGzaQ7W1lMkm+7zQXz3ViZ1G7IkFVkA7J9M18+Acys2EJlu9bJgKvqpJIpVItuOVu+h//tVE4yDK5N5e8FOReHFfzSBxUdTpjbsBSau1zYhBrS8391qwF12g7WJSUBSsck1q0LZdG0qDCiAvWrA3zdRJiTLNakGPJRVbiolebMXAlMa9uj+V/Z4Y1YFgL9FxLyaY+uBTVQlNk8BlLKAqBcno9XBqSnaBDKtivHD/Zqlul7NdD5mfT0tW4pPmhFRNIChju56kYROHmR0wJV6D9Fer15kL2P2Aopr5m4ASxw5TgT6u/jajwG/zByrmk9kOvA4MAfo8wZkBl8I/AJYlNEKYDxwGnARMOgodj/gWK+rGyMud6gfwAynyooeAX4F8KxD6nWSIN/ukL1JiY6/tMkc/UnSaW1oiyXtWFG/naSXK+oPcJ+qyDK9P1fqc3mPmadEn5FnvBpAPSKakv7Zg5ht5lhjSyc9h1iSDgBmm3aYT3jAv9HAGOcsTgemOj+wOVBIGmFwDiAi4n5J5wDXV2BMOunbvYHNgFVOos7oQQrS3u7OrUQtA7rnnVGKDthQRETT4rvMyZKpwPbAUtNWmjFLgS+nhZq2wtngPuCEDJyaBshBb+4OZ7bqpbWkTd7sDFYa90HgGdOLLtHqW8BzJX9hndzg3IqcXK4Ot1aI7wyL7kkVtAdN27WCtkrSouxOIUoXq/NLa0nPRenSxPcYKRk7q4tKpP4PlzPkjdK9wJPAHh0AJi1yDHCm34/wM12fHQyc6JOdnFsUJ2b39z1BfxX4WRKGAmMqVCGAOyJihesGsw3dDJzdQSXSnp7MpKqVi1dayLxupsV6Pxa4FLjEiVeAPtNGZhc0v7MKDDFtC2BbM+CWxCDTGkC/xfwzwNalw0j+w23OYG8j6RJJh7v+YeDlLiqBLdx7kzTZdwPHlMS/rA43u90Wkt7xZUa6KPlsB+swvqJ+e0kvtbEa87L8ZS7Kz2btvuu6eT1aiWZ+9ZbfbTYq0k3NCjudnjs7xT7WgNfIuH68pHTKYVHrt+hPt3XIaeOBkZLOtVg37Kuc5GywKoBxqaSvu366x/m0pJlOCXy8TTCozDt9quwYrgEiJ1uHOO3eq+OhiqBkQyZC07Od41S02XC0abcI2MXXCWvuT2usNs5KF59mQnmDyYzeCewMfArYHdjbQPodt9kP2AXYFdgLuMAmswXc6L77+uSvc7tJ/u3ucX/udR3q+vO9qdvdfhfgJePNJM8/xfjUzsSn94VmQC2/QG6UbHBh9/fw0kDp/9sRsbBCj8dZ3OZnyA0w18g9E3grIhZKGup534yIpyrGSuM/GhHvSLrCqD+Y2ksqgDdK/e+TdJvThSNL0pnWP7+017bBy9xOwU5mwqbb61vhUxywjq/KgqnCEjATGOq+KVjr9/sY4AzjxXJWX9c3geGSlvlrt0uNObk16/N7ilIbEfGApB8Dl2XYlpfHu0VwiVtPdHKfvag6cIqBaJSfSzJ6LpLL13aNwqeYjzXMbnYjG29p1r4G/NbMk1UX/y8kFfZx5LZ/Bn5U8kPqpb2pKqTMXciF3lAn3VoeEftHxATg1Cy217r8igLYM3dsKuZ7OSImeqxvuX4dRkXEMuDqbiDt+V6zy53nDcKH8UxHJpjDERFvtmvcAcnrFfF6cpev6GI98jkGKzCi3+tb3uPHmuXkTurzohn0nn01KqKspsVmnwoTlDYyVNKvrc9jMlpkpyJJpxvxq2x3eh/nEL1hTzPlKRJjT5E0J10N+LRp45hFilpLaXWABVab93wd284PaAeOKcjpY/VV+xFm1hommJ6cllmO2rxG5YxKix4E7nck+HvgXgNvGmsPYIY3X88Cn0QPY0G/JeUgVn9C0Cqp9BPtJLLWRjQfa0NveaIULrdKIjxg+uckjY6Il2z3sYmT4/817xHxWkScExFnRsR5wE1mchL/14GvSBobEWmMFILLdYU/7hoNXNzGYZrfa34vd59XOWmS688wSVsbwftLWFADtrcOTwMGHHrfYodnjPtu4faj/N6XrWXQKgGwra3QMNN+KOmSrG3ev98S+X07ULka17M9VeJcOYxN7nPDIedOpQFTYqTmxUWJgcvdPtHeZe0ndomefIVBS1TuFhdmfPIZWtk7TuTg/s0sI9WftSl/nhM2uRMi4vWqzw0bJR9ABo6mpEeBCaVBG5k3VsXQ4aW6kR3e+zIpqCrDKqR0RIf+rYqMd8pBzDUDalXA2ilA+lUGLKrI2XfK56/vu7rQ6LIWZRnwsqmssfrDsrZmulbhEbbMsX+YEX3Zpcv6bqDXd7rQ1rd/K5OW30TEjd5Tq/frmbVp+Jq/By70/1eakn6af9rf7WKyneORcOIw4KsOlUd9gPxBM9NTtVmPjD293pKnz/RSImgJcB9wbUTMyffRboD/Atbl5tByCLYmAAAAAElFTkSuQmCC" alt="Feed a Friend"><div class="logo-text">Little Learners</div></div></header>
+<div class="wrap">
+  <div class="hero">
+    <h1>Meet the Children Who Need a Sponsor</h1>
+    <p>Every child on this page is waiting for someone to sponsor their place on the Little Learners programme. Their names shown are first names or nicknames only, to protect their privacy.</p>
+  </div>
+  <div id="content"><div class="loading"><div class="spinner"></div><p style="margin-top:10px;">Loading profiles…</p></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
+
+async function init() {
+  if(!(window.supabase && window.supabase.createClient)) { setTimeout(init, 100); return; }
+  const db = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  const el = document.getElementById('content');
+  try {
+    const { data, error } = await db.rpc('get_sponsor_profiles');
+    if(error) throw new Error(error.message);
+    if(!data || !data.length) {
+      el.innerHTML = `<div class="empty"><div class="eicon">💚</div><p>All children currently have a sponsor — thank you! Please check back soon.</p></div>`;
+      return;
+    }
+    const cards = data.map(p => {
+      const { data: urlData } = db.storage.from('donor-photos').getPublicUrl(p.sponsor_photo_path);
+      const photo = urlData?.publicUrl || '';
+      return `<div class="pcard">
+        <img class="photo" src="${photo}" alt="${p.display_name}" loading="lazy">
+        <div class="body">
+          <div class="pname">${p.display_name}</div>
+          <div class="page">${p.age != null ? 'Age ' + p.age : ''}</div>
+          <div class="quote">${p.aspiration}</div>
+        </div>
+      </div>`;
+    });
+    el.innerHTML = `<div class="grid">${cards.join('')}</div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="empty"><div class="eicon">⚠️</div><p>Could not load profiles right now. Please try again shortly.</p></div>`;
+    console.error(e);
+  }
+}
+init();
+</script>
+</body>
+</html>
