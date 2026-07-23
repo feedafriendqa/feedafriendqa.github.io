@@ -971,15 +971,19 @@ async function approveSponsorPhoto(childId) {
   const child = allChildren.find(c=>c.id===childId);
   if(!child?.profile_photo_path) { showToast('No profile photo on file yet'); return; }
   try {
-    const { data: fileBlob, error: dlErr } = await db.storage.from('ll-documents').download(child.profile_photo_path);
-    if(dlErr) throw new Error(dlErr.message);
-    const ext = (child.profile_photo_path.split('.').pop() || 'jpg').toLowerCase();
-    const publicPath = `little-learners/${childId}_${Date.now()}.${ext}`;
-    const { error: upErr } = await db.storage.from('donor-photos').upload(publicPath, fileBlob, { upsert: true, contentType: fileBlob.type || 'image/jpeg' });
-    if(upErr) throw new Error(upErr.message);
-    const { error: saveErr } = await db.from('ll_children').update({ sponsor_photo_path: publicPath }).eq('id', childId);
-    if(saveErr) throw new Error(saveErr.message);
-    child.sponsor_photo_path = publicPath;
+    const { data: sessionData } = await db.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if(!accessToken) throw new Error('Not logged in');
+
+    const resp = await fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/approve-sponsor-photo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
+      body: JSON.stringify({ child_id: childId }),
+    });
+    const result = await resp.json();
+    if(!resp.ok || result.error) throw new Error(result.error || 'Could not approve photo');
+
+    child.sponsor_photo_path = result.sponsor_photo_path;
     showToast('✅ Photo approved for sponsor page');
     openProfile(currentFamily.id);
   } catch(e) {
@@ -2232,6 +2236,15 @@ function renderChildren(children, f) {
             </select>
           </div>
           ${c.special_needs==='Yes — please describe below'?`<div class="irow" style="grid-column:span 2"><div class="ikey">SN Detail</div><textarea class="ival-input" style="min-height:60px;" placeholder="Describe the special need…" onblur="saveChildField('${c.id}','special_needs_detail',this.value)">${c.special_needs_detail||''}</textarea></div>`:''}
+          <div class="irow">
+            <div class="ikey">Allergies</div>
+            <select class="ival-select" onchange="saveChildField('${c.id}','has_allergies',this.value,true)">
+              <option value="" ${!c.has_allergies?'selected':''}>Select…</option>
+              <option value="No" ${c.has_allergies==='No'?'selected':''}>No</option>
+              <option value="Yes" ${c.has_allergies==='Yes'?'selected':''}>Yes — please describe</option>
+            </select>
+          </div>
+          ${c.has_allergies==='Yes'?`<div class="irow"><div class="ikey">Allergy Detail</div><input class="ival-input" placeholder="e.g. peanuts, eggs, dairy…" value="${c.allergy_detail||''}" onblur="saveChildField('${c.id}','allergy_detail',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}"></div>`:''}
           ${c.qid_sponsor?`<div class="irow"><div class="ikey">Sponsor</div><div class="ival">${c.qid_sponsor}</div></div>`:''}
           ${c.qid_expiry?`<div class="irow"><div class="ikey">QID Expiry</div><div class="ival">${c.qid_expiry}</div></div>`:''}
         </div>
