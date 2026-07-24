@@ -1229,6 +1229,7 @@ async function markAttendance(attendeeId, val) {
   if(error) { showToast('Error: '+error.message); return; }
   const a = allAssessmentAttendees.find(x=>x.id===attendeeId);
   if(a) a.day_status = val||null;
+  renderAttendeesForDay();
   renderAssessDaysList();
   showToast('✅ Attendance updated');
 }
