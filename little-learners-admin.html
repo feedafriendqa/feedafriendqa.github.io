@@ -420,6 +420,20 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
     </div>
   </div>
 
+  <div class="card" style="margin:0 0 16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAssessorPanel()">
+      <div class="card-title" style="margin:0;">🧑‍🏫 Assessors</div>
+      <span id="assessor-panel-caret" style="font-size:13px;color:var(--muted);">Manage ▾</span>
+    </div>
+    <div id="assessor-panel" style="display:none;margin-top:12px;">
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input id="new-assessor-name" placeholder="Full name" style="flex:1;padding:9px 12px;border-radius:8px;border:2px solid var(--border);font-size:13px;" onkeydown="if(event.key==='Enter')addAssessor()">
+        <button class="btn-teal btn-sm" onclick="addAssessor()">+ Add</button>
+      </div>
+      <div id="assessor-list-mgmt"><div class="loading">Loading…</div></div>
+    </div>
+  </div>
+
   <div class="gp-path" id="assess-days-list" style="margin-top:16px;"><div class="loading">Loading…</div></div>
 </div>
 
@@ -446,10 +460,12 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
   <div class="tab-bar">
     <button class="tab on" onclick="switchAdTab('eligible',this)">Eligible Children</button>
     <button class="tab" onclick="switchAdTab('attendees',this)">Attendees</button>
+    <button class="tab" onclick="switchAdTab('packs',this)">Pack Distribution</button>
   </div>
   <div class="modal-body">
     <div class="tpanel on" id="adp-eligible"></div>
     <div class="tpanel" id="adp-attendees"></div>
+    <div class="tpanel" id="adp-packs"></div>
   </div>
 </div>
 </div>
@@ -533,6 +549,7 @@ let allFamilies = [], allChildren = [], allAdmins = [], allActivityLogs = [], al
 let foodBoxFriendIds = new Set(), welcomeBabyFriendIds = new Set();
 let currentFamily = null, currentChildren = [], currentUser = null, currentUserRole = null, currentUserEmail = '';
 let allAssessmentDays = [], allAssessmentAttendees = [], currentAssessDay = null;
+let allAssessors = [];
 const AGE_BANDS = [
   {key:'3-4', label:'Ages 3–4 (FS1–FS2)', min:3, max:4},
   {key:'5-6', label:'Ages 5–6 (Year 1–2)', min:5, max:6},
@@ -628,7 +645,7 @@ db.auth.onAuthStateChange((event,session)=>{
 
 // ── DATA ──
 async function loadData() {
-  const [{data:fams},{data:kids},{data:admins},{data:logs},{data:referrals},{data:adays},{data:attendees},{data:fbApps},{data:wbFams}] = await Promise.all([
+  const [{data:fams},{data:kids},{data:admins},{data:logs},{data:referrals},{data:adays},{data:attendees},{data:fbApps},{data:wbFams},{data:assessors}] = await Promise.all([
     db.from('ll_families').select('*').order('created_at',{ascending:false}),
     db.from('ll_children').select('*'),
     db.from('ll_admins').select('*'),
@@ -638,6 +655,7 @@ async function loadData() {
     db.from('ll_assessment_attendees').select('*'),
     db.from('food_box_applications').select('friend_id').not('friend_id','is',null),
     db.from('families').select('friend_id').not('friend_id','is',null),
+    db.from('ll_assessors').select('*').order('name'),
   ]);
   allFamilies = fams||[];
   allChildren = kids||[];
@@ -646,13 +664,19 @@ async function loadData() {
   allReferrals = referrals||[];
   allAssessmentDays = adays||[];
   allAssessmentAttendees = attendees||[];
+  allAssessors = assessors||[];
   foodBoxFriendIds = new Set((fbApps||[]).map(r=>r.friend_id));
   welcomeBabyFriendIds = new Set((wbFams||[]).map(r=>r.friend_id));
   const me = allAdmins.find(a => (a.email||'').toLowerCase() === currentUserEmail.toLowerCase());
   currentUserRole = me?.role || 'case_handler';
   const assessTabBtn = document.getElementById('bb-assess-days');
-  if(assessTabBtn) assessTabBtn.style.display = currentUserRole==='admin' ? 'flex' : 'none';
-  if(currentUserRole!=='admin' && document.getElementById('pg-assess-days')?.classList.contains('active')) {
+  if(assessTabBtn) assessTabBtn.style.display = (currentUserRole==='admin'||currentUserRole==='assessment_lead') ? 'flex' : 'none';
+  if(currentUserRole==='assessment_lead') {
+    // Assessment leads (e.g. Tanzeem) only ever see the Assessment Day tab —
+    // no Dashboard, Families, or QID Sign-In access.
+    document.querySelectorAll('.bb-item').forEach(b => { if(b.id!=='bb-assess-days') b.style.display='none'; });
+    showPg('assess-days', assessTabBtn);
+  } else if(currentUserRole!=='admin' && document.getElementById('pg-assess-days')?.classList.contains('active')) {
     showPg('dash', document.querySelector('.bb-item'));
   }
   populateHandlerFilter();
@@ -666,6 +690,59 @@ async function loadData() {
   renderCheckinsDue();
   renderAssessDaysList();
   renderQidSignin();
+  renderAssessorMgmt();
+}
+
+function toggleAssessorPanel() {
+  const el = document.getElementById('assessor-panel');
+  const caret = document.getElementById('assessor-panel-caret');
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  caret.textContent = open ? 'Manage ▾' : 'Manage ▴';
+}
+
+function renderAssessorMgmt() {
+  const el = document.getElementById('assessor-list-mgmt');
+  if(!el) return;
+  if(!allAssessors.length) { el.innerHTML = '<div class="empty" style="padding:10px 0;">No assessors added yet.</div>'; return; }
+  el.innerHTML = allAssessors.map(x => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);">
+      <span style="font-size:13.5px;font-weight:700;${x.active?'':'color:#9CA3AF;text-decoration:line-through;'}">${x.name}</span>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-small" onclick="toggleAssessorActive('${x.id}',${x.active})">${x.active?'Deactivate':'Reactivate'}</button>
+        <button class="btn-small" style="background:#FDEAEA;color:#8B2020;" onclick="removeAssessorMgmt('${x.id}')">Remove</button>
+      </div>
+    </div>`).join('');
+}
+
+async function addAssessor() {
+  const input = document.getElementById('new-assessor-name');
+  const name = input.value.trim();
+  if(!name) { showToast('Enter a name first'); return; }
+  const {data, error} = await db.from('ll_assessors').insert({name}).select().single();
+  if(error) { showToast('Error: '+error.message); return; }
+  allAssessors.push(data);
+  allAssessors.sort((a,b)=>a.name.localeCompare(b.name));
+  input.value = '';
+  renderAssessorMgmt();
+  showToast(`✅ ${name} added`);
+}
+
+async function toggleAssessorActive(id, current) {
+  const {error} = await db.from('ll_assessors').update({active: !current}).eq('id', id);
+  if(error) { showToast('Error: '+error.message); return; }
+  const a = allAssessors.find(x=>x.id===id);
+  if(a) a.active = !current;
+  renderAssessorMgmt();
+}
+
+async function removeAssessorMgmt(id) {
+  if(!confirm('Remove this assessor? Their name will stay on any past records, but they\'ll disappear from the dropdown.')) return;
+  const {error} = await db.from('ll_assessors').delete().eq('id', id);
+  if(error) { showToast('Could not remove — '+error.message); return; }
+  allAssessors = allAssessors.filter(x=>x.id!==id);
+  renderAssessorMgmt();
+  showToast('Removed');
 }
 
 // ── TURNING 3 NOTIFICATIONS ──
@@ -815,6 +892,7 @@ function openAssessDay(dayId) {
     ${currentAssessDay.location?`<span>📍 ${currentAssessDay.location}</span>`:''}`;
   renderEligibleForDay();
   renderAttendeesForDay();
+  renderPackDistribution();
   switchAdTab('eligible', document.querySelector('#ad-modal .tab'));
   document.getElementById('ad-modal').classList.add('open');
   document.body.style.overflow='hidden';
@@ -909,54 +987,89 @@ function renderAttendeesForDay() {
       const child = allChildren.find(c=>c.id===a.child_id);
       const fam = allFamilies.find(f=>f.id===a.family_id);
       const suggested = child ? suggestYG(child).yg : '—';
+      const senYes = (child?.special_needs||'').toLowerCase().startsWith('yes');
       return `<div class="fam-card" style="flex-direction:column;align-items:stretch;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
           ${child?.profile_photo_path?`<img id="rsvp-photo-${a.id}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;" alt="">`:''}
           <div class="fam-info">
-            <div class="fam-name">${child?.full_name||'Child'}${child?.preferred_name?` <span style="color:var(--teal-mid);">"${child.preferred_name}"</span>`:''} <span style="font-size:11px;color:var(--muted);">(system YG: ${suggested})</span></div>
+            <div class="fam-name">
+              ${child?.full_name||'Child'}${child?.preferred_name?` <span style="color:var(--teal-mid);">"${child.preferred_name}"</span>`:''}
+              <span style="font-size:11px;color:var(--muted);">(system YG: ${suggested})</span>
+              ${senYes?`<span title="SEN: ${child.special_needs_detail||'yes'}" style="cursor:help;">🧩</span>`:''}
+              ${a.has_allergies==='Yes'?`<span title="Allergy/dietary: ${a.allergy_detail||'yes (unspecified)'}" style="cursor:help;">🍽️</span>`:''}
+            </div>
             <div class="fam-meta">
               <span>👪 ${fam?.father_name||fam?.mother_name||'—'}</span><span>📞 ${fam?.father_phone||fam?.mother_phone||'—'}</span>
               <span>${a.invite_status==='confirmed'?'✅ RSVP confirmed':'⏳ Awaiting RSVP'}</span>
               ${a.attending_guardian_name?`<span>👤 ${a.attending_guardian_name} (${a.attending_guardian_relation||'—'})</span>`:''}
               ${child?.qid?'<span>🪪 QID on file</span>':'<span style="color:var(--coral);font-weight:700;">🪪 QID not yet on file</span>'}
-              ${a.photo_consent?`<span>📷 Media consent: ${a.photo_consent}</span>`:''}
               ${a.dietary_chicken?`<span>🍗 Chicken OK: ${a.dietary_chicken}</span>`:''}
-              ${a.has_allergies==='Yes'?`<span style="color:var(--coral);font-weight:700;">⚠️ Allergy: ${a.allergy_detail||'yes (unspecified)'}</span>`:a.has_allergies==='No'?'<span>No allergies</span>':''}
             </div>
+            ${a.photo_consent?`<div style="margin-top:6px;font-size:12.5px;font-weight:700;" class="${a.photo_consent==='Yes'?'':''}">
+              ${a.photo_consent==='Yes'?'<span style="color:var(--forest-mid);">📷 Photo consent: YES — give wristband</span>':`<span style="color:var(--coral);">📷 Photo consent: ${a.photo_consent} — no wristband</span>`}
+            </div>`:''}
             ${a.aspiration_response?`<div style="margin-top:6px;font-size:12px;color:var(--muted);background:var(--cream);padding:6px 10px;border-radius:8px;">🌟 "When I'm older…" — ${a.aspiration_response}</div>`:''}
             ${a.decline_reason?`<div style="margin-top:6px;font-size:12px;color:var(--coral);background:#FDEAEA;padding:6px 10px;border-radius:8px;">❌ Reason for declining: ${a.decline_reason}</div>`:''}
           </div>
           <button class="btn-small" onclick="sendAssessmentInvite('${a.id}')">📧 Invite</button>
         </div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
-          <label style="font-size:11px;font-weight:700;color:var(--muted);">Attendance on the day:</label>
+          <label style="font-size:11px;font-weight:700;color:var(--muted);">Arrived:</label>
           <select onchange="markAttendance('${a.id}',this.value)" style="padding:6px 10px;border-radius:8px;border:2px solid var(--border);font-size:12px;">
             <option value="" ${!a.day_status?'selected':''}>Not marked</option>
-            <option value="attended" ${a.day_status==='attended'?'selected':''}>✅ Attended</option>
-            <option value="no_show" ${a.day_status==='no_show'?'selected':''}>❌ No-show</option>
+            <option value="attended" ${a.day_status==='attended'?'selected':''}>✅ Arrived</option>
+            <option value="no_show" ${a.day_status==='no_show'?'selected':''}>❌ Not Arrived</option>
             <option value="rescheduled" ${a.day_status==='rescheduled'?'selected':''}>🔁 Rescheduled</option>
           </select>
-          <button class="btn-small" onclick="toggleOutcomeForm('${a.id}')">📝 Record Outcome</button>
+          <button class="btn-small" onclick="toggleOutcomeForm('${a.id}','pre')">📝 Pre-Assessment</button>
+          <button class="btn-small" onclick="toggleOutcomeForm('${a.id}','final')">🎓 Final Assessment</button>
         </div>
-        <div id="outcome-${a.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:2px solid var(--border);">
+
+        <div id="pre-${a.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:2px solid var(--border);">
           <div class="af">
-            <div><label>Assessed Year Group</label>
-              <select id="oyg-${a.id}">
+            <div><label>Assessor</label>
+              <select id="pas-assessor-${a.id}">
                 <option value="">Select…</option>
-                <option ${a.outcome_year_group==='FS1'?'selected':''}>FS1</option>
-                <option ${a.outcome_year_group==='FS2'?'selected':''}>FS2</option>
-                <option ${a.outcome_year_group==='Year 1'?'selected':''}>Year 1</option>
-                <option ${a.outcome_year_group==='Year 2'?'selected':''}>Year 2</option>
-                <option ${a.outcome_year_group==='Year 3'?'selected':''}>Year 3</option>
-                <option ${a.outcome_year_group==='Year 4'?'selected':''}>Year 4</option>
-                <option ${a.outcome_year_group==='Year 5'?'selected':''}>Year 5</option>
-                <option ${a.outcome_year_group==='Year 6'?'selected':''}>Year 6</option>
-                <option ${a.outcome_year_group==='11-13 Special'?'selected':''}>11-13 Special</option>
+                ${allAssessors.filter(x=>x.active).map(x=>`<option value="${x.id}" ${a.assessor_id===x.id?'selected':''}>${x.name}</option>`).join('')}
               </select>
             </div>
-            <div><label>Learning Material Level</label><input id="oml-${a.id}" placeholder="e.g. Year 2 materials" value="${a.material_level||''}"></div>
-            <div><label>Notes</label><textarea id="on-${a.id}" placeholder="Observations from the assessment day…">${a.outcome_notes||''}</textarea></div>
-            <button class="btn-teal" style="width:100%;" onclick="saveOutcome('${a.id}')">💾 Save Outcome</button>
+            <div><label>Pre-Assessment Done</label>
+              <select id="pas-status-${a.id}">
+                <option ${a.pre_assessment_status==='Not Started'||!a.pre_assessment_status?'selected':''}>Not Started</option>
+                <option ${a.pre_assessment_status==='Pending'?'selected':''}>Pending</option>
+                <option ${a.pre_assessment_status==='Complete'?'selected':''}>Complete</option>
+              </select>
+            </div>
+            <div><label>Recommended Year Group</label>
+              <select id="pas-yg-${a.id}">${yearGroupOptions(a.outcome_year_group)}</select>
+            </div>
+            <div><label>Notes <span style="font-weight:400;color:var(--muted);">(optional)</span></label><textarea id="pas-notes-${a.id}" placeholder="Initial impressions…">${a.pre_assessment_notes||''}</textarea></div>
+            <button class="btn-teal" style="width:100%;" onclick="savePreAssessment('${a.id}')">💾 Save Pre-Assessment</button>
+          </div>
+        </div>
+
+        <div id="final-${a.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:2px solid var(--border);">
+          <div class="af">
+            <div><label>Recommended Year <span style="font-weight:400;color:var(--muted);">(from pre-assessment)</span></label>
+              <div style="padding:9px 12px;background:var(--cream);border-radius:8px;font-size:13px;font-weight:700;">${a.outcome_year_group||'— not set yet —'}</div>
+            </div>
+            <div><label>Final Assessment Done</label>
+              <select id="fas-status-${a.id}">
+                <option value="Pending" ${a.final_assessment_status==='Pending'||!a.final_assessment_status?'selected':''}>Pending</option>
+                <option value="Done" ${a.final_assessment_status==='Done'?'selected':''}>Done</option>
+              </select>
+            </div>
+            <div><label>Final Outcome / Final Year Level</label>
+              <select id="fas-level-${a.id}">${yearGroupOptions(a.material_level, true)}</select>
+            </div>
+            <div><label>Parent Feedback</label>
+              <select id="fas-feedback-${a.id}">
+                <option value="Pending" ${a.parent_feedback_status==='Pending'||!a.parent_feedback_status?'selected':''}>Pending</option>
+                <option value="Completed" ${a.parent_feedback_status==='Completed'?'selected':''}>Completed</option>
+              </select>
+            </div>
+            <div><label>Notes for assessor</label><textarea id="fas-notes-${a.id}" placeholder="Observations from the assessment day…">${a.outcome_notes||''}</textarea></div>
+            <button class="btn-teal" style="width:100%;" onclick="saveFinalAssessment('${a.id}')">💾 Save Final Assessment</button>
           </div>
         </div>
       </div>`;
@@ -999,9 +1112,19 @@ async function loadAttendeePhoto(attendeeId, path) {
   }
 }
 
-function toggleOutcomeForm(attendeeId) {
-  const el = document.getElementById('outcome-'+attendeeId);
-  el.style.display = el.style.display==='none' ? 'block' : 'none';
+function toggleOutcomeForm(attendeeId, which) {
+  const el = document.getElementById(which+'-'+attendeeId);
+  if(el) el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+const YEAR_GROUP_VALUES = ['FS1','FS2','Year 1','Year 2','Year 3','Year 4','Year 5','Year 6','11-13 Special'];
+function yearGroupOptions(selected, includeFurtherReview) {
+  let opts = '<option value="">Select…</option>' +
+    YEAR_GROUP_VALUES.map(v => `<option ${selected===v?'selected':''}>${v}</option>`).join('');
+  if(includeFurtherReview) {
+    opts += `<option value="Further Review" ${selected==='Further Review'?'selected':''}>Further Review</option>`;
+  }
+  return opts;
 }
 
 async function markAttendance(attendeeId, val) {
@@ -1013,46 +1136,120 @@ async function markAttendance(attendeeId, val) {
   showToast('✅ Attendance updated');
 }
 
-async function saveOutcome(attendeeId) {
+async function savePreAssessment(attendeeId) {
   const a = allAssessmentAttendees.find(x=>x.id===attendeeId);
   if(!a) return;
-  const outcome_year_group = document.getElementById('oyg-'+attendeeId).value;
-  const material_level = document.getElementById('oml-'+attendeeId).value.trim();
-  const outcome_notes = document.getElementById('on-'+attendeeId).value.trim();
+  const assessor_id = document.getElementById('pas-assessor-'+attendeeId).value || null;
+  const pre_assessment_status = document.getElementById('pas-status-'+attendeeId).value;
+  const outcome_year_group = document.getElementById('pas-yg-'+attendeeId).value;
+  const pre_assessment_notes = document.getElementById('pas-notes-'+attendeeId).value.trim();
 
-  const {error} = await db.from('ll_assessment_attendees').update({outcome_year_group, material_level, outcome_notes}).eq('id',attendeeId);
+  const {error} = await db.from('ll_assessment_attendees')
+    .update({assessor_id, pre_assessment_status, outcome_year_group, pre_assessment_notes})
+    .eq('id', attendeeId);
   if(error) { showToast('Error: '+error.message); return; }
-  Object.assign(a, {outcome_year_group, material_level, outcome_notes});
+  Object.assign(a, {assessor_id, pre_assessment_status, outcome_year_group, pre_assessment_notes});
+  renderAttendeesForDay();
+  showToast('✅ Pre-assessment saved');
+}
 
-  // Update the child's material level directly
-  if(material_level) {
-    await db.from('ll_children').update({material_level}).eq('id', a.child_id);
-    const child = allChildren.find(c=>c.id===a.child_id);
-    if(child) child.material_level = material_level;
-  }
+async function saveFinalAssessment(attendeeId) {
+  const a = allAssessmentAttendees.find(x=>x.id===attendeeId);
+  if(!a) return;
+  const final_assessment_status = document.getElementById('fas-status-'+attendeeId).value;
+  const material_level = document.getElementById('fas-level-'+attendeeId).value;
+  const parent_feedback_status = document.getElementById('fas-feedback-'+attendeeId).value;
+  const outcome_notes = document.getElementById('fas-notes-'+attendeeId).value.trim();
 
-  // If the assessed year group differs from the system suggestion, feed it into the existing
-  // override + second-admin-approval workflow so it's reviewed before becoming official.
+  const {error} = await db.from('ll_assessment_attendees')
+    .update({final_assessment_status, material_level, parent_feedback_status, outcome_notes})
+    .eq('id', attendeeId);
+  if(error) { showToast('Error: '+error.message); return; }
+  Object.assign(a, {final_assessment_status, material_level, parent_feedback_status, outcome_notes});
+
+  // The final outcome IS the pack/year group the child is placed into. Since this is
+  // decided live by you/Sara/Tanzeem on assessment day, it's applied immediately as the
+  // official year group — no separate pending-approval step (unlike case-handler overrides
+  // earlier in the pipeline, where a second admin reviews before it's final).
   const child = allChildren.find(c=>c.id===a.child_id);
-  if(child && outcome_year_group) {
+  if(child && material_level && material_level!=='Further Review') {
     const sys = suggestYG(child).yg;
-    if(outcome_year_group !== sys) {
-      const {data:{user}} = await db.auth.getUser();
-      const admin = allAdmins.find(x=>x.email===user?.email);
-      await db.from('ll_children').update({
-        year_group_override: outcome_year_group,
-        year_group_justification: `Assessment day outcome (${currentAssessDay.title}) — assessed by ${admin?.name||user?.email||'staff'}: ${outcome_notes||'no additional notes'}`,
-        year_group_approved: false, year_group_approved_by: null,
-      }).eq('id', child.id);
-      Object.assign(child, {year_group_override: outcome_year_group, year_group_approved:false});
-      await addActivityLog(a.family_id, a.child_id, 'note', `Assessment day result differs from system year group (${sys} → ${outcome_year_group}) — sent for approval.`, '');
-    } else {
-      await addActivityLog(a.family_id, a.child_id, 'note', `Assessment day confirmed year group ${outcome_year_group}.`, '');
-    }
+    const {data:{user}} = await db.auth.getUser();
+    const admin = allAdmins.find(x=>x.email===user?.email);
+    await db.from('ll_children').update({
+      material_level,
+      year_group_override: material_level,
+      year_group_justification: `Assessment day final outcome (${currentAssessDay.title}) — assessed by ${admin?.name||user?.email||'staff'}: ${outcome_notes||'no additional notes'}`,
+      year_group_approved: true,
+      year_group_approved_by: admin?.name||user?.email||'staff',
+    }).eq('id', child.id);
+    Object.assign(child, {material_level, year_group_override: material_level, year_group_approved:true});
+    await addActivityLog(a.family_id, a.child_id, 'note',
+      material_level!==sys
+        ? `Assessment day final outcome ${material_level} (system suggested ${sys}) — confirmed on the day, no approval needed.`
+        : `Assessment day confirmed year group ${material_level}.`, '');
+  } else if(child && material_level==='Further Review') {
+    await db.from('ll_children').update({material_level}).eq('id', child.id);
+    child.material_level = material_level;
   }
 
   renderAttendeesForDay();
-  showToast('✅ Outcome saved');
+  renderPackDistribution();
+  showToast('✅ Final assessment saved');
+}
+
+function renderPackDistribution() {
+  const el = document.getElementById('adp-packs');
+  if(!el) return;
+  const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id && a.material_level);
+  if(!attendees.length) {
+    el.innerHTML = '<div class="empty"><div class="eicon">📦</div><p>No pack decisions recorded yet — packs appear here once Final Assessment is saved for each child.</p></div>';
+    return;
+  }
+  const groups = {};
+  attendees.forEach(a => {
+    const child = allChildren.find(c=>c.id===a.child_id);
+    (groups[a.material_level] = groups[a.material_level]||[]).push(child?.full_name||'Unnamed child');
+  });
+  const order = [...YEAR_GROUP_VALUES, 'Further Review'];
+  const sortedKeys = Object.keys(groups).sort((x,y)=>order.indexOf(x)-order.indexOf(y));
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:13px;font-weight:700;color:var(--muted);">${attendees.length} pack decision(s) recorded</span>
+      <button class="btn-teal btn-sm" onclick="exportPackDistribution()">⬇️ Export / Print</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">
+      ${sortedKeys.map(k => `
+        <div class="fam-card" style="flex-direction:column;align-items:stretch;">
+          <div class="fam-name" style="margin-bottom:6px;">${k} <span style="font-size:11px;color:var(--muted);">(${groups[k].length})</span></div>
+          ${groups[k].map(n=>`<div style="font-size:13px;padding:3px 0;border-top:1px solid var(--border);">${n}</div>`).join('')}
+        </div>`).join('')}
+    </div>`;
+}
+
+function exportPackDistribution() {
+  const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id && a.material_level);
+  if(!attendees.length) { showToast('No pack decisions to export yet'); return; }
+  const rows = [['Pack / Year Group','Child Name']];
+  const groups = {};
+  attendees.forEach(a => {
+    const child = allChildren.find(c=>c.id===a.child_id);
+    (groups[a.material_level] = groups[a.material_level]||[]).push(child?.full_name||'Unnamed child');
+  });
+  const order = [...YEAR_GROUP_VALUES, 'Further Review'];
+  Object.keys(groups).sort((x,y)=>order.indexOf(x)-order.indexOf(y)).forEach(k => {
+    groups[k].forEach(name => rows.push([k, name]));
+  });
+  const csv = rows.map(r => r.map(v => `"${(v||'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `pack-distribution-${currentAssessDay.title.replace(/[^a-z0-9]/gi,'-')}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ Exported — ready to print or share');
 }
 
 async function sendAssessmentInvite(attendeeId) {
