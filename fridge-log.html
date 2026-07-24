@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<meta name="theme-color" content="#FBF6EC"/>
+<title>Log a Refill — Feed a Friend</title>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Poppins,sans-serif;background:#FBF6EC;color:#0A3D1F}
+  .display{font-family:'League Spartan',sans-serif;font-weight:900}
+  input,textarea,select{font-family:Poppins,sans-serif;outline:none}
+  input::placeholder,textarea::placeholder{color:#B8AD97}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+
+const sb = supabase.createClient(
+  "https://xbxagukdvgyaoqvbqoic.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"
+);
+const LOGO = "https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/avatars/Faflogowhite.png";
+
+const CREAM = "#FBF6EC";
+const DK = "#0A3D1F";
+const OR = "#EE8B3E";
+const OR_LT = "#FCE7D2";
+const OR_DK = "#B5591A";
+const GR = "#22C55E";
+const GR_LT = "#E8F5E9";
+const MT = "#8A7F6C";
+const BF = "Poppins,sans-serif";
+const DF = "'League Spartan',sans-serif";
+
+function getParam(name){
+  return new URLSearchParams(window.location.search).get(name);
+}
+
+function Toggle({label, value, onChange}){
+  return (
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 0",borderBottom:"1px solid #F1E7D8"}}>
+      <span style={{fontFamily:BF,fontSize:14,color:DK,fontWeight:600}}>{label}</span>
+      <button onClick={()=>onChange(!value)} style={{
+        width:48,height:28,borderRadius:20,border:"none",cursor:"pointer",position:"relative",
+        background: value ? GR : "#E5DCC8", transition:"background 0.15s"
+      }}>
+        <div style={{
+          width:22,height:22,borderRadius:"50%",background:"#fff",position:"absolute",top:3,
+          left: value ? 23 : 3, transition:"left 0.15s", boxShadow:"0 1px 2px rgba(0,0,0,0.2)"
+        }}/>
+      </button>
+    </div>
+  );
+}
+
+function App(){
+  const [fridges,setFridges]=React.useState([]);
+  const [loading,setLoading]=React.useState(true);
+  const [session,setSession]=React.useState(null);
+  const [profile,setProfile]=React.useState(null);
+  const [asGuest,setAsGuest]=React.useState(false);
+
+  const [fridgeCode,setFridgeCode]=React.useState(getParam("fridge")||"");
+  const [activityType,setActivityType]=React.useState("refill");
+  const [guestName,setGuestName]=React.useState("");
+  const [isClean,setIsClean]=React.useState(true);
+  const [isWorking,setIsWorking]=React.useState(true);
+  const [notes,setNotes]=React.useState("");
+  const [photoFile,setPhotoFile]=React.useState(null);
+  const [submitting,setSubmitting]=React.useState(false);
+  const [done,setDone]=React.useState(false);
+  const [error,setError]=React.useState("");
+
+  React.useEffect(()=>{
+    sb.auth.getSession().then(({data})=>{
+      setSession(data.session||null);
+      if(data.session) loadProfile(data.session.user.id);
+    });
+    sb.auth.onAuthStateChange((_e,s)=>{
+      setSession(s);
+      if(s) loadProfile(s.user.id); else setProfile(null);
+    });
+    loadFridges();
+  },[]);
+
+  async function loadProfile(uid){
+    const {data} = await sb.from("profiles").select("*").eq("id",uid).single();
+    setProfile(data||null);
+  }
+
+  async function loadFridges(){
+    const {data} = await sb.from("fridges").select("id,code,name_en,zone_name,status").order("zone_name");
+    setFridges(data||[]);
+    setLoading(false);
+  }
+
+  const selectedFridge = fridges.find(f=>f.code===fridgeCode);
+
+  async function handleSubmit(){
+    setError("");
+    if(!selectedFridge){ setError("Choose which fridge you visited."); return; }
+    setSubmitting(true);
+    try{
+      let photo_url = null;
+      if(photoFile){
+        const path = `activity/${Date.now()}_${photoFile.name}`;
+        const {error:upErr} = await sb.storage.from("avatars").upload(path, photoFile);
+        if(!upErr){
+          const {data:pub} = sb.storage.from("avatars").getPublicUrl(path);
+          photo_url = pub.publicUrl;
+        }
+      }
+      const payload = {
+        fridge_id: selectedFridge.id,
+        activity_type: activityType,
+        is_clean: isClean,
+        is_working: isWorking,
+        notes: notes || null,
+        photo_url,
+        volunteer_id: (session && !asGuest) ? session.user.id : null,
+        guest_name: (!session || asGuest) ? (guestName || "Anonymous") : null,
+      };
+      const {error:insErr} = await sb.from("fridge_activity").insert(payload);
+      if(insErr) throw insErr;
+      setDone(true);
+    }catch(e){
+      setError(e.message || "Something went wrong — try again.");
+    }
+    setSubmitting(false);
+  }
+
+  if(done){
+    return (
+      <div style={{minHeight:"100vh",background:CREAM,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+        <div style={{textAlign:"center",maxWidth:340}}>
+          <div style={{fontSize:56}}>🧚</div>
+          <div className="display" style={{fontSize:24,color:DK,marginTop:12}}>Thank you!</div>
+          <div style={{fontFamily:BF,fontSize:14,color:MT,marginTop:8,lineHeight:1.6}}>
+            Your {activityType} at {selectedFridge?.name_en} has been logged. Someone in Qatar eats a little easier tonight because of you.
+          </div>
+          <a href="fridges.html" style={{display:"inline-block",marginTop:24,background:GR,color:"#fff",padding:"13px 28px",borderRadius:16,fontWeight:700,fontFamily:BF,fontSize:14,textDecoration:"none"}}>Back to fridges</a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{minHeight:"100vh",background:CREAM,paddingBottom:60}}>
+      <div style={{maxWidth:520,margin:"0 auto",padding:"28px 20px"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <img src={LOGO} style={{height:28,filter:"invert(1) sepia(1) saturate(0) brightness(0.2)"}}/>
+          <a href="fridges.html" style={{fontSize:12,color:DK,fontFamily:BF,fontWeight:600,textDecoration:"none",opacity:0.7}}>← Back</a>
+        </div>
+
+        <div className="display" style={{fontSize:26,color:DK,marginTop:22}}>Log your visit</div>
+        <div style={{fontFamily:BF,fontSize:13.5,color:MT,marginTop:6,lineHeight:1.6}}>
+          Refilled a fridge, gave it a clean, or spotted a problem? Tell us — it helps the whole network run.
+        </div>
+
+        {!session && (
+          <div style={{marginTop:20,background:"#fff",border:"1px solid #F1E7D8",borderRadius:18,padding:16,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+            <div style={{fontFamily:BF,fontSize:12.5,color:MT}}>Sign in to build your fairy profile and track your refills — or continue as a guest below.</div>
+            <a href="fairy-login.html" style={{flexShrink:0,background:OR,color:"#fff",padding:"9px 16px",borderRadius:12,fontWeight:700,fontFamily:BF,fontSize:12.5,textDecoration:"none"}}>Sign in</a>
+          </div>
+        )}
+
+        {session && profile && (
+          <div style={{marginTop:20,background:GR_LT,borderRadius:18,padding:14,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{fontFamily:BF,fontSize:13,color:DK}}>🧚 Logging as <b>{profile.first_name||"you"}</b></div>
+            <button onClick={()=>setAsGuest(!asGuest)} style={{background:"none",border:"none",color:MT,fontSize:12,fontFamily:BF,textDecoration:"underline",cursor:"pointer"}}>
+              {asGuest ? "Log in with account instead" : "Log anonymously instead"}
+            </button>
+          </div>
+        )}
+
+        <div style={{marginTop:24}}>
+          <label style={{fontFamily:BF,fontSize:12.5,fontWeight:700,color:DK}}>Which fridge?</label>
+          <select value={fridgeCode} onChange={e=>setFridgeCode(e.target.value)} style={{
+            width:"100%",marginTop:8,padding:"14px 16px",borderRadius:14,border:"1.5px solid #E5DCC8",
+            fontSize:14,color:DK,background:"#fff"
+          }}>
+            <option value="">Select a fridge…</option>
+            {fridges.map(f=><option key={f.id} value={f.code}>{f.name_en} ({f.code}) — {f.zone_name}</option>)}
+          </select>
+        </div>
+
+        <div style={{marginTop:18}}>
+          <label style={{fontFamily:BF,fontSize:12.5,fontWeight:700,color:DK}}>What did you do?</label>
+          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
+            {[["refill","🧺 Refill"],["cleaning","🧽 Cleaning"],["report_broken","⚠️ Report broken"],["report_moved","📍 Report moved"],["report_closed","🚫 Report closed"]].map(([k,label])=>(
+              <button key={k} onClick={()=>setActivityType(k)} style={{
+                padding:"9px 14px",borderRadius:12,border: activityType===k?"none":"1.5px solid #E5DCC8",cursor:"pointer",
+                fontFamily:BF,fontWeight:700,fontSize:12.5,
+                background: activityType===k ? OR : "#fff", color: activityType===k ? "#fff" : DK,
+              }}>{label}</button>
+            ))}
+          </div>
+        </div>
+
+        {(!session || asGuest) && (
+          <div style={{marginTop:18}}>
+            <label style={{fontFamily:BF,fontSize:12.5,fontWeight:700,color:DK}}>Your name (optional)</label>
+            <input value={guestName} onChange={e=>setGuestName(e.target.value)} placeholder="Leave blank to log anonymously" style={{
+              width:"100%",marginTop:8,padding:"14px 16px",borderRadius:14,border:"1.5px solid #E5DCC8",fontSize:14,color:DK
+            }}/>
+          </div>
+        )}
+
+        <div style={{marginTop:8}}>
+          <Toggle label="Is the fridge clean?" value={isClean} onChange={setIsClean}/>
+          <Toggle label="Is the fridge working?" value={isWorking} onChange={setIsWorking}/>
+        </div>
+
+        <div style={{marginTop:18}}>
+          <label style={{fontFamily:BF,fontSize:12.5,fontWeight:700,color:DK}}>Add a photo (optional)</label>
+          <label style={{
+            display:"block",marginTop:8,border:`1.5px dashed ${OR}`,borderRadius:16,padding:"20px",
+            textAlign:"center",cursor:"pointer",background:OR_LT,color:OR_DK,fontFamily:BF,fontSize:13,fontWeight:600
+          }}>
+            {photoFile ? `📷 ${photoFile.name}` : "📷 Tap to choose a photo"}
+            <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>setPhotoFile(e.target.files[0])}/>
+          </label>
+        </div>
+
+        <div style={{marginTop:18}}>
+          <label style={{fontFamily:BF,fontSize:12.5,fontWeight:700,color:DK}}>Notes (optional)</label>
+          <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Anything else worth flagging?" rows={3} style={{
+            width:"100%",marginTop:8,padding:"14px 16px",borderRadius:14,border:"1.5px solid #E5DCC8",fontSize:14,color:DK,resize:"vertical"
+          }}/>
+        </div>
+
+        {error && <div style={{marginTop:14,color:"#DC2626",fontFamily:BF,fontSize:13}}>{error}</div>}
+
+        <button onClick={handleSubmit} disabled={submitting} style={{
+          width:"100%",marginTop:24,background:GR,color:"#fff",padding:"16px",borderRadius:16,
+          border:"none",fontWeight:700,fontFamily:BF,fontSize:15,cursor:"pointer",opacity:submitting?0.7:1
+        }}>{submitting?"Logging…":"Log this visit"}</button>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
