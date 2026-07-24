@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>My Sponsorships — Feed a Friend</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#0A3D1F;--forest-mid:#145C30;--lime:#5CB85C;--lime-soft:#EAF5EA;--gold:#3AAFA4;--coral:#E05252;--muted:#5A7A65;--border:#C8DFC8;--cream:#F4F9F4;--shadow:0 4px 20px rgba(10,61,31,.09);--r:14px;--rs:10px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Quicksand',sans-serif;background:var(--cream);color:var(--forest);min-height:100vh;}
+header{background:var(--forest);border-bottom:3px solid var(--gold);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-text{font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;color:white;}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.65);font-weight:600;margin-top:1px;}
+.acct-menu-btn{background:rgba(255,255,255,.12);border-radius:50px;padding:6px 14px;cursor:pointer;font-weight:700;color:white;font-size:12px;white-space:nowrap;border:none;}
+.wrap{padding:18px 16px;max-width:640px;margin:0 auto;}
+.hero{background:var(--forest);border-radius:var(--r);padding:22px 20px;margin-bottom:18px;color:white;}
+.hero h1{font-family:'Nunito',sans-serif;font-weight:900;font-size:19px;}
+.hero p{font-size:13px;opacity:.85;margin-top:6px;line-height:1.5;}
+.card{background:white;border-radius:var(--r);box-shadow:var(--shadow);padding:18px;margin-bottom:16px;}
+.fg{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.fg label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.fg input[type=email],.fg input[type=password]{padding:11px 13px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);}
+.btn-submit{background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:12px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:13.5px;cursor:pointer;width:100%;}
+.err{background:#FDEAEA;border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:600;color:#8B2020;margin-bottom:10px;border-left:4px solid var(--coral);}
+.sp-row{background:var(--lime-soft);border-radius:var(--rs);padding:14px;margin-bottom:12px;}
+.sp-top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.sp-name{font-weight:700;font-size:13.5px;color:var(--forest);}
+.sp-sub{font-size:11.5px;color:var(--muted);margin-top:3px;}
+.status-pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:50px;white-space:nowrap;}
+.status-pill.pending{background:#FFF7E0;color:#7A5000;}
+.status-pill.sent{background:#E0F0FF;color:#0A5FA0;}
+.status-pill.received{background:#EAF5EA;color:var(--forest);}
+.status-pill.flagged{background:#FFF3E0;color:#B35C00;}
+.status-pill.expired{background:#FDEAEA;color:#8B2020;}
+.next-steps{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
+.ns-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:12.5px;color:var(--forest);margin-bottom:4px;}
+.bank-box{background:white;border-radius:var(--rs);padding:10px 12px;margin:8px 0;}
+.bank-row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:12px;}
+.bank-row span{color:var(--muted);font-weight:600;}
+.bank-row b{color:var(--forest);text-align:right;}
+.note{font-size:11.5px;font-weight:700;background:#FFF7E0;color:#7A5000;border-radius:var(--rs);padding:8px 10px;margin:8px 0;border-left:3px solid var(--gold);}
+.fg input[type=file]{padding:9px;border-radius:var(--rs);border:2px dashed var(--border);background:var(--cream);font-size:12px;}
+.btn-small{background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:9px 14px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:12.5px;cursor:pointer;width:100%;margin-top:8px;}
+.empty,.loading{text-align:center;padding:50px 20px;color:var(--muted);}
+.empty .ic{font-size:40px;margin-bottom:10px;}
+.spinner{display:inline-block;width:24px;height:24px;border:3px solid rgba(10,61,31,.2);border-top-color:var(--forest);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gap-note{font-size:11.5px;color:var(--muted);text-align:center;margin-top:6px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo-text">💚 My Sponsorships</div>
+    <div class="logo-sub">Feed a Friend — one place for everything you sponsor</div>
+  </div>
+  <div id="header-account"></div>
+</header>
+
+<div class="wrap">
+  <div id="login-view" class="card" style="max-width:400px;margin:40px auto;">
+    <h2 style="font-family:'Nunito',sans-serif;font-weight:900;margin-bottom:6px;">Log In</h2>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px;">Use the same account you used to sponsor.</p>
+    <div class="fg"><label>Email</label><input type="email" id="login-email"></div>
+    <div class="fg"><label>Password</label><input type="password" id="login-password"></div>
+    <div class="err" id="login-err" style="display:none;"></div>
+    <button class="btn-submit" id="login-btn" onclick="doLogin()">Log In</button>
+  </div>
+
+  <div id="app-view" style="display:none;">
+    <div class="hero">
+      <h1>Everything You Sponsor</h1>
+      <p>Across all of our programmes, in one place.</p>
+    </div>
+    <div id="sponsorships-list"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
+let db;
+
+async function init() {
+  if(!(window.supabase && window.supabase.createClient)) { setTimeout(init, 100); return; }
+  db = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  const { data } = await db.auth.getSession();
+  if(data?.session) showApp();
+}
+
+async function doLogin() {
+  const err = document.getElementById('login-err');
+  err.style.display = 'none';
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if(!email || !password) { err.textContent = 'Please enter your email and password.'; err.style.display='block'; return; }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Logging in…';
+  try {
+    const { error } = await db.auth.signInWithPassword({ email, password });
+    if(error) throw new Error(error.message);
+    showApp();
+  } catch(e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Log In';
+  }
+}
+
+async function logOut() {
+  await db.auth.signOut();
+  location.reload();
+}
+
+function showApp() {
+  document.getElementById('login-view').style.display = 'none';
+  document.getElementById('app-view').style.display = 'block';
+  document.getElementById('header-account').innerHTML = `<button class="acct-menu-btn" onclick="logOut()">Log Out</button>`;
+  loadSponsorships();
+}
+
+function escapeHtml(s) {
+  if(s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function loadSponsorships() {
+  const el = document.getElementById('sponsorships-list');
+  el.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+  try {
+    const { data, error } = await db.from('my_sponsorships').select('*').order('created_at', { ascending: false });
+    if(error) throw new Error(error.message);
+    if(!data || !data.length) {
+      el.innerHTML = `<div class="empty"><div class="ic">💚</div><p>You haven't sponsored anyone yet.</p></div>`;
+      return;
+    }
+    el.innerHTML = data.map(s => {
+      const statusLabel = s.payment_status === 'sent' ? 'Payment Sent — Awaiting Confirmation'
+        : s.payment_status === 'received' ? 'Payment Received ✅'
+        : s.payment_status === 'flagged' ? "Needs Attention — We'll Be In Touch"
+        : s.payment_status === 'expired' ? 'Expired'
+        : 'Not Yet Paid';
+      // Little Learners has a self-serve payment flow built in here. Other programmes
+      // (e.g. Food Box) show status only for now — add their own upload flow the same
+      // way once that program's proof/RPC plumbing exists.
+      const canPayHere = s.program === 'Little Learners' && (!s.payment_status || s.payment_status === 'pending');
+      return `
+      <div class="sp-row">
+        <div class="sp-top">
+          <div>
+            <div class="sp-name">${escapeHtml(s.program)} — ${escapeHtml(s.beneficiary_display_name || s.beneficiary_name || '')}</div>
+            <div class="sp-sub">${new Date(s.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>
+          </div>
+          <span class="status-pill ${s.payment_status||'pending'}">${statusLabel}</span>
+        </div>
+        ${canPayHere ? `
+        <div class="next-steps">
+          <div class="ns-title">Next Steps — Send Payment</div>
+          <div class="bank-box">
+            <div class="bank-row"><span>Bank Name</span><b>QNB</b></div>
+            <div class="bank-row"><span>Account Name</span><b>Together for Good Events</b></div>
+            <div class="bank-row"><span>Account Number</span><b>0250227446001</b></div>
+            <div class="bank-row"><span>IBAN</span><b>QA21QNBA000000000250227446001</b></div>
+            <div class="bank-row"><span>SWIFT Code</span><b>QNBAQAQAXXX</b></div>
+          </div>
+          <div class="bank-box">
+            <div class="bank-row"><span>Fawran — Account Type</span><b>Corporate / Business</b></div>
+            <div class="bank-row"><span>Fawran — CR Number</span><b>229085</b></div>
+          </div>
+          <div class="note">⚠️ Select Corporate/Business on Fawran, and "Goods and Services" if your method asks for a purpose. Please arrange within 2 working days.</div>
+          <div class="fg" style="margin-top:10px;margin-bottom:6px;">
+            <label>Upload Transfer Confirmation</label>
+            <input type="file" accept="image/*,.pdf" id="ns-file-${s.id}">
+          </div>
+          <div class="err" id="ns-err-${s.id}" style="display:none;"></div>
+          <button class="btn-small" id="ns-btn-${s.id}" onclick="submitProof('${s.id}')">Submit</button>
+        </div>` : (s.program !== 'Little Learners' && (!s.payment_status || s.payment_status === 'pending') ? `<div class="gap-note">Manage payment for this on the ${escapeHtml(s.program)} sponsorship page.</div>` : '')}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div class="err">Could not load your sponsorships: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function submitProof(pledgeId) {
+  const err = document.getElementById('ns-err-'+pledgeId);
+  const file = document.getElementById('ns-file-'+pledgeId).files[0];
+  err.style.display = 'none';
+  if(!file) {
+    err.textContent = '⚠️ Please attach a screenshot or photo of your transfer.';
+    err.style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('ns-btn-'+pledgeId);
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+  try {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${pledgeId}/proof_${Date.now()}.${ext}`;
+    const { error: upErr } = await db.storage.from('sponsorship-proofs').upload(path, file, { upsert: true, contentType: file.type || 'application/octet-stream' });
+    if(upErr) throw new Error(upErr.message);
+
+    const { data, error } = await db.rpc('attach_sponsor_proof', { p_pledge_id: pledgeId, p_proof_path: path });
+    if(error) throw new Error(error.message);
+    if(!data?.success) throw new Error(data?.error || 'Could not save your proof — please try again.');
+
+    loadSponsorships();
+  } catch(e) {
+    err.textContent = 'Something went wrong: ' + (e.message || 'please try again.');
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Submit';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Payments Reconciliation — Feed a Friend</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#0A3D1F;--forest-mid:#145C30;--lime:#5CB85C;--lime-soft:#EAF5EA;--gold:#3AAFA4;--coral:#E05252;--muted:#5A7A65;--border:#C8DFC8;--cream:#F4F9F4;--shadow:0 4px 20px rgba(10,61,31,.09);--r:14px;--rs:10px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Quicksand',sans-serif;background:var(--cream);color:var(--forest);min-height:100vh;}
+header{background:var(--forest);border-bottom:3px solid var(--gold);padding:12px 16px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;}
+.logo-text{font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;color:white;}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.65);font-weight:600;margin-top:1px;}
+.wrap{padding:18px 16px;max-width:920px;margin:0 auto;}
+.card{background:white;border-radius:var(--r);box-shadow:var(--shadow);padding:18px;margin-bottom:16px;}
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.tab{padding:9px 16px;border-radius:50px;font-weight:700;font-size:13px;cursor:pointer;background:white;color:var(--muted);box-shadow:var(--shadow);}
+.tab.on{background:var(--forest);color:white;}
+.fg{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.fg label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.fg input[type=text],.fg input[type=email],.fg input[type=password],.fg input[type=number]{padding:11px 13px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);}
+.btn{background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:11px 18px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:13px;cursor:pointer;}
+.btn.secondary{background:var(--cream);color:var(--muted);}
+.btn.danger{background:var(--coral);color:white;}
+.btn:disabled{background:#ccc;color:#888;cursor:not-allowed;}
+.err{background:#FDEAEA;border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:600;color:#8B2020;margin-bottom:10px;border-left:4px solid var(--coral);}
+.pq-row{border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px;display:grid;grid-template-columns:100px 1fr;gap:14px;}
+.pq-row img{width:100%;border-radius:var(--rs);object-fit:cover;cursor:pointer;}
+.pq-top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.pq-name{font-family:'Nunito',sans-serif;font-weight:900;font-size:14.5px;}
+.pq-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+.pq-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.tag{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:50px;background:var(--lime-soft);color:var(--forest-mid);white-space:nowrap;}
+.empty{text-align:center;padding:50px 20px;color:var(--muted);}
+.empty .ic{font-size:40px;margin-bottom:10px;}
+.loading{text-align:center;padding:40px;color:var(--muted);}
+.spinner{display:inline-block;width:24px;height:24px;border:3px solid rgba(10,61,31,.2);border-top-color:var(--forest);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px;}
+th{text-align:left;padding:8px 6px;color:var(--muted);text-transform:uppercase;font-size:10.5px;border-bottom:2px solid var(--border);}
+td{padding:8px 6px;border-bottom:1px solid var(--border);}
+.match-yes{color:var(--forest);font-weight:700;}
+.match-no{color:var(--muted);}
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99;align-items:center;justify-content:center;padding:20px;}
+.lightbox.open{display:flex;}
+.lightbox img{max-width:100%;max-height:90vh;border-radius:8px;}
+.file-drop{border:2.5px dashed var(--border);border-radius:var(--rs);padding:20px;text-align:center;color:var(--muted);font-weight:700;font-size:13px;cursor:pointer;background:var(--cream);}
+.note-input{width:100%;padding:8px 10px;border-radius:var(--rs);border:2px solid var(--border);font-size:12.5px;font-family:'Quicksand',sans-serif;margin-top:8px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo-text">💳 Payments Reconciliation</div>
+    <div class="logo-sub">Feed a Friend — internal staff tool</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="login-view" class="card" style="max-width:400px;margin:60px auto;">
+    <h2 style="font-family:'Nunito',sans-serif;font-weight:900;margin-bottom:14px;">Staff Log In</h2>
+    <div class="fg"><label>Email</label><input type="email" id="login-email"></div>
+    <div class="fg"><label>Password</label><input type="password" id="login-password"></div>
+    <div class="err" id="login-err" style="display:none;"></div>
+    <button class="btn" style="width:100%;" id="login-btn" onclick="doLogin()">Log In</button>
+  </div>
+
+  <div id="app-view" style="display:none;">
+    <div class="tabs">
+      <div class="tab on" id="tab-queue" onclick="switchTab('queue')">🧾 Reconciliation Queue</div>
+      <div class="tab" id="tab-import" onclick="switchTab('import')">📄 Bank Statement Import</div>
+    </div>
+
+    <div id="pg-queue">
+      <div class="card">
+        <div style="font-weight:700;font-size:13px;color:var(--muted);margin-bottom:4px;">LITTLE LEARNERS SPONSORSHIPS — AWAITING CONFIRMATION</div>
+        <div id="queue-list"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <div id="pg-import" style="display:none;">
+      <div class="card">
+        <div style="font-weight:700;font-size:13px;color:var(--muted);margin-bottom:10px;">UPLOAD BANK / FAWRAN STATEMENT (CSV)</div>
+        <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px;line-height:1.5;">Export a CSV from your bank with date, description, and amount columns. We'll try to match each transaction to a pending sponsorship automatically.</p>
+        <div class="file-drop" onclick="document.getElementById('csv-input').click()">📄 Click to choose a CSV file</div>
+        <input type="file" accept=".csv" id="csv-input" style="display:none;" onchange="handleCsvUpload(this)">
+        <div id="import-status" style="margin-top:12px;"></div>
+      </div>
+      <div class="card" id="matches-card" style="display:none;">
+        <div style="font-weight:700;font-size:13px;color:var(--muted);margin-bottom:10px;">SUGGESTED MATCHES</div>
+        <div id="matches-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('open')"><img id="lightbox-img"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
+let db;
+let currentQueue = [];
+let csvTransactions = [];
+
+async function init() {
+  if(!(window.supabase && window.supabase.createClient)) { setTimeout(init, 100); return; }
+  db = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  const { data } = await db.auth.getSession();
+  if(data?.session) {
+    const ok = await checkStaffAccess();
+    if(ok) showApp();
+  }
+}
+
+async function checkStaffAccess() {
+  const { data: { user } } = await db.auth.getUser();
+  if(!user) return false;
+  const { data: prof } = await db.from('profiles').select('role').eq('id', user.id).single();
+  return prof && (prof.role === 'admin' || prof.role === 'superadmin');
+}
+
+async function doLogin() {
+  const err = document.getElementById('login-err');
+  err.style.display = 'none';
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if(!email || !password) { err.textContent = 'Please enter your email and password.'; err.style.display='block'; return; }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Logging in…';
+  try {
+    const { error } = await db.auth.signInWithPassword({ email, password });
+    if(error) throw new Error(error.message);
+    const ok = await checkStaffAccess();
+    if(!ok) { await db.auth.signOut(); throw new Error('This account does not have staff access.'); }
+    showApp();
+  } catch(e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Log In';
+  }
+}
+
+function showApp() {
+  document.getElementById('login-view').style.display = 'none';
+  document.getElementById('app-view').style.display = 'block';
+  loadQueue();
+}
+
+function switchTab(t) {
+  document.getElementById('tab-queue').classList.toggle('on', t==='queue');
+  document.getElementById('tab-import').classList.toggle('on', t==='import');
+  document.getElementById('pg-queue').style.display = t==='queue' ? 'block' : 'none';
+  document.getElementById('pg-import').style.display = t==='import' ? 'block' : 'none';
+}
+
+function escapeHtml(s) {
+  if(s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function loadQueue() {
+  const el = document.getElementById('queue-list');
+  el.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+  try {
+    const { data, error } = await db
+      .from('ll_sponsor_pledges')
+      .select('id, sponsor_name, sponsor_email, sponsor_phone, amount, proof_path, created_at, child_id, ll_children(full_name, preferred_name)')
+      .eq('payment_status', 'sent')
+      .order('created_at', { ascending: true });
+    if(error) throw new Error(error.message);
+    currentQueue = data || [];
+    if(!currentQueue.length) {
+      el.innerHTML = `<div class="empty"><div class="ic">✅</div><p>Nothing waiting on confirmation right now.</p></div>`;
+      return;
+    }
+    const rows = await Promise.all(currentQueue.map(async p => {
+      let photoUrl = '';
+      if(p.proof_path) {
+        const { data: urlData } = await db.storage.from('sponsorship-proofs').createSignedUrl(p.proof_path, 3600);
+        photoUrl = urlData?.signedUrl || '';
+      }
+      const childName = p.ll_children?.preferred_name || p.ll_children?.full_name || 'Unknown child';
+      return `<div class="pq-row" id="pq-${p.id}">
+        <div>${photoUrl ? `<img src="${photoUrl}" onclick="openLightbox('${photoUrl}')">` : '<div class="tag">No receipt</div>'}</div>
+        <div>
+          <div class="pq-top">
+            <div>
+              <div class="pq-name">${escapeHtml(p.sponsor_name)}</div>
+              <div class="pq-sub">Sponsoring: ${escapeHtml(childName)} · ${new Date(p.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>
+              <div class="pq-sub">${escapeHtml(p.sponsor_email)} · ${escapeHtml(p.sponsor_phone||'—')}</div>
+            </div>
+            <div class="fg" style="margin-bottom:0;min-width:110px;">
+              <label>Amount (QAR)</label>
+              <input type="number" id="amt-${p.id}" value="${p.amount||''}" placeholder="e.g. 500">
+            </div>
+          </div>
+          <input type="text" class="note-input" id="note-${p.id}" placeholder="Optional note…">
+          <div class="pq-actions">
+            <button class="btn" onclick="resolvePledge('${p.id}','received')">✅ Mark Received</button>
+            <button class="btn danger" onclick="resolvePledge('${p.id}','flagged')">🚩 Flag Issue</button>
+          </div>
+        </div>
+      </div>`;
+    }));
+    el.innerHTML = rows.join('');
+  } catch(e) {
+    el.innerHTML = `<div class="err">Could not load the queue: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function openLightbox(url) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+async function resolvePledge(pledgeId, status) {
+  const amount = document.getElementById('amt-'+pledgeId).value;
+  const note = document.getElementById('note-'+pledgeId).value.trim();
+  try {
+    if(amount) {
+      await db.from('ll_sponsor_pledges').update({ amount: parseFloat(amount) }).eq('id', pledgeId);
+    }
+    const { data, error } = await db.rpc('admin_resolve_pledge_payment', { p_pledge_id: pledgeId, p_status: status, p_note: note || null });
+    if(error) throw new Error(error.message);
+    if(!data) throw new Error('Could not update this record.');
+    document.getElementById('pq-'+pledgeId).style.opacity = '0.4';
+    setTimeout(loadQueue, 400);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// ── CSV IMPORT & MATCHING ──
+function parseCsv(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if(!lines.length) return [];
+  const splitLine = (line) => {
+    const out = []; let cur = ''; let inQuotes = false;
+    for(let i=0;i<line.length;i++){
+      const ch = line[i];
+      if(ch === '"') { inQuotes = !inQuotes; continue; }
+      if(ch === ',' && !inQuotes) { out.push(cur); cur=''; continue; }
+      cur += ch;
+    }
+    out.push(cur);
+    return out.map(s => s.trim());
+  };
+  const headers = splitLine(lines[0]).map(h => h.toLowerCase());
+  const dateIdx = headers.findIndex(h => h.includes('date'));
+  const amtIdx = headers.findIndex(h => h.includes('amount') || h.includes('credit') || h.includes('value'));
+  const descIdx = headers.findIndex(h => h.includes('desc') || h.includes('narrat') || h.includes('detail') || h.includes('reference'));
+  return lines.slice(1).map(line => {
+    const cols = splitLine(line);
+    return {
+      date: dateIdx >= 0 ? cols[dateIdx] : '',
+      amount: amtIdx >= 0 ? parseFloat((cols[amtIdx]||'').replace(/[^0-9.\-]/g,'')) : null,
+      description: descIdx >= 0 ? cols[descIdx] : cols.join(' '),
+    };
+  }).filter(r => r.description);
+}
+
+function handleCsvUpload(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('import-status');
+  statusEl.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      csvTransactions = parseCsv(e.target.result);
+      statusEl.innerHTML = `<div class="tag">✅ Parsed ${csvTransactions.length} transaction(s)</div>`;
+      runMatching();
+    } catch(err) {
+      statusEl.innerHTML = `<div class="err">Could not read that file: ${escapeHtml(err.message)}</div>`;
+    }
+  };
+  reader.readAsText(file);
+}
+
+function runMatching() {
+  const card = document.getElementById('matches-card');
+  const list = document.getElementById('matches-list');
+  if(!currentQueue.length) {
+    card.style.display = 'block';
+    list.innerHTML = `<div class="empty"><div class="ic">✅</div><p>No pending sponsorships to match against.</p></div>`;
+    return;
+  }
+  const rows = currentQueue.map(p => {
+    const childName = p.ll_children?.preferred_name || p.ll_children?.full_name || '';
+    let best = null, bestScore = 0;
+    for(const t of csvTransactions) {
+      let score = 0;
+      if(p.amount && t.amount != null && Math.abs(t.amount - p.amount) < 0.01) score += 10;
+      const desc = (t.description||'').toLowerCase();
+      if(p.sponsor_name && desc.includes(p.sponsor_name.toLowerCase().split(' ')[0])) score += 5;
+      if(desc.includes('ll-') || desc.includes(childName.toLowerCase())) score += 3;
+      if(score > bestScore) { bestScore = score; best = t; }
+    }
+    const matched = bestScore >= 5;
+    return `<tr>
+      <td>${escapeHtml(p.sponsor_name)}<br><span style="color:var(--muted);">${escapeHtml(childName)}</span></td>
+      <td>${p.amount != null ? 'QAR '+p.amount : '<span style="color:var(--muted);">not set</span>'}</td>
+      <td>${matched ? `<span class="match-yes">✅ ${escapeHtml(best.description)} (${best.date})</span>` : '<span class="match-no">No confident match</span>'}</td>
+      <td>${matched ? `<button class="btn" onclick="resolvePledge('${p.id}','received')">Confirm Received</button>` : '—'}</td>
+    </tr>`;
+  }).join('');
+  card.style.display = 'block';
+  list.innerHTML = `<table><tr><th>Sponsor / Child</th><th>Expected</th><th>Suggested Match</th><th></th></tr>${rows}</table>`;
+}
+
+init();
+</script>
+</body>
+</html>
