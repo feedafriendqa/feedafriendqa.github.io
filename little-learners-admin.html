@@ -420,20 +420,6 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
     </div>
   </div>
 
-  <div class="card" style="margin:0 0 16px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAssessorPanel()">
-      <div class="card-title" style="margin:0;">🧑‍🏫 Assessors</div>
-      <span id="assessor-panel-caret" style="font-size:13px;color:var(--muted);">Manage ▾</span>
-    </div>
-    <div id="assessor-panel" style="display:none;margin-top:12px;">
-      <div style="display:flex;gap:8px;margin-bottom:10px;">
-        <input id="new-assessor-name" placeholder="Full name" style="flex:1;padding:9px 12px;border-radius:8px;border:2px solid var(--border);font-size:13px;" onkeydown="if(event.key==='Enter')addAssessor()">
-        <button class="btn-teal btn-sm" onclick="addAssessor()">+ Add</button>
-      </div>
-      <div id="assessor-list-mgmt"><div class="loading">Loading…</div></div>
-    </div>
-  </div>
-
   <div class="gp-path" id="assess-days-list" style="margin-top:16px;"><div class="loading">Loading…</div></div>
 </div>
 
@@ -460,11 +446,17 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
   <div class="tab-bar">
     <button class="tab on" onclick="switchAdTab('eligible',this)">Eligible Children</button>
     <button class="tab" onclick="switchAdTab('attendees',this)">Attendees</button>
+    <button class="tab" onclick="switchAdTab('pre',this)">Pre-Assessment</button>
+    <button class="tab" onclick="switchAdTab('final',this)">Final Assessment</button>
+    <button class="tab" onclick="switchAdTab('assessors',this)">Assessors</button>
     <button class="tab" onclick="switchAdTab('packs',this)">Pack Distribution</button>
   </div>
   <div class="modal-body">
     <div class="tpanel on" id="adp-eligible"></div>
     <div class="tpanel" id="adp-attendees"></div>
+    <div class="tpanel" id="adp-pre"></div>
+    <div class="tpanel" id="adp-final"></div>
+    <div class="tpanel" id="adp-assessors"></div>
     <div class="tpanel" id="adp-packs"></div>
   </div>
 </div>
@@ -690,22 +682,27 @@ async function loadData() {
   renderCheckinsDue();
   renderAssessDaysList();
   renderQidSignin();
-  renderAssessorMgmt();
-}
-
-function toggleAssessorPanel() {
-  const el = document.getElementById('assessor-panel');
-  const caret = document.getElementById('assessor-panel-caret');
-  const open = el.style.display !== 'none';
-  el.style.display = open ? 'none' : 'block';
-  caret.textContent = open ? 'Manage ▾' : 'Manage ▴';
 }
 
 function renderAssessorMgmt() {
-  const el = document.getElementById('assessor-list-mgmt');
+  const el = document.getElementById('adp-assessors');
   if(!el) return;
-  if(!allAssessors.length) { el.innerHTML = '<div class="empty" style="padding:10px 0;">No assessors added yet.</div>'; return; }
-  el.innerHTML = allAssessors.map(x => `
+  const dayAssessors = allAssessors.filter(x=>x.assessment_day_id===currentAssessDay.id);
+  el.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <input id="new-assessor-name" placeholder="Full name" style="flex:1;padding:9px 12px;border-radius:8px;border:2px solid var(--border);font-size:13px;" onkeydown="if(event.key==='Enter')addAssessor()">
+      <button class="btn-teal btn-sm" onclick="addAssessor()">+ Add</button>
+    </div>
+    <div class="note" style="margin-bottom:12px;">Assessors are specific to this assessment day — add whoever's working ${currentAssessDay.title} today.</div>
+    <div id="assessor-list-mgmt"></div>`;
+  renderAssessorListOnly(dayAssessors);
+}
+
+function renderAssessorListOnly(dayAssessors) {
+  const listEl = document.getElementById('assessor-list-mgmt');
+  if(!listEl) return;
+  if(!dayAssessors.length) { listEl.innerHTML = '<div class="empty" style="padding:10px 0;">No assessors added yet for this day.</div>'; return; }
+  listEl.innerHTML = dayAssessors.map(x => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);">
       <span style="font-size:13.5px;font-weight:700;${x.active?'':'color:#9CA3AF;text-decoration:line-through;'}">${x.name}</span>
       <div style="display:flex;gap:6px;">
@@ -719,10 +716,9 @@ async function addAssessor() {
   const input = document.getElementById('new-assessor-name');
   const name = input.value.trim();
   if(!name) { showToast('Enter a name first'); return; }
-  const {data, error} = await db.from('ll_assessors').insert({name}).select().single();
+  const {data, error} = await db.from('ll_assessors').insert({name, assessment_day_id: currentAssessDay.id}).select().single();
   if(error) { showToast('Error: '+error.message); return; }
   allAssessors.push(data);
-  allAssessors.sort((a,b)=>a.name.localeCompare(b.name));
   input.value = '';
   renderAssessorMgmt();
   showToast(`✅ ${name} added`);
@@ -892,6 +888,9 @@ function openAssessDay(dayId) {
     ${currentAssessDay.location?`<span>📍 ${currentAssessDay.location}</span>`:''}`;
   renderEligibleForDay();
   renderAttendeesForDay();
+  renderPreAssessmentList();
+  renderFinalAssessmentList();
+  renderAssessorMgmt();
   renderPackDistribution();
   switchAdTab('eligible', document.querySelector('#ad-modal .tab'));
   document.getElementById('ad-modal').classList.add('open');
@@ -965,6 +964,8 @@ async function addSelectedToDay() {
   allAssessmentAttendees.push(...(data||[]));
   renderEligibleForDay();
   renderAttendeesForDay();
+  renderPreAssessmentList();
+  renderFinalAssessmentList();
   renderAssessDaysList();
   showToast(`✅ Added ${ids.length} child(ren)`);
 }
@@ -1021,56 +1022,8 @@ function renderAttendeesForDay() {
             <option value="no_show" ${a.day_status==='no_show'?'selected':''}>❌ Not Arrived</option>
             <option value="rescheduled" ${a.day_status==='rescheduled'?'selected':''}>🔁 Rescheduled</option>
           </select>
-          <button class="btn-small" onclick="toggleOutcomeForm('${a.id}','pre')">📝 Pre-Assessment</button>
-          <button class="btn-small" onclick="toggleOutcomeForm('${a.id}','final')">🎓 Final Assessment</button>
-        </div>
-
-        <div id="pre-${a.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:2px solid var(--border);">
-          <div class="af">
-            <div><label>Assessor</label>
-              <select id="pas-assessor-${a.id}">
-                <option value="">Select…</option>
-                ${allAssessors.filter(x=>x.active).map(x=>`<option value="${x.id}" ${a.assessor_id===x.id?'selected':''}>${x.name}</option>`).join('')}
-              </select>
-            </div>
-            <div><label>Pre-Assessment Done</label>
-              <select id="pas-status-${a.id}">
-                <option ${a.pre_assessment_status==='Not Started'||!a.pre_assessment_status?'selected':''}>Not Started</option>
-                <option ${a.pre_assessment_status==='Pending'?'selected':''}>Pending</option>
-                <option ${a.pre_assessment_status==='Complete'?'selected':''}>Complete</option>
-              </select>
-            </div>
-            <div><label>Recommended Year Group</label>
-              <select id="pas-yg-${a.id}">${yearGroupOptions(a.outcome_year_group)}</select>
-            </div>
-            <div><label>Notes <span style="font-weight:400;color:var(--muted);">(optional)</span></label><textarea id="pas-notes-${a.id}" placeholder="Initial impressions…">${a.pre_assessment_notes||''}</textarea></div>
-            <button class="btn-teal" style="width:100%;" onclick="savePreAssessment('${a.id}')">💾 Save Pre-Assessment</button>
-          </div>
-        </div>
-
-        <div id="final-${a.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:2px solid var(--border);">
-          <div class="af">
-            <div><label>Recommended Year <span style="font-weight:400;color:var(--muted);">(from pre-assessment)</span></label>
-              <div style="padding:9px 12px;background:var(--cream);border-radius:8px;font-size:13px;font-weight:700;">${a.outcome_year_group||'— not set yet —'}</div>
-            </div>
-            <div><label>Final Assessment Done</label>
-              <select id="fas-status-${a.id}">
-                <option value="Pending" ${a.final_assessment_status==='Pending'||!a.final_assessment_status?'selected':''}>Pending</option>
-                <option value="Done" ${a.final_assessment_status==='Done'?'selected':''}>Done</option>
-              </select>
-            </div>
-            <div><label>Final Outcome / Final Year Level</label>
-              <select id="fas-level-${a.id}">${yearGroupOptions(a.material_level, true)}</select>
-            </div>
-            <div><label>Parent Feedback</label>
-              <select id="fas-feedback-${a.id}">
-                <option value="Pending" ${a.parent_feedback_status==='Pending'||!a.parent_feedback_status?'selected':''}>Pending</option>
-                <option value="Completed" ${a.parent_feedback_status==='Completed'?'selected':''}>Completed</option>
-              </select>
-            </div>
-            <div><label>Notes for assessor</label><textarea id="fas-notes-${a.id}" placeholder="Observations from the assessment day…">${a.outcome_notes||''}</textarea></div>
-            <button class="btn-teal" style="width:100%;" onclick="saveFinalAssessment('${a.id}')">💾 Save Final Assessment</button>
-          </div>
+          <span style="font-size:11.5px;font-weight:700;${a.pre_assessment_status==='Complete'?'color:var(--lime);':'color:var(--muted);'}">📝 Pre-Assessment: ${a.pre_assessment_status||'Not Started'}${a.pre_assessment_status==='Complete'?' ✅':''}</span>
+          <span style="font-size:11.5px;font-weight:700;${a.final_assessment_status==='Done'?'color:var(--lime);':'color:var(--muted);'}">🎓 Final Assessment: ${a.final_assessment_status||'Pending'}${a.final_assessment_status==='Done'?' ✅':''}</span>
         </div>
       </div>`;
     }).join('')}`;
@@ -1112,11 +1065,6 @@ async function loadAttendeePhoto(attendeeId, path) {
   }
 }
 
-function toggleOutcomeForm(attendeeId, which) {
-  const el = document.getElementById(which+'-'+attendeeId);
-  if(el) el.style.display = el.style.display==='none' ? 'block' : 'none';
-}
-
 const YEAR_GROUP_VALUES = ['FS1','FS2','Year 1','Year 2','Year 3','Year 4','Year 5','Year 6','11-13 Special'];
 function yearGroupOptions(selected, includeFurtherReview) {
   let opts = '<option value="">Select…</option>' +
@@ -1125,6 +1073,74 @@ function yearGroupOptions(selected, includeFurtherReview) {
     opts += `<option value="Further Review" ${selected==='Further Review'?'selected':''}>Further Review</option>`;
   }
   return opts;
+}
+
+function renderPreAssessmentList() {
+  const el = document.getElementById('adp-pre');
+  if(!el) return;
+  const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id);
+  if(!attendees.length) { el.innerHTML = '<div class="empty"><div class="eicon">📝</div><p>No children added yet — use the Eligible Children tab.</p></div>'; return; }
+  el.innerHTML = attendees.map(a => {
+    const child = allChildren.find(c=>c.id===a.child_id);
+    return `<div class="fam-card" style="flex-direction:column;align-items:stretch;">
+      <div class="fam-name" style="margin-bottom:8px;">${child?.full_name||'Child'}</div>
+      <div class="af">
+        <div><label>Assessor</label>
+          <select id="pas-assessor-${a.id}">
+            <option value="">Select…</option>
+            ${allAssessors.filter(x=>x.active && x.assessment_day_id===currentAssessDay.id).map(x=>`<option value="${x.id}" ${a.assessor_id===x.id?'selected':''}>${x.name}</option>`).join('')}
+          </select>
+        </div>
+        <div><label>Pre-Assessment Done</label>
+          <select id="pas-status-${a.id}">
+            <option ${a.pre_assessment_status==='Not Started'||!a.pre_assessment_status?'selected':''}>Not Started</option>
+            <option ${a.pre_assessment_status==='Pending'?'selected':''}>Pending</option>
+            <option ${a.pre_assessment_status==='Complete'?'selected':''}>Complete</option>
+          </select>
+        </div>
+        <div><label>Recommended Year Group</label>
+          <select id="pas-yg-${a.id}">${yearGroupOptions(a.outcome_year_group)}</select>
+        </div>
+        <div><label>Notes <span style="font-weight:400;color:var(--muted);">(optional)</span></label><textarea id="pas-notes-${a.id}" placeholder="Initial impressions…">${a.pre_assessment_notes||''}</textarea></div>
+        <button class="btn-teal" style="width:100%;" onclick="savePreAssessment('${a.id}')">💾 Save${a.pre_assessment_status==='Complete'?' ✅':''}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderFinalAssessmentList() {
+  const el = document.getElementById('adp-final');
+  if(!el) return;
+  const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id);
+  if(!attendees.length) { el.innerHTML = '<div class="empty"><div class="eicon">🎓</div><p>No children added yet — use the Eligible Children tab.</p></div>'; return; }
+  el.innerHTML = attendees.map(a => {
+    const child = allChildren.find(c=>c.id===a.child_id);
+    return `<div class="fam-card" style="flex-direction:column;align-items:stretch;">
+      <div class="fam-name" style="margin-bottom:8px;">${child?.full_name||'Child'}</div>
+      <div class="af">
+        <div><label>Recommended Year <span style="font-weight:400;color:var(--muted);">(from pre-assessment)</span></label>
+          <div style="padding:9px 12px;background:var(--cream);border-radius:8px;font-size:13px;font-weight:700;">${a.outcome_year_group||'— not set yet —'}</div>
+        </div>
+        <div><label>Final Assessment Done</label>
+          <select id="fas-status-${a.id}">
+            <option value="Pending" ${a.final_assessment_status==='Pending'||!a.final_assessment_status?'selected':''}>Pending</option>
+            <option value="Done" ${a.final_assessment_status==='Done'?'selected':''}>Done</option>
+          </select>
+        </div>
+        <div><label>Final Outcome / Final Year Level</label>
+          <select id="fas-level-${a.id}">${yearGroupOptions(a.material_level, true)}</select>
+        </div>
+        <div><label>Parent Feedback</label>
+          <select id="fas-feedback-${a.id}">
+            <option value="Pending" ${a.parent_feedback_status==='Pending'||!a.parent_feedback_status?'selected':''}>Pending</option>
+            <option value="Completed" ${a.parent_feedback_status==='Completed'?'selected':''}>Completed</option>
+          </select>
+        </div>
+        <div><label>Notes for assessor</label><textarea id="fas-notes-${a.id}" placeholder="Observations from the assessment day…">${a.outcome_notes||''}</textarea></div>
+        <button class="btn-teal" style="width:100%;" onclick="saveFinalAssessment('${a.id}')">💾 Save${a.final_assessment_status==='Done'?' ✅':''}</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function markAttendance(attendeeId, val) {
@@ -1150,6 +1166,8 @@ async function savePreAssessment(attendeeId) {
   if(error) { showToast('Error: '+error.message); return; }
   Object.assign(a, {assessor_id, pre_assessment_status, outcome_year_group, pre_assessment_notes});
   renderAttendeesForDay();
+  renderPreAssessmentList();
+  renderFinalAssessmentList(); // the read-only "Recommended Year" reference updates too
   showToast('✅ Pre-assessment saved');
 }
 
@@ -1194,6 +1212,7 @@ async function saveFinalAssessment(attendeeId) {
   }
 
   renderAttendeesForDay();
+  renderFinalAssessmentList();
   renderPackDistribution();
   showToast('✅ Final assessment saved');
 }
