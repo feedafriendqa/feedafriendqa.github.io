@@ -105,6 +105,7 @@ function App(){
     })();
   },[done]);
   const [error,setError]=React.useState("");
+  const [photoUploadFailed,setPhotoUploadFailed]=React.useState(false);
 
   React.useEffect(()=>{
     sb.auth.getSession().then(({data})=>{
@@ -137,12 +138,16 @@ function App(){
     setSubmitting(true);
     try{
       let photo_url = null;
+      let photoFailed = false;
       if(photoFile){
-        const path = `activity/${Date.now()}_${photoFile.name}`;
-        const {error:upErr} = await sb.storage.from("avatars").upload(path, photoFile);
+        const path = `${Date.now()}_${photoFile.name}`;
+        const {error:upErr} = await sb.storage.from("fridge-activity-photos").upload(path, photoFile);
         if(!upErr){
-          const {data:pub} = sb.storage.from("avatars").getPublicUrl(path);
+          const {data:pub} = sb.storage.from("fridge-activity-photos").getPublicUrl(path);
           photo_url = pub.publicUrl;
+        } else {
+          console.error("Photo upload failed:", upErr.message);
+          photoFailed = true;
         }
       }
       const payload = {
@@ -164,6 +169,7 @@ function App(){
           body: JSON.stringify({action:"notify_zone", fridge_id: selectedFridge.id, fridge_activity_id: inserted?.id})
         }).catch(()=>{});
       }
+      setPhotoUploadFailed(photoFailed);
       setDone(true);
     }catch(e){
       setError(e.message || "Something went wrong — try again.");
@@ -182,6 +188,11 @@ function App(){
           <div style={{fontFamily:BF,fontSize:14,color:MT,marginTop:8,lineHeight:1.6}}>
             Your {activityType} at {selectedFridge?.name_en} has been logged. Someone in Qatar eats a little easier tonight because of you.
           </div>
+          {photoUploadFailed && (
+            <div style={{marginTop:10,background:"#FEF3C7",color:"#B5591A",fontSize:12,fontFamily:BF,padding:"8px 12px",borderRadius:10}}>
+              ⚠️ Your visit was logged, but the photo didn't upload — feel free to try again next time.
+            </div>
+          )}
 
           <div style={{marginTop:20,background:DK,borderRadius:16,padding:"16px 20px"}}>
             <div className="display" style={{fontSize:30,color:"#fff"}}>{counterTarget==null?"…":counterShown.toLocaleString()}</div>
