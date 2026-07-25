@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Fridges Admin — Feed a Friend</title>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Poppins,sans-serif;background:#F7F7F5;color:#15803D}.spartan{font-family:'League Spartan',sans-serif;font-weight:900}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const sb = supabase.createClient(
+  "https://xbxagukdvgyaoqvbqoic.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"
+);
+const DK = "#15803D", MT = "#6B7280", BF = "Poppins,sans-serif";
+const STATUS_OPTS = ["active","inactive","moved","broken","closed"];
+
+function useAdminAuth(){
+  const [session,setSession]=React.useState(undefined);
+  const [isAdmin,setIsAdmin]=React.useState(null);
+  const [email,setEmail]=React.useState(""); const [password,setPassword]=React.useState(""); const [loginErr,setLoginErr]=React.useState("");
+
+  React.useEffect(()=>{
+    sb.auth.getSession().then(({data})=>{
+      setSession(data.session||null);
+      if(data.session) checkAdmin(data.session.user.id);
+      else setIsAdmin(false);
+    });
+  },[]);
+
+  async function checkAdmin(uid){
+    const {data} = await sb.from("profiles").select("role").eq("id",uid).single();
+    const ok = data && (data.role==='admin' || data.role==='superadmin');
+    setIsAdmin(!!ok);
+  }
+
+  async function login(){
+    setLoginErr("");
+    const {data,error} = await sb.auth.signInWithPassword({email,password});
+    if(error){ setLoginErr(error.message); return; }
+    setSession(data.session);
+    checkAdmin(data.session.user.id);
+  }
+
+  return {session, isAdmin, email, setEmail, password, setPassword, loginErr, login};
+}
+
+function LoginGate({auth}){
+  return (
+    <div style={{maxWidth:360,margin:"0 auto",padding:"60px 24px"}}>
+      <h1 className="spartan" style={{fontSize:24,color:DK}}>Admin Sign In</h1>
+      {!auth.session ? (
+        <>
+          <input value={auth.email} onChange={e=>auth.setEmail(e.target.value)} placeholder="Email" style={{width:"100%",marginTop:16,padding:12,border:"1px solid #ddd",borderRadius:10}}/>
+          <input type="password" value={auth.password} onChange={e=>auth.setPassword(e.target.value)} placeholder="Password" style={{width:"100%",marginTop:10,padding:12,border:"1px solid #ddd",borderRadius:10}}/>
+          {auth.loginErr && <div style={{color:"#DC2626",fontSize:13,marginTop:8}}>{auth.loginErr}</div>}
+          <button onClick={auth.login} style={{width:"100%",marginTop:14,background:DK,color:"#fff",border:"none",borderRadius:10,padding:12,fontWeight:700,cursor:"pointer"}}>Sign in</button>
+        </>
+      ) : <div style={{marginTop:16,color:"#DC2626"}}>Signed in, but this account isn't an admin.</div>}
+    </div>
+  );
+}
+
+// ───────────────────────── FRIDGES TAB ─────────────────────────
+function FridgesTab(){
+  const [fridges,setFridges]=React.useState([]);
+  const [loading,setLoading]=React.useState(true);
+  const [search,setSearch]=React.useState("");
+  const [editing,setEditing]=React.useState(null); // fridge object being edited, or null
+  const [showAdd,setShowAdd]=React.useState(false);
+  const [saving,setSaving]=React.useState(false);
+
+  React.useEffect(()=>{ load(); },[]);
+  async function load(){
+    setLoading(true);
+    const {data} = await sb.from("fridges").select("*").order("zone_name").order("code");
+    setFridges(data||[]);
+    setLoading(false);
+  }
+
+  async function quickStatus(f, status){
+    await sb.from("fridges").update({status, updated_at:new Date().toISOString()}).eq("id",f.id);
+    load();
+  }
+
+  async function saveEdit(form){
+    setSaving(true);
+    if(form.id){
+      await sb.from("fridges").update({
+        name_en:form.name_en, name_ar:form.name_ar||null, zone_number:parseInt(form.zone_number,10),
+        zone_name:form.zone_name, status:form.status, type:form.type, photo_url:form.photo_url||null,
+        notes:form.notes||null, updated_at:new Date().toISOString()
+      }).eq("id",form.id);
+    } else {
+      await sb.from("fridges").insert({
+        code:form.code, name_en:form.name_en, name_ar:form.name_ar||null,
+        zone_number:parseInt(form.zone_number,10), zone_name:form.zone_name,
+        status:form.status||"active", type:form.type||"private", photo_url:form.photo_url||null, notes:form.notes||null
+      });
+    }
+    setSaving(false);
+    setEditing(null); setShowAdd(false);
+    load();
+  }
+
+  const filtered = fridges.filter(f => !search ||
+    f.name_en.toLowerCase().includes(search.toLowerCase()) ||
+    f.code.toLowerCase().includes(search.toLowerCase()) ||
+    f.zone_name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const STATUS_COLOR = {active:"#DCFCE7", inactive:"#F3F4F6", moved:"#FEF3C7", broken:"#FEE2E2", closed:"#F3F4F6"};
+  const STATUS_TEXT = {active:DK, inactive:"#6B7280", moved:"#B5591A", broken:"#DC2626", closed:"#6B7280"};
+
+  return (
+    <div>
+      <div style={{display:"flex",gap:8,marginTop:20}}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name, code, or zone…" style={{flex:1,padding:"10px 14px",border:"1px solid #ddd",borderRadius:10,fontSize:13.5}}/>
+        <button onClick={()=>setShowAdd(true)} style={{background:DK,color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontWeight:700,cursor:"pointer",fontSize:13.5,whiteSpace:"nowrap"}}>+ Add fridge</button>
+      </div>
+
+      <div style={{color:MT,fontSize:12.5,marginTop:10}}>{filtered.length} of {fridges.length} fridges</div>
+
+      {loading ? <div style={{color:MT,marginTop:20}}>Loading…</div> : (
+        <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:8}}>
+          {filtered.map(f=>(
+            <div key={f.id} style={{background:"#fff",borderRadius:12,padding:14,border:"1px solid #eee"}}>
+              <div style={{display:"flex",justifyContent:"space-between",gap:10}}>
+                <div style={{minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{f.name_en} <span style={{color:MT,fontWeight:500}}>· {f.code}</span></div>
+                  <div style={{color:MT,fontSize:12,marginTop:2}}>{f.zone_name} (Zone {f.zone_number})</div>
+                </div>
+                <button onClick={()=>setEditing(f)} style={{flexShrink:0,background:"#fff",border:`1.5px solid ${DK}`,color:DK,borderRadius:8,padding:"6px 12px",fontSize:12.5,fontWeight:700,cursor:"pointer",height:32}}>Edit</button>
+              </div>
+              <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
+                {STATUS_OPTS.map(s=>(
+                  <button key={s} onClick={()=>quickStatus(f,s)} style={{
+                    border:"none",borderRadius:14,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer",textTransform:"capitalize",
+                    background: f.status===s ? STATUS_COLOR[s] : "#F7F7F5",
+                    color: f.status===s ? STATUS_TEXT[s] : "#B0B0B0",
+                    outline: f.status===s ? `1.5px solid ${STATUS_TEXT[s]}` : "none"
+                  }}>{s}</button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(editing || showAdd) && (
+        <FridgeEditModal
+          fridge={editing}
+          onClose={()=>{setEditing(null); setShowAdd(false);}}
+          onSave={saveEdit}
+          saving={saving}
+        />
+      )}
+    </div>
+  );
+}
+
+function FridgeEditModal({fridge, onClose, onSave, saving}){
+  const [form,setForm]=React.useState(fridge || {code:"",name_en:"",name_ar:"",zone_number:"",zone_name:"",status:"active",type:"private",photo_url:"",notes:""});
+  function set(k,v){ setForm(f=>({...f,[k]:v})); }
+  const field = {width:"100%",marginTop:5,padding:"10px 12px",border:"1px solid #ddd",borderRadius:8,fontSize:13.5};
+  const label = {fontSize:11.5,fontWeight:700,color:MT,textTransform:"uppercase",letterSpacing:0.3};
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:50}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:"16px 16px 0 0",maxWidth:480,width:"100%",maxHeight:"85vh",overflowY:"auto",padding:24}}>
+        <div className="spartan" style={{fontSize:20,color:DK,marginBottom:16}}>{fridge ? "Edit Fridge" : "Add Fridge"}</div>
+
+        {!fridge && (
+          <div style={{marginBottom:10}}>
+            <div style={label}>Code</div>
+            <input style={field} value={form.code} onChange={e=>set("code",e.target.value)} placeholder="e.g. 55X"/>
+          </div>
+        )}
+        <div style={{marginBottom:10}}>
+          <div style={label}>Name (English)</div>
+          <input style={field} value={form.name_en} onChange={e=>set("name_en",e.target.value)}/>
+        </div>
+        <div style={{marginBottom:10}}>
+          <div style={label}>Name (Arabic)</div>
+          <input style={field} value={form.name_ar||""} onChange={e=>set("name_ar",e.target.value)} dir="rtl"/>
+        </div>
+        <div style={{display:"flex",gap:10,marginBottom:10}}>
+          <div style={{flex:1}}>
+            <div style={label}>Zone number</div>
+            <input style={field} value={form.zone_number} onChange={e=>set("zone_number",e.target.value)}/>
+          </div>
+          <div style={{flex:2}}>
+            <div style={label}>Zone name</div>
+            <input style={field} value={form.zone_name} onChange={e=>set("zone_name",e.target.value)}/>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:10,marginBottom:10}}>
+          <div style={{flex:1}}>
+            <div style={label}>Status</div>
+            <select style={field} value={form.status} onChange={e=>set("status",e.target.value)}>
+              {STATUS_OPTS.map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div style={{flex:1}}>
+            <div style={label}>Type</div>
+            <select style={field} value={form.type} onChange={e=>set("type",e.target.value)}>
+              <option value="private">private</option>
+              <option value="public">public</option>
+            </select>
+          </div>
+        </div>
+        <div style={{marginBottom:10}}>
+          <div style={label}>Photo URL</div>
+          <input style={field} value={form.photo_url||""} onChange={e=>set("photo_url",e.target.value)}/>
+        </div>
+        <div style={{marginBottom:16}}>
+          <div style={label}>Notes</div>
+          <textarea style={{...field,minHeight:60}} value={form.notes||""} onChange={e=>set("notes",e.target.value)}/>
+        </div>
+
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={onClose} style={{flex:1,background:"#fff",border:"1.5px solid #ddd",color:MT,borderRadius:10,padding:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>
+          <button onClick={()=>onSave(form)} disabled={saving} style={{flex:1,background:DK,color:"#fff",border:"none",borderRadius:10,padding:12,fontWeight:700,cursor:"pointer",opacity:saving?0.7:1}}>{saving?"Saving…":"Save"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── WISHLIST TAB ─────────────────────────
+function WishlistTab(){
+  const [items,setItems]=React.useState([]);
+  const [loading,setLoading]=React.useState(true);
+
+  React.useEffect(()=>{ load(); },[]);
+  async function load(){
+    setLoading(true);
+    const {data} = await sb.from("friend_wishlist_items")
+      .select("*, food_box_applications(full_name_en,full_name,zone,whatsapp)")
+      .order("created_at",{ascending:false});
+    setItems(data||[]);
+    setLoading(false);
+  }
+
+  async function setStatus(id, status){
+    await sb.from("friend_wishlist_items").update({status, updated_at:new Date().toISOString()}).eq("id",id);
+    if(status === "approved"){
+      fetch("https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/friend-portal", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({action:"notify_fairies_wishlist", wishlist_item_id: id})
+      }).catch(()=>{});
+    }
+    load();
+  }
+
+  const pending = items.filter(i=>i.status==='pending');
+  const others = items.filter(i=>i.status!=='pending');
+
+  return (
+    <div>
+      <div style={{color:MT,fontSize:13,marginTop:16}}>Approve items before they become visible to fairies and the public.</div>
+
+      <h2 style={{fontSize:13,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:24}}>Pending ({pending.length})</h2>
+      {loading ? <div style={{color:MT,marginTop:12}}>Loading…</div> : pending.length===0 ? <div style={{color:MT,marginTop:12,fontSize:13}}>Nothing pending.</div> : (
+        <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:10}}>
+          {pending.map(item=>{
+            const app = item.food_box_applications;
+            return (
+              <div key={item.id} style={{background:"#fff",borderRadius:14,padding:16,border:"1px solid #eee"}}>
+                <div style={{fontWeight:700,fontSize:15,color:"#111"}}>{item.item}</div>
+                <div style={{color:MT,fontSize:12.5,marginTop:4}}>{app?.full_name_en || app?.full_name || "Unknown"} · Zone {app?.zone || "—"}</div>
+                <div style={{display:"flex",gap:8,marginTop:12}}>
+                  <button onClick={()=>setStatus(item.id,'approved')} style={{flex:1,background:DK,color:"#fff",border:"none",borderRadius:8,padding:"8px",fontWeight:700,cursor:"pointer",fontSize:13}}>Approve</button>
+                  <button onClick={()=>setStatus(item.id,'rejected')} style={{flex:1,background:"#fff",color:"#DC2626",border:"1.5px solid #DC2626",borderRadius:8,padding:"8px",fontWeight:700,cursor:"pointer",fontSize:13}}>Reject</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <h2 style={{fontSize:13,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:32}}>History</h2>
+      <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:6}}>
+        {others.map(item=>(
+          <div key={item.id} style={{display:"flex",justifyContent:"space-between",padding:"8px 12px",background:"#fff",borderRadius:8,fontSize:13}}>
+            <span>{item.item}</span>
+            <span style={{fontWeight:700,color: item.status==='approved'?DK:item.status==='fulfilled'?"#22C55E":"#DC2626"}}>{item.status}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── APP ─────────────────────────
+function App(){
+  const auth = useAdminAuth();
+  const [tab,setTab]=React.useState("fridges");
+
+  if(auth.session===undefined || auth.isAdmin===null){
+    return <div style={{padding:60,textAlign:"center",color:MT}}>Loading…</div>;
+  }
+  if(!auth.session || !auth.isAdmin){
+    return <LoginGate auth={auth}/>;
+  }
+
+  return (
+    <div style={{maxWidth:700,margin:"0 auto",padding:"32px 24px 64px"}}>
+      <h1 className="spartan" style={{fontSize:28,color:DK}}>Fridges Admin</h1>
+
+      <div style={{display:"flex",gap:8,marginTop:20}}>
+        {[["fridges","Fridges"],["wishlist","Wishlist"]].map(([k,label])=>(
+          <button key={k} onClick={()=>setTab(k)} style={{
+            flex:1,padding:"10px 8px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,
+            background: tab===k ? DK : "#fff", color: tab===k ? "#fff" : DK,
+            boxShadow: tab===k ? "none" : "0 1px 2px rgba(0,0,0,0.08)"
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {tab==="fridges" ? <FridgesTab/> : <WishlistTab/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

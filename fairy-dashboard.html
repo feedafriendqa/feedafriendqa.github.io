@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Fairy Dashboard — Feed a Friend</title>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Poppins,sans-serif;background:#fff;color:#15803D}.spartan{font-family:'League Spartan',sans-serif;font-weight:900}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const sb = supabase.createClient(
+  "https://xbxagukdvgyaoqvbqoic.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"
+);
+const DK = "#15803D", MT = "#6B7280", BF = "Poppins,sans-serif";
+
+function App(){
+  const [session,setSession]=React.useState(undefined);
+  const [email,setEmail]=React.useState(""); const [password,setPassword]=React.useState(""); const [loginErr,setLoginErr]=React.useState("");
+  const [fridges,setFridges]=React.useState([]);
+  const [localIds,setLocalIds]=React.useState(new Set());
+  const [wishlist,setWishlist]=React.useState([]);
+  const [loading,setLoading]=React.useState(true);
+  const [search,setSearch]=React.useState("");
+
+  React.useEffect(()=>{
+    sb.auth.getSession().then(({data})=>{
+      setSession(data.session||null);
+      if(data.session) load(data.session.user.id);
+    });
+  },[]);
+
+  async function login(){
+    setLoginErr("");
+    const {data,error} = await sb.auth.signInWithPassword({email,password});
+    if(error){ setLoginErr(error.message); return; }
+    setSession(data.session);
+    load(data.session.user.id);
+  }
+
+  async function load(uid){
+    setLoading(true);
+    const [{data:fr},{data:local}] = await Promise.all([
+      sb.from("fridges").select("id,code,name_en,zone_name,zone_number").order("zone_name"),
+      sb.from("fairy_local_fridges").select("fridge_id").eq("volunteer_id",uid)
+    ]);
+    setFridges(fr||[]);
+    const ids = new Set((local||[]).map(l=>l.fridge_id));
+    setLocalIds(ids);
+    const myZones = new Set((fr||[]).filter(f=>ids.has(f.id)).map(f=>f.zone_number));
+    const {data:wl} = await sb.from("friend_wishlist_items").select("*, food_box_applications(zone,full_name_en,full_name,whatsapp)").eq("status","approved");
+    setWishlist((wl||[]).filter(w=>{
+      const z = parseInt(String(w.food_box_applications?.zone||"").replace(/\D/g,""),10);
+      return myZones.has(z);
+    }));
+    setLoading(false);
+  }
+
+  async function toggleLocal(fridgeId){
+    const uid = session.user.id;
+    if(localIds.has(fridgeId)){
+      await sb.from("fairy_local_fridges").delete().eq("volunteer_id",uid).eq("fridge_id",fridgeId);
+    } else {
+      await sb.from("fairy_local_fridges").insert({volunteer_id:uid, fridge_id:fridgeId});
+    }
+    load(uid);
+  }
+
+  if(session===undefined) return <div style={{padding:60,textAlign:"center",color:MT}}>Loading…</div>;
+
+  if(!session){
+    return (
+      <div style={{maxWidth:360,margin:"0 auto",padding:"60px 24px"}}>
+        <h1 className="spartan" style={{fontSize:26,color:DK}}>🧚 Fairy Sign In</h1>
+        <div style={{color:MT,fontSize:13,marginTop:6}}>Use the same account you use for volunteering.</div>
+        <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" style={{width:"100%",marginTop:16,padding:12,border:"1px solid #ddd",borderRadius:10}}/>
+        <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password" style={{width:"100%",marginTop:10,padding:12,border:"1px solid #ddd",borderRadius:10}}/>
+        {loginErr && <div style={{color:"#DC2626",fontSize:13,marginTop:8}}>{loginErr}</div>}
+        <button onClick={login} style={{width:"100%",marginTop:14,background:DK,color:"#fff",border:"none",borderRadius:10,padding:12,fontWeight:700,cursor:"pointer"}}>Sign in</button>
+      </div>
+    );
+  }
+
+  const filtered = fridges.filter(f => !search || f.name_en.toLowerCase().includes(search.toLowerCase()) || f.zone_name.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div style={{maxWidth:500,margin:"0 auto",padding:"32px 24px 64px"}}>
+      <h1 className="spartan" style={{fontSize:26,color:DK}}>🧚 My Fairy Dashboard</h1>
+
+      <h2 style={{fontSize:14,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:28}}>Wishlist requests near you ({wishlist.length})</h2>
+      {loading ? <div style={{color:MT,marginTop:10}}>Loading…</div> : wishlist.length===0 ? (
+        <div style={{color:MT,fontSize:13,marginTop:10}}>Nothing yet — mark local fridges below to start seeing requests from that zone.</div>
+      ) : (
+        <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:8}}>
+          {wishlist.map(w=>(
+            <div key={w.id} style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:12,padding:12}}>
+              <div style={{fontWeight:700,fontSize:14}}>{w.item}</div>
+              <div style={{color:MT,fontSize:12,marginTop:3}}>Zone {w.food_box_applications?.zone} · {w.food_box_applications?.whatsapp||"no phone on file"}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <h2 style={{fontSize:14,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:32}}>My local fridges ({localIds.size})</h2>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name or zone…" style={{width:"100%",marginTop:10,padding:10,border:"1px solid #ddd",borderRadius:10}}/>
+      <div style={{marginTop:10,maxHeight:400,overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
+        {filtered.map(f=>(
+          <label key={f.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background: localIds.has(f.id)?"#F0FDF4":"#fff",border:"1px solid #eee",borderRadius:10,cursor:"pointer"}}>
+            <input type="checkbox" checked={localIds.has(f.id)} onChange={()=>toggleLocal(f.id)}/>
+            <div>
+              <div style={{fontSize:13,fontWeight:600}}>{f.name_en} <span style={{color:MT,fontWeight:400}}>· {f.code}</span></div>
+              <div style={{fontSize:11,color:MT}}>{f.zone_name}</div>
+            </div>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
