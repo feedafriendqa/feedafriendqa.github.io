@@ -229,12 +229,8 @@ function App(){
             activity.length===0 ? <div style={{color:MT2,fontSize:14}}>{t.noActivity}</div> :
             activity.map(a=>(
             <div key={a.id} style={{flexShrink:0,width:140}}>
-              <div style={{width:140,height:100,borderRadius:16,overflow:"hidden",background:"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                {a.photo_url ? (
-                  <img src={a.photo_url} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
-                ) : (
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="18" height="13" rx="2" stroke={DK} strokeWidth="1.6"/><path d="M8 7l1.5-2.5h5L16 7" stroke={DK} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="13.5" r="3.2" stroke={DK} strokeWidth="1.6"/></svg>
-                )}
+              <div style={{width:140,height:100,borderRadius:16,overflow:"hidden",background:"#F0FDF4"}}>
+                <img src={a.photo_url||HERO_PHOTO} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
               </div>
               <div style={{fontWeight:600,fontSize:12,marginTop:8,color:"#374151",fontFamily:BF}}>{isAr && a.fridges?.name_ar ? a.fridges.name_ar : a.fridges?.name_en}</div>
               <div style={{fontSize:10.5,color:MT2,marginTop:2}}>{a.fridges?.code} · {a.activity_type==='cleaning'?t.cleaned:t.refilled}</div>
