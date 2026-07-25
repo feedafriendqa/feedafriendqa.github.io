@@ -26,6 +26,7 @@ function App(){
   const [email,setEmail]=React.useState(""); const [password,setPassword]=React.useState(""); const [loginErr,setLoginErr]=React.useState("");
   const [fridges,setFridges]=React.useState([]);
   const [localIds,setLocalIds]=React.useState(new Set());
+  const [routeIds,setRouteIds]=React.useState(new Set());
   const [wishlist,setWishlist]=React.useState([]);
   const [loading,setLoading]=React.useState(true);
   const [search,setSearch]=React.useState("");
@@ -48,7 +49,7 @@ function App(){
   async function load(uid){
     setLoading(true);
     const [{data:fr},{data:local}] = await Promise.all([
-      sb.from("fridges").select("id,code,name_en,zone_name,zone_number").order("zone_name"),
+      sb.from("fridges").select("id,code,name_en,zone_name,zone_number,lat,lng").order("zone_name"),
       sb.from("fairy_local_fridges").select("fridge_id").eq("volunteer_id",uid)
     ]);
     setFridges(fr||[]);
@@ -109,18 +110,42 @@ function App(){
       )}
 
       <h2 style={{fontSize:14,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:32}}>My local fridges ({localIds.size})</h2>
+      <div style={{color:MT,fontSize:12,marginTop:2,marginBottom:2}}>Tap 🗺️ on any fridge to add it to a route below.</div>
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name or zone…" style={{width:"100%",marginTop:10,padding:10,border:"1px solid #ddd",borderRadius:10}}/>
       <div style={{marginTop:10,maxHeight:400,overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
         {filtered.map(f=>(
-          <label key={f.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background: localIds.has(f.id)?"#F0FDF4":"#fff",border:"1px solid #eee",borderRadius:10,cursor:"pointer"}}>
-            <input type="checkbox" checked={localIds.has(f.id)} onChange={()=>toggleLocal(f.id)}/>
-            <div>
+          <div key={f.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background: localIds.has(f.id)?"#F0FDF4":"#fff",border:"1px solid #eee",borderRadius:10}}>
+            <input type="checkbox" checked={localIds.has(f.id)} onChange={()=>toggleLocal(f.id)} style={{cursor:"pointer"}}/>
+            <div style={{flex:1,cursor:"pointer"}} onClick={()=>toggleLocal(f.id)}>
               <div style={{fontSize:13,fontWeight:600}}>{f.name_en} <span style={{color:MT,fontWeight:400}}>· {f.code}</span></div>
               <div style={{fontSize:11,color:MT}}>{f.zone_name}</div>
             </div>
-          </label>
+            <button onClick={()=>{
+              const n = new Set(routeIds);
+              n.has(f.id) ? n.delete(f.id) : n.add(f.id);
+              setRouteIds(n);
+            }} style={{
+              flexShrink:0,border:"none",borderRadius:8,width:34,height:34,fontSize:15,cursor:"pointer",
+              background: routeIds.has(f.id) ? DK : "#F3F4F6"
+            }}>🗺️</button>
+          </div>
         ))}
       </div>
+
+      {routeIds.size>0 && (() => {
+        const stops = fridges.filter(f=>routeIds.has(f.id) && f.lat && f.lng);
+        if(stops.length===0) return null;
+        const dest = stops[stops.length-1];
+        const waypoints = stops.slice(0,-1).map(f=>`${f.lat},${f.lng}`).join("|");
+        const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}${waypoints?`&waypoints=${waypoints}`:""}&travelmode=driving`;
+        return (
+          <div style={{position:"sticky",bottom:16,marginTop:20,background:"#fff",border:`2px solid ${DK}`,borderRadius:14,padding:14,boxShadow:"0 4px 14px rgba(0,0,0,0.12)"}}>
+            <div style={{fontSize:12.5,fontWeight:700,color:DK}}>🗺️ Route: {stops.length} stop{stops.length!==1?"s":""}</div>
+            <div style={{fontSize:11,color:MT,marginTop:2}}>Starts from your current location, visits each stop in order.</div>
+            <a href={routeUrl} target="_blank" rel="noreferrer" style={{display:"block",textAlign:"center",marginTop:10,background:DK,color:"#fff",padding:"10px",borderRadius:10,fontWeight:700,fontSize:13,textDecoration:"none"}}>Open route in Google Maps</a>
+          </div>
+        );
+      })()}
     </div>
   );
 }

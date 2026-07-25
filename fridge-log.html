@@ -125,7 +125,7 @@ function App(){
   }
 
   async function loadFridges(){
-    const {data} = await sb.from("fridges").select("id,code,name_en,zone_name,status").order("zone_name");
+    const {data} = await sb.from("fridges").select("id,code,name_en,zone_name,status,map_link,lat,lng").order("zone_name");
     setFridges(data||[]);
     setLoading(false);
   }
@@ -255,6 +255,14 @@ function App(){
             <option value="">Select a fridge…</option>
             {fridges.map(f=><option key={f.id} value={f.code}>{f.name_en} ({f.code}) — {f.zone_name}</option>)}
           </select>
+          {selectedFridge && (() => {
+            const mapUrl = selectedFridge.map_link || (selectedFridge.lat && selectedFridge.lng ? `https://www.google.com/maps?q=${selectedFridge.lat},${selectedFridge.lng}` : null);
+            return mapUrl ? (
+              <a href={mapUrl} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginTop:8,background:"#F0FDF4",color:DK,border:`1.5px solid ${DK}`,borderRadius:12,padding:"10px",fontFamily:BF,fontWeight:700,fontSize:13,textDecoration:"none"}}>
+                📍 Get directions to {selectedFridge.name_en}
+              </a>
+            ) : null;
+          })()}
         </div>
 
         <div style={{marginTop:18}}>
