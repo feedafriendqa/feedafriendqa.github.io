@@ -32,6 +32,8 @@ const TXT = {
     detect: "Detect my location", located: "Location set ✓", locating: "Locating…",
     or: "or", selectLoc: "Select Location ▾", locError: "Couldn't get your location — try Select Location instead.",
     needsYou: "Needs You Most", needsSub: "Longest since last refill — swipe for more →",
+    nearbyTitle: "Nearest Fridges", zoneTitle: n => `Fridges in ${n}`,
+    getDirections: "Get directions", refillBtn: "Refill", kmAway: km => `${km.toFixed(1)} km away`,
     recent: "Recent Activity", recentSub: "The latest refills and cleanings.", noActivity: "No activity logged yet.",
     fridgesLbl: "Fridges", refillsLbl: "Refills", explore: "Explore By Area", more: "+ More",
     logCta: "Log a refill or cleaning", footer: "Together, we can keep good food moving. 💚",
@@ -43,6 +45,8 @@ const TXT = {
     detect: "حدد موقعي", located: "تم تحديد الموقع ✓", locating: "جارٍ التحديد…",
     or: "أو", selectLoc: "اختر الموقع ▾", locError: "تعذر تحديد موقعك — جرّب اختيار الموقع بدلاً من ذلك.",
     needsYou: "الأكثر حاجة إليك", needsSub: "الأطول انتظارًا منذ آخر تعبئة — اسحب لرؤية المزيد ←",
+    nearbyTitle: "أقرب الثلاجات", zoneTitle: n => `ثلاجات في ${n}`,
+    getDirections: "الاتجاهات", refillBtn: "تعبئة", kmAway: km => `${km.toFixed(1)} كم`,
     recent: "النشاط الأخير", recentSub: "آخر عمليات التعبئة والتنظيف.", noActivity: "لم يتم تسجيل أي نشاط بعد.",
     fridgesLbl: "ثلاجات", refillsLbl: "تعبئات", explore: "استكشف حسب المنطقة", more: "+ المزيد",
     logCta: "سجّل تعبئة أو تنظيف", footer: "معًا، يمكننا أن نحافظ على تدفق الطعام الجيد. 💚",
@@ -62,12 +66,21 @@ function timeAgo(iso){
   return d.toLocaleDateString();
 }
 
+function haversineKm(lat1,lng1,lat2,lng2){
+  if([lat1,lng1,lat2,lng2].some(v=>v==null||isNaN(v))) return null;
+  const R=6371, toRad=d=>d*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLng=toRad(lng2-lng1);
+  const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
 function App(){
   const [fridges,setFridges]=React.useState([]);
   const [activity,setActivity]=React.useState([]);
   const [loading,setLoading]=React.useState(true);
   const [zones,setZones]=React.useState([]);
   const [selectedZone,setSelectedZone]=React.useState("");
+  const [userLoc,setUserLoc]=React.useState(null);
   const [locStatus,setLocStatus]=React.useState("idle");
   const [showAllZones,setShowAllZones]=React.useState(false);
   const [refillTotal,setRefillTotal]=React.useState(null);
@@ -96,8 +109,22 @@ function App(){
 
   function detect(){
     setLocStatus("locating");
+    setSelectedZone("");
     if(!navigator.geolocation){ setLocStatus("error"); return; }
-    navigator.geolocation.getCurrentPosition(()=>setLocStatus("done"), ()=>setLocStatus("error"), {timeout:8000});
+    navigator.geolocation.getCurrentPosition(
+      pos=>{ setUserLoc({lat:pos.coords.latitude,lng:pos.coords.longitude}); setLocStatus("done"); },
+      ()=>setLocStatus("error"),
+      {timeout:8000}
+    );
+  }
+
+  const withDist = fridges.map(f=>({...f, _dist: userLoc ? haversineKm(userLoc.lat,userLoc.lng,f.lat,f.lng) : null}));
+
+  let results = [];
+  if(userLoc){
+    results = withDist.filter(f=>f.status!=='closed').sort((a,b)=>(a._dist??1e9)-(b._dist??1e9)).slice(0,5);
+  } else if(selectedZone){
+    results = withDist.filter(f=>f.zone_name===selectedZone && f.status!=='closed').slice(0,5);
   }
 
   const needy = [...fridges].filter(f=>f.status==='active').sort((a,b)=>{
@@ -131,13 +158,39 @@ function App(){
             📍 {locStatus==="locating"?t.locating:locStatus==="done"?t.located:t.detect}
           </button>
           <div style={{textAlign:"center",color:MT2,fontSize:12,margin:"12px 0"}}>{t.or}</div>
-          <select value={selectedZone} onChange={e=>setSelectedZone(e.target.value)} style={{width:"100%",border:`1.5px solid ${DK}`,color:DK,borderRadius:24,padding:"11px 16px",fontWeight:700,fontSize:13,fontFamily:BF,textAlign:"center",background:"#fff",cursor:"pointer"}}>
+          <select value={selectedZone} onChange={e=>{setSelectedZone(e.target.value); setUserLoc(null); setLocStatus("idle");}} style={{width:"100%",border:`1.5px solid ${DK}`,color:DK,borderRadius:24,padding:"11px 16px",fontWeight:700,fontSize:13,fontFamily:BF,textAlign:"center",background:"#fff",cursor:"pointer"}}>
             <option value="">{t.selectLoc}</option>
             {zones.map(([name,count])=><option key={name} value={name}>{name} ({count})</option>)}
           </select>
           {locStatus==="error" && <div style={{color:"#B5591A",fontSize:11.5,marginTop:8}}>{t.locError}</div>}
         </div>
       </div>
+
+      {results.length > 0 && (
+        <div style={{marginTop:24}}>
+          <div style={{fontSize:12,letterSpacing:0.4,textTransform:"uppercase",color:MT,fontWeight:700,fontFamily:BF}}>
+            {userLoc ? t.nearbyTitle : t.zoneTitle(selectedZone)}
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:12}}>
+            {results.map(f=>{
+              const mapUrl = f.map_link || (f.lat && f.lng ? `https://www.google.com/maps?q=${f.lat},${f.lng}` : null);
+              return (
+                <div key={f.id} style={{display:"flex",gap:12,background:"#fff",border:"1px solid #eee",borderRadius:14,padding:12}}>
+                  <img src={f.photo_url||PLACEHOLDER} onError={e=>e.target.src=PLACEHOLDER} style={{width:56,height:56,borderRadius:10,objectFit:"cover",flexShrink:0}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:13.5,color:"#111"}}>{isAr && f.name_ar ? f.name_ar : f.name_en} <span style={{color:MT2,fontWeight:500}}>· {f.code}</span></div>
+                    <div style={{fontSize:11.5,color:MT,marginTop:2}}>{f.zone_name}{f._dist!=null?` · ${t.kmAway(f._dist)}`:""}</div>
+                    <div style={{display:"flex",gap:8,marginTop:8}}>
+                      {mapUrl && <a href={mapUrl} target="_blank" rel="noreferrer" style={{fontSize:11.5,fontWeight:700,color:DK,border:`1.3px solid ${DK}`,borderRadius:8,padding:"5px 10px",textDecoration:"none"}}>📍 {t.getDirections}</a>}
+                      <a href={`fridge-log.html?fridge=${f.code}`} style={{fontSize:11.5,fontWeight:700,color:"#fff",background:DK,borderRadius:8,padding:"5px 10px",textDecoration:"none"}}>🧺 {t.refillBtn}</a>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div style={{display:"flex",background:DK,borderRadius:12,marginTop:20,overflow:"hidden"}}>
         <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"9px 6px"}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="5" y="2" width="14" height="20" rx="2" stroke="#fff" strokeWidth="1.8"/><line x1="5" y1="9" x2="19" y2="9" stroke="#fff" strokeWidth="1.8"/></svg>
