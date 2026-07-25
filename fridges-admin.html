@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Fridges Admin — Feed a Friend</title>
+<title>Community Fridges Admin — Feed a Friend</title>
 <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -20,6 +20,8 @@ const sb = supabase.createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"
 );
 const DK = "#15803D", MT = "#6B7280", BF = "Poppins,sans-serif";
+const DK2 = "#0A3D1F", MD = "#22C55E";
+const LOGO_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/avatars/Faflogowhite.png";
 const STATUS_OPTS = ["active","inactive","moved","broken","closed"];
 
 function useAdminAuth(){
@@ -54,16 +56,21 @@ function useAdminAuth(){
 
 function LoginGate({auth}){
   return (
-    <div style={{maxWidth:360,margin:"0 auto",padding:"60px 24px"}}>
-      <h1 className="spartan" style={{fontSize:24,color:DK}}>Admin Sign In</h1>
-      {!auth.session ? (
-        <>
-          <input value={auth.email} onChange={e=>auth.setEmail(e.target.value)} placeholder="Email" style={{width:"100%",marginTop:16,padding:12,border:"1px solid #ddd",borderRadius:10}}/>
-          <input type="password" value={auth.password} onChange={e=>auth.setPassword(e.target.value)} placeholder="Password" style={{width:"100%",marginTop:10,padding:12,border:"1px solid #ddd",borderRadius:10}}/>
-          {auth.loginErr && <div style={{color:"#DC2626",fontSize:13,marginTop:8}}>{auth.loginErr}</div>}
-          <button onClick={auth.login} style={{width:"100%",marginTop:14,background:DK,color:"#fff",border:"none",borderRadius:10,padding:12,fontWeight:700,cursor:"pointer"}}>Sign in</button>
-        </>
-      ) : <div style={{marginTop:16,color:"#DC2626"}}>Signed in, but this account isn't an admin.</div>}
+    <div style={{minHeight:"100vh",background:DK2,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 16px",fontFamily:BF}}>
+      <img src={LOGO_URL} alt="Feed a Friend" style={{height:70,marginBottom:6}}/>
+      <p style={{fontSize:11,color:MD,letterSpacing:2,textTransform:"uppercase",marginBottom:20}}>Community Fridges Admin</p>
+      <div style={{background:"#fff",borderRadius:20,padding:"28px 22px",width:"100%",maxWidth:360}}>
+        <h2 style={{fontFamily:"'League Spartan',sans-serif",fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK2,marginBottom:4}}>Sign In</h2>
+        <p style={{color:MT,fontSize:13,marginBottom:20}}>Admin access only.</p>
+        {!auth.session ? (
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <input value={auth.email} onChange={e=>auth.setEmail(e.target.value)} placeholder="you@email.com" style={{width:"100%",padding:"12px 14px",border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
+            <input type="password" value={auth.password} onChange={e=>auth.setPassword(e.target.value)} placeholder="••••••••" style={{width:"100%",padding:"12px 14px",border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
+            {auth.loginErr && <p style={{color:"#DC2626",fontSize:13,fontWeight:600,margin:0}}>{auth.loginErr}</p>}
+            <button onClick={auth.login} style={{background:MD,color:DK2,border:"none",borderRadius:12,padding:14,fontSize:15,fontWeight:700,cursor:"pointer"}}>Sign In →</button>
+          </div>
+        ) : <p style={{color:"#DC2626",fontSize:13,fontWeight:600}}>Signed in, but this account isn't an admin.</p>}
+      </div>
     </div>
   );
 }
@@ -305,7 +312,7 @@ function App(){
   const [tab,setTab]=React.useState("fridges");
 
   if(auth.session===undefined || auth.isAdmin===null){
-    return <div style={{padding:60,textAlign:"center",color:MT}}>Loading…</div>;
+    return <div style={{minHeight:"100vh",background:DK2,display:"flex",alignItems:"center",justifyContent:"center",color:"#BBF7D0",fontFamily:BF}}>Loading…</div>;
   }
   if(!auth.session || !auth.isAdmin){
     return <LoginGate auth={auth}/>;
@@ -313,7 +320,7 @@ function App(){
 
   return (
     <div style={{maxWidth:700,margin:"0 auto",padding:"32px 24px 64px"}}>
-      <h1 className="spartan" style={{fontSize:28,color:DK}}>Fridges Admin</h1>
+      <h1 className="spartan" style={{fontSize:28,color:DK}}>Community Fridges Admin</h1>
 
       <div style={{display:"flex",gap:8,marginTop:20}}>
         {[["fridges","Fridges"],["wishlist","Wishlist"]].map(([k,label])=>(
