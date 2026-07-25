@@ -239,7 +239,7 @@ function App(){
 
         {session && profile && (
           <div style={{marginTop:20,background:GR_LT,borderRadius:18,padding:14,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div style={{fontFamily:BF,fontSize:13,color:DK}}>🧚 Logging as <b>{profile.first_name||"you"}</b></div>
+            <div style={{fontFamily:BF,fontSize:13,color:DK}}>🧚 Logging as <b>{profile.username||profile.first_name||"you"}</b></div>
             <button onClick={()=>setAsGuest(!asGuest)} style={{background:"none",border:"none",color:MT,fontSize:12,fontFamily:BF,textDecoration:"underline",cursor:"pointer"}}>
               {asGuest ? "Log in with account instead" : "Log anonymously instead"}
             </button>

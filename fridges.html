@@ -91,6 +91,8 @@ function App(){
   const [loading,setLoading]=React.useState(true);
   const [zones,setZones]=React.useState([]);
   const [selectedZone,setSelectedZone]=React.useState("");
+  const [session,setSession]=React.useState(undefined);
+  const [profile,setProfile]=React.useState(null);
   const [userLoc,setUserLoc]=React.useState(null);
   const [locStatus,setLocStatus]=React.useState("idle");
   const [showAllZones,setShowAllZones]=React.useState(false);
@@ -99,13 +101,22 @@ function App(){
   const t = TXT[lang];
   const isAr = lang === "ar";
 
-  React.useEffect(()=>{ load(); },[]);
+  React.useEffect(()=>{
+    load();
+    sb.auth.getSession().then(({data})=>{
+      setSession(data.session||null);
+      if(data.session){
+        sb.from("profiles").select("username,first_name,photo_url").eq("id",data.session.user.id).single()
+          .then(({data:p})=>setProfile(p||null));
+      }
+    });
+  },[]);
 
   async function load(){
     setLoading(true);
     const [{data:fr},{data:act},{count:liveRefills},{data:stats}] = await Promise.all([
       sb.from("fridges").select("*").order("zone_name"),
-      sb.from("fridge_activity").select("*, fridges(code,name_en,zone_name,photo_url)").in("activity_type",["refill","cleaning"]).order("created_at",{ascending:false}).limit(8),
+      sb.from("fridge_activity").select("*, fridges(code,name_en,zone_name,photo_url), profiles(username,first_name)").in("activity_type",["refill","cleaning"]).order("created_at",{ascending:false}).limit(8),
       sb.from("fridge_activity").select("id",{count:"exact",head:true}).eq("activity_type","refill"),
       sb.from("site_stats").select("legacy_refill_count").eq("id",1).single()
     ]);
@@ -151,8 +162,18 @@ function App(){
 
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <img src={LOGO} style={{height:32}}/>
-        <div style={{display:"flex",alignItems:"center",gap:14}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
           <button onClick={()=>setLang(isAr?"en":"ar")} style={{border:`1.5px solid ${DK}`,color:DK,background:"#fff",borderRadius:16,padding:"5px 12px",fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:isAr?BF:BF}}>{isAr?"English":"عربي"}</button>
+          {session ? (
+            <a href="fairy-dashboard.html" style={{display:"flex",alignItems:"center",gap:6,textDecoration:"none"}}>
+              <div style={{width:24,height:24,borderRadius:"50%",overflow:"hidden",background:"#DCFCE7",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                {profile?.photo_url ? <img src={profile.photo_url} style={{width:"100%",height:"100%",objectFit:"cover"}}/> : <span style={{fontSize:12}}>🧚</span>}
+              </div>
+              <span style={{fontSize:13,color:DK,fontWeight:700}}>{profile?.username || profile?.first_name || "Fairy"}</span>
+            </a>
+          ) : (
+            <a href="fairy-dashboard.html" style={{fontSize:13,color:DK,fontWeight:700,textDecoration:"none"}}>Sign in</a>
+          )}
           <a href="index.html" style={{fontSize:14,color:DK,textDecoration:"none",fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke={DK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" stroke={DK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
             {t.home}
@@ -234,7 +255,8 @@ function App(){
               </div>
               <div style={{fontWeight:600,fontSize:12,marginTop:8,color:"#374151",fontFamily:BF}}>{isAr && a.fridges?.name_ar ? a.fridges.name_ar : a.fridges?.name_en}</div>
               <div style={{fontSize:10.5,color:MT2,marginTop:2}}>{a.fridges?.code} · {a.activity_type==='cleaning'?t.cleaned:t.refilled}</div>
-              <div style={{fontSize:10.5,fontWeight:700,color:DK,marginTop:2}}>{timeAgo(a.created_at, isAr)}</div>
+              <div style={{fontSize:10.5,color:DK,fontWeight:600,marginTop:2}}>🧚 {a.profiles?.username || a.profiles?.first_name || a.guest_name || "Anonymous"}</div>
+              <div style={{fontSize:10.5,fontWeight:700,color:MT2,marginTop:2}}>{timeAgo(a.created_at, isAr)}</div>
             </div>
           ))}
         </div>
