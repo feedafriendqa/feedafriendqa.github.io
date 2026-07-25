@@ -45,6 +45,9 @@ function App(){
   const [fridges,setFridges]=React.useState([]);
   const [localIds,setLocalIds]=React.useState(new Set());
   const [routeIds,setRouteIds]=React.useState(new Set());
+  const [routeSearch,setRouteSearch]=React.useState("");
+  const [surpriseCount,setSurpriseCount]=React.useState(5);
+  const [surpriseDuration,setSurpriseDuration]=React.useState("60");
   const [wishlist,setWishlist]=React.useState([]);
   const [loading,setLoading]=React.useState(true);
   const [search,setSearch]=React.useState("");
@@ -72,7 +75,7 @@ function App(){
   async function load(uid){
     setLoading(true);
     const [{data:fr},{data:local},{data:prof}] = await Promise.all([
-      sb.from("fridges").select("id,code,name_en,zone_name,zone_number,lat,lng").order("zone_name"),
+      sb.from("fridges").select("id,code,name_en,zone_name,zone_number,lat,lng,status,last_refill_at").order("zone_name"),
       sb.from("fairy_local_fridges").select("fridge_id").eq("volunteer_id",uid),
       sb.from("profiles").select("*").eq("id",uid).single()
     ]);
@@ -165,9 +168,9 @@ function App(){
           <div style={{position:"absolute",bottom:-2,right:-2,background:DK,color:"#fff",borderRadius:"50%",width:18,height:18,fontSize:10,display:"flex",alignItems:"center",justifyContent:"center"}}>✎</div>
         </label>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{display:"flex",gap:6}}>
-            <input value={username} onChange={e=>setUsername(e.target.value)} placeholder="Choose a username" style={{flex:1,padding:"8px 10px",border:"1px solid #BBF7D0",borderRadius:8,fontSize:13}}/>
-            <button onClick={saveUsername} style={{background:DK,color:"#fff",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Save</button>
+          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            <input value={username} onChange={e=>setUsername(e.target.value)} placeholder="Choose a username" style={{flex:1,height:38,padding:"0 12px",border:"1px solid #BBF7D0",borderRadius:19,fontSize:13,boxSizing:"border-box"}}/>
+            <button onClick={saveUsername} style={{flexShrink:0,height:38,background:DK,color:"#fff",border:"none",borderRadius:19,padding:"0 18px",fontSize:12.5,fontWeight:700,cursor:"pointer"}}>Save</button>
           </div>
           <div style={{fontSize:11,color:usernameMsg==="Saved ✓"?DK:"#DC2626",marginTop:4,minHeight:14}}>{usernameMsg}{photoUploading?"Uploading photo…":""}</div>
         </div>
@@ -201,10 +204,6 @@ function App(){
                 <div style={{fontSize:13,fontWeight:600}}>{f.name_en} <span style={{color:MT,fontWeight:400}}>· {f.code}</span></div>
                 <div style={{fontSize:11,color:MT}}>{f.zone_name}</div>
               </div>
-              <button onClick={()=>{const n=new Set(routeIds); n.has(f.id)?n.delete(f.id):n.add(f.id); setRouteIds(n);}} style={{
-                flexShrink:0,border:"none",borderRadius:8,width:32,height:32,fontSize:14,cursor:"pointer",
-                background: routeIds.has(f.id) ? DK : "#fff"
-              }}>🗺️</button>
               <button onClick={()=>toggleLocal(f.id)} style={{flexShrink:0,border:"none",background:"transparent",color:"#DC2626",fontSize:16,cursor:"pointer",padding:"4px 6px"}}>✕</button>
             </div>
           ))}
@@ -228,17 +227,107 @@ function App(){
         )}
       </div>
 
-      {routeIds.size>0 && (() => {
-        const stops = fridges.filter(f=>routeIds.has(f.id) && f.lat && f.lng);
-        if(stops.length===0) return null;
-        const dest = stops[stops.length-1];
-        const waypoints = stops.slice(0,-1).map(f=>`${f.lat},${f.lng}`).join("|");
-        const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}${waypoints?`&waypoints=${waypoints}`:""}&travelmode=driving`;
+      <h2 style={{fontSize:14,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:36}}>Plan My Route</h2>
+      <div style={{color:MT,fontSize:12,marginTop:2,marginBottom:10}}>Search any fridge — doesn't have to be one of yours.</div>
+
+      {(() => {
+        const stops = fridges.filter(f=>routeIds.has(f.id));
+        const routeSearchResults = routeSearch ? fridges.filter(f =>
+          !routeIds.has(f.id) && (
+            f.name_en.toLowerCase().includes(routeSearch.toLowerCase()) ||
+            f.zone_name.toLowerCase().includes(routeSearch.toLowerCase()) ||
+            f.code.toLowerCase().includes(routeSearch.toLowerCase())
+          )
+        ).slice(0,8) : [];
+
+        function addToRoute(id){ const n=new Set(routeIds); n.add(id); setRouteIds(n); }
+        function removeFromRoute(id){ const n=new Set(routeIds); n.delete(id); setRouteIds(n); }
+
+        function surpriseMe(){
+          const perStop = surpriseDuration==="30" ? 12 : surpriseDuration==="60" ? 8 : 6; // rough minutes/stop incl. driving
+          const maxByDuration = Math.max(2, Math.round(parseInt(surpriseDuration,10)/perStop));
+          const n = Math.min(surpriseCount, maxByDuration);
+          const candidates = fridges
+            .filter(f=>f.status==='active' && f.lat && f.lng)
+            .sort((a,b)=>{
+              const at=a.last_refill_at?new Date(a.last_refill_at).getTime():0;
+              const bt=b.last_refill_at?new Date(b.last_refill_at).getTime():0;
+              return at-bt;
+            })
+            .slice(0,n);
+          setRouteIds(new Set(candidates.map(f=>f.id)));
+        }
+
         return (
-          <div style={{position:"sticky",bottom:16,marginTop:20,background:"#fff",border:`2px solid ${DK}`,borderRadius:14,padding:14,boxShadow:"0 4px 14px rgba(0,0,0,0.12)"}}>
-            <div style={{fontSize:12.5,fontWeight:700,color:DK}}>🗺️ Route: {stops.length} stop{stops.length!==1?"s":""}</div>
-            <div style={{fontSize:11,color:MT,marginTop:2}}>Starts from your current location, visits each stop in order.</div>
-            <a href={routeUrl} target="_blank" rel="noreferrer" style={{display:"block",textAlign:"center",marginTop:10,background:DK,color:"#fff",padding:"10px",borderRadius:10,fontWeight:700,fontSize:13,textDecoration:"none"}}>Open route in Google Maps</a>
+          <div>
+            {stops.length>0 && (
+              <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
+                {stops.map(f=>(
+                  <div key={f.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:10}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:600}}>{f.name_en} <span style={{color:MT,fontWeight:400}}>· {f.code}</span></div>
+                      <div style={{fontSize:11,color:MT}}>{f.zone_name}</div>
+                    </div>
+                    <button onClick={()=>removeFromRoute(f.id)} style={{flexShrink:0,border:"none",background:"transparent",color:"#DC2626",fontSize:16,cursor:"pointer",padding:"4px 6px"}}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{position:"relative"}}>
+              <input value={routeSearch} onChange={e=>setRouteSearch(e.target.value)} placeholder="Type any fridge name or zone…" style={{width:"100%",padding:"12px 14px",border:"1px solid #ddd",borderRadius:10,fontSize:13.5}}/>
+              {routeSearchResults.length>0 && (
+                <div style={{marginTop:6,border:"1px solid #eee",borderRadius:10,overflow:"hidden"}}>
+                  {routeSearchResults.map(f=>(
+                    <div key={f.id} onClick={()=>{addToRoute(f.id); setRouteSearch("");}} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",background:"#fff",borderBottom:"1px solid #f3f3f3",cursor:"pointer"}}>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:600}}>{f.name_en} <span style={{color:MT,fontWeight:400}}>· {f.code}</span></div>
+                        <div style={{fontSize:11,color:MT}}>{f.zone_name}</div>
+                      </div>
+                      <span style={{color:DK,fontWeight:700,fontSize:12}}>+ Add</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{marginTop:20,background:"#FEF9EC",border:"1px solid #FDE9B8",borderRadius:14,padding:16}}>
+              <div style={{fontWeight:700,fontSize:14,color:"#92600C"}}>✨ Surprise me</div>
+              <div style={{fontSize:11.5,color:"#92600C",marginTop:3,lineHeight:1.5}}>Picks fridges that need attention most — longest since their last refill.</div>
+              <div style={{display:"flex",gap:10,marginTop:12}}>
+                <div style={{flex:1}}>
+                  <label style={{fontSize:11,fontWeight:700,color:"#92600C"}}># of fridges</label>
+                  <select value={surpriseCount} onChange={e=>setSurpriseCount(parseInt(e.target.value,10))} style={{width:"100%",marginTop:4,padding:"9px 10px",borderRadius:8,border:"1px solid #FDE9B8",fontSize:13}}>
+                    {[2,3,4,5,6,8,10].map(n=><option key={n} value={n}>{n} fridges</option>)}
+                  </select>
+                </div>
+                <div style={{flex:1}}>
+                  <label style={{fontSize:11,fontWeight:700,color:"#92600C"}}>Journey length</label>
+                  <select value={surpriseDuration} onChange={e=>setSurpriseDuration(e.target.value)} style={{width:"100%",marginTop:4,padding:"9px 10px",borderRadius:8,border:"1px solid #FDE9B8",fontSize:13}}>
+                    <option value="30">~30 min</option>
+                    <option value="60">~1 hour</option>
+                    <option value="120">~2 hours</option>
+                  </select>
+                </div>
+              </div>
+              <button onClick={surpriseMe} style={{width:"100%",marginTop:12,background:"#D97706",color:"#fff",border:"none",borderRadius:10,padding:11,fontWeight:700,fontSize:13,cursor:"pointer"}}>✨ Surprise me</button>
+              <div style={{fontSize:10.5,color:"#92600C",marginTop:6,opacity:0.8}}>Rough estimate only — doesn't account for real traffic or driving time between stops.</div>
+            </div>
+
+            {stops.length>0 && (() => {
+              const withCoords = stops.filter(f=>f.lat && f.lng);
+              if(withCoords.length===0) return null;
+              const dest = withCoords[withCoords.length-1];
+              const waypoints = withCoords.slice(0,-1).map(f=>`${f.lat},${f.lng}`).join("|");
+              const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}${waypoints?`&waypoints=${waypoints}`:""}&travelmode=driving`;
+              return (
+                <div style={{position:"sticky",bottom:16,marginTop:20,background:"#fff",border:`2px solid ${DK}`,borderRadius:14,padding:14,boxShadow:"0 4px 14px rgba(0,0,0,0.12)"}}>
+                  <div style={{fontSize:12.5,fontWeight:700,color:DK}}>Route: {withCoords.length} stop{withCoords.length!==1?"s":""}</div>
+                  <div style={{fontSize:11,color:MT,marginTop:2}}>Starts from your current location, visits each stop in order.</div>
+                  <a href={routeUrl} target="_blank" rel="noreferrer" style={{display:"block",textAlign:"center",marginTop:10,background:DK,color:"#fff",padding:"10px",borderRadius:10,fontWeight:700,fontSize:13,textDecoration:"none"}}>Open route in Google Maps</a>
+                </div>
+              );
+            })()}
           </div>
         );
       })()}
