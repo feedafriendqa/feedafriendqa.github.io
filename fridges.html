@@ -3,19 +3,14 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<meta name="theme-color" content="#FBF6EC"/>
-<title>Fridge Locator — Feed a Friend</title>
+<meta name="theme-color" content="#FFFFFF"/>
+<title>Find a Fridge — Feed a Friend</title>
 <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Poppins,sans-serif;background:#FBF6EC;color:#0A3D1F}
-  .display{font-family:'League Spartan',sans-serif;font-weight:900}
-  ::selection{background:#FCE0C2}
-</style>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Poppins,sans-serif;background:#fff;color:#15803D}.spartan{font-family:'League Spartan',sans-serif;font-weight:900}</style>
 </head>
 <body>
 <div id="root"></div>
@@ -25,44 +20,11 @@ const sb = supabase.createClient(
   "https://xbxagukdvgyaoqvbqoic.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"
 );
-const LOGO = "https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/avatars/Faflogowhite.png";
-const HERO_PHOTO = "https://www.fafconnect.org/fridges_photos/fridge_6a339c37a04f16.16713712_WhatsApp_Image_2026-04-05_at_4.36.51_PM.jpeg";
-
-const CREAM = "#FBF6EC";
-const DK = "#0A3D1F";
-const OR = "#EE8B3E";
-const OR_LT = "#FCE7D2";
-const OR_DK = "#B5591A";
-const GR = "#22C55E";
-const MT = "#8A7F6C";
-const RD = "#DC2626";
-const RDBG = "#FBE3E1";
-const DF = "'League Spartan',sans-serif";
-const BF = "Poppins,sans-serif";
-
-function haversineKm(lat1,lng1,lat2,lng2){
-  if([lat1,lng1,lat2,lng2].some(v=>v==null||isNaN(v))) return null;
-  const R=6371, toRad=d=>d*Math.PI/180;
-  const dLat=toRad(lat2-lat1), dLng=toRad(lng2-lng1);
-  const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
-const STATUS_LABEL = {
-  active:{label:"Active", bg:"#E8F5E9", fg:DK},
-  inactive:{label:"Inactive", bg:"#F1ECE0", fg:MT},
-  moved:{label:"Moved — confirm pin", bg:OR_LT, fg:OR_DK},
-  broken:{label:"Reported broken", bg:RDBG, fg:RD},
-  closed:{label:"Closed", bg:"#F1ECE0", fg:MT},
-};
-
-function StatusPill({status}){
-  const s = STATUS_LABEL[status] || STATUS_LABEL.active;
-  return <span style={{background:s.bg,color:s.fg,fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:20,fontFamily:BF}}>{s.label}</span>;
-}
+const PLACEHOLDER = "https://www.fafconnect.org/fridges_photos/fridge_6a339c37a04f16.16713712_WhatsApp_Image_2026-04-05_at_4.36.51_PM.jpeg";
+const DK = "#15803D", MT = "#6B7280", MT2 = "#9CA3AF", BF = "Poppins,sans-serif", DF = "'League Spartan',sans-serif";
 
 function timeAgo(iso){
-  if(!iso) return "No refills logged yet";
+  if(!iso) return "—";
   const d = new Date(iso), now = new Date();
   const mins = Math.floor((now-d)/60000);
   if(mins<60) return mins+"m ago";
@@ -73,61 +35,14 @@ function timeAgo(iso){
   return d.toLocaleDateString();
 }
 
-function FridgeCard({f, dist, onOpen}){
-  return (
-    <div onClick={()=>onOpen(f)} style={{
-      display:"flex",gap:14,background:"#fff",borderRadius:20,padding:14,cursor:"pointer",
-      border:"1px solid #F1E7D8"
-    }}>
-      <img src={f.photo_url||HERO_PHOTO} onError={e=>e.target.src=HERO_PHOTO} style={{width:72,height:72,borderRadius:16,objectFit:"cover",flexShrink:0,background:OR_LT}}/>
-      <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",justifyContent:"center"}}>
-        <div style={{fontWeight:700,fontSize:15,fontFamily:BF,color:DK}}>{f.name_en} <span style={{color:MT,fontWeight:500}}>({f.code})</span></div>
-        <div style={{fontSize:12.5,color:MT,marginTop:3}}>📍 {f.zone_name}{dist!=null?` · ${dist.toFixed(1)} km away`:""}</div>
-        <div style={{display:"flex",gap:8,alignItems:"center",marginTop:7,flexWrap:"wrap"}}>
-          <StatusPill status={f.status}/>
-          <span style={{fontSize:11,color:MT}}>{timeAgo(f.last_refill_at)}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FridgeDetail({f, onClose}){
-  const mapUrl = f.map_link || (f.lat && f.lng ? `https://www.google.com/maps?q=${f.lat},${f.lng}` : null);
-  return (
-    <div style={{position:"fixed",inset:0,background:"rgba(10,61,31,0.45)",zIndex:50,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}>
-      <div onClick={e=>e.stopPropagation()} style={{background:CREAM,borderRadius:"28px 28px 0 0",maxWidth:480,width:"100%",maxHeight:"88vh",overflowY:"auto",padding:24}}>
-        <div style={{width:36,height:4,background:"#E5DCC8",borderRadius:4,margin:"0 auto 18px"}}/>
-        <img src={f.photo_url||HERO_PHOTO} onError={e=>e.target.src=HERO_PHOTO} style={{width:"100%",height:190,objectFit:"cover",borderRadius:20,background:OR_LT}}/>
-        <div style={{marginTop:16,display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-          <div>
-            <div className="display" style={{fontSize:24,color:DK}}>{f.name_en}</div>
-            <div style={{fontSize:13,color:MT,fontFamily:BF,marginTop:2}}>Code {f.code} · {f.zone_name} (Zone {f.zone_number})</div>
-          </div>
-          <StatusPill status={f.status}/>
-        </div>
-        <div style={{fontSize:12.5,color:MT,fontFamily:BF,marginTop:12}}>Last refill: {timeAgo(f.last_refill_at)}</div>
-        {f.status==='moved' && <div style={{marginTop:12,background:OR_LT,color:OR_DK,fontSize:12.5,fontFamily:BF,padding:"10px 14px",borderRadius:14}}>⚠️ This fridge has moved recently — confirm the pin before heading out.</div>}
-        {f.status==='broken' && <div style={{marginTop:12,background:RDBG,color:RD,fontSize:12.5,fontFamily:BF,padding:"10px 14px",borderRadius:14}}>⚠️ Reported not working. A fairy has been notified.</div>}
-        <div style={{display:"flex",gap:10,marginTop:20}}>
-          {mapUrl && <a href={mapUrl} target="_blank" rel="noreferrer" style={{flex:1,textAlign:"center",background:"#fff",border:`1.5px solid ${DK}`,color:DK,padding:"13px",borderRadius:16,fontWeight:700,fontFamily:BF,fontSize:14,textDecoration:"none"}}>📍 Get directions</a>}
-          <a href={`fridge-log.html?fridge=${f.code}`} style={{flex:1,textAlign:"center",background:GR,color:"#fff",padding:"13px",borderRadius:16,fontWeight:700,fontFamily:BF,fontSize:14,textDecoration:"none"}}>🧚 Log a refill</a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function App(){
   const [fridges,setFridges]=React.useState([]);
   const [activity,setActivity]=React.useState([]);
   const [loading,setLoading]=React.useState(true);
   const [zones,setZones]=React.useState([]);
   const [selectedZone,setSelectedZone]=React.useState("");
-  const [userLoc,setUserLoc]=React.useState(null);
   const [locStatus,setLocStatus]=React.useState("idle");
-  const [openFridge,setOpenFridge]=React.useState(null);
-  const [tab,setTab]=React.useState("locate");
+  const [showAllZones,setShowAllZones]=React.useState(false);
 
   React.useEffect(()=>{ load(); },[]);
 
@@ -135,131 +50,119 @@ function App(){
     setLoading(true);
     const [{data:fr},{data:act}] = await Promise.all([
       sb.from("fridges").select("*").order("zone_name"),
-      sb.from("fridge_activity").select("*, fridges(code,name_en,zone_name)").eq("activity_type","refill").order("created_at",{ascending:false}).limit(15)
+      sb.from("fridge_activity").select("*, fridges(code,name_en,zone_name)").in("activity_type",["refill","cleaning"]).order("created_at",{ascending:false}).limit(6)
     ]);
     setFridges(fr||[]);
     setActivity(act||[]);
     const zmap = {};
     (fr||[]).forEach(f=>{ zmap[f.zone_name]=(zmap[f.zone_name]||0)+1; });
-    setZones(Object.entries(zmap).sort((a,b)=>a[0].localeCompare(b[0])));
+    setZones(Object.entries(zmap).sort((a,b)=>b[1]-a[1]));
     setLoading(false);
   }
 
   function detect(){
     setLocStatus("locating");
     if(!navigator.geolocation){ setLocStatus("error"); return; }
-    navigator.geolocation.getCurrentPosition(
-      pos=>{ setUserLoc({lat:pos.coords.latitude,lng:pos.coords.longitude}); setLocStatus("done"); },
-      ()=>setLocStatus("error"),
-      {timeout:8000}
-    );
+    navigator.geolocation.getCurrentPosition(()=>setLocStatus("done"), ()=>setLocStatus("error"), {timeout:8000});
   }
 
-  const withDist = fridges.map(f=>({...f, _dist: userLoc ? haversineKm(userLoc.lat,userLoc.lng,f.lat,f.lng) : null}));
-  let shown = withDist.filter(f=>f.status!=='closed');
-  if(selectedZone) shown = shown.filter(f=>f.zone_name===selectedZone);
-  if(userLoc) shown = [...shown].sort((a,b)=>(a._dist??1e9)-(b._dist??1e9));
-
-  const needy = [...withDist].filter(f=>f.status==='active').sort((a,b)=>{
+  const needy = [...fridges].filter(f=>f.status==='active').sort((a,b)=>{
     const at=a.last_refill_at?new Date(a.last_refill_at).getTime():0;
     const bt=b.last_refill_at?new Date(b.last_refill_at).getTime():0;
     return at-bt;
-  }).slice(0,5);
+  }).slice(0,8);
+
+  const visibleZones = showAllZones ? zones : zones.slice(0,5);
 
   return (
-    <div style={{minHeight:"100vh",background:CREAM,paddingBottom:50}}>
+    <div style={{maxWidth:640,margin:"0 auto",padding:"32px 24px 64px"}}>
 
-      <div style={{padding:"28px 20px 0",maxWidth:560,margin:"0 auto"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <img src={LOGO} style={{height:30,filter:"invert(1) sepia(1) saturate(0) brightness(0.2)"}}/>
-          <a href="index.html" style={{fontSize:12,color:DK,fontFamily:BF,fontWeight:600,textDecoration:"none",opacity:0.7}}>🏠 Home</a>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{width:32,height:32,borderRadius:8,background:DK,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>🧺</div>
+          <span style={{fontFamily:DF,fontWeight:800,fontSize:13,color:DK,letterSpacing:0.3}}>TOGETHER FOR GOOD</span>
         </div>
+        <a href="index.html" style={{fontSize:14,color:DK,textDecoration:"none",fontWeight:700,display:"flex",alignItems:"center",gap:6}}>🏠 Home</a>
+      </div>
 
-        <div style={{marginTop:26,borderRadius:28,overflow:"hidden",position:"relative",height:170}}>
-          <img src={HERO_PHOTO} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-          <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,rgba(10,61,31,0) 40%,rgba(10,61,31,0.55) 100%)"}}/>
-          <div style={{position:"absolute",bottom:16,left:20,right:20,color:"#fff"}}>
-            <div className="display" style={{fontSize:22}}>Take what you need.</div>
-            <div className="display" style={{fontSize:22,color:"#FCE7D2"}}>Share what you can.</div>
-          </div>
-        </div>
-
-        <div style={{marginTop:18,fontSize:13.5,color:MT,fontFamily:BF,lineHeight:1.6}}>
-          Our network of <b style={{color:DK}}>{fridges.length} community fridges</b> across Qatar offers free food to anyone who needs it — no questions asked.
+      <div style={{display:"flex",gap:16,alignItems:"center",marginTop:32}}>
+        <img src={PLACEHOLDER} style={{width:"42%",height:150,objectFit:"cover",borderRadius:20,flexShrink:0}}/>
+        <div style={{width:"58%",minWidth:0}}>
+          <h1 className="spartan" style={{fontSize:"clamp(28px,9vw,48px)",lineHeight:1.08,color:DK}}>Find a<br/>Fridge</h1>
+          <div style={{color:MT,fontSize:14,marginTop:16}}>{fridges.length||101} community fridges across Qatar.</div>
+          <button onClick={detect} style={{width:"100%",marginTop:24,background:DK,color:"#fff",border:"none",borderRadius:30,padding:16,fontWeight:700,fontSize:15,fontFamily:BF,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+            📍 {locStatus==="locating"?"Locating…":locStatus==="done"?"Location set ✓":"Detect my location"}
+          </button>
+          <div style={{textAlign:"center",color:MT2,fontSize:12,margin:"12px 0"}}>or</div>
+          <select value={selectedZone} onChange={e=>setSelectedZone(e.target.value)} style={{width:"100%",border:`2px solid ${DK}`,color:DK,borderRadius:30,padding:16,fontWeight:700,fontSize:15,fontFamily:BF,textAlign:"center",background:"#fff",cursor:"pointer"}}>
+            <option value="">Select Location ▾</option>
+            {zones.map(([name,count])=><option key={name} value={name}>{name} ({count})</option>)}
+          </select>
+          {locStatus==="error" && <div style={{color:"#B5591A",fontSize:11.5,marginTop:8}}>Couldn't get your location — try Select Location instead.</div>}
         </div>
       </div>
 
-      <div style={{display:"flex",gap:8,padding:"22px 20px 0",maxWidth:560,margin:"0 auto"}}>
-        {[["locate","Locate"],["needy","Needs refill"],["recent","Recent"]].map(([k,label])=>(
-          <button key={k} onClick={()=>setTab(k)} style={{
-            flex:1,padding:"11px 8px",borderRadius:14,border: tab===k?"none":"1.5px solid #E5DCC8",cursor:"pointer",
-            fontFamily:BF,fontWeight:700,fontSize:12.5,
-            background: tab===k ? OR : "transparent", color: tab===k ? "#fff" : DK,
-          }}>{label}</button>
+      <hr style={{border:"none",borderTop:"1px solid #E5E7EB",margin:"44px 0 20px"}}/>
+
+      <div>
+        <div style={{fontSize:13,letterSpacing:0.4,textTransform:"uppercase",color:MT,fontWeight:700}}>Needs You Most</div>
+        <div style={{color:MT2,fontSize:12,marginTop:4,marginBottom:16}}>Longest since last refill — swipe for more →</div>
+        <div style={{display:"flex",gap:16,overflowX:"auto",paddingBottom:8,margin:"0 -24px",padding:"0 24px 8px"}}>
+          {loading ? [1,2,3,4].map(i=><div key={i} style={{flexShrink:0,width:148,height:180,background:"#F3F3F3",borderRadius:16}}/>) :
+            needy.map((f,i)=>(
+            <div key={f.id} style={{flexShrink:0,width:148}}>
+              <div style={{position:"relative",width:148,height:110,borderRadius:16,overflow:"hidden",background:"#F3F3F3"}}>
+                <span style={{position:"absolute",top:8,left:8,width:22,height:22,borderRadius:"50%",background:"#fff",color:DK,fontFamily:DF,fontWeight:900,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.15)",zIndex:2}}>{i+1}</span>
+                <img src={f.photo_url||PLACEHOLDER} onError={e=>e.target.src=PLACEHOLDER} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+              </div>
+              <div style={{fontWeight:600,fontSize:13,marginTop:9,color:"#374151"}}>{f.name_en}</div>
+              <div style={{fontSize:11,color:MT2,marginTop:2}}>{f.code} · {f.zone_name}</div>
+              <div style={{fontSize:11,fontWeight:700,color:DK,marginTop:4}}>{timeAgo(f.last_refill_at)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <hr style={{border:"none",borderTop:"1px solid #E5E7EB",margin:"44px 0 20px"}}/>
+
+      <div>
+        <div style={{fontSize:13,letterSpacing:0.4,textTransform:"uppercase",color:MT,fontWeight:700}}>Recent Activity</div>
+        <div style={{color:MT2,fontSize:12,marginTop:4,marginBottom:12}}>The latest refills and cleanings.</div>
+        {loading ? <div style={{color:MT2,fontSize:14}}>Loading…</div> :
+          activity.length===0 ? <div style={{color:MT2,fontSize:14}}>No activity logged yet.</div> :
+          activity.map(a=>(
+          <div key={a.id} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 0",borderBottom:"1px solid #F0F0F0",fontSize:14}}>
+            <span style={{width:6,height:6,borderRadius:"50%",background:DK,flexShrink:0}}></span>
+            <span style={{color:"#374151"}}>{a.fridges?.name_en} · {a.fridges?.code} — {a.activity_type==='cleaning'?'cleaned':'refilled'}</span>
+            <span style={{marginLeft:"auto",color:MT2,fontSize:12,flexShrink:0}}>{timeAgo(a.created_at)}</span>
+          </div>
         ))}
       </div>
 
-      <div style={{maxWidth:560,margin:"0 auto",padding:"18px 20px"}}>
-        {tab==="locate" && (
-          <>
-            <div style={{display:"flex",gap:8,marginBottom:14}}>
-              <button onClick={detect} style={{flex:1,background:"#fff",border:`1.5px solid ${OR}`,color:OR_DK,borderRadius:14,padding:"11px 12px",fontFamily:BF,fontWeight:700,fontSize:13,cursor:"pointer"}}>
-                📍 {locStatus==="locating"?"Locating…":userLoc?"Location set":"Use my location"}
-              </button>
-              <select value={selectedZone} onChange={e=>setSelectedZone(e.target.value)} style={{flex:1,borderRadius:14,border:"1.5px solid #E5DCC8",padding:"11px 12px",fontFamily:BF,fontSize:13,color:DK,background:"#fff"}}>
-                <option value="">All neighborhoods</option>
-                {zones.map(([name,count])=><option key={name} value={name}>{name} ({count})</option>)}
-              </select>
-            </div>
-            {locStatus==="error" && <div style={{fontSize:12,color:OR_DK,marginBottom:12,fontFamily:BF}}>Couldn't get your location — showing all fridges. Try filtering by neighborhood instead.</div>}
-            {loading ? <Skeleton/> : (
-              <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                {shown.length===0 && <Empty text="No fridges match this filter yet."/>}
-                {shown.map(f=><FridgeCard key={f.id} f={f} dist={f._dist} onOpen={setOpenFridge}/>)}
-              </div>
-            )}
-          </>
-        )}
+      <hr style={{border:"none",borderTop:"1px solid #E5E7EB",margin:"44px 0 20px"}}/>
 
-        {tab==="needy" && (
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div style={{fontFamily:BF,fontSize:13,color:MT,marginBottom:2}}>These fridges have gone longest without a refill — start here if you're heading out.</div>
-            {loading ? <Skeleton/> : needy.map((f,i)=>(
-              <div key={f.id} style={{display:"flex",gap:10,alignItems:"stretch"}}>
-                <div style={{width:26,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:DF,fontWeight:900,fontSize:19,color:OR}}>{i+1}</div>
-                <div style={{flex:1}}><FridgeCard f={f} dist={f._dist} onOpen={setOpenFridge}/></div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {tab==="recent" && (
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {loading ? <Skeleton/> : activity.length===0 ? <Empty text="No refills logged yet."/> : activity.map(a=>(
-              <div key={a.id} style={{display:"flex",gap:12,background:"#fff",borderRadius:16,padding:"12px 16px",border:"1px solid #F1E7D8"}}>
-                <div style={{width:8,height:8,borderRadius:8,background:GR,marginTop:6,flexShrink:0}}/>
-                <div>
-                  <div style={{fontFamily:BF,fontWeight:700,fontSize:13,color:DK}}>{a.fridges?.name_en} <span style={{color:MT,fontWeight:500}}>({a.fridges?.code})</span></div>
-                  <div style={{fontFamily:BF,fontSize:12,color:MT}}>{timeAgo(a.created_at)} · {a.guest_name || "🧚 Fairy"}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      <div>
+        <div style={{fontSize:13,letterSpacing:0.4,textTransform:"uppercase",color:MT,fontWeight:700}}>Explore By Area</div>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:16}}>
+          {visibleZones.map(([name,count])=>(
+            <button key={name} onClick={()=>setSelectedZone(name)} style={{
+              border:`2px solid ${DK}`,borderRadius:24,padding:"9px 18px",fontSize:13.5,fontWeight:600,fontFamily:BF,cursor:"pointer",
+              background: selectedZone===name ? DK : "#fff", color: selectedZone===name ? "#fff" : DK
+            }}>{name}</button>
+          ))}
+          {!showAllZones && zones.length>5 && (
+            <button onClick={()=>setShowAllZones(true)} style={{border:`2px solid ${DK}`,color:DK,background:"#fff",borderRadius:24,padding:"9px 18px",fontSize:13.5,fontWeight:600,fontFamily:BF,cursor:"pointer"}}>+ More</button>
+          )}
+        </div>
       </div>
 
-      {openFridge && <FridgeDetail f={openFridge} onClose={()=>setOpenFridge(null)}/>}
+      <a href="fridge-log.html" style={{display:"block",textAlign:"center",background:DK,color:"#fff",borderRadius:30,padding:16,fontWeight:700,fontSize:15,fontFamily:BF,textDecoration:"none",marginTop:44}}>
+        ♡ Log a refill or cleaning
+      </a>
+
+      <div style={{textAlign:"center",color:MT,fontSize:12.5,marginTop:22}}>Together, we can keep good food moving. 💚</div>
     </div>
   );
-}
-
-function Skeleton(){
-  return <div style={{display:"flex",flexDirection:"column",gap:12}}>
-    {[1,2,3].map(i=><div key={i} style={{height:88,borderRadius:20,background:"#F1E7D8"}}/>)}
-  </div>;
-}
-function Empty({text}){
-  return <div style={{textAlign:"center",padding:"48px 20px",color:"#8A7F6C",fontFamily:"Poppins,sans-serif",fontSize:13}}>{text}</div>;
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
