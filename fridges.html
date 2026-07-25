@@ -31,10 +31,10 @@ const TXT = {
     stat: n => `${n} Community Fridges in Qatar`,
     detect: "Detect my location", located: "Location set ✓", locating: "Locating…",
     or: "or", selectLoc: "Select Location ▾", locError: "Couldn't get your location — try Select Location instead.",
-    needsYou: "Needs You Most", needsSub: "Longest since last refill — swipe for more →",
+    needsYou: "Needs You Most", needsSub: "Longest since last refill.",
     nearbyTitle: "Nearest Fridges", zoneTitle: n => `Fridges in ${n}`,
     getDirections: "Get directions", refillBtn: "Refill", kmAway: km => `${km.toFixed(1)} km away`,
-    recent: "Recent Activity", recentSub: "The latest refills and cleanings.", noActivity: "No activity logged yet.",
+    recent: "Recent Activity", recentSub: "The latest refills and cleanings — swipe for more →", noActivity: "No activity logged yet.",
     fridgesLbl: "Fridges", refillsLbl: "Refills", explore: "Explore By Area", more: "+ More",
     logCta: "Log a refill or cleaning", footer: "Together, we can keep good food moving. 💚",
     home: "Home", refilled: "refilled", cleaned: "cleaned", loading: "Loading…"
@@ -44,26 +44,37 @@ const TXT = {
     stat: n => `${n} ثلاجة مجتمعية في قطر`,
     detect: "حدد موقعي", located: "تم تحديد الموقع ✓", locating: "جارٍ التحديد…",
     or: "أو", selectLoc: "اختر الموقع ▾", locError: "تعذر تحديد موقعك — جرّب اختيار الموقع بدلاً من ذلك.",
-    needsYou: "الأكثر حاجة إليك", needsSub: "الأطول انتظارًا منذ آخر تعبئة — اسحب لرؤية المزيد ←",
+    needsYou: "الأكثر حاجة إليك", needsSub: "الأطول انتظارًا منذ آخر تعبئة.",
     nearbyTitle: "أقرب الثلاجات", zoneTitle: n => `ثلاجات في ${n}`,
-    getDirections: "الاتجاهات", refillBtn: "تعبئة", kmAway: km => `${km.toFixed(1)} كم`,
-    recent: "النشاط الأخير", recentSub: "آخر عمليات التعبئة والتنظيف.", noActivity: "لم يتم تسجيل أي نشاط بعد.",
+    getDirections: "الاتجاهات", refillBtn: "تعبئة", kmAway: km => `${toArabicDigits(km.toFixed(1))} كم`,
+    recent: "النشاط الأخير", recentSub: "آخر عمليات التعبئة والتنظيف — اسحب لرؤية المزيد ←", noActivity: "لم يتم تسجيل أي نشاط بعد.",
     fridgesLbl: "ثلاجات", refillsLbl: "تعبئات", explore: "استكشف حسب المنطقة", more: "+ المزيد",
     logCta: "سجّل تعبئة أو تنظيف", footer: "معًا، يمكننا أن نحافظ على تدفق الطعام الجيد. 💚",
     home: "الرئيسية", refilled: "تمت التعبئة", cleaned: "تم التنظيف", loading: "جارٍ التحميل…"
   }
 };
 
-function timeAgo(iso){
+function toArabicDigits(str){
+  const map = {'0':'٠','1':'١','2':'٢','3':'٣','4':'٤','5':'٥','6':'٦','7':'٧','8':'٨','9':'٩'};
+  return String(str).replace(/[0-9]/g, d=>map[d]);
+}
+
+function timeAgo(iso, isAr){
   if(!iso) return "—";
   const d = new Date(iso), now = new Date();
   const mins = Math.floor((now-d)/60000);
-  if(mins<60) return mins+"m ago";
-  const hrs = Math.floor(mins/60);
-  if(hrs<24) return hrs+"h ago";
-  const days = Math.floor(hrs/24);
-  if(days<30) return days+"d ago";
-  return d.toLocaleDateString();
+  let out;
+  if(mins<60) out = mins+(isAr?" د":"m ago");
+  else {
+    const hrs = Math.floor(mins/60);
+    if(hrs<24) out = hrs+(isAr?" س":"h ago");
+    else {
+      const days = Math.floor(hrs/24);
+      if(days<30) out = days+(isAr?" ي":"d ago");
+      else return d.toLocaleDateString();
+    }
+  }
+  return isAr ? toArabicDigits(out) : out;
 }
 
 function haversineKm(lat1,lng1,lat2,lng2){
@@ -94,7 +105,7 @@ function App(){
     setLoading(true);
     const [{data:fr},{data:act},{count:liveRefills},{data:stats}] = await Promise.all([
       sb.from("fridges").select("*").order("zone_name"),
-      sb.from("fridge_activity").select("*, fridges(code,name_en,zone_name)").in("activity_type",["refill","cleaning"]).order("created_at",{ascending:false}).limit(6),
+      sb.from("fridge_activity").select("*, fridges(code,name_en,zone_name,photo_url)").in("activity_type",["refill","cleaning"]).order("created_at",{ascending:false}).limit(8),
       sb.from("fridge_activity").select("id",{count:"exact",head:true}).eq("activity_type","refill"),
       sb.from("site_stats").select("legacy_refill_count").eq("id",1).single()
     ]);
@@ -160,7 +171,7 @@ function App(){
           <div style={{textAlign:"center",color:MT2,fontSize:12,margin:"12px 0"}}>{t.or}</div>
           <select value={selectedZone} onChange={e=>{setSelectedZone(e.target.value); setUserLoc(null); setLocStatus("idle");}} style={{width:"100%",border:`1.5px solid ${DK}`,color:DK,borderRadius:24,padding:"11px 16px",fontWeight:700,fontSize:13,fontFamily:BF,textAlign:"center",background:"#fff",cursor:"pointer"}}>
             <option value="">{t.selectLoc}</option>
-            {zones.map(([name,count])=><option key={name} value={name}>{name} ({count})</option>)}
+            {zones.map(([name,count])=><option key={name} value={name}>{name} ({isAr?toArabicDigits(count):count})</option>)}
           </select>
           {locStatus==="error" && <div style={{color:"#B5591A",fontSize:11.5,marginTop:8}}>{t.locError}</div>}
         </div>
@@ -182,7 +193,10 @@ function App(){
                     <div style={{fontSize:11.5,color:MT,marginTop:2}}>{f.zone_name}{f._dist!=null?` · ${t.kmAway(f._dist)}`:""}</div>
                     <div style={{display:"flex",gap:8,marginTop:8}}>
                       {mapUrl && <a href={mapUrl} target="_blank" rel="noreferrer" style={{fontSize:11.5,fontWeight:700,color:DK,border:`1.3px solid ${DK}`,borderRadius:8,padding:"5px 10px",textDecoration:"none"}}>📍 {t.getDirections}</a>}
-                      <a href={`fridge-log.html?fridge=${f.code}`} style={{fontSize:11.5,fontWeight:700,color:"#fff",background:DK,borderRadius:8,padding:"5px 10px",textDecoration:"none"}}>🧺 {t.refillBtn}</a>
+                      <a href={`fridge-log.html?fridge=${f.code}`} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11.5,fontWeight:700,color:"#fff",background:DK,borderRadius:8,padding:"5px 10px",textDecoration:"none"}}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 10h16l-1.5 9a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7L4 10Z" stroke="#fff" strokeWidth="2"/></svg>
+                        {t.refillBtn}
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -194,13 +208,13 @@ function App(){
       <div style={{display:"flex",background:DK,borderRadius:12,marginTop:20,overflow:"hidden"}}>
         <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"9px 6px"}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="5" y="2" width="14" height="20" rx="2" stroke="#fff" strokeWidth="1.8"/><line x1="5" y1="9" x2="19" y2="9" stroke="#fff" strokeWidth="1.8"/></svg>
-          <span className="spartan" style={{color:"#fff",fontSize:16}}>{fridges.length||101}</span>
+          <span className="spartan" style={{color:"#fff",fontSize:16}}>{isAr?toArabicDigits(fridges.length||101):(fridges.length||101)}</span>
           <span style={{color:"#BBF7D0",fontSize:11.5,fontWeight:600}}>{t.fridgesLbl}</span>
         </div>
         <div style={{width:1,background:"rgba(255,255,255,0.25)",margin:"8px 0"}}></div>
         <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"9px 6px"}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 10h16l-1.5 9a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7L4 10Z" stroke="#fff" strokeWidth="1.8"/></svg>
-          <span className="spartan" style={{color:"#fff",fontSize:16}}>{refillTotal!=null ? refillTotal.toLocaleString() : "…"}</span>
+          <span className="spartan" style={{color:"#fff",fontSize:16}}>{refillTotal!=null ? (isAr?toArabicDigits(refillTotal.toLocaleString()):refillTotal.toLocaleString()) : "…"}</span>
           <span style={{color:"#BBF7D0",fontSize:11.5,fontWeight:600}}>{t.refillsLbl}</span>
         </div>
       </div>
@@ -208,19 +222,19 @@ function App(){
       <hr style={{border:"none",borderTop:"1px solid #E5E7EB",margin:"22px 0 20px"}}/>
 
       <div>
-        <div style={{fontSize:12,letterSpacing:0.4,textTransform:"uppercase",color:MT,fontWeight:700,fontFamily:BF}}>{t.needsYou}</div>
-        <div style={{color:MT2,fontSize:12,marginTop:4,marginBottom:16}}>{t.needsSub}</div>
+        <div style={{fontSize:12,letterSpacing:0.4,textTransform:"uppercase",color:MT,fontWeight:700,fontFamily:BF}}>{t.recent}</div>
+        <div style={{color:MT2,fontSize:12,marginTop:4,marginBottom:16}}>{t.recentSub}</div>
         <div style={{display:"flex",gap:16,overflowX:"auto",paddingBottom:8,margin:"0 -24px",padding:"0 24px 8px"}}>
-          {loading ? [1,2,3,4].map(i=><div key={i} style={{flexShrink:0,width:148,height:180,background:"#F3F3F3",borderRadius:16}}/>) :
-            needy.map((f,i)=>(
-            <div key={f.id} style={{flexShrink:0,width:148}}>
-              <div style={{position:"relative",width:148,height:110,borderRadius:16,overflow:"hidden",background:"#F3F3F3"}}>
-                <span style={{position:"absolute",top:8,left:8,width:22,height:22,borderRadius:"50%",background:"#fff",color:DK,fontFamily:DF,fontWeight:900,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.15)",zIndex:2}}>{i+1}</span>
-                <img src={f.photo_url||PLACEHOLDER} onError={e=>e.target.src=PLACEHOLDER} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+          {loading ? [1,2,3].map(i=><div key={i} style={{flexShrink:0,width:140,height:150,background:"#F3F3F3",borderRadius:16}}/>) :
+            activity.length===0 ? <div style={{color:MT2,fontSize:14}}>{t.noActivity}</div> :
+            activity.map(a=>(
+            <div key={a.id} style={{flexShrink:0,width:140}}>
+              <div style={{width:140,height:100,borderRadius:16,overflow:"hidden",background:"#F3F3F3"}}>
+                <img src={a.photo_url||a.fridges?.photo_url||PLACEHOLDER} onError={e=>e.target.src=PLACEHOLDER} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
               </div>
-              <div style={{fontWeight:600,fontSize:12.5,marginTop:9,color:"#374151",fontFamily:BF}}>{isAr && f.name_ar ? f.name_ar : f.name_en}</div>
-              <div style={{fontSize:11,color:MT2,marginTop:2}}>{f.code} · {f.zone_name}</div>
-              <div style={{fontSize:11,fontWeight:700,color:DK,marginTop:4}}>{timeAgo(f.last_refill_at)}</div>
+              <div style={{fontWeight:600,fontSize:12,marginTop:8,color:"#374151",fontFamily:BF}}>{isAr && a.fridges?.name_ar ? a.fridges.name_ar : a.fridges?.name_en}</div>
+              <div style={{fontSize:10.5,color:MT2,marginTop:2}}>{a.fridges?.code} · {a.activity_type==='cleaning'?t.cleaned:t.refilled}</div>
+              <div style={{fontSize:10.5,fontWeight:700,color:DK,marginTop:2}}>{timeAgo(a.created_at, isAr)}</div>
             </div>
           ))}
         </div>
@@ -229,17 +243,22 @@ function App(){
       <hr style={{border:"none",borderTop:"1px solid #E5E7EB",margin:"44px 0 20px"}}/>
 
       <div>
-        <div style={{fontSize:12,letterSpacing:0.4,textTransform:"uppercase",color:MT,fontWeight:700,fontFamily:BF}}>{t.recent}</div>
-        <div style={{color:MT2,fontSize:12,marginTop:4,marginBottom:12}}>{t.recentSub}</div>
-        {loading ? <div style={{color:MT2,fontSize:14}}>{t.loading}</div> :
-          activity.length===0 ? <div style={{color:MT2,fontSize:14}}>{t.noActivity}</div> :
-          activity.map(a=>(
-          <div key={a.id} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 0",borderBottom:"1px solid #F0F0F0",fontSize:14}}>
-            <span style={{width:6,height:6,borderRadius:"50%",background:DK,flexShrink:0}}></span>
-            <span style={{color:"#374151"}}>{isAr && a.fridges?.name_ar ? a.fridges.name_ar : a.fridges?.name_en} · {a.fridges?.code} — {a.activity_type==='cleaning'?t.cleaned:t.refilled}</span>
-            <span style={{marginInlineStart:"auto",color:MT2,fontSize:12,flexShrink:0}}>{timeAgo(a.created_at)}</span>
-          </div>
-        ))}
+        <div style={{fontSize:12,letterSpacing:0.4,textTransform:"uppercase",color:MT,fontWeight:700,fontFamily:BF}}>{t.needsYou}</div>
+        <div style={{color:MT2,fontSize:12,marginTop:4,marginBottom:16}}>{t.needsSub}</div>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {loading ? [1,2,3].map(i=><div key={i} style={{height:76,background:"#F3F3F3",borderRadius:14}}/>) :
+            needy.map((f,i)=>(
+            <div key={f.id} style={{display:"flex",gap:12,alignItems:"center",background:"#fff",border:"1px solid #eee",borderRadius:14,padding:10}}>
+              <span style={{flexShrink:0,width:26,height:26,borderRadius:"50%",background:DK,color:"#fff",fontFamily:DF,fontWeight:900,fontSize:13,display:"flex",alignItems:"center",justifyContent:"center"}}>{isAr?toArabicDigits(i+1):i+1}</span>
+              <img src={f.photo_url||PLACEHOLDER} onError={e=>e.target.src=PLACEHOLDER} style={{width:52,height:52,borderRadius:10,objectFit:"cover",flexShrink:0}}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:600,fontSize:13,color:"#374151",fontFamily:BF}}>{isAr && f.name_ar ? f.name_ar : f.name_en}</div>
+                <div style={{fontSize:11,color:MT2,marginTop:1}}>{f.code} · {f.zone_name}</div>
+              </div>
+              <div style={{fontSize:11,fontWeight:700,color:DK,flexShrink:0}}>{timeAgo(f.last_refill_at, isAr)}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <hr style={{border:"none",borderTop:"1px solid #E5E7EB",margin:"44px 0 20px"}}/>
@@ -259,8 +278,9 @@ function App(){
         </div>
       </div>
 
-      <a href="fridge-log.html" style={{display:"block",textAlign:"center",background:DK,color:"#fff",borderRadius:24,padding:"13px 16px",fontWeight:700,fontSize:14,fontFamily:BF,textDecoration:"none",marginTop:36}}>
-        ♡ {t.logCta}
+      <a href="fridge-log.html" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,textAlign:"center",background:DK,color:"#fff",borderRadius:24,padding:"13px 16px",fontWeight:700,fontSize:14,fontFamily:BF,textDecoration:"none",marginTop:36}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 10h16l-1.5 9a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7L4 10Z" stroke="#fff" strokeWidth="2"/></svg>
+        {t.logCta}
       </a>
 
       <div style={{textAlign:"center",color:MT,fontSize:12.5,marginTop:22}}>{t.footer}</div>

@@ -10,6 +10,7 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Poppins,sans-serif;background:#FFFFFF;color:#15803D}
@@ -76,6 +77,33 @@ function App(){
   const [photoFile,setPhotoFile]=React.useState(null);
   const [submitting,setSubmitting]=React.useState(false);
   const [done,setDone]=React.useState(false);
+  const [counterTarget,setCounterTarget]=React.useState(null);
+  const [counterShown,setCounterShown]=React.useState(0);
+
+  React.useEffect(()=>{
+    if(!done) return;
+    (async ()=>{
+      const [{count:liveRefills},{data:stats}] = await Promise.all([
+        sb.from("fridge_activity").select("id",{count:"exact",head:true}).eq("activity_type","refill"),
+        sb.from("site_stats").select("legacy_refill_count").eq("id",1).single()
+      ]);
+      const total = (liveRefills||0) + (stats?.legacy_refill_count||0);
+      setCounterTarget(total);
+      const start = Math.max(total-24,0);
+      let n = start;
+      const step = ()=>{
+        n += Math.max(1,Math.round((total-n)/8));
+        if(n>=total){ setCounterShown(total); return; }
+        setCounterShown(n);
+        requestAnimationFrame(step);
+      };
+      setCounterShown(start);
+      requestAnimationFrame(step);
+      if(window.confetti){
+        window.confetti({particleCount:120,spread:80,origin:{y:0.35},colors:["#15803D","#22C55E","#BBF7D0"]});
+      }
+    })();
+  },[done]);
   const [error,setError]=React.useState("");
 
   React.useEffect(()=>{
@@ -144,15 +172,35 @@ function App(){
   }
 
   if(done){
+    const isGuestVisit = !session || asGuest;
     return (
-      <div style={{minHeight:"100vh",background:CREAM,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
-        <div style={{textAlign:"center",maxWidth:340}}>
-          <div style={{fontSize:56}}>🧚</div>
-          <div className="display" style={{fontSize:24,color:DK,marginTop:12}}>Thank you!</div>
+      <div style={{minHeight:"100vh",background:CREAM,padding:"40px 24px"}}>
+        <div style={{textAlign:"center",maxWidth:360,margin:"0 auto"}}>
+          <img src={LOGO} style={{height:34,margin:"0 auto 18px",display:"block"}}/>
+          <div style={{fontSize:44}}>🧚</div>
+          <div className="display" style={{fontSize:24,color:DK,marginTop:10}}>Thank you!</div>
           <div style={{fontFamily:BF,fontSize:14,color:MT,marginTop:8,lineHeight:1.6}}>
             Your {activityType} at {selectedFridge?.name_en} has been logged. Someone in Qatar eats a little easier tonight because of you.
           </div>
-          <a href="fridges.html" style={{display:"inline-block",marginTop:24,background:GR,color:"#fff",padding:"13px 28px",borderRadius:16,fontWeight:700,fontFamily:BF,fontSize:14,textDecoration:"none"}}>Back to fridges</a>
+
+          <div style={{marginTop:20,background:DK,borderRadius:16,padding:"16px 20px"}}>
+            <div className="display" style={{fontSize:30,color:"#fff"}}>{counterTarget==null?"…":counterShown.toLocaleString()}</div>
+            <div style={{fontFamily:BF,fontSize:11.5,color:"#BBF7D0",fontWeight:600,marginTop:2}}>total refills logged, together</div>
+          </div>
+
+          {isGuestVisit && (
+            <div style={{marginTop:20,background:"#fff",border:"1px solid #E5DCC8",borderRadius:16,padding:18,textAlign:"left"}}>
+              <div style={{fontFamily:BF,fontWeight:700,fontSize:14,color:DK}}>🧚 Not registered yet?</div>
+              <ul style={{fontFamily:BF,fontSize:12.5,color:MT,marginTop:8,paddingLeft:18,lineHeight:1.7}}>
+                <li>See your personal refill count build up over time</li>
+                <li>Mark fridges near you as "local" and get notified when someone nearby needs help</li>
+                <li>Show up on the fairy leaderboard for your zone</li>
+              </ul>
+              <a href="index.html" style={{display:"block",textAlign:"center",marginTop:12,background:DK,color:"#fff",padding:"11px",borderRadius:12,fontWeight:700,fontFamily:BF,fontSize:13,textDecoration:"none"}}>Create a free account</a>
+            </div>
+          )}
+
+          <a href="fridges.html" style={{display:"inline-block",marginTop:20,background:GR,color:"#fff",padding:"13px 28px",borderRadius:16,fontWeight:700,fontFamily:BF,fontSize:14,textDecoration:"none"}}>Back to fridges</a>
         </div>
       </div>
     );
@@ -201,12 +249,20 @@ function App(){
         <div style={{marginTop:18}}>
           <label style={{fontFamily:BF,fontSize:12.5,fontWeight:700,color:DK}}>What did you do?</label>
           <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
-            {[["refill","🧺 Refill"],["cleaning","🧽 Cleaning"],["report_broken","⚠️ Report broken"],["report_moved","📍 Report moved"],["report_closed","🚫 Report closed"]].map(([k,label])=>(
+            {[["refill",null],["cleaning","🧽 Cleaning"],["report_broken","⚠️ Report broken"],["report_moved","📍 Report moved"],["report_closed","🚫 Report closed"]].map(([k,label])=>(
               <button key={k} onClick={()=>setActivityType(k)} style={{
+                display:"flex",alignItems:"center",gap:6,
                 padding:"9px 14px",borderRadius:12,border: activityType===k?"none":"1.5px solid #E5DCC8",cursor:"pointer",
                 fontFamily:BF,fontWeight:700,fontSize:12.5,
-                background: activityType===k ? OR : "#fff", color: activityType===k ? "#fff" : DK,
-              }}>{label}</button>
+                background: activityType===k ? DK : "#fff", color: activityType===k ? "#fff" : DK,
+              }}>
+                {k==="refill" ? (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 10h16l-1.5 9a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7L4 10Z" stroke={activityType===k?"#fff":DK} strokeWidth="2"/></svg>
+                    Refill
+                  </>
+                ) : label}
+              </button>
             ))}
           </div>
         </div>
@@ -222,14 +278,13 @@ function App(){
 
         <div style={{marginTop:8}}>
           <Toggle label="Is the fridge clean?" value={isClean} onChange={setIsClean}/>
-          <Toggle label="Is the fridge working?" value={isWorking} onChange={setIsWorking}/>
         </div>
 
         <div style={{marginTop:18}}>
           <label style={{fontFamily:BF,fontSize:12.5,fontWeight:700,color:DK}}>Add a photo (optional)</label>
           <label style={{
-            display:"block",marginTop:8,border:`1.5px dashed ${OR}`,borderRadius:16,padding:"20px",
-            textAlign:"center",cursor:"pointer",background:OR_LT,color:OR_DK,fontFamily:BF,fontSize:13,fontWeight:600
+            display:"block",marginTop:8,border:`1.5px dashed ${DK}`,borderRadius:16,padding:"20px",
+            textAlign:"center",cursor:"pointer",background:"#F0FDF4",color:DK,fontFamily:BF,fontSize:13,fontWeight:600
           }}>
             {photoFile ? `📷 ${photoFile.name}` : "📷 Tap to choose a photo"}
             <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>setPhotoFile(e.target.files[0])}/>
