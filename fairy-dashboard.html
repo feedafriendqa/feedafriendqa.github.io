@@ -83,6 +83,7 @@ function App(){
   const [username,setUsername]=React.useState("");
   const [notifyEmail,setNotifyEmail]=React.useState(false);
   const [newPassword,setNewPassword]=React.useState(""); const [pwMsg,setPwMsg]=React.useState(""); const [pwSaving,setPwSaving]=React.useState(false); const [showPwForm,setShowPwForm]=React.useState(false);
+  const [editingUsername,setEditingUsername]=React.useState(false);
   const [usernameMsg,setUsernameMsg]=React.useState("");
   const [photoUploading,setPhotoUploading]=React.useState(false);
 
@@ -167,6 +168,7 @@ function App(){
     setFridges(fr||[]);
     setProfile(prof||null);
     setUsername(prof?.username || "");
+    setEditingUsername(!prof?.username);
     setNotifyEmail(prof?.notify_wishlist_email || false);
     setMyStats({refills: refillCount||0, cleanings: cleanCount||0});
     const ids = new Set((local||[]).map(l=>l.fridge_id));
@@ -196,7 +198,7 @@ function App(){
     if(!username.trim()){ setUsernameMsg("Username can't be empty."); return; }
     const {error} = await sb.from("profiles").update({username: username.trim()}).eq("id",session.user.id);
     if(error) setUsernameMsg(error.message.includes("duplicate") ? "That username is taken." : error.message);
-    else setUsernameMsg("Saved ✓");
+    else { setUsernameMsg("Saved ✓"); setEditingUsername(false); }
   }
 
   async function toggleNotifyEmail(){
@@ -333,6 +335,18 @@ function App(){
   return (
     <div style={{maxWidth:500,margin:"0 auto",padding:"32px 24px 64px"}}>
       <Header/>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:14,marginTop:-2}}>
+        <a onClick={()=>setShowPwForm(!showPwForm)} style={{fontSize:11.5,color:MT,cursor:"pointer",textDecoration:"underline"}}>Change password</a>
+        <a onClick={logout} style={{fontSize:11.5,color:MT,cursor:"pointer",textDecoration:"underline"}}>Sign out</a>
+      </div>
+      {showPwForm && (
+        <div style={{marginTop:8,display:"flex",gap:8,alignItems:"flex-start"}}>
+          <input type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="New password (min. 6 characters)" style={{flex:1,minWidth:0,padding:10,border:"1px solid #ddd",borderRadius:10,fontSize:13,boxSizing:"border-box"}}/>
+          <button onClick={changePassword} disabled={pwSaving} style={{flexShrink:0,background:DK,color:"#fff",border:"none",borderRadius:10,padding:"10px 14px",fontSize:12.5,fontWeight:700,cursor:"pointer"}}>{pwSaving?"Saving…":"Update"}</button>
+        </div>
+      )}
+      {pwMsg && <div style={{textAlign:"right",fontSize:11.5,marginTop:4,color:pwMsg.includes("updated")?DK:"#DC2626"}}>{pwMsg}</div>}
+
       <h1 className="spartan" style={{fontSize:26,color:DK,marginTop:12}}>🧚 Fridge Fairies</h1>
       <div style={{marginTop:10}}>
         <div style={{fontWeight:700,fontSize:15,color:DK}}>Welcome back, {profile?.username || profile?.first_name || "friend"}!</div>
@@ -348,28 +362,20 @@ function App(){
           <div style={{position:"absolute",bottom:-2,right:-2,background:DK,color:"#fff",borderRadius:"50%",width:18,height:18,fontSize:10,display:"flex",alignItems:"center",justifyContent:"center"}}>✎</div>
         </label>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{display:"flex",gap:6,alignItems:"center"}}>
-            <input value={username} onChange={e=>setUsername(e.target.value)} placeholder="Choose a username" style={{flex:1,height:38,padding:"0 12px",border:"1px solid #BBF7D0",borderRadius:19,fontSize:13,boxSizing:"border-box"}}/>
-            <button onClick={saveUsername} style={{flexShrink:0,height:38,background:DK,color:"#fff",border:"none",borderRadius:19,padding:"0 18px",fontSize:12.5,fontWeight:700,cursor:"pointer"}}>Save</button>
-          </div>
+          {editingUsername ? (
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <input value={username} onChange={e=>setUsername(e.target.value)} placeholder="Choose a username" style={{flex:1,minWidth:0,height:38,padding:"0 12px",border:"1px solid #BBF7D0",borderRadius:19,fontSize:13,boxSizing:"border-box"}}/>
+              <button onClick={saveUsername} style={{flexShrink:0,height:38,background:DK,color:"#fff",border:"none",borderRadius:19,padding:"0 18px",fontSize:12.5,fontWeight:700,cursor:"pointer"}}>Save</button>
+            </div>
+          ) : (
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontWeight:700,fontSize:15,color:DK}}>{username}</span>
+              <a onClick={()=>setEditingUsername(true)} style={{fontSize:11.5,color:MT,cursor:"pointer",textDecoration:"underline"}}>Edit</a>
+            </div>
+          )}
           <div style={{fontSize:11,color:usernameMsg==="Saved ✓"?DK:"#DC2626",marginTop:4,minHeight:14}}>{usernameMsg}{photoUploading?"Uploading photo…":""}</div>
         </div>
       </div>
-      <label style={{display:"flex",alignItems:"flex-start",gap:8,marginTop:14,cursor:"pointer"}}>
-        <input type="checkbox" checked={notifyEmail} onChange={toggleNotifyEmail} style={{marginTop:2}}/>
-        <span style={{fontSize:12.5,color:"#374151"}}>📧 Email me when a new wishlist request appears near one of my local fridges</span>
-      </label>
-      <div style={{textAlign:"right",marginTop:6,display:"flex",justifyContent:"flex-end",gap:14}}>
-        <a onClick={()=>setShowPwForm(!showPwForm)} style={{fontSize:11.5,color:MT,cursor:"pointer",textDecoration:"underline"}}>Change password</a>
-        <a onClick={logout} style={{fontSize:11.5,color:MT,cursor:"pointer",textDecoration:"underline"}}>Sign out</a>
-      </div>
-      {showPwForm && (
-        <div style={{marginTop:10,display:"flex",gap:8,alignItems:"flex-start"}}>
-          <input type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="New password (min. 6 characters)" style={{flex:1,minWidth:0,padding:10,border:"1px solid #ddd",borderRadius:10,fontSize:13,boxSizing:"border-box"}}/>
-          <button onClick={changePassword} disabled={pwSaving} style={{flexShrink:0,background:DK,color:"#fff",border:"none",borderRadius:10,padding:"10px 14px",fontSize:12.5,fontWeight:700,cursor:"pointer"}}>{pwSaving?"Saving…":"Update"}</button>
-        </div>
-      )}
-      {pwMsg && <div style={{textAlign:"right",fontSize:11.5,marginTop:4,color:pwMsg.includes("updated")?DK:"#DC2626"}}>{pwMsg}</div>}
 
       <div style={{display:"flex",gap:10,marginTop:18}}>
         <div style={{flex:1,background:"linear-gradient(135deg,#22C55E,#15803D)",borderRadius:14,padding:"14px 12px",textAlign:"center"}}>
@@ -384,6 +390,10 @@ function App(){
 
       <h2 style={{fontSize:14,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:28}}>Wishlist requests near you ({wishlist.length})</h2>
       <div style={{color:MT,fontSize:11.5,marginTop:2,marginBottom:8}}>From registered Friends in Need in your local zones.</div>
+      <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,cursor:"pointer"}}>
+        <input type="checkbox" checked={notifyEmail} onChange={toggleNotifyEmail}/>
+        <span style={{fontSize:12,color:"#374151"}}>📧 Email me about new requests</span>
+      </label>
       {loading ? <div style={{color:MT,marginTop:10}}>Loading…</div> : wishlist.length===0 ? (
         <div style={{color:MT,fontSize:13,marginTop:10}}>Nothing yet — add local fridges below to start seeing requests from that zone.</div>
       ) : (
