@@ -23,6 +23,83 @@ const LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAACQCAYAAADQgbjg
 const ICON_ONLY = "data:image/png;base64,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";
 const DK = "#15803D", MT = "#6B7280", BF = "Poppins,sans-serif", DF = "'League Spartan',sans-serif";
 
+const TXT = {
+  en: {
+    home:"Home", becomeFairy:"Become a Fridge Fairy", helpKeep:"Help keep Qatar's community fridges stocked.",
+    whyJoin:"Why join as a fairy?",
+    benefit1:"Mark fridges near you as \"local\" and get wishlist requests from that zone",
+    benefit2:"Plan a route to visit several fridges in one trip, in whatever order suits you",
+    benefit3:"Build a public refill count under your own username",
+    benefit4:"Set a username of your choice — a photo is optional, never required",
+    signIn:"Sign In", createAccount:"Create Account", email:"Email", password:"Password",
+    signInBtn:"Sign in", newHere:"Already have a volunteer account? It works here too.",
+    firstName:"First name *", lastName:"Last name *", dob:"Date of birth *", phone:"Phone *",
+    nationality:"Nationality * (e.g. Qatari, British, Egyptian)", createNote:"This creates a full volunteer account — same one used across all Feed a Friend programs.",
+    student:"🎓 Student", working:"💼 Working", other:"Other", level:"Level…", highSchool:"High School",
+    undergrad:"Undergraduate", postgrad:"Postgraduate", school:"School / University", profession:"Profession (e.g. Teacher, Nurse…)",
+    funFact:"Fun fact about you (optional)", creating:"Creating…", createBtn:"Create account",
+    welcomeBack: name => `Welcome back, ${name}!`,
+    myActivity:"My activity", nothingLogged:"Nothing logged yet — your refills and cleanings will show up here.",
+    cleaned:"cleaned", refilled:"refilled",
+    wishlistNear: n => `Wishlist requests near you (${n})`,
+    fromRegistered:"From registered Friends in Need in your local zones.",
+    emailMe:"📧 Email me about new requests",
+    nothingYetWishlist:"Nothing yet — add local fridges below to start seeing requests from that zone.",
+    myLocalFridges: n => `My local fridges (${n})`,
+    noneYet:"None yet — search below to add some.",
+    typeToAdd:"Type a fridge name or zone to add…", add:"+ Add",
+    planRoute:"Plan My Route", searchAny:"Search any fridge — doesn't have to be one of yours.",
+    surpriseMe:"✨ Surprise me", surpriseDesc:"Picks fridges that need attention most — longest since their last refill.",
+    numFridges:"# of fridges", journeyLen:"Journey length", min30:"~30 min", hr1:"~1 hour", hr2:"~2 hours",
+    surpriseNote:"Rough estimate only — doesn't account for real traffic or driving time between stops.",
+    routeStops: n => `Route: ${n} stop${n!==1?"s":""}`,
+    routeStart:"Starts from your current location, visits each stop in order.", openRoute:"Open route in Google Maps",
+    changePw:"Change password", signOut:"Sign out", newPw:"New password (min. 6 characters)",
+    update:"Update", saving:"Saving…", save:"Save", edit:"Edit", refills:"refills",
+    fridges:"fridges", cleanedLbl:"cleaned", since: d => `Since ${d}`,
+    loading:"Loading…",
+  },
+  ar: {
+    home:"الرئيسية", becomeFairy:"انضم كجنية الثلاجة", helpKeep:"ساعد في إبقاء ثلاجات المجتمع في قطر ممتلئة.",
+    whyJoin:"لماذا تنضم كجنية؟",
+    benefit1:"حدد الثلاجات القريبة منك كـ\"محلية\" واحصل على طلبات من تلك المنطقة",
+    benefit2:"خطط لمسار لزيارة عدة ثلاجات في رحلة واحدة، بالترتيب الذي يناسبك",
+    benefit3:"اِبنِ عدد تعبئاتك العلني تحت اسم المستخدم الخاص بك",
+    benefit4:"اختر اسم مستخدم من اختيارك — الصورة اختيارية وليست مطلوبة أبدًا",
+    signIn:"تسجيل الدخول", createAccount:"إنشاء حساب", email:"البريد الإلكتروني", password:"كلمة المرور",
+    signInBtn:"تسجيل الدخول", newHere:"لديك حساب متطوع؟ يعمل هنا أيضًا.",
+    firstName:"الاسم الأول *", lastName:"اسم العائلة *", dob:"تاريخ الميلاد *", phone:"رقم الهاتف *",
+    nationality:"الجنسية * (مثل: قطري، بريطاني، مصري)", createNote:"هذا يُنشئ حساب متطوع كامل — نفس الحساب المستخدم في جميع برامج فيد أ فراند.",
+    student:"🎓 طالب", working:"💼 موظف", other:"أخرى", level:"المستوى…", highSchool:"المدرسة الثانوية",
+    undergrad:"جامعي", postgrad:"دراسات عليا", school:"المدرسة / الجامعة", profession:"المهنة (مثل: معلم، ممرضة…)",
+    funFact:"معلومة طريفة عنك (اختياري)", creating:"جارٍ الإنشاء…", createBtn:"إنشاء حساب",
+    welcomeBack: name => `مرحبًا بعودتك، ${name}!`,
+    myActivity:"نشاطي", nothingLogged:"لم يتم تسجيل أي شيء بعد — ستظهر تعبئاتك وتنظيفاتك هنا.",
+    cleaned:"تم التنظيف", refilled:"تمت التعبئة",
+    wishlistNear: n => `طلبات قريبة منك (${n})`,
+    fromRegistered:"من الأصدقاء المحتاجين المسجلين في مناطقك المحلية.",
+    emailMe:"📧 أرسل لي بريدًا عند وجود طلب جديد",
+    nothingYetWishlist:"لا يوجد شيء بعد — أضف ثلاجات محلية أدناه لرؤية الطلبات من تلك المنطقة.",
+    myLocalFridges: n => `ثلاجاتي المحلية (${n})`,
+    noneYet:"لا يوجد شيء بعد — ابحث أدناه لإضافة بعضها.",
+    typeToAdd:"اكتب اسم ثلاجة أو منطقة للإضافة…", add:"+ إضافة",
+    planRoute:"خطط مساري", searchAny:"ابحث عن أي ثلاجة — لا يجب أن تكون واحدة من ثلاجاتك.",
+    surpriseMe:"✨ فاجئني", surpriseDesc:"يختار الثلاجات الأكثر حاجة للاهتمام — الأطول انتظارًا منذ آخر تعبئة.",
+    numFridges:"عدد الثلاجات", journeyLen:"مدة الرحلة", min30:"~٣٠ دقيقة", hr1:"~ساعة واحدة", hr2:"~ساعتان",
+    surpriseNote:"تقدير تقريبي فقط — لا يأخذ بعين الاعتبار الازدحام الفعلي أو وقت القيادة بين المحطات.",
+    routeStops: n => `المسار: ${n} محطة`,
+    routeStart:"يبدأ من موقعك الحالي، ويزور كل محطة بالترتيب.", openRoute:"افتح المسار في خرائط جوجل",
+    changePw:"تغيير كلمة المرور", signOut:"تسجيل الخروج", newPw:"كلمة مرور جديدة (٦ أحرف على الأقل)",
+    update:"تحديث", saving:"جارٍ الحفظ…", save:"حفظ", edit:"تعديل", refills:"تعبئات",
+    fridges:"ثلاجات", cleanedLbl:"نُظفت", since: d => `منذ ${d}`,
+    loading:"جارٍ التحميل…",
+  },
+};
+function toArabicDigits(str){
+  const map = {'0':'٠','1':'١','2':'٢','3':'٣','4':'٤','5':'٥','6':'٦','7':'٧','8':'٨','9':'٩'};
+  return String(str).replace(/[0-9]/g, d=>map[d]);
+}
+
 const QUOTES = [
   "\"No one has ever become poor by giving.\" — Anne Frank",
   "\"He is not a believer who eats his fill while his neighbor goes hungry.\" — Prophet Muhammad ﷺ",
@@ -57,16 +134,31 @@ const QUOTES = [
 ];
 function pickQuote(){ return QUOTES[Math.floor(Math.random()*QUOTES.length)]; }
 
-function Header(){
+function Header({lang, setLang, isAr, t}){
   return (
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
       <img src={LOGO} style={{height:30}}/>
-      <a href="https://www.feedafriend.org" style={{fontSize:13.5,color:DK,textDecoration:"none",fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke={DK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" stroke={DK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        Home
-      </a>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={()=>setLang(isAr?"en":"ar")} style={{border:`1.5px solid ${DK}`,color:DK,background:"#fff",borderRadius:16,padding:"5px 12px",fontSize:12.5,fontWeight:700,cursor:"pointer"}}>{isAr?"English":"عربي"}</button>
+        <a href="https://www.feedafriend.org" style={{fontSize:13.5,color:DK,textDecoration:"none",fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke={DK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" stroke={DK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          {t.home}
+        </a>
+      </div>
     </div>
   );
+}
+
+function timeAgo(iso){
+  if(!iso) return "—";
+  const d = new Date(iso), now = new Date();
+  const mins = Math.floor((now-d)/60000);
+  if(mins<60) return mins+"m ago";
+  const hrs = Math.floor(mins/60);
+  if(hrs<24) return hrs+"h ago";
+  const days = Math.floor(hrs/24);
+  if(days<30) return days+"d ago";
+  return d.toLocaleDateString();
 }
 
 function Sparkle({size=16, color}){
@@ -80,6 +172,9 @@ function Sparkle({size=16, color}){
 }
 
 function App(){
+  const [lang,setLang]=React.useState("en");
+  const isAr = lang === "ar";
+  const t = TXT[lang];
   const [session,setSession]=React.useState(undefined);
   const [email,setEmail]=React.useState(""); const [password,setPassword]=React.useState(""); const [loginErr,setLoginErr]=React.useState("");
   const [authMode,setAuthMode]=React.useState("signin");
@@ -105,6 +200,7 @@ function App(){
   const [surpriseDuration,setSurpriseDuration]=React.useState("60");
   const [wishlist,setWishlist]=React.useState([]);
   const [myStats,setMyStats]=React.useState({refills:0, cleanings:0});
+  const [myActivity,setMyActivity]=React.useState([]);
   const [quote]=React.useState(pickQuote());
   const [loading,setLoading]=React.useState(true);
   const [search,setSearch]=React.useState("");
@@ -168,12 +264,13 @@ function App(){
 
   async function load(uid){
     setLoading(true);
-    const [{data:fr},{data:local},{data:prof},{count:refillCount},{count:cleanCount}] = await Promise.all([
+    const [{data:fr},{data:local},{data:prof},{count:refillCount},{count:cleanCount},{data:activity}] = await Promise.all([
       sb.from("fridges").select("id,code,name_en,zone_name,zone_number,lat,lng,status,last_refill_at").order("zone_name"),
       sb.from("fairy_local_fridges").select("fridge_id").eq("volunteer_id",uid),
       sb.from("profiles").select("*").eq("id",uid).single(),
       sb.from("fridge_activity").select("id",{count:"exact",head:true}).eq("volunteer_id",uid).eq("activity_type","refill"),
-      sb.from("fridge_activity").select("id",{count:"exact",head:true}).eq("volunteer_id",uid).eq("activity_type","cleaning")
+      sb.from("fridge_activity").select("id",{count:"exact",head:true}).eq("volunteer_id",uid).eq("activity_type","cleaning"),
+      sb.from("fridge_activity").select("id,activity_type,created_at,notes,fridges(name_en,name_ar,code)").eq("volunteer_id",uid).order("created_at",{ascending:false}).limit(20)
     ]);
     setFridges(fr||[]);
     setProfile(prof||null);
@@ -181,6 +278,7 @@ function App(){
     setEditingUsername(!prof?.username);
     setNotifyEmail(prof?.notify_wishlist_email || false);
     setMyStats({refills: refillCount||0, cleanings: cleanCount||0});
+    setMyActivity(activity||[]);
     const ids = new Set((local||[]).map(l=>l.fridge_id));
     setLocalIds(ids);
     const myZones = new Set((fr||[]).filter(f=>ids.has(f.id)).map(f=>f.zone_number));
@@ -232,27 +330,27 @@ function App(){
     setPhotoUploading(false);
   }
 
-  if(session===undefined) return <div style={{padding:60,textAlign:"center",color:MT}}><Header/>Loading…</div>;
+  if(session===undefined) return <div style={{padding:60,textAlign:"center",color:MT}}><Header lang={lang} setLang={setLang} isAr={isAr} t={t}/>{t.loading}</div>;
 
   if(!session){
     const BENEFITS = [
-      {icon:<path d="M12 2 4 7v6c0 5 4 8 8 9 4-1 8-4 8-9V7l-8-5Z"/>, text:"Mark fridges near you as \"local\" and get wishlist requests from that zone"},
-      {icon:<><path d="M9 20l-5-1V7l5-2 6 2 5-2v13l-5 2-6-2Z"/><path d="M9 5v15M15 7v13"/></>, text:"Plan a route to visit several fridges in one trip, in whatever order suits you"},
-      {icon:<><path d="M12 20V10M18 20V4M6 20v-6"/></>, text:"Build a public refill count under your own username"},
-      {icon:<circle cx="12" cy="12" r="8"/>, text:"Set a username of your choice — a photo is optional, never required"},
+      {icon:<path d="M12 2 4 7v6c0 5 4 8 8 9 4-1 8-4 8-9V7l-8-5Z"/>, text:t.benefit1},
+      {icon:<><path d="M9 20l-5-1V7l5-2 6 2 5-2v13l-5 2-6-2Z"/><path d="M9 5v15M15 7v13"/></>, text:t.benefit2},
+      {icon:<><path d="M12 20V10M18 20V4M6 20v-6"/></>, text:t.benefit3},
+      {icon:<circle cx="12" cy="12" r="8"/>, text:t.benefit4},
     ];
     return (
-      <div style={{maxWidth:380,margin:"0 auto",padding:"16px 24px 32px"}}>
-        <Header/>
+      <div dir={isAr?"rtl":"ltr"} style={{maxWidth:380,margin:"0 auto",padding:"16px 24px 32px"}}>
+        <Header lang={lang} setLang={setLang} isAr={isAr} t={t}/>
 
         <div style={{textAlign:"center",marginTop:6}}>
           <img src={ICON_ONLY} style={{height:44,margin:"0 auto",display:"block"}}/>
-          <h1 className="spartan" style={{fontSize:21,color:DK,marginTop:6}}>Become a Fridge Fairy</h1>
-          <div style={{color:MT,fontSize:12,marginTop:2}}>Help keep Qatar's community fridges stocked.</div>
+          <h1 className="spartan" style={{fontSize:21,color:DK,marginTop:6}}>{t.becomeFairy}</h1>
+          <div style={{color:MT,fontSize:12,marginTop:2}}>{t.helpKeep}</div>
         </div>
 
         <div style={{marginTop:14}}>
-          <div style={{fontSize:11,letterSpacing:0.4,textTransform:"uppercase",color:MT,fontWeight:700,fontFamily:BF}}>Why join as a fairy?</div>
+          <div style={{fontSize:11,letterSpacing:0.4,textTransform:"uppercase",color:MT,fontWeight:700,fontFamily:BF}}>{t.whyJoin}</div>
           <div style={{marginTop:4,display:"flex",flexDirection:"column"}}>
             {BENEFITS.map((b,i)=>(
               <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"6px 0",borderBottom: i<BENEFITS.length-1 ? "1px solid #F0F0F0" : "none"}}>
@@ -266,68 +364,68 @@ function App(){
         </div>
 
         <div style={{display:"flex",gap:4,marginTop:14,background:"#F3F4F6",borderRadius:14,padding:4}}>
-          <button onClick={()=>{setAuthMode("signin"); setLoginErr(""); setSignupMsg("");}} style={{flex:1,padding:"10px 8px",borderRadius:11,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,transition:"all 0.15s",background:authMode==="signin"?"#fff":"transparent",color:DK,boxShadow:authMode==="signin"?"0 1px 4px rgba(0,0,0,0.1)":"none"}}>Sign In</button>
-          <button onClick={()=>{setAuthMode("signup"); setLoginErr(""); setSignupMsg("");}} style={{flex:1,padding:"10px 8px",borderRadius:11,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,transition:"all 0.15s",background:authMode==="signup"?"#fff":"transparent",color:DK,boxShadow:authMode==="signup"?"0 1px 4px rgba(0,0,0,0.1)":"none"}}>Create Account</button>
+          <button onClick={()=>{setAuthMode("signin"); setLoginErr(""); setSignupMsg("");}} style={{flex:1,padding:"10px 8px",borderRadius:11,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,transition:"all 0.15s",background:authMode==="signin"?"#fff":"transparent",color:DK,boxShadow:authMode==="signin"?"0 1px 4px rgba(0,0,0,0.1)":"none"}}>{t.signIn}</button>
+          <button onClick={()=>{setAuthMode("signup"); setLoginErr(""); setSignupMsg("");}} style={{flex:1,padding:"10px 8px",borderRadius:11,border:"none",cursor:"pointer",fontWeight:700,fontSize:13.5,transition:"all 0.15s",background:authMode==="signup"?"#fff":"transparent",color:DK,boxShadow:authMode==="signup"?"0 1px 4px rgba(0,0,0,0.1)":"none"}}>{t.createAccount}</button>
         </div>
 
         {authMode==="signin" ? (
           <div style={{marginTop:12}}>
             <div style={{position:"relative"}}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={MT} strokeWidth="1.8" style={{position:"absolute",left:13,top:12}}><path d="M3 6h18v12H3V6Z"/><path d="M3 6l9 7 9-7"/></svg>
-              <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" style={{width:"100%",padding:"10px 10px 10px 38px",border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:13.5,boxSizing:"border-box"}}/>
+              <input value={email} onChange={e=>setEmail(e.target.value)} placeholder={t.email} style={{width:"100%",padding:"10px 10px 10px 38px",border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:13.5,boxSizing:"border-box"}}/>
             </div>
             <div style={{position:"relative",marginTop:8}}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={MT} strokeWidth="1.8" style={{position:"absolute",left:13,top:12}}><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg>
-              <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password" style={{width:"100%",padding:"10px 10px 10px 38px",border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:13.5,boxSizing:"border-box"}}/>
+              <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={t.password} style={{width:"100%",padding:"10px 10px 10px 38px",border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:13.5,boxSizing:"border-box"}}/>
             </div>
             {loginErr && <div style={{color:"#DC2626",fontSize:12,marginTop:6}}>{loginErr}</div>}
-            <button onClick={login} style={{width:"100%",marginTop:10,background:"linear-gradient(135deg,#22C55E,#15803D)",color:"#fff",border:"none",borderRadius:12,padding:11,fontWeight:700,fontSize:14,cursor:"pointer",boxShadow:"0 3px 10px rgba(21,128,61,0.25)"}}>Sign in</button>
-            <div style={{color:MT,fontSize:11,marginTop:8,textAlign:"center"}}>Already have a volunteer account? It works here too.</div>
+            <button onClick={login} style={{width:"100%",marginTop:10,background:"linear-gradient(135deg,#22C55E,#15803D)",color:"#fff",border:"none",borderRadius:12,padding:11,fontWeight:700,fontSize:14,cursor:"pointer",boxShadow:"0 3px 10px rgba(21,128,61,0.25)"}}>{t.signInBtn}</button>
+            <div style={{color:MT,fontSize:11,marginTop:8,textAlign:"center"}}>{t.newHere}</div>
           </div>
         ) : (
           <div style={{marginTop:18}}>
-            <div style={{fontSize:11,color:MT,marginBottom:8}}>This creates a full volunteer account — same one used across all Feed a Friend programs.</div>
+            <div style={{fontSize:11,color:MT,marginBottom:8}}>{t.createNote}</div>
             <div style={{display:"flex",gap:8}}>
-              <input value={firstName} onChange={e=>setFirstName(e.target.value)} placeholder="First name *" style={{flex:1,minWidth:0,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
-              <input value={surname} onChange={e=>setSurname(e.target.value)} placeholder="Last name *" style={{flex:1,minWidth:0,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
+              <input value={firstName} onChange={e=>setFirstName(e.target.value)} placeholder={t.firstName} style={{flex:1,minWidth:0,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
+              <input value={surname} onChange={e=>setSurname(e.target.value)} placeholder={t.lastName} style={{flex:1,minWidth:0,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
             </div>
             <div style={{display:"flex",gap:8,marginTop:10}}>
               <div style={{flex:1,minWidth:0}}>
-                <label style={{fontSize:11,color:MT}}>Date of birth *</label>
+                <label style={{fontSize:11,color:MT}}>{t.dob}</label>
                 <input type="date" value={dob} onChange={e=>setDob(e.target.value)} style={{width:"100%",marginTop:4,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
               </div>
               <div style={{flex:1,minWidth:0}}>
-                <label style={{fontSize:11,color:MT}}>Phone *</label>
+                <label style={{fontSize:11,color:MT}}>{t.phone}</label>
                 <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="e.g. 33123456" style={{width:"100%",marginTop:4,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
               </div>
             </div>
-            <input value={nationality} onChange={e=>setNationality(e.target.value)} placeholder="Nationality * (e.g. Qatari, British, Egyptian)" style={{width:"100%",marginTop:10,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
-            <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email *" style={{width:"100%",marginTop:10,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password * (min. 6 characters)" style={{width:"100%",marginTop:10,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
+            <input value={nationality} onChange={e=>setNationality(e.target.value)} placeholder={t.nationality} style={{width:"100%",marginTop:10,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
+            <input value={email} onChange={e=>setEmail(e.target.value)} placeholder={t.email+" *"} style={{width:"100%",marginTop:10,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={t.password+" *"} style={{width:"100%",marginTop:10,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
 
             <div style={{display:"flex",gap:6,marginTop:12}}>
-              {[["student","🎓 Student"],["working","💼 Working"],["","Other"]].map(([k,label])=>(
+              {[["student",t.student],["working",t.working],["",t.other]].map(([k,label])=>(
                 <button key={k} onClick={()=>setEmployment(k)} style={{flex:1,minWidth:0,padding:"9px 6px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:12.5,background:employment===k?DK:"#F3F4F6",color:employment===k?"#fff":DK}}>{label}</button>
               ))}
             </div>
             {employment==="student" && (
               <div style={{display:"flex",gap:8,marginTop:10}}>
                 <select value={studentLevel} onChange={e=>setStudentLevel(e.target.value)} style={{flex:1,minWidth:0,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:13,boxSizing:"border-box"}}>
-                  <option value="">Level…</option>
-                  <option value="High School">High School</option>
-                  <option value="Undergraduate">Undergraduate</option>
-                  <option value="Postgraduate">Postgraduate</option>
+                  <option value="">{t.level}</option>
+                  <option value="High School">{t.highSchool}</option>
+                  <option value="Undergraduate">{t.undergrad}</option>
+                  <option value="Postgraduate">{t.postgrad}</option>
                 </select>
-                <input value={studentSchool} onChange={e=>setStudentSchool(e.target.value)} placeholder="School / University" style={{flex:1.4,minWidth:0,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:13,boxSizing:"border-box"}}/>
+                <input value={studentSchool} onChange={e=>setStudentSchool(e.target.value)} placeholder={t.school} style={{flex:1.4,minWidth:0,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:13,boxSizing:"border-box"}}/>
               </div>
             )}
             {employment==="working" && (
-              <input value={prof} onChange={e=>setProf(e.target.value)} placeholder="Profession (e.g. Teacher, Nurse…)" style={{width:"100%",marginTop:10,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
+              <input value={prof} onChange={e=>setProf(e.target.value)} placeholder={t.profession} style={{width:"100%",marginTop:10,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
             )}
-            <input value={funFact} onChange={e=>setFunFact(e.target.value)} placeholder="Fun fact about you (optional)" style={{width:"100%",marginTop:10,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
+            <input value={funFact} onChange={e=>setFunFact(e.target.value)} placeholder={t.funFact} style={{width:"100%",marginTop:10,padding:12,border:"1.5px solid #E5E7EB",borderRadius:12,fontSize:14,boxSizing:"border-box"}}/>
 
             {signupMsg && <div style={{color:signupMsg.startsWith("Account created")?DK:"#DC2626",fontSize:13,marginTop:8}}>{signupMsg}</div>}
-            <button onClick={signup} disabled={signupLoading} style={{width:"100%",marginTop:14,background:"linear-gradient(135deg,#22C55E,#15803D)",color:"#fff",border:"none",borderRadius:12,padding:13,fontWeight:700,fontSize:14.5,cursor:"pointer",boxShadow:"0 3px 10px rgba(21,128,61,0.25)",opacity:signupLoading?0.7:1}}>{signupLoading?"Creating…":"Create account"}</button>
+            <button onClick={signup} disabled={signupLoading} style={{width:"100%",marginTop:14,background:"linear-gradient(135deg,#22C55E,#15803D)",color:"#fff",border:"none",borderRadius:12,padding:13,fontWeight:700,fontSize:14.5,cursor:"pointer",boxShadow:"0 3px 10px rgba(21,128,61,0.25)",opacity:signupLoading?0.7:1}}>{signupLoading?t.creating:t.createBtn}</button>
           </div>
         )}
       </div>
@@ -343,23 +441,23 @@ function App(){
   const myFridges = fridges.filter(f=>localIds.has(f.id));
 
   return (
-    <div style={{maxWidth:500,margin:"0 auto",padding:"32px 24px 64px"}}>
-      <Header/>
+    <div dir={isAr?"rtl":"ltr"} style={{maxWidth:500,margin:"0 auto",padding:"32px 24px 64px"}}>
+      <Header lang={lang} setLang={setLang} isAr={isAr} t={t}/>
       <div style={{display:"flex",justifyContent:"flex-end",gap:14,marginTop:-2}}>
-        <a onClick={()=>setShowPwForm(!showPwForm)} style={{fontSize:11.5,color:MT,cursor:"pointer",textDecoration:"underline"}}>Change password</a>
-        <a onClick={logout} style={{fontSize:11.5,color:MT,cursor:"pointer",textDecoration:"underline"}}>Sign out</a>
+        <a onClick={()=>setShowPwForm(!showPwForm)} style={{fontSize:11.5,color:MT,cursor:"pointer",textDecoration:"underline"}}>{t.changePw}</a>
+        <a onClick={logout} style={{fontSize:11.5,color:MT,cursor:"pointer",textDecoration:"underline"}}>{t.signOut}</a>
       </div>
       {showPwForm && (
         <div style={{marginTop:8,display:"flex",gap:8,alignItems:"flex-start"}}>
-          <input type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="New password (min. 6 characters)" style={{flex:1,minWidth:0,padding:10,border:"1px solid #ddd",borderRadius:10,fontSize:13,boxSizing:"border-box"}}/>
-          <button onClick={changePassword} disabled={pwSaving} style={{flexShrink:0,background:DK,color:"#fff",border:"none",borderRadius:10,padding:"10px 14px",fontSize:12.5,fontWeight:700,cursor:"pointer"}}>{pwSaving?"Saving…":"Update"}</button>
+          <input type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder={t.newPw} style={{flex:1,minWidth:0,padding:10,border:"1px solid #ddd",borderRadius:10,fontSize:13,boxSizing:"border-box"}}/>
+          <button onClick={changePassword} disabled={pwSaving} style={{flexShrink:0,background:DK,color:"#fff",border:"none",borderRadius:10,padding:"10px 14px",fontSize:12.5,fontWeight:700,cursor:"pointer"}}>{pwSaving?t.saving:t.update}</button>
         </div>
       )}
       {pwMsg && <div style={{textAlign:"right",fontSize:11.5,marginTop:4,color:pwMsg.includes("updated")?DK:"#DC2626"}}>{pwMsg}</div>}
 
-      <h1 className="spartan" style={{fontSize:26,color:DK,marginTop:12,display:"flex",alignItems:"center",gap:8}}><Sparkle size={22} color={DK}/> Fridge Fairies</h1>
+      <h1 className="spartan" style={{fontSize:26,color:DK,marginTop:12,display:"flex",alignItems:"center",gap:8}}><Sparkle size={22} color={DK}/> {isAr?"جنيات الثلاجة":"Fridge Fairies"}</h1>
       <div style={{marginTop:10}}>
-        <div style={{fontWeight:700,fontSize:15,color:DK}}>Welcome back, {profile?.username || profile?.first_name || "friend"}!</div>
+        <div style={{fontWeight:700,fontSize:15,color:DK}}>{t.welcomeBack(profile?.username || profile?.first_name || (isAr?"صديق":"friend"))}</div>
         <div style={{fontSize:12.5,color:MT,marginTop:4,fontStyle:"italic",lineHeight:1.5}}>{quote}</div>
       </div>
 
@@ -374,53 +472,71 @@ function App(){
         <div style={{flex:1,minWidth:0}}>
           {editingUsername ? (
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              <input value={username} onChange={e=>setUsername(e.target.value)} placeholder="Choose a username" style={{flex:1,minWidth:0,height:38,padding:"0 12px",border:"1px solid #E5E7EB",borderRadius:19,fontSize:13,boxSizing:"border-box"}}/>
-              <button onClick={saveUsername} style={{flexShrink:0,height:38,background:DK,color:"#fff",border:"none",borderRadius:19,padding:"0 18px",fontSize:12.5,fontWeight:700,cursor:"pointer"}}>Save</button>
+              <input value={username} onChange={e=>setUsername(e.target.value)} placeholder={isAr?"اختر اسم مستخدم":"Choose a username"} style={{flex:1,minWidth:0,height:38,padding:"0 12px",border:"1px solid #E5E7EB",borderRadius:19,fontSize:13,boxSizing:"border-box"}}/>
+              <button onClick={saveUsername} style={{flexShrink:0,height:38,background:DK,color:"#fff",border:"none",borderRadius:19,padding:"0 18px",fontSize:12.5,fontWeight:700,cursor:"pointer"}}>{t.save}</button>
             </div>
           ) : (
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <span style={{fontWeight:700,fontSize:15,color:DK}}>{username}</span>
-              <a onClick={()=>setEditingUsername(true)} style={{fontSize:11.5,color:MT,cursor:"pointer",textDecoration:"underline"}}>Edit</a>
+              <a onClick={()=>setEditingUsername(true)} style={{fontSize:11.5,color:MT,cursor:"pointer",textDecoration:"underline"}}>{t.edit}</a>
             </div>
           )}
           <div style={{display:"flex",gap:14,marginTop:6,flexWrap:"wrap"}}>
-            <span style={{fontSize:12,color:"#374151"}}><b style={{color:DK}}>{myStats.refills}</b> refills</span>
-            <span style={{fontSize:12,color:"#374151"}}><b style={{color:DK}}>{myStats.cleanings}</b> cleaned</span>
-            {profile?.created_at && <span style={{fontSize:12,color:MT}}>Since {new Date(profile.created_at).toLocaleDateString(undefined,{month:"short",year:"numeric"})}</span>}
+            <span style={{fontSize:12,color:"#374151"}}><b style={{color:DK}}>{isAr?toArabicDigits(myStats.refills):myStats.refills}</b> {t.refills}</span>
+            <span style={{fontSize:12,color:"#374151"}}><b style={{color:DK}}>{isAr?toArabicDigits(myStats.cleanings):myStats.cleanings}</b> {t.cleanedLbl}</span>
+            {profile?.created_at && <span style={{fontSize:12,color:MT}}>{t.since(new Date(profile.created_at).toLocaleDateString(isAr?"ar":undefined,{month:"short",year:"numeric"}))}</span>}
           </div>
           <div style={{fontSize:11,color:usernameMsg==="Saved ✓"?DK:"#DC2626",marginTop:4,minHeight:14}}>{usernameMsg}{photoUploading?"Uploading photo…":""}</div>
         </div>
       </div>
 
-      <h2 style={{fontSize:14,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:28}}>Wishlist requests near you ({wishlist.length})</h2>
-      <div style={{color:MT,fontSize:11.5,marginTop:2,marginBottom:8}}>From registered Friends in Need in your local zones.</div>
-      <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,cursor:"pointer"}}>
-        <input type="checkbox" checked={notifyEmail} onChange={toggleNotifyEmail}/>
-        <span style={{fontSize:12,color:"#374151"}}>📧 Email me about new requests</span>
-      </label>
-      {loading ? <div style={{color:MT,marginTop:10}}>Loading…</div> : wishlist.length===0 ? (
-        <div style={{color:MT,fontSize:13,marginTop:10}}>Nothing yet — add local fridges below to start seeing requests from that zone.</div>
+      <h2 style={{fontSize:14,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:28}}>{t.myActivity}</h2>
+      {myActivity.length===0 ? (
+        <div style={{color:MT,fontSize:13,marginTop:8}}>{t.nothingLogged}</div>
       ) : (
-        <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:8}}>
-          {wishlist.map(w=>(
-            <div key={w.id} style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:12,padding:12}}>
-              <div style={{fontWeight:700,fontSize:14}}>{w.item}</div>
-              <div style={{color:MT,fontSize:12,marginTop:3}}>Zone {w.food_box_applications?.zone} · {w.food_box_applications?.whatsapp||"no phone on file"}</div>
+        <div style={{marginTop:10,display:"flex",flexDirection:"column"}}>
+          {myActivity.map((a,i)=>(
+            <div key={a.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom: i<myActivity.length-1 ? "1px solid #F0F0F0" : "none"}}>
+              <span style={{width:6,height:6,borderRadius:"50%",background: a.activity_type==='cleaning' ? "#22C55E" : DK, flexShrink:0}}></span>
+              <div style={{flex:1,minWidth:0}}>
+                <span style={{fontSize:13,color:"#374151"}}>{isAr && a.fridges?.name_ar ? a.fridges.name_ar : a.fridges?.name_en} · {a.fridges?.code} — {a.activity_type==='cleaning'?t.cleaned:t.refilled}</span>
+                {a.notes && <div style={{fontSize:11,color:MT,marginTop:2}}>{a.notes}</div>}
+              </div>
+              <span style={{fontSize:11.5,color:MT,flexShrink:0}}>{timeAgo(a.created_at)}</span>
             </div>
           ))}
         </div>
       )}
 
-      <h2 style={{fontSize:14,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:32}}>My local fridges ({myFridges.length})</h2>
+      <h2 style={{fontSize:14,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:28}}>{t.wishlistNear(isAr?toArabicDigits(wishlist.length):wishlist.length)}</h2>
+      <div style={{color:MT,fontSize:11.5,marginTop:2,marginBottom:8}}>{t.fromRegistered}</div>
+      <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,cursor:"pointer"}}>
+        <input type="checkbox" checked={notifyEmail} onChange={toggleNotifyEmail}/>
+        <span style={{fontSize:12,color:"#374151"}}>{t.emailMe}</span>
+      </label>
+      {loading ? <div style={{color:MT,marginTop:10}}>{t.loading}</div> : wishlist.length===0 ? (
+        <div style={{color:MT,fontSize:13,marginTop:10}}>{t.nothingYetWishlist}</div>
+      ) : (
+        <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:8}}>
+          {wishlist.map(w=>(
+            <div key={w.id} style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:12,padding:12}}>
+              <div style={{fontWeight:700,fontSize:14}}>{w.item}</div>
+              <div style={{color:MT,fontSize:12,marginTop:3}}>{isAr?"منطقة":"Zone"} {w.food_box_applications?.zone} · {w.food_box_applications?.whatsapp||(isAr?"لا يوجد رقم هاتف":"no phone on file")}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <h2 style={{fontSize:14,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:32}}>{t.myLocalFridges(isAr?toArabicDigits(myFridges.length):myFridges.length)}</h2>
       {myFridges.length===0 ? (
-        <div style={{color:MT,fontSize:13,marginTop:8}}>None yet — search below to add some.</div>
+        <div style={{color:MT,fontSize:13,marginTop:8}}>{t.noneYet}</div>
       ) : (
         <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:6}}>
           {myFridges.map(f=>(
             <div key={f.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:10}}>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:600}}>{f.name_en} <span style={{color:MT,fontWeight:400}}>· {f.code}</span></div>
-                <div style={{fontSize:11,color:MT}}>{f.zone_name}</div>
+                <div style={{fontSize:13,fontWeight:600}}>{isAr && f.name_ar ? f.name_ar : f.name_en} <span style={{color:MT,fontWeight:400}}>· {f.code}</span></div>
+                <div style={{fontSize:11,color:MT}}>{isAr && f.zone_name_ar ? f.zone_name_ar : f.zone_name}</div>
               </div>
               <button onClick={()=>toggleLocal(f.id)} style={{flexShrink:0,border:"none",background:"transparent",color:"#DC2626",fontSize:16,cursor:"pointer",padding:"4px 6px"}}>✕</button>
             </div>
@@ -429,24 +545,24 @@ function App(){
       )}
 
       <div style={{marginTop:16,position:"relative"}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Type a fridge name or zone to add…" style={{width:"100%",padding:"12px 14px",border:"1px solid #ddd",borderRadius:10,fontSize:13.5}}/>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={t.typeToAdd} style={{width:"100%",padding:"12px 14px",border:"1px solid #ddd",borderRadius:10,fontSize:13.5}}/>
         {filtered.length>0 && (
           <div style={{marginTop:6,border:"1px solid #eee",borderRadius:10,overflow:"hidden"}}>
             {filtered.map(f=>(
               <div key={f.id} onClick={()=>{toggleLocal(f.id); setSearch("");}} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",background:"#fff",borderBottom:"1px solid #f3f3f3",cursor:"pointer"}}>
                 <div>
-                  <div style={{fontSize:13,fontWeight:600}}>{f.name_en} <span style={{color:MT,fontWeight:400}}>· {f.code}</span></div>
-                  <div style={{fontSize:11,color:MT}}>{f.zone_name}</div>
+                  <div style={{fontSize:13,fontWeight:600}}>{isAr && f.name_ar ? f.name_ar : f.name_en} <span style={{color:MT,fontWeight:400}}>· {f.code}</span></div>
+                  <div style={{fontSize:11,color:MT}}>{isAr && f.zone_name_ar ? f.zone_name_ar : f.zone_name}</div>
                 </div>
-                <span style={{color:DK,fontWeight:700,fontSize:12}}>+ Add</span>
+                <span style={{color:DK,fontWeight:700,fontSize:12}}>{t.add}</span>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      <h2 style={{fontSize:14,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:36}}>Plan My Route</h2>
-      <div style={{color:MT,fontSize:12,marginTop:2,marginBottom:10}}>Search any fridge — doesn't have to be one of yours.</div>
+      <h2 style={{fontSize:14,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:36}}>{t.planRoute}</h2>
+      <div style={{color:MT,fontSize:12,marginTop:2,marginBottom:10}}>{t.searchAny}</div>
 
       {(() => {
         const stops = fridges.filter(f=>routeIds.has(f.id));
@@ -483,8 +599,8 @@ function App(){
                 {stops.map(f=>(
                   <div key={f.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:10}}>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:600}}>{f.name_en} <span style={{color:MT,fontWeight:400}}>· {f.code}</span></div>
-                      <div style={{fontSize:11,color:MT}}>{f.zone_name}</div>
+                      <div style={{fontSize:13,fontWeight:600}}>{isAr && f.name_ar ? f.name_ar : f.name_en} <span style={{color:MT,fontWeight:400}}>· {f.code}</span></div>
+                      <div style={{fontSize:11,color:MT}}>{isAr && f.zone_name_ar ? f.zone_name_ar : f.zone_name}</div>
                     </div>
                     <button onClick={()=>removeFromRoute(f.id)} style={{flexShrink:0,border:"none",background:"transparent",color:"#DC2626",fontSize:16,cursor:"pointer",padding:"4px 6px"}}>✕</button>
                   </div>
@@ -493,16 +609,16 @@ function App(){
             )}
 
             <div style={{position:"relative"}}>
-              <input value={routeSearch} onChange={e=>setRouteSearch(e.target.value)} placeholder="Type any fridge name or zone…" style={{width:"100%",padding:"12px 14px",border:"1px solid #ddd",borderRadius:10,fontSize:13.5}}/>
+              <input value={routeSearch} onChange={e=>setRouteSearch(e.target.value)} placeholder={t.typeToAdd} style={{width:"100%",padding:"12px 14px",border:"1px solid #ddd",borderRadius:10,fontSize:13.5}}/>
               {routeSearchResults.length>0 && (
                 <div style={{marginTop:6,border:"1px solid #eee",borderRadius:10,overflow:"hidden"}}>
                   {routeSearchResults.map(f=>(
                     <div key={f.id} onClick={()=>{addToRoute(f.id); setRouteSearch("");}} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",background:"#fff",borderBottom:"1px solid #f3f3f3",cursor:"pointer"}}>
                       <div>
-                        <div style={{fontSize:13,fontWeight:600}}>{f.name_en} <span style={{color:MT,fontWeight:400}}>· {f.code}</span></div>
-                        <div style={{fontSize:11,color:MT}}>{f.zone_name}</div>
+                        <div style={{fontSize:13,fontWeight:600}}>{isAr && f.name_ar ? f.name_ar : f.name_en} <span style={{color:MT,fontWeight:400}}>· {f.code}</span></div>
+                        <div style={{fontSize:11,color:MT}}>{isAr && f.zone_name_ar ? f.zone_name_ar : f.zone_name}</div>
                       </div>
-                      <span style={{color:DK,fontWeight:700,fontSize:12}}>+ Add</span>
+                      <span style={{color:DK,fontWeight:700,fontSize:12}}>{t.add}</span>
                     </div>
                   ))}
                 </div>
@@ -510,26 +626,26 @@ function App(){
             </div>
 
             <div style={{marginTop:20,background:"#FEF9EC",border:"1px solid #FDE9B8",borderRadius:14,padding:16}}>
-              <div style={{fontWeight:700,fontSize:14,color:"#92600C"}}>✨ Surprise me</div>
-              <div style={{fontSize:11.5,color:"#92600C",marginTop:3,lineHeight:1.5}}>Picks fridges that need attention most — longest since their last refill.</div>
+              <div style={{fontWeight:700,fontSize:14,color:"#92600C"}}>{t.surpriseMe}</div>
+              <div style={{fontSize:11.5,color:"#92600C",marginTop:3,lineHeight:1.5}}>{t.surpriseDesc}</div>
               <div style={{display:"flex",gap:10,marginTop:12}}>
                 <div style={{flex:1}}>
-                  <label style={{fontSize:11,fontWeight:700,color:"#92600C"}}># of fridges</label>
+                  <label style={{fontSize:11,fontWeight:700,color:"#92600C"}}>{t.numFridges}</label>
                   <select value={surpriseCount} onChange={e=>setSurpriseCount(parseInt(e.target.value,10))} style={{width:"100%",marginTop:4,padding:"9px 10px",borderRadius:8,border:"1px solid #FDE9B8",fontSize:13}}>
-                    {[2,3,4,5,6,8,10].map(n=><option key={n} value={n}>{n} fridges</option>)}
+                    {[2,3,4,5,6,8,10].map(n=><option key={n} value={n}>{isAr?toArabicDigits(n):n} {t.fridges}</option>)}
                   </select>
                 </div>
                 <div style={{flex:1}}>
-                  <label style={{fontSize:11,fontWeight:700,color:"#92600C"}}>Journey length</label>
+                  <label style={{fontSize:11,fontWeight:700,color:"#92600C"}}>{t.journeyLen}</label>
                   <select value={surpriseDuration} onChange={e=>setSurpriseDuration(e.target.value)} style={{width:"100%",marginTop:4,padding:"9px 10px",borderRadius:8,border:"1px solid #FDE9B8",fontSize:13}}>
-                    <option value="30">~30 min</option>
-                    <option value="60">~1 hour</option>
-                    <option value="120">~2 hours</option>
+                    <option value="30">{t.min30}</option>
+                    <option value="60">{t.hr1}</option>
+                    <option value="120">{t.hr2}</option>
                   </select>
                 </div>
               </div>
-              <button onClick={surpriseMe} style={{width:"100%",marginTop:12,background:"#D97706",color:"#fff",border:"none",borderRadius:10,padding:11,fontWeight:700,fontSize:13,cursor:"pointer"}}>✨ Surprise me</button>
-              <div style={{fontSize:10.5,color:"#92600C",marginTop:6,opacity:0.8}}>Rough estimate only — doesn't account for real traffic or driving time between stops.</div>
+              <button onClick={surpriseMe} style={{width:"100%",marginTop:12,background:"#D97706",color:"#fff",border:"none",borderRadius:10,padding:11,fontWeight:700,fontSize:13,cursor:"pointer"}}>{t.surpriseMe}</button>
+              <div style={{fontSize:10.5,color:"#92600C",marginTop:6,opacity:0.8}}>{t.surpriseNote}</div>
             </div>
 
             {stops.length>0 && (() => {
@@ -540,9 +656,9 @@ function App(){
               const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}${waypoints?`&waypoints=${waypoints}`:""}&travelmode=driving`;
               return (
                 <div style={{position:"sticky",bottom:16,marginTop:20,background:"#fff",border:`2px solid ${DK}`,borderRadius:14,padding:14,boxShadow:"0 4px 14px rgba(0,0,0,0.12)"}}>
-                  <div style={{fontSize:12.5,fontWeight:700,color:DK}}>Route: {withCoords.length} stop{withCoords.length!==1?"s":""}</div>
-                  <div style={{fontSize:11,color:MT,marginTop:2}}>Starts from your current location, visits each stop in order.</div>
-                  <a href={routeUrl} target="_blank" rel="noreferrer" style={{display:"block",textAlign:"center",marginTop:10,background:DK,color:"#fff",padding:"10px",borderRadius:10,fontWeight:700,fontSize:13,textDecoration:"none"}}>Open route in Google Maps</a>
+                  <div style={{fontSize:12.5,fontWeight:700,color:DK}}>{t.routeStops(isAr?toArabicDigits(withCoords.length):withCoords.length)}</div>
+                  <div style={{fontSize:11,color:MT,marginTop:2}}>{t.routeStart}</div>
+                  <a href={routeUrl} target="_blank" rel="noreferrer" style={{display:"block",textAlign:"center",marginTop:10,background:DK,color:"#fff",padding:"10px",borderRadius:10,fontWeight:700,fontSize:13,textDecoration:"none"}}>{t.openRoute}</a>
                 </div>
               );
             })()}
