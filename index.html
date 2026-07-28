@@ -626,8 +626,8 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
   </main>
 
   <script>
-    const sb = supabase.createClient("https://xbxagukdvgyaoqvbqoic.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4");
-
+    // View-switching is wired up first and doesn't depend on Supabase at all,
+    // so Sign In / Register always work even if the CDN script below fails to load.
     const choiceView = document.getElementById('choiceView');
     const signinView = document.getElementById('signinView');
     const registerView = document.getElementById('registerView');
@@ -651,6 +651,12 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
     document.getElementById('showRegisterBtn').addEventListener('click', showRegister);
     document.getElementById('backFromSignin').addEventListener('click', showChoice);
     document.getElementById('backFromRegister').addEventListener('click', showChoice);
+
+    if (typeof supabase === 'undefined') {
+      console.error('Supabase library failed to load — sign in / register will not work until this loads.');
+    } else {
+
+    const sb = supabase.createClient("https://xbxagukdvgyaoqvbqoic.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4");
 
     const form = document.getElementById('signinView');
     const errBox = document.getElementById('loginError');
@@ -777,6 +783,8 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       registerBtn.disabled = false;
       registerBtn.textContent = prevLabel;
     });
+
+    } // end supabase-available check
   </script>
 
 </body>
