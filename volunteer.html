@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Feed a Friend — Volunteer Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<meta name="theme-color" content="#0A3D1F"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="Feed a Friend"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0A3D1F;font-family:Poppins,sans-serif;-webkit-font-smoothing:antialiased}
+input,select,textarea,button{font-family:inherit}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.fade{animation:fadein .2s ease}
+.card{transition:transform .15s,box-shadow .15s}
+.card:active{transform:scale(0.98)}
+#splash{position:fixed;inset:0;background:#0A3D1F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999}
+.spinner{width:40px;height:40px;border:4px solid #22C55E;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+</style>
+</head>
+<body>
+<div id="splash"><div class="spinner"></div><p style="color:#BBF7D0;font-size:12px;letter-spacing:2px">LOADING...</p></div>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<script type="text/babel">
+const {useState, useEffect} = React;
+const sb = supabase.createClient("https://xbxagukdvgyaoqvbqoic.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4");
+const LOGO = "https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/avatars/Faflogowhite.png";
+const EDGE = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder";
+const EDGE_ROLE_AI = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/generate-role-description";
+const DK="#0A3D1F",GN="#15803D",MD="#22C55E",PL="#F0FDF4",BR="#BBF7D0",MT="#4B7C5A";
+const HF="'League Spartan',sans-serif",BF="'Poppins',sans-serif";
+const inp = {width:"100%",padding:"12px 14px",border:"1.5px solid #BBF7D0",borderRadius:10,fontSize:15,fontFamily:BF,outline:"none",boxSizing:"border-box",background:"#fff",color:DK};
+const PROJECTS = [
+  {id:"food-boxes",label:"Food Boxes",emoji:"📦",bg:"#F5A623",light:"#FEF3C7",text:"#7C4D00"},
+  {id:"welcome-baby",label:"Welcome Baby",emoji:"👶",bg:"#9B59B6",light:"#F3E8FF",text:"#5B21B6"},
+  {id:"community-fridges",label:"Community Fridges",emoji:"🧊",bg:"#E8732A",light:"#FFEDD5",text:"#9A3412"},
+  {id:"little-learners",label:"Little Learners",emoji:"📚",bg:"#1A9E8F",light:"#CCFBF1",text:"#134E4A"},
+  {id:"pay-it-forward",label:"Pay it Forward",emoji:"🎁",bg:"#E74C3C",light:"#FEE2E2",text:"#991B1B"},
+  {id:"giving-garden",label:"Giving Garden",emoji:"🌱",bg:"#8E44AD",light:"#EDE9FE",text:"#4C1D95"},
+  {id:"general",label:"General",emoji:"⭐",bg:"#607D8B",light:"#ECEFF1",text:"#37474F"},
+];
+const gp = id => PROJECTS.find(p=>p.id===id)||PROJECTS[0];
+const commitLabel = o => o.commitment_hours ? " · ⏱ "+o.commitment_hours+" hrs/"+(o.commitment_frequency||"week") : "";
+
+async function sendEmail(type,name,email,adminEmail="",eventTitle=""){
+  try{ await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"},body:JSON.stringify({type,name,email,adminEmail,eventTitle})});}
+  catch(e){console.log("Email error",e);}
+}
+
+async function uploadPhoto(userId, file){
+  const ext = file.name.split(".").pop();
+  const {data} = await sb.storage.from("avatars").upload(userId+"/avatar."+ext, file, {upsert:true});
+  if(data){const {data:u} = sb.storage.from("avatars").getPublicUrl(data.path); return u.publicUrl;}
+  return null;
+}
+
+function Tag({pid,sm}){
+  const p=gp(pid);
+  return <span style={{background:p.light,color:p.text,padding:sm?"2px 8px":"3px 10px",borderRadius:20,fontSize:sm?10:11,fontWeight:700,display:"inline-flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>{p.emoji} {p.label}</span>;
+}
+
+function Avtr({u,sz=40}){
+  if(u?.photo_url) return <img src={u.photo_url} style={{width:sz,height:sz,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:"2px solid "+MD}}/>;
+  const i=(u?.first_name?.[0]||"")+(u?.surname?.[0]||"");
+  return <div style={{width:sz,height:sz,borderRadius:"50%",background:MD,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:HF,fontWeight:900,fontSize:sz*.35,color:DK,flexShrink:0}}>{i}</div>;
+}
+
+function RoleBadge({role}){
+  if(role==="superadmin") return <span style={{background:"#7C3AED",color:"#fff",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>⭐ Super Admin</span>;
+  if(role==="admin") return <span style={{background:DK,color:MD,borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>🛡️ Admin</span>;
+  return null;
+}
+
+function Field({label,children}){
+  return <div><label style={{display:"block",fontWeight:700,fontSize:13,color:DK,marginBottom:6,fontFamily:BF}}>{label}</label>{children}</div>;
+}
+
+function Toast({msg}){
+  if(!msg) return null;
+  return <div style={{position:"fixed",top:68,left:12,right:12,background:DK,color:"#fff",padding:"12px 16px",borderRadius:12,zIndex:9999,fontSize:14,fontWeight:600,textAlign:"center",border:"1px solid "+MD,fontFamily:BF}}>{msg}</div>;
+}
+
+function PhotoEditor({current,onSelect}){
+  const [preview,setPreview] = useState(null);
+  const [pos,setPos] = useState("center");
+  return <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
+    <div style={{position:"relative"}}>
+      {preview
+        ? <img src={preview} style={{width:80,height:80,borderRadius:"50%",objectFit:"cover",objectPosition:pos,border:"3px solid "+MD}}/>
+        : <Avtr u={current} sz={80}/>
+      }
+      <label style={{position:"absolute",bottom:0,right:0,background:DK,borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:14,border:"2px solid #fff"}}>
+        📷<input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
+          const f=e.target.files[0]; if(!f) return;
+          const r=new FileReader(); r.onload=ev=>{setPreview(ev.target.result); onSelect(f,ev.target.result);};
+          r.readAsDataURL(f);
+        }}/>
+      </label>
+    </div>
+    {preview && <div style={{display:"flex",gap:6}}>
+      {["top","center","bottom"].map(p=><button key={p} onClick={()=>setPos(p)} style={{background:pos===p?DK:"#fff",color:pos===p?"#fff":DK,border:"1px solid "+BR,borderRadius:6,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer",textTransform:"capitalize"}}>{p}</button>)}
+    </div>}
+    {!preview && <p style={{fontSize:12,color:MT,fontFamily:BF}}>Tap 📷 to change photo</p>}
+  </div>;
+}
+
+// -- AUTH ----------------------------------------------------------------------
+function playCheer(){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const play=(f,t,d)=>{const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*1.5,t+d*0.3);g.gain.setValueAtTime(0.3,t);g.gain.exponentialRampToValueAtTime(0.001,t+d);o.start(t);o.stop(t+d);};const t=ctx.currentTime;[523,659,784,1047].forEach((f,i)=>play(f,t+i*0.12,0.15));play(1047,t+0.5,0.4);}catch(e){}}
+function Confetti({active,hours}){
+  const [particles,setParticles]=React.useState([]);
+  React.useEffect(()=>{
+    if(!active)return;
+    const cols=["#FFD700","#FF6B6B","#4ECDC4","#45B7D1","#96CEB4","#FFEAA7","#DDA0DD","#98D8C8","#FF8C69","#87CEEB"];
+    const shapes=["●","★","♦","▲","♥","✦"];
+    const p=Array.from({length:80},(_,i)=>({
+      id:i, x:Math.random()*100, delay:Math.random()*0.8,
+      dur:1.5+Math.random()*1.5, color:cols[Math.floor(Math.random()*cols.length)],
+      shape:shapes[Math.floor(Math.random()*shapes.length)],
+      size:10+Math.random()*14, drift:(Math.random()-0.5)*200,
+      rotate:Math.random()*720,
+    }));
+    setParticles(p);
+    playCheer();
+    setTimeout(()=>setParticles([]),4000);
+  },[active]);
+  if(!particles.length)return null;
+  return <div style={{position:"fixed",top:0,left:0,width:"100%",height:"100%",pointerEvents:"none",zIndex:9999,overflow:"hidden"}}>
+    {particles.map(p=><div key={p.id} style={{
+      position:"absolute", left:p.x+"%", top:"-20px",
+      fontSize:p.size, color:p.color, lineHeight:1,
+      animation:`fall${p.id%4} ${p.dur}s ${p.delay}s ease-in forwards`,
+    }}>{p.shape}</div>)}
+    <div style={{position:"absolute",top:"40%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center",animation:"popIn 0.5s ease-out"}}>
+      <div style={{fontSize:52,marginBottom:8}}>🎉</div>
+      <div style={{fontFamily:"Georgia,serif",fontSize:28,fontWeight:900,color:"#1a3c2e",textShadow:"0 2px 8px rgba(255,255,255,0.9)",background:"rgba(255,255,255,0.92)",borderRadius:16,padding:"12px 24px",boxShadow:"0 4px 20px rgba(0,0,0,0.15)"}}>
+        +{hours}h logged! 🌟
+      </div>
+    </div>
+    <style>{`
+      @keyframes fall0{to{transform:translateY(110vh) translateX(50px) rotate(360deg);opacity:0}}
+      @keyframes fall1{to{transform:translateY(110vh) translateX(-80px) rotate(-360deg);opacity:0}}
+      @keyframes fall2{to{transform:translateY(110vh) translateX(30px) rotate(540deg);opacity:0}}
+      @keyframes fall3{to{transform:translateY(110vh) translateX(-60px) rotate(-540deg);opacity:0}}
+      @keyframes popIn{from{transform:translate(-50%,-50%) scale(0.5);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+    `}</style>
+  </div>;
+}
+
+function Auth({onAuth}){
+  const [mode,setMode]=useState("login");
+  const [loading,setLoading]=useState(false);
+  const [err,setErr]=useState(""), [msg,setMsg]=useState("");
+  const [showPw,setShowPw]=useState(false);
+  const [em,setEm]=useState(""), [pw,setPw]=useState("");
+  const [r,setR]=useState({fn:"",sn:"",dob:"",email:"",pw:"",pw2:"",employment:"",student:false,studentLevel:"",studentSchool:"",working:false,prof:"",projs:[],photo:null,photoFile:null,nationality:"",fun_fact:""});
+
+  async function login(){
+    setErr(""); setLoading(true);
+    const {data,error}=await sb.auth.signInWithPassword({email:em,password:pw});
+    if(error){setErr(error.message);setLoading(false);return;}
+    const {data:p}=await sb.from("profiles").select("*").eq("id",data.user.id).single();
+    if(p&&!p.approved&&p.role!=="admin"&&p.role!=="superadmin"){await sb.auth.signOut();setErr("Your registration is pending admin approval.");setLoading(false);return;}
+    onAuth(p); setLoading(false);
+  }
+
+  async function register(){
+    setErr("");
+    if(!r.fn||!r.sn||!r.dob||!r.phone||!r.nationality||!r.email||!r.pw){setErr("Please fill in all required fields.");return;}
+    if(!r.employment){setErr("Please select your employment status.");return;}
+    if(r.projs.length===0){setErr("Please select at least one project you are interested in.");return;}
+    if(r.pw!==r.pw2){setErr("Passwords do not match.");return;}
+    if(r.pw.length<6){setErr("Password must be at least 6 characters.");return;}
+    setLoading(true);
+    const {data,error}=await sb.auth.signUp({email:r.email,password:r.pw});
+    if(error){setErr(error.message);setLoading(false);return;}
+    let photo_url=null;
+    if(r.photoFile&&data.user) photo_url=await uploadPhoto(data.user.id,r.photoFile);
+    await sb.from("profiles").insert({id:data.user.id,first_name:r.fn,surname:r.sn,email:r.email,dob:r.dob,phone:r.phone||"",nationality:r.nationality||"",fun_fact:r.fun_fact||"",is_student:r.employment==="student",student_level:r.studentLevel,student_school:r.studentSchool,is_working:r.employment==="working",profession:r.prof,projects:r.projs,photo_url,role:"volunteer",approved:false});
+    await sendEmail("volunteer_pending",r.fn,r.email);
+    await sendEmail("new_volunteer",r.fn+" "+r.sn,r.email,"salaam@feedafriend.org");
+    setMsg("Registration submitted! An admin will review and approve your account shortly.");
+    setMode("login"); setLoading(false);
+  }
+
+  async function forgot(){
+    if(!em){setErr("Please enter your email.");return;}
+    await sb.auth.resetPasswordForEmail(em,{redirectTo:window.location.href});
+    setMsg("Reset email sent! Check your inbox."); setMode("login");
+  }
+
+  const tp=id=>setR(x=>{const p=x.projs.includes(id)?x.projs.filter(i=>i!==id):[...x.projs,id];return{...x,projs:p};});
+  const card={background:"#fff",borderRadius:20,padding:"28px 22px",width:"100%",maxWidth:420};
+  const bg={minHeight:"100vh",background:DK,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 16px",fontFamily:BF};
+
+  return <div className="fade" style={bg}>
+    <img src={LOGO} alt="Feed a Friend" style={{height:70,marginBottom:6}}/>
+    <p style={{fontSize:11,color:MD,letterSpacing:2,textTransform:"uppercase",marginBottom:20}}>Volunteer Portal</p>
+    {msg&&<div style={{background:"#DCFCE7",color:DK,borderRadius:12,padding:"12px 16px",marginBottom:16,fontSize:13,width:"100%",maxWidth:420,textAlign:"center",fontWeight:600}}>{msg}</div>}
+
+    {mode==="login"&&<div style={card}>
+      <h2 style={{fontFamily:HF,fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Sign In</h2>
+      <p style={{color:MT,fontSize:13,marginBottom:20}}>Welcome back!</p>
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <Field label="Email"><input type="email" placeholder="you@email.com" value={em} onChange={e=>setEm(e.target.value)} style={inp}/></Field>
+        <Field label="Password">
+          <div style={{position:"relative"}}>
+            <input type={showPw?"text":"password"} placeholder="••••••••" value={pw} onChange={e=>setPw(e.target.value)} style={{...inp,paddingRight:50}}/>
+            <button onClick={()=>setShowPw(s=>!s)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:12,color:MT}}>{showPw?"Hide":"Show"}</button>
+          </div>
+        </Field>
+        {err&&<p style={{color:"#DC2626",fontSize:13,fontWeight:600}}>{err}</p>}
+        <button onClick={login} disabled={loading} style={{background:MD,color:DK,border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",opacity:loading?.7:1}}>{loading?"Signing in...":"Sign In →"}</button>
+        <button onClick={()=>{setMode("forgot");setErr("")}} style={{background:"none",border:"none",color:MT,fontSize:13,cursor:"pointer",textDecoration:"underline"}}>Forgot password?</button>
+      </div>
+      <div style={{borderTop:"1px solid "+BR,marginTop:20,paddingTop:16,textAlign:"center"}}>
+        <p style={{fontSize:13,color:MT}}>New volunteer? <span onClick={()=>{setMode("register");setErr("")}} style={{color:GN,fontWeight:700,cursor:"pointer"}}>Register here</span></p>
+      </div>
+    </div>}
+
+    {mode==="forgot"&&<div style={card}>
+      <h2 style={{fontFamily:HF,fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Reset Password</h2>
+      <p style={{color:MT,fontSize:13,marginBottom:20}}>Enter your email for a reset link.</p>
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <Field label="Email"><input type="email" placeholder="you@email.com" value={em} onChange={e=>setEm(e.target.value)} style={inp}/></Field>
+        {err&&<p style={{color:"#DC2626",fontSize:13,fontWeight:600}}>{err}</p>}
+        <button onClick={forgot} style={{background:MD,color:DK,border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Send Reset Link</button>
+        <button onClick={()=>setMode("login")} style={{background:"none",border:"none",color:MT,fontSize:13,cursor:"pointer",textDecoration:"underline"}}>← Back</button>
+      </div>
+    </div>}
+
+    {mode==="register"&&<div style={{...card,maxHeight:"85vh",overflowY:"auto"}}>
+      <h2 style={{fontFamily:HF,fontSize:22,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Register</h2>
+      <p style={{color:MT,fontSize:13,marginBottom:20}}>Join our volunteer community.</p>
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <Field label="Profile Photo">
+          <PhotoEditor current={null} onSelect={(f,prev)=>setR(x=>{return{...x,photo:prev,photoFile:f};})}/> 
+        </Field>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <Field label="First Name *"><input type="text" placeholder="Sara" value={r.fn} onChange={e=>setR(x=>{return{...x,fn:e.target.value};} )} style={inp}/></Field>
+          <Field label="Surname *"><input type="text" placeholder="Ahmed" value={r.sn} onChange={e=>setR(x=>{return{...x,sn:e.target.value};} )} style={inp}/></Field>
+        </div>
+        <Field label="Date of Birth *"><input type="date" value={r.dob} onChange={e=>setR(x=>{return{...x,dob:e.target.value};} )} style={inp}/></Field>
+        <Field label="Phone Number *"><input type="tel" placeholder="e.g. 33123456" value={r.phone||""} onChange={e=>setR(x=>{return{...x,phone:e.target.value};} )} style={inp}/></Field>
+        <Field label="Nationality *"><input type="text" placeholder="e.g. British, Qatari, Egyptian" value={r.nationality||""} onChange={e=>setR(x=>{return{...x,nationality:e.target.value};} )} style={inp}/></Field>
+        <Field label="Email *"><input type="email" placeholder="you@email.com" value={r.email} onChange={e=>setR(x=>{return{...x,email:e.target.value};} )} style={inp}/></Field>
+        <Field label="Password *"><input type="password" placeholder="Min. 6 characters" value={r.pw} onChange={e=>setR(x=>{return{...x,pw:e.target.value};} )} style={inp}/></Field>
+        <Field label="Confirm Password *"><input type="password" placeholder="Repeat password" value={r.pw2} onChange={e=>setR(x=>{return{...x,pw2:e.target.value};} )} style={inp}/></Field>
+        <Field label="Employment Status *">
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {[{val:"student",label:"🎓 Student"},{val:"working",label:"💼 Working"},{val:"not_working",label:"🏠 Not currently working"}].map(opt=><label key={opt.val} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 12px",borderRadius:10,background:r.employment===opt.val?"#F0FDF4":"#fff",border:"1.5px solid "+(r.employment===opt.val?GN:BR)}}>
+              <input type="radio" name="employment" value={opt.val} checked={r.employment===opt.val} onChange={e=>setR(x=>{return{...x,employment:e.target.value,student:e.target.value==="student",working:e.target.value==="working"};} )} style={{width:18,height:18,accentColor:GN}}/>
+              <span style={{fontSize:14,fontWeight:600,color:r.employment===opt.val?GN:DK}}>{opt.label}</span>
+            </label>)}
+          </div>
+        </Field>
+        {r.employment==="student"&&<div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",background:PL,borderRadius:12,border:"1px solid "+BR}}>
+          <Field label="Level of study">
+            <select value={r.studentLevel} onChange={e=>setR(x=>{return{...x,studentLevel:e.target.value};} )} style={inp}>
+              <option value="">Select level...</option>
+              <option>Secondary School (GCSE)</option><option>Sixth Form / A-Levels</option>
+              <option>Undergraduate</option><option>Postgraduate</option><option>Other</option>
+            </select>
+          </Field>
+          <Field label="School / University"><input type="text" placeholder="e.g. University of Manchester" value={r.studentSchool} onChange={e=>setR(x=>{return{...x,studentSchool:e.target.value};} )} style={inp}/></Field>
+        </div>}
+        {r.employment==="working"&&<div style={{padding:"14px",background:PL,borderRadius:12,border:"1px solid "+BR}}>
+          <Field label="Profession"><input type="text" placeholder="e.g. Teacher, Nurse..." value={r.prof} onChange={e=>setR(x=>{return{...x,prof:e.target.value};} )} style={inp}/></Field>
+        </div>}
+        <Field label="Projects you're interested in *">
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:4}}>
+            {PROJECTS.map(p=><label key={p.id} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 12px",borderRadius:10,background:r.projs.includes(p.id)?p.light:"#fff",border:"1.5px solid "+(r.projs.includes(p.id)?p.bg:BR)}}>
+              <input type="checkbox" checked={r.projs.includes(p.id)} onChange={()=>tp(p.id)} style={{width:18,height:18,accentColor:p.bg}}/>
+              <span style={{fontSize:18}}>{p.emoji}</span>
+              <span style={{fontSize:14,fontWeight:600,color:r.projs.includes(p.id)?p.text:DK}}>{p.label}</span>
+            </label>)}
+          </div>
+        </Field>
+        <Field label="Fun Fact About Me (optional)"><input type="text" placeholder="e.g. I once hiked Everest base camp! 🏔️" value={r.fun_fact||""} onChange={e=>setR(x=>{return{...x,fun_fact:e.target.value};} )} style={inp}/></Field>
+        {err&&<p style={{color:"#DC2626",fontSize:13,fontWeight:600}}>{err}</p>}
+        <button onClick={register} disabled={loading} style={{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",opacity:loading?.7:1}}>{loading?"Submitting...":"Submit Registration"}</button>
+        <button onClick={()=>{setMode("login");setErr("")}} style={{background:"none",border:"none",color:MT,fontSize:13,cursor:"pointer",textDecoration:"underline"}}>← Back to Sign In</button>
+      </div>
+    </div>}
+    <p style={{fontSize:11,color:"rgba(255,255,255,0.3)",marginTop:20}}>feedafriend.org · Volunteer Portal</p>
+  </div>;
+}
+
+// -- PROFILE EDIT SCREEN (shared) ---------------------------------------------
+function ProfileEdit({profile, onSave, onBack}){
+  const [fn,setFn]=useState(profile.first_name||"");
+  const [sn,setSn]=useState(profile.surname||"");
+  const [phone,setPhone]=useState(profile.phone||"");
+  const [nationality,setNationality]=useState(profile.nationality||"");
+  const [funFact,setFunFact]=useState(profile.fun_fact||"");
+  const [dob,setDob]=useState(profile.dob||"");
+  const [employment,setEmployment]=useState(profile.is_student?"student":profile.is_working?"working":"not_working");
+  const [studentLevel,setStudentLevel]=useState(profile.student_level||"");
+  const [studentSchool,setStudentSchool]=useState(profile.student_school||"");
+  const [prof,setProf]=useState(profile.profession||"");
+  const [projs,setProjs]=useState(profile.projects||[]);
+  const [photoFile,setPhotoFile]=useState(null);
+  const [saving,setSaving]=useState(false);
+  const isAdmin = profile.role==="admin"||profile.role==="superadmin";
+
+  const tp=id=>setProjs(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+
+  async function save(){
+    setSaving(true);
+    let photo_url = profile.photo_url;
+    if(photoFile) photo_url = await uploadPhoto(profile.id, photoFile) || photo_url;
+    const updates = {first_name:fn,surname:sn,photo_url,phone,nationality,fun_fact:funFact};
+    if(!isAdmin){
+      Object.assign(updates,{dob,is_student:employment==="student",is_working:employment==="working",student_level:studentLevel,student_school:studentSchool,profession:prof,projects:projs});
+    }
+    const {error} = await sb.from("profiles").update(updates).eq("id",profile.id);
+    setSaving(false);
+    if(error){alert("Error: "+error.message); return;}
+    onSave({...profile,...updates});
+  }
+
+  return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
+    <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 16px",gap:12,position:"sticky",top:0,zIndex:100}}>
+      <button onClick={onBack} style={{background:"rgba(255,255,255,0.1)",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13,fontWeight:700}}>← Back</button>
+      <span style={{fontFamily:HF,fontWeight:900,fontSize:16,color:"#fff",textTransform:"uppercase"}}>Edit Profile</span>
+    </header>
+    <main style={{maxWidth:640,margin:"0 auto",padding:"20px 16px 40px"}}>
+      <div style={{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",paddingBottom:14,borderBottom:"1px solid "+BR}}>
+            <PhotoEditor current={profile} onSelect={(f)=>setPhotoFile(f)}/>
+          </div>
+          <Field label="First Name"><input type="text" value={fn} onChange={e=>setFn(e.target.value)} style={inp}/></Field>
+          <Field label="Surname"><input type="text" value={sn} onChange={e=>setSn(e.target.value)} style={inp}/></Field>
+          <Field label="Phone Number"><input type="tel" placeholder="e.g. 33123456" value={phone} onChange={e=>setPhone(e.target.value)} style={inp}/></Field>
+          <Field label="Nationality"><input type="text" placeholder="e.g. British, Qatari, Egyptian" value={nationality} onChange={e=>setNationality(e.target.value)} style={inp}/></Field>
+          <Field label="Fun Fact About Me (optional)"><input type="text" placeholder="e.g. I once hiked Everest base camp! 🏔️" value={funFact} onChange={e=>setFunFact(e.target.value)} style={inp}/></Field>
+          {!isAdmin&&<>
+            <Field label="Date of Birth"><input type="date" value={dob} onChange={e=>setDob(e.target.value)} style={inp}/></Field>
+            <Field label="Employment Status">
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {[{val:"student",label:"🎓 Student"},{val:"working",label:"💼 Working"},{val:"not_working",label:"🏠 Not currently working"}].map(opt=><label key={opt.val} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 12px",borderRadius:10,background:employment===opt.val?"#F0FDF4":"#fff",border:"1.5px solid "+(employment===opt.val?GN:BR)}}>
+                  <input type="radio" name="edit_employment" value={opt.val} checked={employment===opt.val} onChange={e=>setEmployment(e.target.value)} style={{width:18,height:18,accentColor:GN}}/>
+                  <span style={{fontSize:14,fontWeight:600,color:employment===opt.val?GN:DK}}>{opt.label}</span>
+                </label>)}
+              </div>
+            </Field>
+            {employment==="student"&&<div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",background:PL,borderRadius:12,border:"1px solid "+BR}}>
+              <Field label="Level of study">
+                <select value={studentLevel} onChange={e=>setStudentLevel(e.target.value)} style={inp}>
+                  <option value="">Select...</option>
+                  <option>Secondary School (GCSE)</option><option>Sixth Form / A-Levels</option>
+                  <option>Undergraduate</option><option>Postgraduate</option><option>Other</option>
+                </select>
+              </Field>
+              <Field label="School / University"><input type="text" value={studentSchool} onChange={e=>setStudentSchool(e.target.value)} style={inp}/></Field>
+            </div>}
+            {employment==="working"&&<div style={{padding:"14px",background:PL,borderRadius:12,border:"1px solid "+BR}}>
+              <Field label="Profession"><input type="text" value={prof} onChange={e=>setProf(e.target.value)} style={inp}/></Field>
+            </div>}
+            <Field label="Project Interests">
+              <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:4}}>
+                {PROJECTS.map(p=><label key={p.id} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 12px",borderRadius:10,background:projs.includes(p.id)?p.light:"#fff",border:"1.5px solid "+(projs.includes(p.id)?p.bg:BR)}}>
+                  <input type="checkbox" checked={projs.includes(p.id)} onChange={()=>tp(p.id)} style={{width:18,height:18,accentColor:p.bg}}/>
+                  <span style={{fontSize:18}}>{p.emoji}</span>
+                  <span style={{fontSize:14,fontWeight:600,color:projs.includes(p.id)?p.text:DK}}>{p.label}</span>
+                </label>)}
+              </div>
+            </Field>
+          </>}
+          <button onClick={save} disabled={saving} style={{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",opacity:saving?.7:1}}>{saving?"Saving...":"Save Changes"}</button>
+        </div>
+      </div>
+    </main>
+  </div>;
+}
+
+// -- ADMIN ---------------------------------------------------------------------
+function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
+  const [profile,setProfile]=useState(initProfile);
+  const [tab,setTab]=useState(isSuperAdmin?"pending":"opps");
+  const [pending,setPending]=useState([]);
+  const [vols,setVols]=useState([]);
+  const [admins,setAdmins]=useState([]);
+  const [opps,setOpps]=useState([]);
+  const [oppSignups,setOppSignups]=useState({});
+  const [hoursPending,setHoursPending]=useState([]);
+  const [hourLogs,setHourLogs]=useState([]);
+  const [toast,setToast]=useState(null);
+  const [viewProf,setViewProf]=useState(null);
+  const [editOpp,setEditOpp]=useState(null);
+  const [editingProfile,setEditingProfile]=useState(false);
+  const [volSearch,setVolSearch]=useState("");
+  const [volHistory,setVolHistory]=useState([]);
+  const [csvResult,setCsvResult]=useState(null);
+  const [manualHours,setManualHours]=useState(null);
+  const [celebrate,setCelebrate]=useState(false);
+  const [celebrateHours,setCelebrateHours]=useState(0);
+  const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),type:"event",date:"",end_date:"",start_time:"",end_time:"",spots:"",hours:"",commitment_hours:"",commitment_frequency:"week",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
+  const [aiLoading,setAiLoading]=useState(false);
+  const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
+
+  const calcHours=(s,e)=>{
+    if(!s||!e) return "";
+    const [sh,sm]=s.split(":").map(Number);
+    const [eh,em]=e.split(":").map(Number);
+    const diff=(eh*60+em)-(sh*60+sm);
+    return diff>0?(diff/60).toFixed(1).replace(".0",""):"";
+  };
+
+  useEffect(()=>{load();}, []);
+
+  async function load(){
+    const oppQuery = isSuperAdmin
+      ? sb.from("opportunities").select("*").eq("archived",false).order("date")
+      : sb.from("opportunities").select("*").eq("archived",false).in("project",profile.admin_projects||[]).order("date");
+    const [{data:p},{data:v},{data:a},{data:o},{data:s},{data:h},{data:al}] = await Promise.all([
+      sb.from("profiles").select("*").eq("approved",false).eq("role","volunteer"),
+      sb.from("profiles").select("*").eq("approved",true).eq("role","volunteer"),
+      isSuperAdmin ? sb.from("profiles").select("*").in("role",["admin","superadmin"]) : Promise.resolve({data:[]}),
+      oppQuery,
+      sb.from("signups").select("*,profiles(id,first_name,surname,email,phone,photo_url,is_student,student_level,student_school,is_working,profession,projects,approved,dob,role,admin_projects)"),
+      sb.from("hour_logs").select("*,profiles(first_name,surname,email)").eq("status","pending").order("created_at",{ascending:false}),
+      sb.from("hour_logs").select("*").eq("status","approved").order("date",{ascending:false}),
+    ]);
+    setPending(p||[]); setVols(v||[]); setAdmins(a||[]); setOpps(o||[]);
+    const g={};
+    (s||[]).forEach(su=>{if(!g[su.opportunity_id])g[su.opportunity_id]=[];g[su.opportunity_id].push(su);});
+    setOppSignups(g);
+    setHoursPending(h||[]);
+    setHourLogs(al||[]);
+    setVolHistory(al||[]);
+  }
+
+  const approve=async id=>{
+    const {error}=await sb.from("profiles").update({approved:true}).eq("id",id);
+    if(error){st("Error: "+error.message);return;}
+    const {data:vol}=await sb.from("profiles").select("first_name,email").eq("id",id).single();
+    if(vol) await sendEmail("volunteer_approved",vol.first_name,vol.email);
+    st("✓ Approved!"); load();
+  };
+  const decline=async id=>{
+    const {error}=await sb.from("profiles").delete().eq("id",id);
+    if(error){st("Error: "+error.message);return;}
+    await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"},body:JSON.stringify({type:"delete_user",userId:id})});
+    st("Declined."); load();
+  };
+  const deleteVol=async id=>{
+    if(!window.confirm("Are you sure you want to delete this volunteer? They will be able to re-register with the same email.")) return;
+    await sb.from("signups").delete().eq("volunteer_id",id);
+    await sb.from("hour_logs").delete().eq("volunteer_id",id);
+    const {error}=await sb.from("profiles").delete().eq("id",id);
+    if(error){st("Error: "+error.message);return;}
+    await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"},body:JSON.stringify({type:"delete_user",userId:id})});
+    setViewProf(null); st("Volunteer removed."); load();
+  };
+  const approveSignup=async id=>{
+    const {error}=await sb.from("signups").update({status:"approved"}).eq("id",id);
+    if(error){st("Error: "+error.message);return;}
+    st("✓ Signup approved!"); load();
+  };
+  const declineSignup=async id=>{
+    const {error}=await sb.from("signups").delete().eq("id",id);
+    if(error){st("Error: "+error.message);return;}
+    st("Declined."); load();
+  };
+  const markDNA=async id=>{
+    const {error}=await sb.from("signups").update({did_not_attend:true}).eq("id",id);
+    if(error){st("Error: "+error.message);return;}
+    st("Marked as did not attend."); load();
+  };
+  const checkIn=async id=>{
+    const {error}=await sb.from("signups").update({checked_in:new Date().toISOString()}).eq("id",id);
+    if(error){st("Error: "+error.message);return;}
+    st("✓ Checked in!"); load();
+  };
+  const checkOut=async(id,oppId,volId,volName,title,proj,checkinTime)=>{
+    const now=new Date();
+    const checkoutISO=now.toISOString();
+    const {error}=await sb.from("signups").update({checked_out:checkoutISO}).eq("id",id);
+    if(error){st("Error: "+error.message);return;}
+    const exactHours=checkinTime?Math.round((now-new Date(checkinTime))/36000)/100:0;
+    await sb.from("hour_logs").insert({volunteer_id:volId,name:volName,activity:title,project:proj,hours:exactHours,date:now.toISOString().split("T")[0],notes:"Logged via check-in/out",status:"approved"});
+    st("✅ "+exactHours+"h logged!"); setCelebrateHours(exactHours); setCelebrate(true); setTimeout(()=>setCelebrate(false),4500); load();
+  };
+  const delOpp=async(id,title)=>{
+    if(!window.confirm("Cancel this event? All signed-up volunteers will be emailed.")) return;
+    // Fetch all signups with volunteer profiles
+    const {data:sups}=await sb.from("signups").select("*,profiles(first_name,email)").eq("opportunity_id",id);
+    // Send cancellation email to each
+    if(sups&&sups.length>0){
+      await Promise.all(sups.map(s=>sendEmail("event_cancelled",s.profiles?.first_name||"Volunteer",s.profiles?.email||"","",title)));
+    }
+    const {error}=await sb.from("opportunities").delete().eq("id",id);
+    if(error){st("Error removing: "+error.message);return;}
+    st("Event cancelled & emails sent."); load();
+  };
+  const addOpp=async()=>{
+    if(!no.title||!no.date||!no.location){st("Fill title, "+(no.type==="ongoing"?"start date":"date")+" and location.");return;}
+    const {error}=await sb.from("opportunities").insert({...no,end_date:no.end_date||null,spots:Number(no.spots)||10,hours:Number(no.hours)||2,commitment_hours:no.type==="ongoing"&&no.commitment_hours?Number(no.commitment_hours):null,commitment_frequency:no.type==="ongoing"?(no.commitment_frequency||"week"):null,created_by:profile.id});
+    if(error){st("Error: "+error.message);return;}
+    setNo({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),type:"event",date:"",end_date:"",start_time:"",end_time:"",spots:"",hours:"",commitment_hours:"",commitment_frequency:"week",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[]});
+    st("✓ Published!"); setTab("opps"); load();
+  };
+  const saveEditOpp=async()=>{
+    if(!editOpp.title||!editOpp.date||!editOpp.location){st("Fill title, "+(editOpp.type==="ongoing"?"start date":"date")+" and location.");return;}
+    const {error}=await sb.from("opportunities").update({title:editOpp.title,description:editOpp.description,type:editOpp.type||"event",date:editOpp.date,end_date:editOpp.end_date||null,location:editOpp.location,spots:Number(editOpp.spots)||10,hours:Number(editOpp.hours)||2,commitment_hours:editOpp.commitment_hours?Number(editOpp.commitment_hours):null,commitment_frequency:editOpp.type==="ongoing"?(editOpp.commitment_frequency||"week"):null,start_time:editOpp.start_time,end_time:editOpp.end_time,students_only:editOpp.students_only,project:editOpp.project,questions:editOpp.questions||[]}).eq("id",editOpp.id);
+    if(error){st("Error: "+error.message);return;}
+    st("✓ Updated!"); setEditOpp(null); load();
+  };
+  const updateAdminProjects=async(adminId,projects)=>{
+    const {error}=await sb.from("profiles").update({admin_projects:projects}).eq("id",adminId);
+    if(error){st("Error: "+error.message);return;}
+    st("✓ Admin projects updated!"); load();
+  };
+  const generateDescription=async(target,setTarget)=>{
+    if(!target.title){st("Add a role title first.");return;}
+    if(!target.description){st("Add a few brief notes about the role first.");return;}
+    setAiLoading(true);
+    try{
+      const hc=target.commitment_hours?target.commitment_hours+" hours per "+(target.commitment_frequency||"week"):"";
+      const res=await fetch(EDGE_ROLE_AI,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({role_title:target.title,brief:target.description,hours_commitment:hc,has_end_date:!!target.end_date,end_date:target.end_date})});
+      const json=await res.json();
+      if(!res.ok||json.error) throw new Error(json.error||"AI generation failed.");
+      setTarget(t=>{return{...t,description:json.description};} );
+      st("✓ Description generated — feel free to edit it!");
+    }catch(e){
+      st("AI error: "+e.message);
+    }finally{
+      setAiLoading(false);
+    }
+  };
+  const SUGGESTED_QUESTIONS=[
+    {q:"Have you ever volunteered with Feed a Friend in the past?",type:"yesno"},
+    {q:"Why would you like to volunteer for this role?",type:"text"},
+    {q:"Do you have any skills that could add value to this role?",type:"text"},
+    {q:"Any other comments?",type:"text"},
+  ];
+  const addSuggestedQuestions=(target,setTarget)=>{
+    setTarget(t=>{
+      const existing=(t.questions||[]).map(q=>q.q);
+      const toAdd=SUGGESTED_QUESTIONS.filter(sq=>!existing.includes(sq.q));
+      return{...t,questions:[...(t.questions||[]),...toAdd]};
+    });
+  };
+
+  const TABS=[
+    ...(isSuperAdmin?[{id:"pending",label:"Pending",count:pending.length,alert:pending.length>0}]:[]),
+    ...(isSuperAdmin?[{id:"vols",label:"Volunteers",count:vols.length,alert:false}]:[]),
+    ...(isSuperAdmin?[{id:"admins",label:"Admins",count:admins.length,alert:false}]:[]),
+    {id:"opps",label:"Opportunities",count:opps.length,alert:false},
+    {id:"hours",label:"Hours",count:null,alert:false},
+    {id:"add",label:"+ Add",count:null,alert:false},
+  ];
+
+  if(editingProfile) return <ProfileEdit profile={profile} onSave={p=>{setProfile(p);setEditingProfile(false);st("✓ Profile saved!")}} onBack={()=>setEditingProfile(false)}/>;
+  if(viewProf) return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
+    <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 16px",gap:12,position:"sticky",top:0,zIndex:100}}>
+      <button onClick={()=>setViewProf(null)} style={{background:"rgba(255,255,255,0.1)",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13,fontWeight:700}}>← Back</button>
+      <span style={{fontFamily:HF,fontWeight:900,fontSize:16,color:"#fff",textTransform:"uppercase"}}>Volunteer Profile</span>
+    </header>
+    <main style={{maxWidth:640,margin:"0 auto",padding:"20px 16px"}}>
+      <div style={{background:"#fff",borderRadius:16,padding:24,border:"1px solid "+BR,marginBottom:16,display:"flex",alignItems:"center",gap:16}}>
+        <Avtr u={viewProf} sz={70}/>
+        <div>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <div style={{fontFamily:HF,fontWeight:900,fontSize:20,color:DK}}>{viewProf.first_name} {viewProf.surname}</div>
+            <RoleBadge role={viewProf.role}/>
+          </div>
+          <div style={{fontSize:13,color:MT}}>{viewProf.email}</div>
+          <div style={{fontSize:12,color:MT,marginTop:2}}>DOB: {viewProf.dob||"Not provided"}</div>
+          {viewProf.phone&&<div style={{fontSize:12,color:MT,marginTop:2}}>📞 {viewProf.phone}</div>}
+          {viewProf.nationality&&<div style={{fontSize:12,color:MT,marginTop:2}}>🌍 {viewProf.nationality}</div>}
+          {viewProf.fun_fact&&<div style={{fontSize:12,color:MT,marginTop:4,fontStyle:"italic"}}>✨ "{viewProf.fun_fact}"</div>}
+          <div style={{marginTop:6}}><span style={{background:DK,color:MD,borderRadius:20,padding:"3px 10px",fontSize:12,fontWeight:700}}>⏱ {Math.round(hourLogs.filter(l=>l.volunteer_id===viewProf.id).reduce((s,l)=>s+Number(l.hours),0)*100)/100}h volunteered</span></div>
+        </div>
+      </div>
+      <div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
+        <h3 style={{fontFamily:HF,fontSize:14,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Background</h3>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {viewProf.is_student&&<div style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:10,padding:"8px 14px",fontSize:13,fontWeight:600}}>🎓 {viewProf.student_level||"Student"}{viewProf.student_school?" · "+viewProf.student_school:""}</div>}
+          {viewProf.is_working&&<div style={{background:"#FFEDD5",color:"#9A3412",borderRadius:10,padding:"8px 14px",fontSize:13,fontWeight:600}}>💼 {viewProf.profession||"Working"}</div>}
+          {!viewProf.is_student&&!viewProf.is_working&&<p style={{color:MT,fontSize:13}}>No background info provided.</p>}
+        </div>
+      </div>
+      {viewProf.projects?.length>0&&<div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
+        <h3 style={{fontFamily:HF,fontSize:14,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Project Interests</h3>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{viewProf.projects.map(pid=><Tag key={pid} pid={pid}/>)}</div>
+      </div>}
+      {(()=>{const vhl=volHistory.filter(l=>l.volunteer_id===viewProf.id);const vth=vhl.reduce((s,l)=>s+Number(l.hours),0);return <div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+          <h3 style={{fontFamily:HF,fontSize:14,fontWeight:900,textTransform:"uppercase",color:DK,margin:0}}>Hour History</h3>
+          <button onClick={()=>setManualHours(manualHours?null:{activity:"Baby sorting clothes",project:"welcome-baby",hours:"",date:"2026-06-02"})} style={{background:DK,color:MD,border:"none",borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Add Hours</button>
+        </div>
+        <p style={{fontSize:12,color:MT,marginBottom:12,fontFamily:BF}}>{Math.round(vth*100)/100}h across {vhl.length} activities</p>
+        {manualHours&&<div style={{background:PL,borderRadius:10,padding:12,marginBottom:12,border:"1px solid "+BR}}>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            <input placeholder="Activity name" value={manualHours.activity} onChange={e=>setManualHours({...manualHours,activity:e.target.value})} style={{...inp,fontSize:13}}/>
+            <div style={{display:"flex",gap:8}}>
+              <select value={manualHours.project} onChange={e=>setManualHours({...manualHours,project:e.target.value})} style={{...inp,flex:1,fontSize:13}}>
+                {PROJECTS.map(p=><option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}
+              </select>
+              <input type="number" placeholder="Hours" value={manualHours.hours} onChange={e=>setManualHours({...manualHours,hours:e.target.value})} style={{...inp,width:80,fontSize:13}}/>
+            </div>
+            <input type="date" value={manualHours.date} onChange={e=>setManualHours({...manualHours,date:e.target.value})} style={{...inp,fontSize:13}}/>
+            <button onClick={async()=>{
+              if(!manualHours.activity||!manualHours.hours||!manualHours.date){st("Fill all fields.");return;}
+              const {error}=await sb.from("hour_logs").insert({volunteer_id:viewProf.id,name:viewProf.first_name+" "+viewProf.surname,activity:manualHours.activity,project:manualHours.project,hours:Number(manualHours.hours),date:manualHours.date,status:"approved",notes:"Manually added by admin"});
+              if(error){st("Error: "+error.message);return;}
+              st("✓ Hours added!");setManualHours(null);load();
+            }} style={{background:DK,color:MD,border:"none",borderRadius:8,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer"}}>Save Hours</button>
+          </div>
+        </div>}
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>{PROJECTS.map(p=>{const ph=vhl.filter(l=>l.project===p.id).reduce((s,l)=>s+Number(l.hours),0);if(!ph)return null;return <span key={p.id} style={{background:p.bg,color:"#fff",borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>{p.emoji} {Math.round(ph*100)/100}h {p.label}</span>;})}</div>
+        {vhl.length===0&&<p style={{color:MT,fontSize:13}}>No approved hours yet.</p>}
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>{vhl.map(l=>{const p=gp(l.project);return <div key={l.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,background:PL,border:"1px solid "+BR}}>
+          <div style={{width:32,height:32,borderRadius:8,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{p.emoji}</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:700,fontSize:12,fontFamily:BF,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.activity}</div>
+            <div style={{fontSize:11,color:MT}}>{l.date}</div>
+          </div>
+          <div style={{fontWeight:900,fontSize:18,color:p.bg,fontFamily:HF,flexShrink:0}}>{l.hours}h</div>
+        </div>;})}</div>
+      </div>;})()}
+      {(()=>{
+        const dnaList=Object.values(oppSignups).flat().filter(s=>s.volunteer_id===viewProf.id&&s.did_not_attend);
+        if(!dnaList.length) return null;
+        return <div style={{background:"#fff",borderRadius:16,padding:20,border:"1px solid "+BR,marginBottom:16}}>
+          <h3 style={{fontFamily:HF,fontSize:14,fontWeight:900,textTransform:"uppercase",color:"#DC2626",marginBottom:12}}>❌ Did Not Attend ({dnaList.length})</h3>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>{dnaList.map(s=>{
+            const o=opps.find(op=>op.id===s.opportunity_id);
+            if(!o) return null;
+            return <div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,background:"#FEF2F2",border:"1px solid #FECACA"}}>
+              <div style={{fontSize:20,flexShrink:0}}>❌</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:12,fontFamily:BF}}>{o.title}</div>
+                <div style={{fontSize:11,color:MT}}>{o.date}</div>
+              </div>
+            </div>;
+          })}</div>
+        </div>;
+      })()}
+      {isSuperAdmin&&<div style={{display:"flex",gap:8}}>
+        <button onClick={()=>deleteVol(viewProf.id)} style={{flex:1,background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:10,padding:"12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>🗑️ Delete Volunteer</button>
+      </div>}
+    </main>
+  </div>;
+  if(editOpp) return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
+    <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 16px",gap:12,position:"sticky",top:0,zIndex:100}}>
+      <button onClick={()=>setEditOpp(null)} style={{background:"rgba(255,255,255,0.1)",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13,fontWeight:700}}>← Back</button>
+      <span style={{fontFamily:HF,fontWeight:900,fontSize:16,color:"#fff",textTransform:"uppercase"}}>Edit Opportunity</span>
+    </header>
+    <main style={{maxWidth:640,margin:"0 auto",padding:"20px 16px"}}>
+      <div style={{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <Field label="Project"><select value={editOpp.project} onChange={e=>setEditOpp(o=>{return{...o,project:e.target.value};} )} style={inp}>{PROJECTS.map(p=><option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}</select></Field>
+          <Field label="Vacancy Type">
+            <div style={{display:"flex",gap:8}}>
+              {[{val:"event",label:"📅 Event"},{val:"ongoing",label:"🤝 Join the FAF Team"}].map(opt=>
+                <button key={opt.val} onClick={()=>setEditOpp(o=>{return{...o,type:opt.val};} )} style={{flex:1,background:(editOpp.type||"event")===opt.val?DK:"#fff",color:(editOpp.type||"event")===opt.val?"#fff":DK,border:"1.5px solid "+((editOpp.type||"event")===opt.val?DK:BR),borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>{opt.label}</button>)}
+            </div>
+          </Field>
+          <Field label="Title *"><input type="text" value={editOpp.title} onChange={e=>setEditOpp(o=>{return{...o,title:e.target.value};} )} style={inp}/></Field>
+          <Field label={editOpp.type==="ongoing"?"Brief notes about the role":"Description"}>
+            <textarea value={editOpp.description||""} onChange={e=>setEditOpp(o=>{return{...o,description:e.target.value};} )} rows={4} style={{...inp,resize:"vertical"}}/>
+          </Field>
+          {editOpp.type==="ongoing"&&<div>
+            <button onClick={()=>generateDescription(editOpp,setEditOpp)} disabled={aiLoading} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:700,cursor:"pointer",opacity:aiLoading?.6:1}}>{aiLoading?"✨ Generating...":"✨ Generate Full Description with AI"}</button>
+            <p style={{fontSize:11,color:MT,marginTop:6,fontFamily:BF}}>Writes a full role description from your notes above — you can edit it after.</p>
+          </div>}
+          {editOpp.type==="ongoing"
+            ? <>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <Field label="Start Date *"><input type="date" value={editOpp.date} onChange={e=>setEditOpp(o=>{return{...o,date:e.target.value};} )} style={inp}/></Field>
+                  <Field label="End Date (optional)"><input type="date" value={editOpp.end_date||""} onChange={e=>setEditOpp(o=>{return{...o,end_date:e.target.value};} )} style={inp}/></Field>
+                </div>
+                <p style={{fontSize:11,color:MT,marginTop:-6,fontFamily:BF}}>Leave End Date blank for an ongoing role with no fixed end.</p>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <Field label="Time Commitment"><input type="number" min="0" step="0.5" placeholder="e.g. 5" value={editOpp.commitment_hours||""} onChange={e=>setEditOpp(o=>{return{...o,commitment_hours:e.target.value};} )} style={inp}/></Field>
+                  <Field label="Per"><select value={editOpp.commitment_frequency||"week"} onChange={e=>setEditOpp(o=>{return{...o,commitment_frequency:e.target.value};} )} style={inp}><option value="day">Hours / day</option><option value="week">Hours / week</option><option value="month">Hours / month</option><option value="year">Hours / year</option></select></Field>
+                </div>
+              </>
+            : <>
+                <Field label="Date *"><input type="date" value={editOpp.date} onChange={e=>setEditOpp(o=>{return{...o,date:e.target.value};} )} style={inp}/></Field>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <Field label="Start Time"><input type="time" value={editOpp.start_time||""} onChange={e=>setEditOpp(o=>{const h=calcHours(e.target.value,o.end_time);return{...o,start_time:e.target.value,hours:h||o.hours};} )} style={inp}/></Field>
+                  <Field label="End Time"><input type="time" value={editOpp.end_time||""} onChange={e=>setEditOpp(o=>{const h=calcHours(o.start_time,e.target.value);return{...o,end_time:e.target.value,hours:h||o.hours};} )} style={inp}/></Field>
+                </div>
+                {editOpp.start_time&&editOpp.end_time&&editOpp.hours&&<div style={{background:"#DCFCE7",borderRadius:10,padding:"10px 14px",fontSize:13,color:DK,fontWeight:600}}>⏱ Duration: <strong>{editOpp.hours} hours</strong></div>}
+              </>
+          }
+          <Field label="Location *"><input type="text" value={editOpp.location} onChange={e=>setEditOpp(o=>{return{...o,location:e.target.value};} )} style={inp}/></Field>
+          <div style={{display:"grid",gridTemplateColumns:editOpp.type==="ongoing"?"1fr":"1fr 1fr",gap:10}}>
+            {editOpp.type!=="ongoing"&&<Field label="Hours"><input type="number" value={editOpp.hours} onChange={e=>setEditOpp(o=>{return{...o,hours:e.target.value};} )} style={inp}/></Field>}
+            <Field label="Spots"><input type="number" value={editOpp.spots} onChange={e=>setEditOpp(o=>{return{...o,spots:e.target.value};} )} style={inp}/></Field>
+          </div>
+          <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:editOpp.students_only?"#EDE9FE":"#F9FAFB",border:"1.5px solid "+(editOpp.students_only?"#9B59B6":"#E5E7EB")}}>
+            <input type="checkbox" checked={editOpp.students_only||false} onChange={e=>setEditOpp(o=>{return{...o,students_only:e.target.checked};} )} style={{width:18,height:18,accentColor:"#9B59B6"}}/>
+            <div><div style={{fontWeight:700,fontSize:14,color:editOpp.students_only?"#5B21B6":DK}}>🎓 Students Only</div></div>
+          </label>
+          <button onClick={saveEditOpp} style={{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Save Changes</button>
+        </div>
+      </div>
+    </main>
+  </div>;
+
+  return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
+    <Confetti active={celebrate} hours={celebrateHours}/>
+    <header style={{background:DK,height:60,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",position:"sticky",top:0,zIndex:100}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <img src={LOGO} style={{height:40}}/>
+        <span style={{fontFamily:HF,fontWeight:900,fontSize:13,color:MD,textTransform:"uppercase",letterSpacing:1}}>{isSuperAdmin?"Super Admin":"Project Admin"}</span>
+      </div>
+      <button onClick={onLogout} style={{background:"#DC2626",color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Sign Out</button>
+    </header>
+    <Toast msg={toast}/>
+    <main style={{maxWidth:640,margin:"0 auto",padding:"16px 14px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+        <div style={{position:"relative",cursor:"pointer",flexShrink:0}} onClick={()=>setEditingProfile(true)}>
+          <Avtr u={profile} sz={48}/>
+          <div style={{position:"absolute",bottom:0,right:0,background:DK,borderRadius:"50%",width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,border:"2px solid "+PL}}>📷</div>
+        </div>
+        <div style={{flex:1}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <h1 style={{fontFamily:HF,fontSize:20,fontWeight:900,textTransform:"uppercase",color:DK}}>Admin Panel</h1>
+            <RoleBadge role={profile.role}/>
+          </div>
+          <p style={{color:MT,fontSize:12}}>Welcome, {profile.first_name}</p>
+        </div>
+        <button onClick={()=>setEditingProfile(true)} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>My Profile</button>
+      </div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:20}}>
+        {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{background:tab===t.id?DK:"#fff",color:tab===t.id?"#fff":DK,border:"1.5px solid "+(tab===t.id?DK:BR),borderRadius:20,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+          {t.label}{t.count!==null&&<span style={{background:t.alert?"#DC2626":tab===t.id?"rgba(255,255,255,0.3)":BR,color:t.alert?"#fff":tab===t.id?"#fff":MT,borderRadius:20,padding:"1px 7px",fontSize:11,fontWeight:700}}>{t.count}</span>}
+        </button>)}
+      </div>
+
+      {tab==="pending"&&<div>
+        <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Pending Registrations</h2>
+        {pending.length===0&&<p style={{color:MT,fontSize:14}}>No pending registrations 🎉</p>}
+        {pending.map(u=><div key={u.id} style={{background:"#fff",borderRadius:14,padding:16,border:"1px solid "+BR,marginBottom:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+            <Avtr u={u} sz={44}/>
+            <div>
+              <div style={{fontWeight:700,fontSize:15,fontFamily:BF}}>{u.first_name} {u.surname}</div>
+              <div style={{fontSize:12,color:MT}}>{u.email} · DOB: {u.dob}</div>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+            {u.is_student&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>🎓 {u.student_level||"Student"}{u.student_school?" · "+u.student_school:""}</span>}
+            {u.is_working&&<span style={{background:"#FFEDD5",color:"#9A3412",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>💼 {u.profession||"Working"}</span>}
+          </div>
+          {u.projects?.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:10}}>{u.projects.map(pid=><Tag key={pid} pid={pid} sm/>)}</div>}
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>approve(u.id)} style={{flex:1,background:MD,color:DK,border:"none",borderRadius:8,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
+            <button onClick={()=>decline(u.id)} style={{flex:1,background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
+          </div>
+        </div>)}
+      </div>}
+
+      {tab==="vols"&&<div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+          <div style={{background:"#fff",borderRadius:12,padding:"12px 14px",border:"1px solid "+BR,textAlign:"center"}}>
+            <div style={{fontFamily:HF,fontWeight:900,fontSize:28,color:DK}}>{vols.length}</div>
+            <div style={{fontSize:11,color:MT,fontWeight:600}}>Active Volunteers</div>
+          </div>
+          <div style={{background:"#fff",borderRadius:12,padding:"12px 14px",border:"1px solid "+BR,textAlign:"center"}}>
+            <div style={{fontFamily:HF,fontWeight:900,fontSize:28,color:DK}}>{Math.round(hourLogs.reduce((s,l)=>s+Number(l.hours),0)*100)/100}</div>
+            <div style={{fontSize:11,color:MT,fontWeight:600}}>Total Hours Logged</div>
+          </div>
+          <div style={{background:"#fff",borderRadius:12,padding:"12px 14px",border:"1px solid "+BR,textAlign:"center"}}>
+            <div style={{fontFamily:HF,fontWeight:900,fontSize:28,color:DK}}>{vols.filter(v=>v.is_student).length}</div>
+            <div style={{fontSize:11,color:MT,fontWeight:600}}>Students</div>
+          </div>
+          <div style={{background:"#fff",borderRadius:12,padding:"12px 14px",border:"1px solid "+BR,textAlign:"center"}}>
+            <div style={{fontFamily:HF,fontWeight:900,fontSize:28,color:DK}}>{pending.length}</div>
+            <div style={{fontSize:11,color:MT,fontWeight:600}}>Pending Approval</div>
+          </div>
+        </div>
+        <input type="text" placeholder="🔍 Search by name or email..." value={volSearch} onChange={e=>setVolSearch(e.target.value)} style={{...inp,marginBottom:12}}/>
+        {vols.filter(u=>{const q=volSearch.toLowerCase();return !q||u.first_name?.toLowerCase().includes(q)||u.surname?.toLowerCase().includes(q)||u.email?.toLowerCase().includes(q);}).map(u=>{
+          const hrs=hourLogs.filter(l=>l.volunteer_id===u.id).reduce((s,l)=>s+Number(l.hours),0);
+          return <div key={u.id} style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
+            <Avtr u={u} sz={40}/>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:14,fontFamily:BF}}>{u.first_name} {u.surname}</div>
+              <div style={{fontSize:12,color:MT}}>{u.email}</div>
+              <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
+                {u.is_student&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>🎓 Student</span>}
+                {u.is_working&&<span style={{background:"#FFEDD5",color:"#9A3412",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>💼 Working</span>}
+                {hrs>0&&<span style={{background:DK,color:MD,borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>⏱ {Math.round(hrs*100)/100}h</span>}
+              </div>
+            </div>
+            <button onClick={()=>setViewProf(u)} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>View</button>
+          </div>;
+        })}
+        {vols.filter(u=>{const q=volSearch.toLowerCase();return !q||u.first_name?.toLowerCase().includes(q)||u.surname?.toLowerCase().includes(q)||u.email?.toLowerCase().includes(q);}).length===0&&<p style={{color:MT,fontSize:14,textAlign:"center",padding:20}}>No volunteers found.</p>}
+      </div>}
+
+      {tab==="admins"&&isSuperAdmin&&<div>
+        <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Admins ({admins.length})</h2>
+        {admins.map(a=><div key={a.id} style={{background:"#fff",borderRadius:14,padding:"14px 16px",border:"1px solid "+BR,marginBottom:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+            <Avtr u={a} sz={44}/>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{fontWeight:700,fontSize:15,fontFamily:BF}}>{a.first_name} {a.surname}</div>
+                <RoleBadge role={a.role}/>
+              </div>
+              <div style={{fontSize:12,color:MT}}>{a.email}</div>
+            </div>
+          </div>
+          {a.role!=="superadmin"&&<div>
+            <p style={{fontSize:12,fontWeight:700,color:DK,marginBottom:8,fontFamily:BF}}>Assigned Projects:</p>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+              {PROJECTS.map(p=>{
+                const assigned=(a.admin_projects||[]).includes(p.id);
+                return <button key={p.id} onClick={()=>{
+                  const current=a.admin_projects||[];
+                  const updated=assigned?current.filter(x=>x!==p.id):[...current,p.id];
+                  updateAdminProjects(a.id,updated);
+                }} style={{background:assigned?p.bg:"#fff",color:assigned?"#fff":DK,border:"1.5px solid "+(assigned?p.bg:BR),borderRadius:20,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>{p.emoji} {p.label}</button>;
+              })}
+            </div>
+          </div>}
+        </div>)}
+      </div>}
+
+      {tab==="hours"&&<div>
+        {/* CSV Upload */}
+        <div style={{background:"#fff",borderRadius:14,padding:"16px",border:"1px solid "+BR,marginBottom:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <h3 style={{fontFamily:HF,fontSize:13,fontWeight:900,textTransform:"uppercase",color:DK,margin:0}}>📂 Upload Hours from CSV</h3>
+            <button onClick={()=>{
+              const csv="name,project,activity,date,hours\nMohanad Ahmed,food-boxes,Pantry Session,2026-05-01,3\n";
+              const b=new Blob([csv],{type:"text/csv"});
+              const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="hours_template.csv";a.click();
+            }} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>⬇ Template</button>
+          </div>
+          <p style={{fontSize:12,color:MT,marginBottom:10,fontFamily:BF}}>Columns: <b>name, project, activity, date, hours</b>. For project, you can use names like: Little Learners, Giving Garden, Food Boxes, Packing/Sorting, Funlabs, Events, Arabic Support. Unregistered volunteers will be downloaded as a .txt file.</p>
+          <input type="file" accept=".csv" onChange={async e=>{
+            const file=e.target.files[0]; if(!file) return;
+            const text=await file.text();
+            const lines=text.trim().split("\n").slice(1);
+            const matched=[]; const unmatched=[];
+            const allVols=[...vols,...pending];
+            for(const line of lines){
+              const parts=line.split(",").map(s=>s.trim().replace(/^"|"$/g,""));
+              if(parts.length<5||!parts[0]) continue;
+              const [name,project,activity,date,hours]=parts;
+              const nameLower=name.toLowerCase();
+              // Map spreadsheet project names to app project IDs
+              const projMap={"little learners":"little-learners","giving garden":"giving-garden","food boxes":"food-boxes","food-boxes":"food-boxes","packing/sorting":"food-boxes","packing sorting":"food-boxes","welcome baby":"welcome-baby","pay it forward":"pay-it-forward","community fridges":"community-fridges","funlabs":"little-learners","events":"food-boxes","arabic support":"little-learners","arabic-support":"little-learners"};
+              const mappedProject=projMap[project.toLowerCase()]||project;
+              const vol=allVols.find(v=>{
+                const full=(v.first_name+" "+v.surname).toLowerCase();
+                const rev=(v.surname+" "+v.first_name).toLowerCase();
+                return full===nameLower||rev===nameLower||full.includes(nameLower)||nameLower.includes(v.first_name.toLowerCase());
+              });
+              if(vol) matched.push({volunteer_id:vol.id,name:vol.first_name+" "+vol.surname,activity,project:mappedProject,hours:parseFloat(hours)||0,date,status:"approved",notes:"Imported from spreadsheet"});
+              else unmatched.push(name);
+            }
+            if(matched.length>0){
+              const {error}=await sb.from("hour_logs").insert(matched);
+              if(error){st("Error: "+error.message);return;}
+            }
+            setCsvResult({matched:matched.length,unmatched});
+            if(unmatched.length>0){
+              const b=new Blob([unmatched.join("\n")],{type:"text/plain"});
+              const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="unmatched_volunteers.txt";a.click();
+            }
+            st("✓ Imported "+matched.length+" records!"); load();
+            e.target.value="";
+          }} style={{width:"100%",padding:"10px",borderRadius:8,border:"1.5px dashed "+BR,background:PL,fontSize:13,cursor:"pointer"}}/>
+          {csvResult&&<div style={{marginTop:10,padding:"10px 12px",borderRadius:8,background:"#F0FDF4",border:"1px solid #BBF7D0"}}>
+            <div style={{fontSize:13,fontWeight:700,color:"#166534"}}>✓ {csvResult.matched} records imported</div>
+            {csvResult.unmatched.length>0&&<div style={{fontSize:12,color:"#DC2626",marginTop:4}}>⚠ {csvResult.unmatched.length} unmatched (downloaded as .txt)</div>}
+          </div>}
+        </div>
+        {/* Pending manual logs */}
+        <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Pending Hour Logs</h2>
+        {hoursPending.length===0&&<p style={{color:MT,fontSize:14}}>No pending hour logs 🎉</p>}
+        {hoursPending.map(l=><div key={l.id} style={{background:"#fff",borderRadius:14,padding:"14px 16px",border:"1px solid "+BR,marginBottom:10,borderLeft:"4px solid "+gp(l.project).bg}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+            <div>
+              <Tag pid={l.project} sm/>
+              <div style={{fontWeight:700,fontSize:14,marginTop:6,fontFamily:BF}}>{l.activity}</div>
+              <div style={{fontSize:12,color:MT,marginTop:2}}>{l.profiles?.first_name} {l.profiles?.surname} · {l.date} · {l.hours}h</div>
+              {l.notes&&<div style={{fontSize:12,color:MT,marginTop:2,fontStyle:"italic"}}>"{l.notes}"</div>}
+            </div>
+            <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:10}}>
+              <button onClick={async()=>{const{error}=await sb.from("hour_logs").update({status:"approved"}).eq("id",l.id);if(error){st("Error: "+error.message);return;}st("✓ Hours approved!");load();}} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
+              <button onClick={async()=>{const{error}=await sb.from("hour_logs").delete().eq("id",l.id);if(error){st("Error: "+error.message);return;}st("Hours declined.");load();}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
+            </div>
+          </div>
+        </div>)}
+      </div>}
+
+      {tab==="opps"&&<div>
+        <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Opportunities & Sign-ups</h2>
+        {opps.map(o=>{
+          const p=gp(o.project);
+          const sups=oppSignups[o.id]||[];
+          const pendingSups=sups.filter(s=>s.status==="pending");
+          const approvedSups=sups.filter(s=>s.status==="approved");
+          return <div key={o.id} style={{background:"#fff",borderRadius:14,padding:"14px 16px",border:"1px solid "+BR,marginBottom:12,borderLeft:"4px solid "+p.bg}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+              <div style={{flex:1}}>
+                <Tag pid={o.project} sm/>
+                {o.students_only&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700,marginLeft:6}}>🎓 Students Only</span>}
+                {o.type==="ongoing"&&<span style={{background:"#7C3AED",color:"#fff",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700,marginLeft:6}}>🤝 Join the FAF Team</span>}
+                <div style={{fontWeight:700,fontSize:15,marginTop:6,color:DK,fontFamily:BF}}>{o.title}</div>
+                <div style={{fontSize:12,color:MT,marginTop:2}}>{o.type==="ongoing"?"🤝 "+(o.end_date?"Runs "+o.date+" – "+o.end_date:"Ongoing since "+o.date):"📅 "+o.date+(o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):"")} · 📍 {o.location}{o.type!=="ongoing"?" · "+o.hours+"h":commitLabel(o)}</div>
+                <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
+                  {pendingSups.length>0&&<span style={{background:"#FEF3C7",color:"#D97706",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>⏳ {pendingSups.length} pending</span>}
+                  {approvedSups.length>0&&<span style={{background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>✓ {approvedSups.length} approved</span>}
+                  {sups.filter(s=>s.status==="waitlist").length>0&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>⏸ {sups.filter(s=>s.status==="waitlist").length} waitlist</span>}
+                  <span style={{fontSize:11,color:MT}}>({Number(o.spots)||10} spots)</span>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:6,marginLeft:10,flexShrink:0}}>
+                <button onClick={()=>setEditOpp({...o})} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Edit</button>
+                <button onClick={()=>{
+                  const rows=oppSignups[o.id]||[];
+                  const headers=["Name","Email","Phone","Status","Checked In","Checked Out","Hours","Did Not Attend"];
+                  const lines=[headers.join(","),...rows.map(s=>[
+                    (s.profiles?.first_name+" "+s.profiles?.surname).trim(),
+                    s.profiles?.email||"",
+                    s.profiles?.phone||"",
+                    s.status||"",
+                    s.checked_in?new Date(s.checked_in).toLocaleTimeString():"",
+                    s.checked_out?new Date(s.checked_out).toLocaleTimeString():"",
+                    s.checked_in&&s.checked_out?o.hours:"",
+                    s.did_not_attend?"Yes":"",
+                  ].map(v=>`"${v}"`).join(","))];
+                  const b=new Blob([lines.join("\n")],{type:"text/csv"});
+                  const a=document.createElement("a");a.href=URL.createObjectURL(b);
+                  a.download=o.title.replace(/\s+/g,"_")+"_attendance.csv";a.click();
+                }} style={{background:"#DBEAFE",color:"#1D4ED8",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>⬇ Export</button>
+                <button onClick={async()=>{if(!window.confirm("Archive this event? It will be hidden but kept in the database."))return;const{error}=await sb.from("opportunities").update({archived:true}).eq("id",o.id);if(error){st("Error: "+error.message);return;}st("Event archived.");load();}} style={{background:"#FEF3C7",color:"#D97706",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Archive</button>
+                <button onClick={()=>delOpp(o.id,o.title,o.project)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Cancel Event</button>
+              </div>
+            </div>
+            {sups.length>0&&<div style={{borderTop:"1px solid "+BR,paddingTop:10,marginTop:8}}>
+              {sups.map(s=><div key={s.volunteer_id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid #F0FDF4",flexWrap:"wrap"}}>
+                <button onClick={()=>setViewProf(s.profiles)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,flex:1,textAlign:"left",padding:0}}>
+                  <Avtr u={s.profiles} sz={32}/>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700,color:DK,fontFamily:BF}}>{s.profiles?.first_name} {s.profiles?.surname}</div>
+                    <div style={{fontSize:11,color:MT}}>{s.profiles?.email}{s.profiles?.phone?" · 📞 "+s.profiles.phone:""}</div>
+                  </div>
+                </button>
+                {s.answers?.length>0&&<div style={{width:"100%",marginTop:4,marginLeft:40,background:PL,borderRadius:8,padding:"6px 10px"}}>
+                  {s.answers.map((a,i)=><div key={i} style={{fontSize:11,color:DK,marginBottom:2}}>{a.question}: <strong>{a.answer||"—"}</strong></div>)}
+                </div>}
+                <div style={{display:"flex",gap:6,flexShrink:0}}>
+                  {s.status==="pending"&&<div style={{display:"flex",gap:4}}>
+                    <button onClick={()=>approveSignup(s.id)} style={{background:MD,color:DK,border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓</button>
+                    <button onClick={()=>declineSignup(s.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"6px 12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✕</button>
+                  </div>}
+                  {s.status==="approved"&&!s.checked_in&&(()=>{
+                    const now=new Date();
+                    const eventDate=new Date(o.date+"T"+(o.start_time||"00:00")+":00");
+                    const minsUntil=(eventDate-now)/60000;
+                    const canCheckin=minsUntil<=30&&minsUntil>-((o.hours||2)*60+120);
+                    return <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                    {canCheckin&&<><button onClick={()=>checkIn(s.id)} style={{background:"#DBEAFE",color:"#1D4ED8",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>📍 In</button>
+                    <button onClick={()=>markDNA(s.id)} style={{background:"#FEF3C7",color:"#D97706",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>❌ DNA</button></>}
+                    {!canCheckin&&<span style={{fontSize:11,color:MT,fontFamily:BF}}>📅 {o.start_time||o.date}</span>}
+                    <button onClick={()=>declineSignup(s.id)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>Unsub</button>
+                  </div>;
+                  })()}
+                  {s.checked_in&&!s.checked_out&&!s.did_not_attend&&(()=>{const now=new Date();const eventDate=new Date(o.date+"T"+(o.start_time||"00:00")+":00");const minsUntil=(eventDate-now)/60000;const canCheckout=minsUntil<=30&&minsUntil>-((o.hours||2)*60+120);return canCheckout&&<button onClick={()=>checkOut(s.id,o.id,s.volunteer_id,(s.profiles?.first_name+" "+s.profiles?.surname).trim(),o.title,o.project,s.checked_in)} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>🏁 Check Out</button>;})()}
+                  {s.did_not_attend&&<span style={{fontSize:11,color:"#D97706",fontWeight:700,background:"#FEF3C7",padding:"3px 8px",borderRadius:20}}>❌ DNA</span>}
+                  {s.checked_out&&<span style={{fontSize:11,color:"#7C3AED",fontWeight:700,background:"#F3E8FF",padding:"3px 8px",borderRadius:20}}>✅ {o.hours}h</span>}
+                </div>
+              </div>)}
+            </div>}
+          </div>;
+        })}
+      </div>}
+
+      {tab==="add"&&<div>
+        <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:16}}>Add New Opportunity</h2>
+        <div style={{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <Field label="Project"><select value={no.project} onChange={e=>setNo(n=>{return{...n,project:e.target.value};} )} style={inp}>{(isSuperAdmin?PROJECTS:PROJECTS.filter(p=>(profile.admin_projects||[]).includes(p.id))).map(p=><option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}</select></Field>
+            <Field label="Vacancy Type">
+              <div style={{display:"flex",gap:8}}>
+                {[{val:"event",label:"📅 Event"},{val:"ongoing",label:"🤝 Join the FAF Team"}].map(opt=>
+                  <button key={opt.val} onClick={()=>setNo(n=>{return{...n,type:opt.val};} )} style={{flex:1,background:no.type===opt.val?DK:"#fff",color:no.type===opt.val?"#fff":DK,border:"1.5px solid "+(no.type===opt.val?DK:BR),borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>{opt.label}</button>)}
+              </div>
+            </Field>
+            <Field label="Title *"><input type="text" placeholder={no.type==="ongoing"?"e.g. Delivery Driver":"e.g. Box Packing Day"} value={no.title} onChange={e=>setNo(n=>{return{...n,title:e.target.value};} )} style={inp}/></Field>
+            <Field label={no.type==="ongoing"?"Brief notes about the role":"Description"}>
+              <textarea value={no.description} onChange={e=>setNo(n=>{return{...n,description:e.target.value};} )} rows={no.type==="ongoing"?3:3} placeholder={no.type==="ongoing"?"e.g. Drives collected food donations from pickup points to our warehouse, twice a week":"What will volunteers do?"} style={{...inp,resize:"vertical"}}/>
+            </Field>
+            {no.type==="ongoing"&&<div>
+              <button onClick={()=>generateDescription(no,setNo)} disabled={aiLoading} style={{background:"#7C3AED",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:700,cursor:"pointer",opacity:aiLoading?.6:1,display:"flex",alignItems:"center",gap:6}}>{aiLoading?"✨ Generating...":"✨ Generate Full Description with AI"}</button>
+              <p style={{fontSize:11,color:MT,marginTop:6,fontFamily:BF}}>Writes a full role description from your notes above — you can edit it after.</p>
+            </div>}
+            {no.type==="ongoing"
+              ? <>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    <Field label="Start Date *"><input type="date" value={no.date} onChange={e=>setNo(n=>{return{...n,date:e.target.value};} )} style={inp}/></Field>
+                    <Field label="End Date (optional)"><input type="date" value={no.end_date} onChange={e=>setNo(n=>{return{...n,end_date:e.target.value};} )} style={inp}/></Field>
+                  </div>
+                  <p style={{fontSize:11,color:MT,marginTop:-6,fontFamily:BF}}>Leave End Date blank for an ongoing role with no fixed end.</p>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    <Field label="Time Commitment"><input type="number" min="0" step="0.5" placeholder="e.g. 5" value={no.commitment_hours} onChange={e=>setNo(n=>{return{...n,commitment_hours:e.target.value};} )} style={inp}/></Field>
+                    <Field label="Per"><select value={no.commitment_frequency} onChange={e=>setNo(n=>{return{...n,commitment_frequency:e.target.value};} )} style={inp}><option value="day">Hours / day</option><option value="week">Hours / week</option><option value="month">Hours / month</option><option value="year">Hours / year</option></select></Field>
+                  </div>
+                </>
+              : <>
+                  <Field label="Date *"><input type="date" value={no.date} onChange={e=>setNo(n=>{return{...n,date:e.target.value};} )} style={inp}/></Field>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    <Field label="Start Time"><input type="time" value={no.start_time} onChange={e=>{const h=calcHours(e.target.value,no.end_time);setNo(n=>{return{...n,start_time:e.target.value,hours:h||n.hours};} );}} style={inp}/></Field>
+                    <Field label="End Time"><input type="time" value={no.end_time} onChange={e=>{const h=calcHours(no.start_time,e.target.value);setNo(n=>{return{...n,end_time:e.target.value,hours:h||n.hours};} );}} style={inp}/></Field>
+                  </div>
+                  {no.start_time&&no.end_time&&no.hours&&<div style={{background:"#DCFCE7",borderRadius:10,padding:"10px 14px",fontSize:13,color:DK,fontWeight:600}}>⏱ Duration: <strong>{no.hours} hours</strong></div>}
+                </>
+            }
+            <Field label="Location *"><input type="text" placeholder="e.g. Feed a Friend HQ" value={no.location} onChange={e=>setNo(n=>{return{...n,location:e.target.value};} )} style={inp}/></Field>
+            <Field label="Spots"><input type="number" placeholder="10" value={no.spots} onChange={e=>setNo(n=>{return{...n,spots:e.target.value};} )} style={inp}/></Field>
+            <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:no.students_only?"#EDE9FE":"#F9FAFB",border:"1.5px solid "+(no.students_only?"#9B59B6":"#E5E7EB")}}>
+              <input type="checkbox" checked={no.students_only} onChange={e=>setNo(n=>{return{...n,students_only:e.target.checked};} )} style={{width:18,height:18,accentColor:"#9B59B6"}}/>
+              <div><div style={{fontWeight:700,fontSize:14,color:no.students_only?"#5B21B6":DK}}>🎓 Students Only</div></div>
+            </label>
+            <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:no.student_friendly?"#EDE9FE":"#F9FAFB",border:"1.5px solid "+(no.student_friendly?"#9B59B6":"#E5E7EB")}}>
+              <input type="checkbox" checked={no.student_friendly} onChange={e=>setNo(n=>{return{...n,student_friendly:e.target.checked};} )} style={{width:18,height:18,accentColor:"#9B59B6"}}/>
+              <div><div style={{fontWeight:700,fontSize:14,color:no.student_friendly?"#5B21B6":DK}}>🎓 Student Friendly (14+)</div></div>
+            </label>
+            <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"12px 14px",borderRadius:10,background:no.kid_friendly?"#DCFCE7":"#F9FAFB",border:"1.5px solid "+(no.kid_friendly?"#16A34A":"#E5E7EB")}}>
+              <input type="checkbox" checked={no.kid_friendly} onChange={e=>setNo(n=>{return{...n,kid_friendly:e.target.checked};} )} style={{width:18,height:18,accentColor:"#16A34A"}}/>
+              <div><div style={{fontWeight:700,fontSize:14,color:no.kid_friendly?"#166534":DK}}>👦 Kid Friendly (6+)</div></div>
+            </label>
+            <div style={{borderTop:"1px solid "+BR,paddingTop:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                <label style={{fontWeight:700,fontSize:13,color:DK}}>Qualifying Questions</label>
+                <div style={{display:"flex",gap:6}}>
+                  {no.type==="ongoing"&&<button onClick={()=>addSuggestedQuestions(no,setNo)} style={{background:"#EDE9FE",color:"#5B21B6",border:"1px solid #D8B4FE",borderRadius:8,padding:"5px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>✨ Suggest Questions</button>}
+                  <button onClick={()=>setNo(n=>{return{...n,questions:[...n.questions,{q:"",type:"text"}]};} )} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"5px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>+ Add</button>
+                </div>
+              </div>
+              {no.questions.map((q,i)=><div key={i} style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
+                <input type="text" placeholder={`Question ${i+1}...`} value={q.q} onChange={e=>setNo(n=>{const qs=[...n.questions];qs[i]={...qs[i],q:e.target.value};return{...n,questions:qs};} )} style={{...inp,flex:1}}/>
+                <select value={q.type} onChange={e=>setNo(n=>{const qs=[...n.questions];qs[i]={...qs[i],type:e.target.value};return{...n,questions:qs};} )} style={{...inp,width:"auto",padding:"12px 8px"}}>
+                  <option value="text">Text</option>
+                  <option value="yesno">Yes/No</option>
+                </select>
+                <button onClick={()=>setNo(n=>{return{...n,questions:n.questions.filter((_,j)=>j!==i)};} )} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"10px 12px",cursor:"pointer",fontWeight:700}}>✕</button>
+              </div>)}
+              {no.questions.length===0&&<p style={{fontSize:12,color:MT,fontStyle:"italic"}}>No questions — volunteers sign up directly.</p>}
+            </div>
+            <button onClick={addOpp} style={{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Publish Opportunity</button>
+          </div>
+        </div>
+      </div>}
+    </main>
+  </div>;
+}
+
+// -- VOLUNTEER -----------------------------------------------------------------
+function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
+  const [profile,setProfile]=useState(initProfile);
+  const [view,setView]=useState("dashboard");
+  const [logs,setLogs]=useState([]);
+  const [opps,setOpps]=useState([]);
+  const [su,setSu]=useState([]);
+  const [fp,setFp]=useState("all");
+  const [form,setForm]=useState({activity:"",hours:"",date:"",project:"food-boxes",notes:""});
+  const [toast,setToast]=useState(null);
+  const [signupModal,setSignupModal]=useState(null);
+  const [answers,setAnswers]=useState({});
+  const [editingProfile,setEditingProfile]=useState(false);
+  const [volSearch,setVolSearch]=useState("");
+  const [volHistory,setVolHistory]=useState([]);
+  const [csvResult,setCsvResult]=useState(null);
+  const [manualHours,setManualHours]=useState(null);
+  const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
+
+  useEffect(()=>{loadData(); const t=setInterval(loadData,30000); return ()=>clearInterval(t);}, []);
+
+  const storageKey="faf_hrs_"+profile.id;
+  const prevTh=React.useRef(Number(localStorage.getItem(storageKey)||0));
+  const [cardFlipped,setCardFlipped]=React.useState(false);
+  async function loadData(){
+    const [{data:o},{data:l},{data:s}]=await Promise.all([
+      sb.from("opportunities").select("*").eq("archived",false).order("date"),
+      sb.from("hour_logs").select("*").eq("volunteer_id",profile.id).order("created_at",{ascending:false}),
+      sb.from("signups").select("opportunity_id,status,checked_in,checked_out").eq("volunteer_id",profile.id),
+    ]);
+    const newTh=(l||[]).filter(x=>x.status==="approved").reduce((a,x)=>a+Number(x.hours),0);
+    if(newTh>prevTh.current){setVolCelebrateHours(Math.round((newTh-prevTh.current)*100)/100);setVolCelebrate(true);setTimeout(()=>setVolCelebrate(false),4500);}
+    prevTh.current=newTh;
+    localStorage.setItem(storageKey,newTh);
+    setOpps(o||[]); setLogs(l||[]); setSu(s||[]);
+  }
+
+  async function submitLog(){
+    if(!form.activity||!form.hours||!form.date) return;
+    await sb.from("hour_logs").insert({...form,hours:Number(form.hours),volunteer_id:profile.id,name:(profile.first_name+" "+profile.surname).trim(),status:"pending"});
+    setForm({activity:"",hours:"",date:"",project:"food-boxes",notes:""}); st("✓ Hours submitted for admin approval!"); loadData();
+  }
+
+  async function signUp(o){
+    if(su.find(x=>x.opportunity_id===o.id)) return;
+    if(o.questions&&o.questions.length>0){setSignupModal(o);setAnswers({});}
+    else await submitSignup(o,[]);
+  }
+
+  async function cancelSignup(opportunityId){
+    await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",opportunityId);
+    st("Signup cancelled."); loadData();
+  }
+
+  async function submitSignup(o,answersArr){
+    // Check current approved signup count vs capacity
+    const {data:existing}=await sb.from("signups").select("id,status").eq("opportunity_id",o.id);
+    const approvedCount=(existing||[]).filter(s=>s.status==="approved").length;
+    const spots=Number(o.spots)||10;
+    const isFull=approvedCount>=spots;
+    const status=isFull?"waitlist":"pending";
+    await sb.from("signups").insert({volunteer_id:profile.id,opportunity_id:o.id,status,answers:answersArr});
+    setSignupModal(null); setAnswers({});
+    st(isFull?"✓ Added to waitlist! You'll be notified if a spot opens.":"✓ Request sent! Awaiting admin approval."); loadData();
+  }
+
+  const approvedLogs=logs.filter(l=>l.status==="approved"); const th=approvedLogs.reduce((s,l)=>s+Number(l.hours),0);
+  const [volCelebrate,setVolCelebrate]=React.useState(false);
+  const [volCelebrateHours,setVolCelebrateHours]=React.useState(0);
+  const getOppCounts=(oId)=>{const sups=signups.filter(s=>s.opportunity_id===oId);return{approved:sups.filter(s=>s.status==="approved").length,waitlist:sups.filter(s=>s.status==="waitlist").length};};
+  const visibleOpps=opps.filter(o=>!o.students_only||profile.is_student);
+  const fo=fp==="all"?visibleOpps:visibleOpps.filter(o=>o.project===fp);
+  const foEvents=fo.filter(o=>o.type!=="ongoing");
+  const foOngoing=fo.filter(o=>o.type==="ongoing");
+  const NAV=[{id:"dashboard",label:"Home"},{id:"opportunities",label:"Opportunities"},{id:"log",label:"Log Hours"},{id:"history",label:"My Hours"}];
+
+  const renderOppCard=o=>{
+    const p=gp(o.project); const signup=su.find(x=>x.opportunity_id===o.id); const done=!!signup; const isOngoing=o.type==="ongoing";
+    return <div key={o.id} className="card" style={{background:"#fff",borderRadius:16,border:"1px solid "+BR,borderLeft:"5px solid "+(isOngoing?"#7C3AED":p.bg),padding:"14px 14px 12px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+        <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+          <Tag pid={o.project}/>
+          {o.students_only&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>🎓 Students Only</span>}
+          {isOngoing&&<span style={{background:"#7C3AED",color:"#fff",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>🤝 Join the FAF Team</span>}
+        </div>
+        {!isOngoing&&<span style={{fontFamily:HF,fontWeight:800,fontSize:13,color:p.bg}}>{o.hours}h</span>}
+      </div>
+      <div style={{fontFamily:HF,fontWeight:900,fontSize:15,textTransform:"uppercase",color:DK,marginBottom:4}}>{o.title}</div>
+      <div style={{fontSize:12,color:MT,lineHeight:1.5,marginBottom:8,fontFamily:BF}}>{o.description}</div>
+      <div style={{fontSize:11,color:MT,marginBottom:10,fontFamily:BF}}>{isOngoing?"🤝 "+(o.end_date?"Runs "+o.date+" – "+o.end_date:"Ongoing since "+o.date)+commitLabel(o):"📅 "+o.date+(o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):"")} · 📍 {o.location}</div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{fontSize:11,background:p.light,color:p.text,padding:"2px 8px",borderRadius:20,fontWeight:600,fontFamily:BF}}>{o.spots} spots</span>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          {!done&&<button onClick={()=>signUp(o)} style={{background:isOngoing?"#7C3AED":p.bg,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:BF}}>{isOngoing?"Join the FAF Team →":"Sign Up →"}</button>}
+          {done&&signup?.status==="pending"&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
+            <span style={{background:"#FEF3C7",color:"#D97706",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>⏳ Pending</span>
+            <button onClick={async()=>{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Signup cancelled.");loadData();}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>
+          </div>}
+          {done&&signup?.status==="waitlist"&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
+            <span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>⏸ Waitlist</span>
+            <button onClick={async()=>{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Removed from waitlist.");loadData();}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>
+          </div>}
+          {done&&signup?.status==="approved"&&!signup?.checked_in&&<div style={{display:"flex",gap:4,alignItems:"center"}}>
+            <span style={{background:p.light,color:p.text,borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>✓ Approved</span>
+            <button onClick={async()=>{if(window.confirm("Cancel your attendance?")){{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Attendance cancelled.");loadData();}}}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>
+          </div>}
+          {done&&signup?.checked_in&&<span style={{background:p.light,color:p.text,borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>📍 Checked In</span>}
+        </div>
+      </div>
+    </div>;
+  };
+
+  if(editingProfile) return <ProfileEdit profile={profile} onSave={p=>{
+    setProfile(p); onUpdateProfile(p); setEditingProfile(false); st("✓ Profile saved!");
+  }} onBack={()=>setEditingProfile(false)}/>;
+
+  return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
+    <Confetti active={volCelebrate} hours={volCelebrateHours}/>
+    <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 14px",position:"sticky",top:0,zIndex:100,gap:12,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>
+      <button onClick={()=>setView("dashboard")} style={{background:"none",border:"none",cursor:"pointer",padding:0,flexShrink:0}}>
+        <img src={LOGO} alt="Feed a Friend" style={{height:42,display:"block"}}/>
+      </button>
+      <nav style={{display:"flex",gap:2,flex:1,justifyContent:"flex-end",alignItems:"center"}}>
+        {NAV.map(n=><button key={n.id} onClick={()=>setView(n.id)} style={{background:view===n.id?MD:"transparent",color:view===n.id?DK:"#BBF7D0",border:"none",borderRadius:8,padding:"6px 9px",cursor:"pointer",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{n.label}</button>)}
+        <button onClick={onLogout} style={{background:"#DC2626",color:"#fff",border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:11,fontWeight:700,marginLeft:4}}>Sign Out</button>
+      </nav>
+    </header>
+    <Toast msg={toast}/>
+    {!profile.phone&&<div style={{background:"#FEF3C7",borderTop:"3px solid #F59E0B",padding:"12px 16px",display:"flex",alignItems:"center",gap:10,justifyContent:"space-between"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <span style={{fontSize:18}}>📞</span>
+        <div>
+          <div style={{fontWeight:700,fontSize:13,color:"#92400E"}}>Please add your phone number</div>
+          <div style={{fontSize:12,color:"#78350F"}}>We need it to contact you about events.</div>
+        </div>
+      </div>
+      <button onClick={()=>setEditingProfile(true)} style={{background:"#F59E0B",color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}>Update Profile</button>
+    </div>}
+    <main style={{maxWidth:640,margin:"0 auto",padding:"16px 14px 40px"}}>
+
+      {view==="dashboard"&&<div className="fade">
+        <div style={{background:DK,borderRadius:18,padding:"22px 18px",marginBottom:16,position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",right:-10,top:-10,fontSize:100,opacity:.05}}>🥦</div>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+            <Avtr u={profile} sz={46}/>
+            <p style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#86EFAC",fontFamily:BF}}>Welcome back, {profile.first_name}!</p>
+          </div>
+          <h1 style={{fontFamily:HF,fontSize:30,fontWeight:900,textTransform:"uppercase",color:"#fff",lineHeight:1.05,marginBottom:16}}>Together<br/>for Good</h1>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            <button onClick={()=>setView("opportunities")} style={{background:MD,color:DK,border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:BF}}>Find Opportunities →</button>
+            <button onClick={()=>setView("log")} style={{background:"rgba(255,255,255,.12)",color:"#fff",border:"1.5px solid rgba(255,255,255,.25)",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:BF}}>Log Hours</button>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
+          {[{label:"Total Hours",value:th,sub:"hrs given",color:GN},{label:"Activities",value:logs.length,sub:"logged",color:"#7C3AED"},{label:"Signups",value:su.length,sub:"total",color:"#E8732A"}].map(s=><div key={s.label} style={{background:"#fff",borderRadius:14,padding:"12px 10px",border:"1px solid "+BR,borderTop:"4px solid "+s.color}}>
+            <div style={{fontSize:26,fontWeight:900,color:s.color,fontFamily:HF,lineHeight:1}}>{s.value}</div>
+            <div style={{fontSize:10,color:MT,textTransform:"uppercase",letterSpacing:.5,marginTop:2}}>{s.sub}</div>
+            <div style={{fontSize:11,fontWeight:600,color:DK,marginTop:3}}>{s.label}</div>
+          </div>)}
+        </div>
+        <h2 style={{fontFamily:HF,fontSize:17,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>Upcoming Events</h2>
+        <div style={{marginBottom:16}}>
+          {su.filter(s=>s.status==="approved"&&!s.checked_out).length===0
+            ? <div style={{background:"#fff",borderRadius:14,padding:20,border:"1px solid "+BR,textAlign:"center",color:MT,fontSize:13,fontFamily:BF}}>No upcoming events — <span onClick={()=>setView("opportunities")} style={{color:GN,fontWeight:700,cursor:"pointer"}}>browse opportunities</span></div>
+            : su.filter(s=>s.status==="approved"&&!s.checked_out).map(s=>{
+                const o=opps.find(x=>x.id===s.opportunity_id); if(!o) return null;
+                const p=gp(o.project);
+                return <div key={s.opportunity_id} style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,borderLeft:"4px solid "+p.bg,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{width:36,height:36,borderRadius:10,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{p.emoji}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:13,fontFamily:BF,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{o.title}</div>
+                    <div style={{fontSize:11,color:MT,fontFamily:BF}}>{o.type==="ongoing"?"🤝 "+(o.end_date?"Runs "+o.date+" – "+o.end_date:"Ongoing since "+o.date)+commitLabel(o):"📅 "+o.date+(o.start_time?" · ⏰ "+o.start_time:"")} · 📍 {o.location}</div>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0,alignItems:"flex-end"}}>
+                    <span style={{fontSize:11,background:"#DCFCE7",color:"#166534",borderRadius:20,padding:"3px 8px",fontWeight:700}}>✓ Approved</span>
+                    <button onClick={async()=>{if(window.confirm("Cancel your attendance?")){{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Attendance cancelled.");loadData();}}}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"4px 8px",fontSize:10,fontWeight:700,cursor:"pointer"}}>Cancel</button>
+                  </div>
+                </div>;
+              })
+          }
+        </div>
+        <h2 style={{fontFamily:HF,fontSize:17,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>Our Projects</h2>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+          {PROJECTS.map(p=><button key={p.id} className="card" onClick={()=>{setView("opportunities");setFp(p.id);}} style={{background:p.bg,border:"none",borderRadius:14,padding:"14px 12px",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:26,flexShrink:0}}>{p.emoji}</span>
+            <div>
+              <div style={{fontWeight:700,fontSize:13,color:"#fff",lineHeight:1.3,fontFamily:BF}}>{p.label}</div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,.75)",marginTop:2,fontFamily:BF}}>{visibleOpps.filter(o=>o.project===p.id).length} opportunities</div>
+            </div>
+          </button>)}
+        </div>
+        <h2 style={{fontFamily:HF,fontSize:17,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>Recent Activity</h2>
+        <div style={{background:"#fff",borderRadius:14,overflow:"hidden",border:"1px solid "+BR}}>
+          {logs.length===0&&<p style={{padding:24,color:MT,textAlign:"center",fontFamily:BF}}>No hours logged yet.</p>}
+          {logs.slice(0,5).map((l,i)=>{const p=gp(l.project);return <div key={l.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderBottom:i<Math.min(logs.length,5)-1?"1px solid "+PL:"none"}}>
+            <div style={{width:34,height:34,borderRadius:10,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>{p.emoji}</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:600,fontSize:13,fontFamily:BF,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.activity}</div>
+              <div style={{fontSize:11,color:MT,fontFamily:BF}}>{l.date}</div>
+            </div>
+            <div style={{fontWeight:900,fontSize:17,color:p.bg,fontFamily:HF,flexShrink:0}}>{l.hours}h</div>
+          </div>;})}
+        </div>
+      </div>}
+
+      {view==="opportunities"&&<div className="fade">
+        <h1 style={{fontFamily:HF,fontSize:24,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Volunteer Opportunities</h1>
+        <p style={{color:MT,fontSize:13,marginBottom:14,fontFamily:BF}}>Find your next chance to make a difference.</p>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
+          <button onClick={()=>setFp("all")} style={{padding:"5px 12px",borderRadius:20,border:"2px solid "+(fp==="all"?GN:BR),background:fp==="all"?GN:"#fff",color:fp==="all"?"#fff":DK,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:BF}}>All</button>
+          {PROJECTS.map(p=><button key={p.id} onClick={()=>setFp(p.id)} style={{padding:"5px 10px",borderRadius:20,border:"2px solid "+(fp===p.id?p.bg:BR),background:fp===p.id?p.bg:"#fff",color:fp===p.id?"#fff":DK,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:BF}}>{p.emoji} {p.label}</button>)}
+        </div>
+        {foOngoing.length>0&&<div style={{marginBottom:20}}>
+          <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:"#7C3AED",marginBottom:10}}>🤝 Join the FAF Team</h2>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {foOngoing.map(renderOppCard)}
+          </div>
+        </div>}
+        {foEvents.length>0&&<div>
+          {foOngoing.length>0&&<h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>📅 Upcoming Events</h2>}
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {foEvents.map(renderOppCard)}
+          </div>
+        </div>}
+        {foOngoing.length===0&&foEvents.length===0&&<p style={{color:MT,fontSize:14,textAlign:"center",padding:24,fontFamily:BF}}>No opportunities match this filter yet.</p>}
+      </div>}
+
+      {view==="log"&&<div className="fade">
+        <h1 style={{fontFamily:HF,fontSize:24,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>Log Your Hours</h1>
+        <p style={{color:MT,fontSize:13,marginBottom:18,fontFamily:BF}}>Every hour counts — thank you!</p>
+        <div style={{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <Field label="Project"><select value={form.project} onChange={e=>setForm(f=>{return{...f,project:e.target.value};} )} style={inp}>{PROJECTS.map(p=><option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}</select></Field>
+            <Field label="Event Name"><input type="text" placeholder="e.g. Pantry Stock" value={form.activity} onChange={e=>setForm(f=>{return{...f,activity:e.target.value};} )} style={inp}/></Field>
+            <Field label="Date of Event"><input type="date" value={form.date} onChange={e=>setForm(f=>{return{...f,date:e.target.value};} )} style={inp}/></Field>
+            <Field label="Hours Volunteered"><input type="number" placeholder="e.g. 3" value={form.hours} onChange={e=>setForm(f=>{return{...f,hours:e.target.value};} )} style={inp}/></Field>
+            <Field label="Notes (optional)"><textarea value={form.notes} onChange={e=>setForm(f=>{return{...f,notes:e.target.value};} )} rows={3} placeholder="Share anything about your experience..." style={{...inp,resize:"vertical"}}/></Field>
+            <button onClick={submitLog} style={{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:BF}}>Submit Hours 🌿</button>
+          </div>
+        </div>
+      </div>}
+
+      {view==="history"&&<div className="fade">
+        <div style={{background:"#fff",borderRadius:16,padding:16,border:"1px solid "+BR,marginBottom:16}}>
+          <div style={{display:"flex",alignItems:"center",gap:14}}>
+            <div style={{position:"relative",cursor:"pointer"}} onClick={()=>setEditingProfile(true)}>
+              <Avtr u={profile} sz={58}/>
+              <div style={{position:"absolute",bottom:0,right:0,background:DK,borderRadius:"50%",width:20,height:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,border:"2px solid #fff"}}>📷</div>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <div style={{fontFamily:HF,fontWeight:900,fontSize:17,color:DK}}>{profile.first_name} {profile.surname}</div>
+                <RoleBadge role={profile.role}/>
+              </div>
+              <div style={{fontSize:12,color:MT,fontFamily:BF}}>{profile.email}</div>
+              <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
+                {profile.is_student&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>🎓 {profile.student_level||"Student"}{profile.student_school?" · "+profile.student_school:""}</span>}
+                {profile.is_working&&<span style={{background:"#FFEDD5",color:"#9A3412",borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>💼 {profile.profession||"Working"}</span>}
+                <span style={{background:DK,color:MD,borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>⏱ {Math.round(th*100)/100}h volunteered</span>
+              </div>
+              {profile.fun_fact&&<div style={{marginTop:8,padding:"8px 12px",background:"#FEF9C3",borderRadius:10,border:"1px solid #FDE68A",fontSize:12,color:"#78350F",fontStyle:"italic"}}>✨ "{profile.fun_fact}"</div>}
+            </div>
+            <button onClick={()=>setEditingProfile(true)} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:BF,flexShrink:0}}>Edit</button>
+          </div>
+        </div>
+        {/* VOLUNTEER CARD */}
+        <div onClick={()=>setCardFlipped(f=>!f)} style={{cursor:"pointer",perspective:"1000px",marginBottom:20,userSelect:"none"}}>
+          <div style={{position:"relative",width:"100%",paddingBottom:"56.25%",transition:"transform 0.7s cubic-bezier(.4,0,.2,1)",transformStyle:"preserve-3d",transform:cardFlipped?"rotateY(180deg)":"rotateY(0deg)"}}>
+            {/* FRONT */}
+            <div style={{position:"absolute",inset:0,backfaceVisibility:"hidden",WebkitBackfaceVisibility:"hidden",borderRadius:18,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,0.25)"}}>
+              <div style={{width:"100%",height:"100%",background:"linear-gradient(135deg,#0d2b1a 0%,#1a4a2e 40%,#0d2b1a 100%)",position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"5%"}}>
+                {/* leaf texture overlay */}
+                <div style={{position:"absolute",inset:0,backgroundImage:"radial-gradient(ellipse at 20% 50%,rgba(34,85,34,0.4) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(20,60,20,0.5) 0%,transparent 50%)",pointerEvents:"none"}}/>
+                <div style={{position:"absolute",top:"8%",left:"50%",transform:"translateX(-50%)",zIndex:2}}>
+                  <img src="https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/avatars/Faflogowhite.png" style={{height:52,objectFit:"contain"}} alt="FaF"/>
+                </div>
+                <div style={{position:"absolute",bottom:"12%",left:"50%",transform:"translateX(-50%)",width:"80%",textAlign:"center",zIndex:2}}>
+                  <div style={{color:"rgba(255,255,255,0.7)",fontSize:"clamp(9px,2.5vw,13px)",fontWeight:700,letterSpacing:3,textTransform:"uppercase",fontFamily:"Georgia,serif",marginBottom:6}}>Volunteer Card</div>
+                  <div style={{color:"#fff",fontSize:"clamp(22px,7vw,38px)",fontWeight:900,fontFamily:"Georgia,serif",textTransform:"uppercase",letterSpacing:1,lineHeight:1.1,textShadow:"0 2px 8px rgba(0,0,0,0.5)"}}>{profile.first_name}<br/>{profile.surname}</div>
+                </div>
+                {/* border */}
+                <div style={{position:"absolute",inset:"3%",border:"1.5px solid rgba(255,255,255,0.25)",borderRadius:14,pointerEvents:"none"}}/>
+                <div style={{position:"absolute",bottom:"4%",right:"4%",color:"rgba(255,255,255,0.35)",fontSize:10}}>tap to flip →</div>
+              </div>
+            </div>
+            {/* BACK */}
+            <div style={{position:"absolute",inset:0,backfaceVisibility:"hidden",WebkitBackfaceVisibility:"hidden",transform:"rotateY(180deg)",borderRadius:18,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,0.25)"}}>
+              <div style={{width:"100%",height:"100%",background:"linear-gradient(135deg,#0d2b1a 0%,#1e5c30 50%,#0d2b1a 100%)",position:"relative",display:"flex",flexDirection:"column",justifyContent:"center",padding:"6%"}}>
+                <div style={{position:"absolute",inset:0,backgroundImage:"radial-gradient(ellipse at 80% 50%,rgba(34,85,34,0.4) 0%,transparent 60%)",pointerEvents:"none"}}/>
+                <div style={{position:"absolute",inset:"3%",border:"1.5px solid rgba(255,255,255,0.25)",borderRadius:14,pointerEvents:"none"}}/>
+                <div style={{zIndex:2}}>
+                  <div style={{color:"rgba(255,255,255,0.6)",fontSize:"clamp(8px,2vw,11px)",letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>Feed a Friend · Volunteer</div>
+                  <div style={{color:"#fff",fontSize:"clamp(14px,4vw,20px)",fontWeight:900,fontFamily:"Georgia,serif",textTransform:"uppercase",marginBottom:12}}>{profile.first_name} {profile.surname}</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                    <div style={{color:"rgba(255,255,255,0.85)",fontSize:"clamp(9px,2.5vw,12px)"}}>⏱ <strong>{Math.round(th*100)/100}h</strong> volunteered · <strong>{approvedLogs.length}</strong> sessions</div>
+                    {profile.nationality&&<div style={{color:"rgba(255,255,255,0.85)",fontSize:"clamp(9px,2.5vw,12px)"}}>🌍 {profile.nationality}</div>}
+                    {profile.is_student&&<div style={{color:"rgba(255,255,255,0.85)",fontSize:"clamp(9px,2.5vw,12px)"}}>🎓 {profile.student_level||"Student"}{profile.student_school?" · "+profile.student_school:""}</div>}
+                    {profile.is_working&&<div style={{color:"rgba(255,255,255,0.85)",fontSize:"clamp(9px,2.5vw,12px)"}}>💼 {profile.profession||"Working professional"}</div>}
+                    {profile.fun_fact&&<div style={{color:"rgba(255,255,255,0.7)",fontSize:"clamp(8px,2vw,11px)",fontStyle:"italic",marginTop:4}}>✨ "{profile.fun_fact}"</div>}
+                  </div>
+                  <div style={{position:"absolute",bottom:"8%",right:"6%",display:"flex",alignItems:"center",gap:6}}>
+                    <img src="https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/avatars/Faflogowhite.png" style={{height:24,objectFit:"contain",opacity:0.7}} alt=""/>
+                    <div style={{color:"rgba(255,255,255,0.5)",fontSize:"clamp(7px,1.8vw,9px)",fontFamily:"Georgia,serif",letterSpacing:1}}>Together for Good</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <h1 style={{fontFamily:HF,fontSize:24,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:4}}>My Hours</h1>
+        <p style={{color:MT,fontSize:13,marginBottom:14,fontFamily:BF}}>{th} hours across {logs.length} activities.</p>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:16}}>
+          {PROJECTS.map(p=>{const h=logs.filter(l=>l.project===p.id).reduce((s,l)=>s+Number(l.hours),0);if(!h) return null;return <div key={p.id} style={{background:p.bg,color:"#fff",borderRadius:20,padding:"4px 10px",fontSize:11,fontWeight:700}}>{p.emoji} {h}h {p.label}</div>;})}
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {logs.map(l=>{const p=gp(l.project);return <div key={l.id} style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,borderLeft:"5px solid "+p.bg,display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:36,height:36,borderRadius:10,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{p.emoji}</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:700,fontSize:13,fontFamily:BF,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.activity}</div>
+              <div style={{fontSize:11,color:MT,marginTop:2,fontFamily:BF}}>{l.date}</div>
+              <div style={{marginTop:4,display:"flex",gap:4,flexWrap:"wrap"}}><Tag pid={l.project} sm/>{l.status==="pending"&&<span style={{background:"#FEF3C7",color:"#D97706",borderRadius:20,padding:"2px 6px",fontSize:10,fontWeight:700}}>⏳ Pending</span>}</div>
+            </div>
+            <div style={{fontWeight:900,fontSize:22,color:p.bg,fontFamily:HF,flexShrink:0}}>{l.hours}h</div>
+          </div>;})}
+          {logs.length===0&&<p style={{padding:28,textAlign:"center",color:MT,fontFamily:BF,background:"#fff",borderRadius:14}}>No hours yet — go volunteer!</p>}
+        </div>
+      </div>}
+    </main>
+
+    {signupModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:999,display:"flex",alignItems:"flex-end"}}>
+      <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"24px 20px",width:"100%",maxHeight:"80vh",overflowY:"auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <h2 style={{fontFamily:HF,fontSize:18,fontWeight:900,textTransform:"uppercase",color:DK}}>Sign Up</h2>
+          <button onClick={()=>setSignupModal(null)} style={{background:"#F3F4F6",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13}}>✕</button>
+        </div>
+        <p style={{fontSize:13,color:MT,marginBottom:16,fontFamily:BF}}>Please answer these questions to apply for <strong style={{color:DK}}>{signupModal.title}</strong></p>
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          {signupModal.questions.map((q,i)=><div key={i}>
+            <label style={{display:"block",fontWeight:700,fontSize:13,color:DK,marginBottom:6,fontFamily:BF}}>{i+1}. {q.q}</label>
+            {q.type==="yesno"
+              ? <div style={{display:"flex",gap:10}}>
+                  <button onClick={()=>setAnswers(a=>{return{...a,[i]:"Yes"};} )} style={{flex:1,padding:"10px",borderRadius:10,border:"2px solid "+(answers[i]==="Yes"?"#22C55E":BR),background:answers[i]==="Yes"?"#DCFCE7":"#fff",fontWeight:700,cursor:"pointer",fontSize:14}}>✓ Yes</button>
+                  <button onClick={()=>setAnswers(a=>{return{...a,[i]:"No"};} )} style={{flex:1,padding:"10px",borderRadius:10,border:"2px solid "+(answers[i]==="No"?"#DC2626":"#E5E7EB"),background:answers[i]==="No"?"#FEE2E2":"#fff",fontWeight:700,cursor:"pointer",fontSize:14}}>✕ No</button>
+                </div>
+              : <input type="text" placeholder="Your answer..." value={answers[i]||""} onChange={e=>setAnswers(a=>{return{...a,[i]:e.target.value};} )} style={inp}/>
+            }
+          </div>)}
+        </div>
+        <button onClick={()=>{
+          const arr=signupModal.questions.map((q,i)=>{return{question:q.q,answer:answers[i]||""};} );
+          submitSignup(signupModal,arr);
+        }} style={{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",width:"100%",marginTop:20,fontFamily:BF}}>Submit Application →</button>
+      </div>
+    </div>}
+  </div>;
+}
+
+// -- APP -----------------------------------------------------------------------
+function App(){
+  const [profile,setProfile]=useState(null);
+  const [loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    sb.auth.getSession().then(async({data:{session}})=>{
+      if(session){
+        const {data}=await sb.from("profiles").select("*").eq("id",session.user.id).single();
+        setProfile(data);
+      }
+      setLoading(false);
+    });
+    const {data:{subscription}}=sb.auth.onAuthStateChange(event=>{
+      if(event==="SIGNED_OUT") setProfile(null);
+    });
+    return ()=>subscription.unsubscribe();
+  },[]);
+
+  const logout=async()=>{await sb.auth.signOut();setProfile(null);};
+
+  if(loading) return <div style={{minHeight:"100vh",background:DK,display:"flex",alignItems:"center",justifyContent:"center"}}>
+    <div className="spinner"/>
+  </div>;
+  if(!profile) return <Auth onAuth={p=>setProfile(p)}/>;
+  if(profile.role==="superadmin") return <Admin profile={profile} onLogout={logout} isSuperAdmin={true}/>;
+  if(profile.role==="admin") return <Admin profile={profile} onLogout={logout} isSuperAdmin={false}/>;
+  return <Volunteer profile={profile} onLogout={logout} onUpdateProfile={setProfile}/>;
+}
+
+document.getElementById("splash").style.display="none";
+const root=ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App/>);
+</script>
+
+<script>
+let deferredPrompt;
+window.addEventListener("beforeinstallprompt",e=>{
+  e.preventDefault(); deferredPrompt=e;
+  const b=document.createElement("div");
+  b.style="position:fixed;bottom:0;left:0;right:0;background:#0A3D1F;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;z-index:9999;box-shadow:0 -4px 20px rgba(0,0,0,.3)";
+  b.innerHTML=`<div style="display:flex;align-items:center;gap:10px"><img src="https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/avatars/Faflogowhite.png" style="height:36px"/><div><div style="font-weight:700;font-size:14px;color:#fff;font-family:Poppins,sans-serif">Feed a Friend</div><div style="font-size:11px;color:#BBF7D0;font-family:Poppins,sans-serif">Add to your home screen</div></div></div><div style="display:flex;gap:8px"><button onclick="deferredPrompt.prompt();this.closest('div').remove()" style="background:#22C55E;color:#0A3D1F;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:Poppins,sans-serif">Install</button><button onclick="this.closest('div').remove()" style="background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer">✕</button></div>`;
+  document.body.appendChild(b);
+});
+</script>
+</body>
+</html>
