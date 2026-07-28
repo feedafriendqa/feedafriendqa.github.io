@@ -530,8 +530,13 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
               </ul>
 
               <div class="field">
-                <label for="regName">Full name</label>
-                <input id="regName" type="text" placeholder="Your full name" autocomplete="name" required>
+                <label for="regFirstName">First name</label>
+                <input id="regFirstName" type="text" placeholder="First name" autocomplete="given-name" required>
+              </div>
+
+              <div class="field">
+                <label for="regSurname">Surname</label>
+                <input id="regSurname" type="text" placeholder="Surname" autocomplete="family-name" required>
               </div>
 
               <div class="field">
@@ -540,13 +545,53 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
               </div>
 
               <div class="field">
+                <label for="regPassword">Create a password</label>
+                <input id="regPassword" type="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required>
+              </div>
+
+              <div class="field">
                 <label for="regPhone">Phone number</label>
                 <input id="regPhone" type="tel" placeholder="+974 5555 5555" autocomplete="tel" required>
               </div>
 
               <div class="field">
-                <label for="regPassword">Create a password</label>
-                <input id="regPassword" type="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required>
+                <label for="regDob">Date of birth</label>
+                <input id="regDob" type="date" required>
+              </div>
+
+              <div class="field">
+                <label for="regNationality">Nationality</label>
+                <input id="regNationality" type="text" placeholder="Your nationality" autocomplete="country-name" required>
+              </div>
+
+              <div class="field">
+                <div class="checkbox-group">
+                  <label><input type="checkbox" id="regIsStudent"> I'm currently a student</label>
+                </div>
+              </div>
+
+              <div id="studentFields" class="hidden-view">
+                <div class="field">
+                  <label for="regStudentLevel">Level of study</label>
+                  <input id="regStudentLevel" type="text" placeholder="e.g. High school, Undergraduate">
+                </div>
+                <div class="field">
+                  <label for="regStudentSchool">School / University</label>
+                  <input id="regStudentSchool" type="text" placeholder="Name of school or university">
+                </div>
+              </div>
+
+              <div class="field">
+                <div class="checkbox-group">
+                  <label><input type="checkbox" id="regIsWorking"> I'm currently working</label>
+                </div>
+              </div>
+
+              <div id="workingFields" class="hidden-view">
+                <div class="field">
+                  <label for="regProfession">Profession / job title</label>
+                  <input id="regProfession" type="text" placeholder="e.g. Teacher, Engineer">
+                </div>
               </div>
 
               <div class="field">
@@ -559,6 +604,11 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
                   <label><input type="checkbox" name="program" value="Giving Garden"> Giving Garden</label>
                   <label><input type="checkbox" name="program" value="Pay it Forward"> Pay it Forward</label>
                 </div>
+              </div>
+
+              <div class="field">
+                <label for="regFunFact">A fun fact about you (optional)</label>
+                <input id="regFunFact" type="text" placeholder="Something fun for your profile">
               </div>
 
               <div id="registerError" style="display:none;margin:0 2px 14px;font-size:12.5px;color:#ffb4b4;font-weight:700;"></div>
@@ -640,13 +690,23 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       window.location.href = 'connect-landing.html';
     });
 
-    // NOTE: assumes a "profiles" table keyed by the auth user's id, with
-    // columns name / phone / programs / approved — verify these match your
-    // actual schema (the same one volunteer.html writes to).
+    // Verified against the live "profiles" table schema in Supabase.
     const registerForm = document.getElementById('registerView');
     const registerErr = document.getElementById('registerError');
     const registerOk = document.getElementById('registerSuccess');
     const registerBtn = document.getElementById('registerBtn');
+
+    const isStudentBox = document.getElementById('regIsStudent');
+    const studentFields = document.getElementById('studentFields');
+    isStudentBox.addEventListener('change', () => {
+      studentFields.classList.toggle('hidden-view', !isStudentBox.checked);
+    });
+
+    const isWorkingBox = document.getElementById('regIsWorking');
+    const workingFields = document.getElementById('workingFields');
+    isWorkingBox.addEventListener('change', () => {
+      workingFields.classList.toggle('hidden-view', !isWorkingBox.checked);
+    });
 
     registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -656,11 +716,20 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       const prevLabel = registerBtn.textContent;
       registerBtn.textContent = 'Creating account…';
 
-      const name = document.getElementById('regName').value.trim();
+      const first_name = document.getElementById('regFirstName').value.trim();
+      const surname = document.getElementById('regSurname').value.trim();
       const email = document.getElementById('regEmail').value.trim();
-      const phone = document.getElementById('regPhone').value.trim();
       const password = document.getElementById('regPassword').value;
-      const programs = Array.from(
+      const phone = document.getElementById('regPhone').value.trim();
+      const dob = document.getElementById('regDob').value || null;
+      const nationality = document.getElementById('regNationality').value.trim();
+      const is_student = isStudentBox.checked;
+      const student_level = is_student ? document.getElementById('regStudentLevel').value.trim() : null;
+      const student_school = is_student ? document.getElementById('regStudentSchool').value.trim() : null;
+      const is_working = isWorkingBox.checked;
+      const profession = is_working ? document.getElementById('regProfession').value.trim() : null;
+      const fun_fact = document.getElementById('regFunFact').value.trim() || null;
+      const projects = Array.from(
         registerForm.querySelectorAll('input[name="program"]:checked')
       ).map(cb => cb.value);
 
@@ -676,9 +745,19 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
 
       const { error: profileError } = await sb.from('profiles').insert({
         id: data.user.id,
-        name,
+        first_name,
+        surname,
+        email,
         phone,
-        programs,
+        dob,
+        nationality,
+        is_student,
+        student_level,
+        student_school,
+        is_working,
+        profession,
+        fun_fact,
+        projects,
         approved: false
       });
 
@@ -693,6 +772,8 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       registerOk.textContent = "Thanks! Your registration is pending admin approval — we'll be in touch.";
       registerOk.style.display = 'block';
       registerForm.reset();
+      studentFields.classList.add('hidden-view');
+      workingFields.classList.add('hidden-view');
       registerBtn.disabled = false;
       registerBtn.textContent = prevLabel;
     });
