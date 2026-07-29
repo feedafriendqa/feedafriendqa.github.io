@@ -511,12 +511,32 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
 
               <div class="row">
                 <label class="remember"><input type="checkbox"> Remember me</label>
-                <a class="forgot" href="volunteer.html">Forgot password?</a>
+                <button type="button" class="forgot" id="forgotPasswordBtn" style="background:none;border:none;cursor:pointer;">Forgot password?</button>
               </div>
 
               <div id="loginError" style="display:none;margin:0 2px 14px;font-size:12.5px;color:#ffb4b4;font-weight:700;"></div>
 
               <button class="btn primary" type="submit" id="loginBtn">Log in</button>
+            </form>
+
+            <form id="resetPasswordView" class="hidden-view" onsubmit="return false;">
+              <h2>Set a new password.</h2>
+              <p>You've followed a password reset link — choose a new password below.</p>
+
+              <div class="field">
+                <label for="newPassword">New password</label>
+                <input id="newPassword" type="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required>
+              </div>
+
+              <div class="field">
+                <label for="newPasswordConfirm">Confirm new password</label>
+                <input id="newPasswordConfirm" type="password" placeholder="Re-enter your new password" autocomplete="new-password" minlength="8" required>
+              </div>
+
+              <div id="resetError" style="display:none;margin:0 2px 14px;font-size:12.5px;color:#ffb4b4;font-weight:700;"></div>
+              <div id="resetSuccess" style="display:none;margin:0 2px 14px;font-size:13px;color:#c7f2b0;font-weight:700;"></div>
+
+              <button class="btn primary" type="submit" id="resetPasswordBtn">Set new password</button>
             </form>
 
             <form id="registerView" class="hidden-view" onsubmit="return false;">
@@ -631,21 +651,31 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
     const choiceView = document.getElementById('choiceView');
     const signinView = document.getElementById('signinView');
     const registerView = document.getElementById('registerView');
+    const resetPasswordView = document.getElementById('resetPasswordView');
 
     function showChoice(){
       choiceView.classList.remove('hidden-view');
       signinView.classList.add('hidden-view');
       registerView.classList.add('hidden-view');
+      resetPasswordView.classList.add('hidden-view');
     }
     function showSignin(){
       choiceView.classList.add('hidden-view');
       signinView.classList.remove('hidden-view');
       registerView.classList.add('hidden-view');
+      resetPasswordView.classList.add('hidden-view');
     }
     function showRegister(){
       choiceView.classList.add('hidden-view');
       signinView.classList.add('hidden-view');
       registerView.classList.remove('hidden-view');
+      resetPasswordView.classList.add('hidden-view');
+    }
+    function showResetPassword(){
+      choiceView.classList.add('hidden-view');
+      signinView.classList.add('hidden-view');
+      registerView.classList.add('hidden-view');
+      resetPasswordView.classList.remove('hidden-view');
     }
     document.getElementById('showSigninBtn').addEventListener('click', showSignin);
     document.getElementById('showRegisterBtn').addEventListener('click', showRegister);
@@ -664,6 +694,16 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
 
     const sb = supabase.createClient("https://xbxagukdvgyaoqvbqoic.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4");
 
+    // When someone arrives here via a password-reset email link, Supabase
+    // picks up the recovery token from the URL automatically and fires this
+    // event — that's our cue to show the "set new password" form instead of
+    // the normal sign-in choice.
+    sb.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        showResetPassword();
+      }
+    });
+
     const form = document.getElementById('signinView');
     const errBox = document.getElementById('loginError');
     const btn = document.getElementById('loginBtn');
@@ -671,6 +711,7 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       errBox.style.display = 'none';
+      errBox.style.color = '#ffb4b4';
       btn.disabled = true;
       const prevLabel = btn.textContent;
       btn.textContent = 'Signing in…';
@@ -700,6 +741,74 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       }
 
       window.location.href = 'connect-landing.html';
+    });
+
+    // Forgot password: sends a real reset email via Supabase. Uses whatever
+    // email is already typed in the sign-in field; asks for it otherwise.
+    // NOTE: the reset link Supabase emails will redirect back to this same
+    // page (redirectTo below) — you'll need a page that reads the recovery
+    // token from the URL and lets the person set a new password. If you
+    // don't have that yet, point redirectTo at wherever that page will live.
+    document.getElementById('forgotPasswordBtn').addEventListener('click', async () => {
+      let email = document.getElementById('email').value.trim();
+      if (!email) {
+        email = (window.prompt('Enter your email address to reset your password:') || '').trim();
+      }
+      if (!email) return;
+
+      errBox.style.display = 'none';
+      errBox.style.color = '#ffb4b4';
+      const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname
+      });
+
+      if (error) {
+        errBox.textContent = error.message;
+        errBox.style.display = 'block';
+      } else {
+        errBox.style.color = '#c7f2b0';
+        errBox.textContent = "Check your email — we've sent a password reset link to " + email + ".";
+        errBox.style.display = 'block';
+      }
+    });
+
+    const resetForm = document.getElementById('resetPasswordView');
+    const resetErr = document.getElementById('resetError');
+    const resetOk = document.getElementById('resetSuccess');
+    const resetBtn = document.getElementById('resetPasswordBtn');
+
+    resetForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      resetErr.style.display = 'none';
+      resetOk.style.display = 'none';
+
+      const newPassword = document.getElementById('newPassword').value;
+      const newPasswordConfirm = document.getElementById('newPasswordConfirm').value;
+
+      if (newPassword !== newPasswordConfirm) {
+        resetErr.textContent = "Passwords don't match — please re-enter them.";
+        resetErr.style.display = 'block';
+        return;
+      }
+
+      resetBtn.disabled = true;
+      const prevLabel = resetBtn.textContent;
+      resetBtn.textContent = 'Updating…';
+
+      const { error } = await sb.auth.updateUser({ password: newPassword });
+
+      if (error) {
+        resetErr.textContent = error.message;
+        resetErr.style.display = 'block';
+        resetBtn.disabled = false;
+        resetBtn.textContent = prevLabel;
+        return;
+      }
+
+      resetOk.textContent = 'Password updated! Redirecting you in…';
+      resetOk.style.display = 'block';
+      resetForm.reset();
+      setTimeout(() => { window.location.href = 'connect-landing.html'; }, 1500);
     });
 
     // Verified against the live "profiles" table schema in Supabase.
