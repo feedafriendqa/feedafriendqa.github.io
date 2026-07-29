@@ -890,6 +890,29 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
         return;
       }
 
+      // Fire both notification emails the old volunteer.html flow sent —
+      // same edge function, same "new_volunteer" (to admin) and
+      // "volunteer_pending" (to the new user) types it already supports.
+      // Best-effort: an email hiccup shouldn't block a signup that's
+      // already saved, so failures here are logged, not surfaced.
+      const fullName = (first_name + ' ' + surname).trim();
+      try {
+        await Promise.allSettled([
+          fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'new_volunteer', name: fullName, email })
+          }),
+          fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'volunteer_pending', name: fullName, email })
+          })
+        ]);
+      } catch (emailErr) {
+        console.error('Registration emails failed (non-fatal):', emailErr);
+      }
+
       registerOk.textContent = "Thanks! Your registration is pending admin approval — we'll be in touch.";
       registerOk.style.display = 'block';
       registerForm.reset();
