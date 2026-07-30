@@ -8,7 +8,7 @@
   <meta name="description" content="Find your place. Create your impact.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root{
       --forest:#0b2f20;
@@ -451,6 +451,52 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       .phrase:nth-child(1),.phrase:nth-child(2){display:none}
       .phrase:nth-child(3){opacity:1;transform:none;filter:none}
     }
+    /* ===== Language toggle ===== */
+    .lang-toggle{
+      appearance:none;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.10);
+      color:#fff;
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.02em;
+      padding:8px 14px;
+      border-radius:999px;
+      cursor:pointer;
+      transition:.2s ease;
+    }
+    .lang-toggle:hover{background:rgba(255,255,255,.20)}
+
+    /* ===== Arabic / RTL ===== */
+    html[lang="ar"] body,
+    html[lang="ar"] .btn,
+    html[lang="ar"] input,
+    html[lang="ar"] .field label,
+    html[lang="ar"] .checkbox-group label,
+    html[lang="ar"] h2,
+    html[lang="ar"] p,
+    html[lang="ar"] .sub,
+    html[lang="ar"] .strap,
+    html[lang="ar"] .phrase,
+    html[lang="ar"] .identity h1,
+    html[lang="ar"] .benefits,
+    html[lang="ar"] .lang-toggle{
+      font-family:Cairo,Manrope,system-ui,sans-serif;
+    }
+    html[dir="rtl"] .topbar{flex-direction:row-reverse}
+    html[dir="rtl"] .hero-grid{direction:rtl}
+    html[dir="rtl"] .copy,
+    html[dir="rtl"] .field label,
+    html[dir="rtl"] .login>p,
+    html[dir="rtl"] .login h2,
+    html[dir="rtl"] .benefits{text-align:right}
+    html[dir="rtl"] .checkbox-group label,
+    html[dir="rtl"] .remember,
+    html[dir="rtl"] .row{flex-direction:row-reverse}
+    html[dir="rtl"] .back-btn{direction:rtl}
+    html[dir="rtl"] .field input{text-align:right}
+    html[dir="rtl"] .field input::placeholder{text-align:right}
+    html[dir="rtl"] .benefits{padding-right:20px;padding-left:0}
   </style>
   <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';document.head.appendChild(s);"></script>
 </head>
@@ -467,21 +513,22 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
             <span>CONNECT</span>
           </span>
         </a>
+        <button type="button" class="lang-toggle" id="langToggleBtn" data-en="عربي" data-ar="English">عربي</button>
       </header>
 
       <div class="hero-grid">
         <div class="copy">
           <div class="sequence" aria-label="One act of kindness can change a life. Including yours.">
-            <div class="phrase">One act of kindness...</div>
-            <div class="phrase">can change a life.</div>
-            <div class="phrase">Including yours.</div>
+            <div class="phrase" data-en="One act of kindness..." data-ar="فعل خير واحد...">One act of kindness...</div>
+            <div class="phrase" data-en="can change a life." data-ar="يمكن أن يغيّر حياة.">can change a life.</div>
+            <div class="phrase" data-en="Including yours." data-ar="حياتك أنت أيضاً.">Including yours.</div>
           </div>
         </div>
 
         <div class="cta-block">
           <div class="identity">
-            <p class="strap">Find your place. Create your impact.</p>
-            <p class="sub">Join thousands of volunteers making a lasting difference across Qatar.</p>
+            <p class="strap" data-en="Find your place. Create your impact." data-ar="اعثر على مكانك. اصنع أثرك.">Find your place. Create your impact.</p>
+            <p class="sub" data-en="Join thousands of volunteers making a lasting difference across Qatar." data-ar="انضم إلى آلاف المتطوعين الذين يصنعون فرقاً حقيقياً في قطر.">Join thousands of volunteers making a lasting difference across Qatar.</p>
           </div>
 
           <div class="login-wrap">
@@ -489,152 +536,152 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
 
             <div id="choiceView">
               <div class="btn-row">
-                <button class="btn primary" type="button" id="showSigninBtn">Sign In</button>
-                <button class="btn secondary" type="button" id="showRegisterBtn">Register</button>
+                <button class="btn primary" type="button" id="showSigninBtn" data-en="Sign In" data-ar="تسجيل الدخول">Sign In</button>
+                <button class="btn secondary" type="button" id="showRegisterBtn" data-en="Register" data-ar="التسجيل">Register</button>
               </div>
             </div>
 
             <form id="signinView" class="hidden-view" onsubmit="return false;">
-              <button type="button" class="back-btn" id="backFromSignin">← Back</button>
-              <h2>Welcome back.</h2>
-              <p>Sign in to continue your journey.</p>
+              <button type="button" class="back-btn" id="backFromSignin" data-en="← Back" data-ar="→ رجوع">← Back</button>
+              <h2 data-en="Welcome back." data-ar="مرحباً بعودتك.">Welcome back.</h2>
+              <p data-en="Sign in to continue your journey." data-ar="سجّل الدخول لمتابعة رحلتك.">Sign in to continue your journey.</p>
 
               <div class="field">
-                <label for="email">Email address</label>
-                <input id="email" type="email" placeholder="you@example.com" autocomplete="email" required>
+                <label for="email" data-en="Email address" data-ar="البريد الإلكتروني">Email address</label>
+                <input id="email" type="email" placeholder="you@example.com" data-en-placeholder="you@example.com" data-ar-placeholder="you@example.com" autocomplete="email" required>
               </div>
 
               <div class="field">
-                <label for="password">Password</label>
-                <input id="password" type="password" placeholder="Enter your password" autocomplete="current-password" required>
+                <label for="password" data-en="Password" data-ar="كلمة المرور">Password</label>
+                <input id="password" type="password" placeholder="Enter your password" data-en-placeholder="Enter your password" data-ar-placeholder="أدخل كلمة المرور" autocomplete="current-password" required>
               </div>
 
               <div class="row">
-                <label class="remember"><input type="checkbox"> Remember me</label>
-                <button type="button" class="forgot" id="forgotPasswordBtn" style="background:none;border:none;cursor:pointer;">Forgot password?</button>
+                <label class="remember"><input type="checkbox"> <span data-en="Remember me" data-ar="تذكرني">Remember me</span></label>
+                <button type="button" class="forgot" id="forgotPasswordBtn" style="background:none;border:none;cursor:pointer;" data-en="Forgot password?" data-ar="نسيت كلمة المرور؟">Forgot password?</button>
               </div>
 
               <div id="loginError" style="display:none;margin:0 2px 14px;font-size:12.5px;color:#ffb4b4;font-weight:700;"></div>
 
-              <button class="btn primary" type="submit" id="loginBtn">Log in</button>
+              <button class="btn primary" type="submit" id="loginBtn" data-en="Log in" data-ar="تسجيل الدخول">Log in</button>
             </form>
 
             <form id="resetPasswordView" class="hidden-view" onsubmit="return false;">
-              <h2>Set a new password.</h2>
-              <p>You've followed a password reset link — choose a new password below.</p>
+              <h2 data-en="Set a new password." data-ar="عيّن كلمة مرور جديدة.">Set a new password.</h2>
+              <p data-en="You've followed a password reset link — choose a new password below." data-ar="لقد اتّبعت رابط إعادة تعيين كلمة المرور — اختر كلمة مرور جديدة أدناه.">You've followed a password reset link — choose a new password below.</p>
 
               <div class="field">
-                <label for="newPassword">New password</label>
-                <input id="newPassword" type="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required>
+                <label for="newPassword" data-en="New password" data-ar="كلمة المرور الجديدة">New password</label>
+                <input id="newPassword" type="password" placeholder="At least 8 characters" data-en-placeholder="At least 8 characters" data-ar-placeholder="8 أحرف على الأقل" autocomplete="new-password" minlength="8" required>
               </div>
 
               <div class="field">
-                <label for="newPasswordConfirm">Confirm new password</label>
-                <input id="newPasswordConfirm" type="password" placeholder="Re-enter your new password" autocomplete="new-password" minlength="8" required>
+                <label for="newPasswordConfirm" data-en="Confirm new password" data-ar="تأكيد كلمة المرور الجديدة">Confirm new password</label>
+                <input id="newPasswordConfirm" type="password" placeholder="Re-enter your new password" data-en-placeholder="Re-enter your new password" data-ar-placeholder="أعد إدخال كلمة المرور الجديدة" autocomplete="new-password" minlength="8" required>
               </div>
 
               <div id="resetError" style="display:none;margin:0 2px 14px;font-size:12.5px;color:#ffb4b4;font-weight:700;"></div>
               <div id="resetSuccess" style="display:none;margin:0 2px 14px;font-size:13px;color:#c7f2b0;font-weight:700;"></div>
 
-              <button class="btn primary" type="submit" id="resetPasswordBtn">Set new password</button>
+              <button class="btn primary" type="submit" id="resetPasswordBtn" data-en="Set new password" data-ar="تعيين كلمة المرور">Set new password</button>
             </form>
 
             <form id="registerView" class="hidden-view" onsubmit="return false;">
-              <button type="button" class="back-btn" id="backFromRegister">← Back</button>
-              <h2>Join the movement.</h2>
-              <p>As a Feed a Friend volunteer you can:</p>
+              <button type="button" class="back-btn" id="backFromRegister" data-en="← Back" data-ar="→ رجوع">← Back</button>
+              <h2 data-en="Join the movement." data-ar="انضم إلى الحركة.">Join the movement.</h2>
+              <p data-en="As a Feed a Friend volunteer you can:" data-ar="كمتطوع في فيد أ فريند يمكنك:">As a Feed a Friend volunteer you can:</p>
               <ul class="benefits">
-                <li>Pick up one-off shifts or ongoing projects that fit your schedule</li>
-                <li>Get first notice on new drives and events near you</li>
-                <li>Track your hours and see the impact you're making</li>
+                <li data-en="Pick up one-off shifts or ongoing projects that fit your schedule" data-ar="اختر مناوبات فردية أو مشاريع مستمرة تناسب جدولك">Pick up one-off shifts or ongoing projects that fit your schedule</li>
+                <li data-en="Get first notice on new drives and events near you" data-ar="كن أول من يعلم بالحملات والفعاليات القريبة منك">Get first notice on new drives and events near you</li>
+                <li data-en="Track your hours and see the impact you're making" data-ar="تابع ساعاتك وشاهد الأثر الذي تصنعه">Track your hours and see the impact you're making</li>
               </ul>
 
               <div class="field">
-                <label for="regFirstName">First name</label>
-                <input id="regFirstName" type="text" placeholder="First name" autocomplete="given-name" required>
+                <label for="regFirstName" data-en="First name" data-ar="الاسم الأول">First name</label>
+                <input id="regFirstName" type="text" placeholder="First name" data-en-placeholder="First name" data-ar-placeholder="الاسم الأول" autocomplete="given-name" required>
               </div>
 
               <div class="field">
-                <label for="regSurname">Surname</label>
-                <input id="regSurname" type="text" placeholder="Surname" autocomplete="family-name" required>
+                <label for="regSurname" data-en="Surname" data-ar="اسم العائلة">Surname</label>
+                <input id="regSurname" type="text" placeholder="Surname" data-en-placeholder="Surname" data-ar-placeholder="اسم العائلة" autocomplete="family-name" required>
               </div>
 
               <div class="field">
-                <label for="regEmail">Email address</label>
-                <input id="regEmail" type="email" placeholder="you@example.com" autocomplete="email" required>
+                <label for="regEmail" data-en="Email address" data-ar="البريد الإلكتروني">Email address</label>
+                <input id="regEmail" type="email" placeholder="you@example.com" data-en-placeholder="you@example.com" data-ar-placeholder="you@example.com" autocomplete="email" required>
               </div>
 
               <div class="field">
-                <label for="regPassword">Create a password</label>
-                <input id="regPassword" type="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required>
+                <label for="regPassword" data-en="Create a password" data-ar="أنشئ كلمة مرور">Create a password</label>
+                <input id="regPassword" type="password" placeholder="At least 8 characters" data-en-placeholder="At least 8 characters" data-ar-placeholder="8 أحرف على الأقل" autocomplete="new-password" minlength="8" required>
               </div>
 
               <div class="field">
-                <label for="regPhone">Phone number</label>
-                <input id="regPhone" type="tel" placeholder="+974 5555 5555" autocomplete="tel" required>
+                <label for="regPhone" data-en="Phone number" data-ar="رقم الهاتف">Phone number</label>
+                <input id="regPhone" type="tel" placeholder="+974 5555 5555" data-en-placeholder="+974 5555 5555" data-ar-placeholder="+974 5555 5555" autocomplete="tel" required>
               </div>
 
               <div class="field">
-                <label for="regDob">Date of birth</label>
+                <label for="regDob" data-en="Date of birth" data-ar="تاريخ الميلاد">Date of birth</label>
                 <input id="regDob" type="date" required>
               </div>
 
               <div class="field">
-                <label for="regNationality">Nationality</label>
-                <input id="regNationality" type="text" placeholder="Your nationality" autocomplete="country-name" required>
+                <label for="regNationality" data-en="Nationality" data-ar="الجنسية">Nationality</label>
+                <input id="regNationality" type="text" placeholder="Your nationality" data-en-placeholder="Your nationality" data-ar-placeholder="جنسيتك" autocomplete="country-name" required>
               </div>
 
               <div class="field">
                 <div class="checkbox-group">
-                  <label><input type="checkbox" id="regIsStudent"> I'm currently a student</label>
+                  <label><input type="checkbox" id="regIsStudent"> <span data-en="I'm currently a student" data-ar="أنا حالياً طالب">I'm currently a student</span></label>
                 </div>
               </div>
 
               <div id="studentFields" class="hidden-view">
                 <div class="field">
-                  <label for="regStudentLevel">Level of study</label>
-                  <input id="regStudentLevel" type="text" placeholder="e.g. High school, Undergraduate">
+                  <label for="regStudentLevel" data-en="Level of study" data-ar="المرحلة الدراسية">Level of study</label>
+                  <input id="regStudentLevel" type="text" placeholder="e.g. High school, Undergraduate" data-en-placeholder="e.g. High school, Undergraduate" data-ar-placeholder="مثال: ثانوية، جامعة">
                 </div>
                 <div class="field">
-                  <label for="regStudentSchool">School / University</label>
-                  <input id="regStudentSchool" type="text" placeholder="Name of school or university">
+                  <label for="regStudentSchool" data-en="School / University" data-ar="المدرسة / الجامعة">School / University</label>
+                  <input id="regStudentSchool" type="text" placeholder="Name of school or university" data-en-placeholder="Name of school or university" data-ar-placeholder="اسم المدرسة أو الجامعة">
                 </div>
               </div>
 
               <div class="field">
                 <div class="checkbox-group">
-                  <label><input type="checkbox" id="regIsWorking"> I'm currently working</label>
+                  <label><input type="checkbox" id="regIsWorking"> <span data-en="I'm currently working" data-ar="أنا حالياً موظف">I'm currently working</span></label>
                 </div>
               </div>
 
               <div id="workingFields" class="hidden-view">
                 <div class="field">
-                  <label for="regProfession">Profession / job title</label>
-                  <input id="regProfession" type="text" placeholder="e.g. Teacher, Engineer">
+                  <label for="regProfession" data-en="Profession / job title" data-ar="المهنة / المسمى الوظيفي">Profession / job title</label>
+                  <input id="regProfession" type="text" placeholder="e.g. Teacher, Engineer" data-en-placeholder="e.g. Teacher, Engineer" data-ar-placeholder="مثال: معلم، مهندس">
                 </div>
               </div>
 
               <div class="field">
-                <label>Which programmes interest you?</label>
+                <label data-en="Which programmes interest you?" data-ar="ما البرامج التي تهمك؟">Which programmes interest you?</label>
                 <div class="checkbox-group">
-                  <label><input type="checkbox" name="program" value="Food Boxes"> Food Boxes</label>
-                  <label><input type="checkbox" name="program" value="Welcome Baby"> Welcome Baby</label>
-                  <label><input type="checkbox" name="program" value="Community Fridges"> Community Fridges</label>
-                  <label><input type="checkbox" name="program" value="Little Learners"> Little Learners</label>
-                  <label><input type="checkbox" name="program" value="Giving Garden"> Giving Garden</label>
-                  <label><input type="checkbox" name="program" value="Pay it Forward"> Pay it Forward</label>
+                  <label><input type="checkbox" name="program" value="Food Boxes"> <span data-en="Food Boxes" data-ar="صناديق الطعام">Food Boxes</span></label>
+                  <label><input type="checkbox" name="program" value="Welcome Baby"> <span data-en="Welcome Baby" data-ar="أهلاً طفلي">Welcome Baby</span></label>
+                  <label><input type="checkbox" name="program" value="Community Fridges"> <span data-en="Community Fridges" data-ar="ثلاجات المجتمع">Community Fridges</span></label>
+                  <label><input type="checkbox" name="program" value="Little Learners"> <span data-en="Little Learners" data-ar="المتعلمون الصغار">Little Learners</span></label>
+                  <label><input type="checkbox" name="program" value="Giving Garden"> <span data-en="Giving Garden" data-ar="حديقة العطاء">Giving Garden</span></label>
+                  <label><input type="checkbox" name="program" value="Pay it Forward"> <span data-en="Pay it Forward" data-ar="ادفعها للأمام">Pay it Forward</span></label>
                 </div>
               </div>
 
               <div class="field">
-                <label for="regFunFact">A fun fact about you (optional)</label>
-                <input id="regFunFact" type="text" placeholder="Something fun for your profile">
+                <label for="regFunFact" data-en="A fun fact about you (optional)" data-ar="معلومة طريفة عنك (اختياري)">A fun fact about you (optional)</label>
+                <input id="regFunFact" type="text" placeholder="Something fun for your profile" data-en-placeholder="Something fun for your profile" data-ar-placeholder="شيء طريف لملفك الشخصي">
               </div>
 
               <div id="registerError" style="display:none;margin:0 2px 14px;font-size:12.5px;color:#ffb4b4;font-weight:700;"></div>
               <div id="registerSuccess" style="display:none;margin:0 2px 14px;font-size:13px;color:#c7f2b0;font-weight:700;"></div>
 
-              <button class="btn primary" type="submit" id="registerBtn">Create account</button>
+              <button class="btn primary" type="submit" id="registerBtn" data-en="Create account" data-ar="إنشاء حساب">Create account</button>
             </form>
 
           </div>
@@ -646,6 +693,34 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
   </main>
 
   <script>
+    // ===== Language toggle (EN/AR) — must run before anything else so the
+    // saved choice applies immediately on load. =====
+    function setLang(lang){
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+      document.querySelectorAll('[data-en]').forEach(el => {
+        const text = lang === 'ar' ? el.getAttribute('data-ar') : el.getAttribute('data-en');
+        if (text !== null) el.textContent = text;
+      });
+      document.querySelectorAll('[data-en-placeholder]').forEach(el => {
+        const text = lang === 'ar' ? el.getAttribute('data-ar-placeholder') : el.getAttribute('data-en-placeholder');
+        if (text !== null) el.setAttribute('placeholder', text);
+      });
+      const toggleBtn = document.getElementById('langToggleBtn');
+      if (toggleBtn) toggleBtn.textContent = lang === 'ar' ? toggleBtn.getAttribute('data-ar') : toggleBtn.getAttribute('data-en');
+      sessionStorage.setItem('connect_lang', lang);
+    }
+    (function(){
+      const savedLang = sessionStorage.getItem('connect_lang') || 'en';
+      setLang(savedLang);
+    })();
+    document.getElementById('langToggleBtn').addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('lang') === 'ar' ? 'ar' : 'en';
+      setLang(current === 'ar' ? 'en' : 'ar');
+    });
+    function curLang(){ return document.documentElement.getAttribute('lang') === 'ar' ? 'ar' : 'en'; }
+    function t(en, ar){ return curLang() === 'ar' ? ar : en; }
+
     // View-switching is wired up first and doesn't depend on Supabase at all,
     // so Sign In / Register always work even if the CDN script below fails to load.
     const choiceView = document.getElementById('choiceView');
@@ -685,7 +760,7 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
     function showLoadError(){
       const errBox = document.getElementById('loginError');
       const regErrBox = document.getElementById('registerError');
-      const msg = 'Something failed to load — please refresh the page or check your connection, then try again.';
+      const msg = t('Something failed to load — please refresh the page or check your connection, then try again.', 'حدث خطأ في التحميل — يرجى تحديث الصفحة أو التحقق من الاتصال، ثم المحاولة مرة أخرى.');
       if (errBox) { errBox.textContent = msg; errBox.style.display = 'block'; }
       if (regErrBox) { regErrBox.textContent = msg; regErrBox.style.display = 'block'; }
     }
@@ -714,7 +789,7 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       errBox.style.color = '#ffb4b4';
       btn.disabled = true;
       const prevLabel = btn.textContent;
-      btn.textContent = 'Signing in…';
+      btn.textContent = t('Signing in…', 'جارٍ تسجيل الدخول…');
 
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
@@ -733,7 +808,7 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       const { data: profile } = await sb.from('profiles').select('*').eq('id', data.user.id).single();
       if (profile && !profile.approved && profile.role !== 'admin' && profile.role !== 'superadmin') {
         await sb.auth.signOut();
-        errBox.textContent = 'Your registration is pending admin approval.';
+        errBox.textContent = t('Your registration is pending admin approval.', 'تسجيلك قيد موافقة الإدارة.');
         errBox.style.display = 'block';
         btn.disabled = false;
         btn.textContent = prevLabel;
@@ -752,7 +827,7 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
     document.getElementById('forgotPasswordBtn').addEventListener('click', async () => {
       let email = document.getElementById('email').value.trim();
       if (!email) {
-        email = (window.prompt('Enter your email address to reset your password:') || '').trim();
+        email = (window.prompt(t('Enter your email address to reset your password:', 'أدخل بريدك الإلكتروني لإعادة تعيين كلمة المرور:')) || '').trim();
       }
       if (!email) return;
 
@@ -767,7 +842,7 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
         errBox.style.display = 'block';
       } else {
         errBox.style.color = '#c7f2b0';
-        errBox.textContent = "Check your email — we've sent a password reset link to " + email + ".";
+        errBox.textContent = t("Check your email — we've sent a password reset link to " + email + ".", "تحقق من بريدك الإلكتروني — لقد أرسلنا رابط إعادة تعيين كلمة المرور إلى " + email + ".");
         errBox.style.display = 'block';
       }
     });
@@ -786,14 +861,14 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       const newPasswordConfirm = document.getElementById('newPasswordConfirm').value;
 
       if (newPassword !== newPasswordConfirm) {
-        resetErr.textContent = "Passwords don't match — please re-enter them.";
+        resetErr.textContent = t("Passwords don't match — please re-enter them.", "كلمتا المرور غير متطابقتين — يرجى إعادة إدخالهما.");
         resetErr.style.display = 'block';
         return;
       }
 
       resetBtn.disabled = true;
       const prevLabel = resetBtn.textContent;
-      resetBtn.textContent = 'Updating…';
+      resetBtn.textContent = t('Updating…', 'جارٍ التحديث…');
 
       const { error } = await sb.auth.updateUser({ password: newPassword });
 
@@ -805,7 +880,7 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
         return;
       }
 
-      resetOk.textContent = 'Password updated! Redirecting you in…';
+      resetOk.textContent = t('Password updated! Redirecting you in…', 'تم تحديث كلمة المرور! جارٍ إعادة توجيهك…');
       resetOk.style.display = 'block';
       resetForm.reset();
       setTimeout(() => { window.location.href = 'connect-landing.html'; }, 1500);
@@ -835,7 +910,7 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       registerOk.style.display = 'none';
       registerBtn.disabled = true;
       const prevLabel = registerBtn.textContent;
-      registerBtn.textContent = 'Creating account…';
+      registerBtn.textContent = t('Creating account…', 'جارٍ إنشاء الحساب…');
 
       const first_name = document.getElementById('regFirstName').value.trim();
       const surname = document.getElementById('regSurname').value.trim();
@@ -913,7 +988,7 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
         console.error('Registration emails failed (non-fatal):', emailErr);
       }
 
-      registerOk.textContent = "Thanks! Your registration is pending admin approval — we'll be in touch.";
+      registerOk.textContent = t("Thanks! Your registration is pending admin approval — we'll be in touch.", "شكراً لك! تسجيلك قيد موافقة الإدارة — سنتواصل معك قريباً.");
       registerOk.style.display = 'block';
       registerForm.reset();
       studentFields.classList.add('hidden-view');
