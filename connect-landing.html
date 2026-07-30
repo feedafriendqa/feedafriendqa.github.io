@@ -454,7 +454,7 @@
 <section class="snap-section" id="home-section" style="padding-top:96px;min-height:auto;justify-content:flex-start;">
   <div class="section-inner">
     <div class="hero-greet">
-      <span data-en="Assalamu alaikum, Alliyah! 👋" data-ar="السلام عليكم، علياء! 👋">Assalamu alaikum, Alliyah! 👋</span>
+      <span id="greetText" data-en="Assalamu alaikum, Alliyah! 👋" data-ar="السلام عليكم، علياء! 👋">Assalamu alaikum, Alliyah! 👋</span>
     </div>
     <h1 data-en-html="Thank you for&lt;br&gt;making a difference" data-ar-html="شكراً لك على&lt;br&gt;صنع الفرق">Thank you for<br>making a difference</h1>
     <p class="hero-sub" data-en="Every hour you give helps build a stronger, more compassionate community." data-ar="كل ساعة تقدّمها تساهم في بناء مجتمع أقوى وأكثر تراحماً.">Every hour you give helps build a stronger, more compassionate community.</p>
@@ -685,6 +685,43 @@
     </div>
   </div>
 </section>
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';document.head.appendChild(s);"></script>
+<script>
+  // ===== Auth guard + personalised greeting =====
+  // Anyone who lands here without a session gets bounced back to login;
+  // anyone with a session gets their own first name in the greeting instead
+  // of a hardcoded placeholder.
+  (async function(){
+    const sb = supabase.createClient("https://xbxagukdvgyaoqvbqoic.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4");
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      window.location.href = 'index.html';
+      return;
+    }
+    const { data: profile } = await sb.from('profiles').select('first_name').eq('id', session.user.id).single();
+    const name = (profile && profile.first_name) ? profile.first_name : '';
+    const greetEl = document.getElementById('greetText');
+    if (greetEl && name) {
+      const enGreet = `Assalamu alaikum, ${name}! 👋`;
+      const arGreet = `السلام عليكم، ${name}! 👋`;
+      greetEl.setAttribute('data-en', enGreet);
+      greetEl.setAttribute('data-ar', arGreet);
+      const currentLang = document.documentElement.getAttribute('lang') === 'ar' ? 'ar' : 'en';
+      greetEl.textContent = currentLang === 'ar' ? arGreet : enGreet;
+    }
+
+    // Wire up sign out from the avatar so people aren't stuck logged in forever
+    const avatarEl = document.querySelector('.avatar');
+    if (avatarEl) {
+      avatarEl.style.cursor = 'pointer';
+      avatarEl.title = 'Sign out';
+      avatarEl.addEventListener('click', async () => {
+        await sb.auth.signOut();
+        window.location.href = 'index.html';
+      });
+    }
+  })();
+</script>
 <script>
   // ===== Language toggle (EN/AR) =====
   function setLang(lang){

@@ -925,9 +925,9 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       const is_working = isWorkingBox.checked;
       const profession = is_working ? document.getElementById('regProfession').value.trim() : null;
       const fun_fact = document.getElementById('regFunFact').value.trim() || null;
-      const projects = Array.from(
+      const projects = [...new Set(Array.from(
         registerForm.querySelectorAll('input[name="program"]:checked')
-      ).map(cb => cb.value);
+      ).map(cb => cb.value))];
 
       const { data, error } = await sb.auth.signUp({ email, password });
 
