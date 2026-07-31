@@ -122,7 +122,7 @@ select.edit-field{cursor:pointer;}
 .tag-check-label input{width:16px;height:16px;cursor:pointer;}
 .badge-duplicate{background:#f3e5f5;color:#6a1b9a;border:1px solid #ce93d8;}
 .badge-archived{background:#eceff1;color:#546e7a;border:1px solid #b0bec5;}
-.badge-active{background:#e0f7fa;color:#007a6e;border:1px solid #80d5ce;}
+.badge-confirmed{background:#e0f7fa;color:#007a6e;border:1px solid #80d5ce;}
 .assigned-pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:800;background:#f0f4f0;color:var(--green);border:1px solid var(--border);}
 .badge-rejected{background:var(--red-light);color:var(--red);border:1px solid #f5b8b8;}
 .badge-translation{background:#fff0f8;color:#a0186a;border:1px solid #f0a8d8;font-size:10px;margin-left:4px;}
@@ -322,8 +322,8 @@ select.edit-field{cursor:pointer;}
       <div class="stat-card sc-new" onclick="setFilterFromTile('new')"><div class="num" id="stat-new">–</div><div class="lbl">New</div></div>
       <div class="stat-card sc-pending" onclick="setFilterFromTile('pending')"><div class="num" id="stat-pending">–</div><div class="lbl">Pending</div></div>
       <div class="stat-card sc-approved" onclick="setFilterFromTile('approved')"><div class="num" id="stat-approved">–</div><div class="lbl">Approved</div></div>
-      <div class="stat-card sc-active" onclick="setFilterFromTile('active')"><div class="num" id="stat-active">–</div><div class="lbl">Confirmed</div></div>
-      <div class="stat-card sc-boxes" onclick="setFilterFromTile('active')"><div class="num" id="stat-boxes-needed">–</div><div class="lbl">Boxes needed</div></div>
+      <div class="stat-card sc-active" onclick="setFilterFromTile('confirmed')"><div class="num" id="stat-active">–</div><div class="lbl">Confirmed</div></div>
+      <div class="stat-card sc-boxes" onclick="setFilterFromTile('confirmed')"><div class="num" id="stat-boxes-needed">–</div><div class="lbl">Boxes needed</div></div>
       <div class="stat-card sc-archived" onclick="setFilterFromTile('archived')"><div class="num" id="stat-archived">–</div><div class="lbl">Archived</div></div>
       <div class="stat-card sc-review" onclick="setFilterFromTile('review')"><div class="num" id="stat-translation">–</div><div class="lbl">Needs review</div></div>
       <div class="stat-card sc-wbb" onclick="setFilterFromTile('wbb_review')"><div class="num" id="stat-wbb-review">–</div><div class="lbl">🍼 Pregnant — verify WBB</div></div>
@@ -338,7 +338,7 @@ select.edit-field{cursor:pointer;}
       <button class="filter-btn" data-status="new" onclick="setFilter('new',this)">New</button>
       <button class="filter-btn" data-status="pending" onclick="setFilter('pending',this)">Pending</button>
       <button class="filter-btn" data-status="approved" onclick="setFilter('approved',this)">Approved</button>
-      <button class="filter-btn" data-status="active" onclick="setFilter('active',this)">Confirmed</button>
+      <button class="filter-btn" data-status="confirmed" onclick="setFilter('confirmed',this)">Confirmed</button>
       <button class="filter-btn" data-status="rejected" onclick="setFilter('rejected',this)">Rejected</button>
       <button class="filter-btn" data-status="archived" onclick="setFilter('archived',this)">Archived</button>
       <button class="filter-btn" id="my-cases-toggle" style="display:none;" onclick="toggleMyCases(this)">My cases only</button>
@@ -874,8 +874,8 @@ function getDummyApps() {
     {id:'demo-1',created_at:d(1),full_name:'Ahmed Al Rashidi',full_name_en:'Ahmed Al Rashidi',qid_number:'28412345678',whatsapp:'+974 5512 3456',area:'Al Waab',monthly_salary:3200,monthly_rent:1800,household_size:4,submission_lang:'en',status:'pending',translation_pending:false,nationality:'Pakistani',gender:'male',sponsor:'Qatar Petroleum',is_muslim:true,assigned_to:'Alliyah',tags:[]},
     {id:'demo-2',created_at:d(2),full_name:'فاطمة محمد علي',full_name_en:'Fatima Mohammed Ali',qid_number:'28498765432',whatsapp:'+974 5598 7654',area:'Industrial Area',monthly_salary:2800,monthly_rent:1400,household_size:6,submission_lang:'ar',status:'pending',translation_pending:true,nationality:'Egyptian',gender:'female',sponsor:'Al Meera',is_muslim:true,is_pregnant:true,due_date:'2025-09-15',assigned_to:'Sarah',tags:['wbb']},
     {id:'demo-3',created_at:d(5),full_name:'Priya Sharma',full_name_en:'Priya Sharma',qid_number:'28376543210',whatsapp:'+974 5576 5432',area:'Al Gharafa',monthly_salary:3000,monthly_rent:1600,household_size:3,submission_lang:'en',status:'approved',translation_pending:false,nationality:'Indian',gender:'female',sponsor:'Lulu Hypermarket',is_muslim:false,assigned_to:'Alliyah',tags:['ll'],boxes_received:3,max_boxes:6},
-    {id:'demo-4',created_at:d(7),full_name:'রহিম উদ্দিন',full_name_en:'Rahim Uddin',qid_number:'28312345999',whatsapp:'+974 5534 5678',area:'Al Mansoura',monthly_salary:2500,monthly_rent:1200,household_size:5,submission_lang:'bn',status:'active',translation_pending:true,nationality:'Bangladeshi',gender:'male',sponsor:'Qatar Cool',is_muslim:true,assigned_to:'Badana',tags:['long_term'],boxes_received:14},
-    {id:'demo-5',created_at:d(10),full_name:'Maria Santos',full_name_en:'Maria Santos',qid_number:'28345678901',whatsapp:'+974 5545 6789',area:'Duhail',monthly_salary:2200,monthly_rent:1100,household_size:2,submission_lang:'en',status:'active',translation_pending:false,nationality:'Filipino',gender:'female',sponsor:'Private Household',is_muslim:false,assigned_to:'Alliyah',tags:[],boxes_received:2,max_boxes:3},
+    {id:'demo-4',created_at:d(7),full_name:'রহিম উদ্দিন',full_name_en:'Rahim Uddin',qid_number:'28312345999',whatsapp:'+974 5534 5678',area:'Al Mansoura',monthly_salary:2500,monthly_rent:1200,household_size:5,submission_lang:'bn',status:'confirmed',translation_pending:true,nationality:'Bangladeshi',gender:'male',sponsor:'Qatar Cool',is_muslim:true,assigned_to:'Badana',tags:['long_term'],boxes_received:14},
+    {id:'demo-5',created_at:d(10),full_name:'Maria Santos',full_name_en:'Maria Santos',qid_number:'28345678901',whatsapp:'+974 5545 6789',area:'Duhail',monthly_salary:2200,monthly_rent:1100,household_size:2,submission_lang:'en',status:'confirmed',translation_pending:false,nationality:'Filipino',gender:'female',sponsor:'Private Household',is_muslim:false,assigned_to:'Alliyah',tags:[],boxes_received:2,max_boxes:3},
     {id:'demo-6',created_at:d(14),full_name:'محمد عبد الله',full_name_en:'Mohammed Abdullah',qid_number:'28467890123',whatsapp:'+974 5567 8901',area:'Al Khor',monthly_salary:4000,monthly_rent:2600,household_size:3,submission_lang:'ar',status:'rejected',translation_pending:false,nationality:'Yemeni',gender:'male',sponsor:'Unsponsored',is_muslim:true,assigned_to:'Sarah',tags:[]},
     {id:'demo-7',created_at:d(0),full_name:'Sunita Gurung',full_name_en:'Sunita Gurung',qid_number:'28399988776',whatsapp:'+974 5566 7788',area:'Al Sailiya',monthly_salary:1800,monthly_rent:900,household_size:3,submission_lang:'en',status:null,translation_pending:false,nationality:'Nepali',gender:'female',sponsor:'Private Household',is_muslim:false,assigned_to:null,tags:[]}
   ];
@@ -887,12 +887,12 @@ function updateStats() {
   document.getElementById('stat-new').textContent = scoped.filter(function(a){return resolveStatus(a)==='new';}).length;
   document.getElementById('stat-pending').textContent = scoped.filter(function(a){return resolveStatus(a)==='pending';}).length;
   document.getElementById('stat-approved').textContent = scoped.filter(function(a){return resolveStatus(a)==='approved';}).length;
-  document.getElementById('stat-active').textContent = scoped.filter(function(a){return resolveStatus(a)==='active';}).length;
+  document.getElementById('stat-active').textContent = scoped.filter(function(a){return resolveStatus(a)==='confirmed';}).length;
   // 1 box feeds 3-4 people, so a household needs ceil(size / 4) boxes at
   // each delivery. Only Confirmed cases count here, since those are the
   // ones actually due a box at the next distribution.
   var boxesNeeded = scoped
-    .filter(function(a){ return resolveStatus(a) === 'active'; })
+    .filter(function(a){ return resolveStatus(a) === 'confirmed'; })
     .reduce(function(sum, a){ return sum + Math.ceil((a.household_size || 1) / 4); }, 0);
   document.getElementById('stat-boxes-needed').textContent = boxesNeeded;
   document.getElementById('stat-archived').textContent = scoped.filter(function(a){return resolveStatus(a)==='archived';}).length;
@@ -901,7 +901,7 @@ function updateStats() {
 }
 
 var LANG_TAGS = {ar:'🇶🇦 AR',bn:'🇧🇩 BN',hi:'🇮🇳 HI',ur:'🇵🇰 UR',tl:'🇵🇭 TL',en:'🇬🇧 EN'};
-var STATUS_OPTIONS = ['new','pending','approved','active','rejected','duplicate','archived'];
+var STATUS_OPTIONS = ['new','pending','approved','confirmed','rejected','duplicate','archived'];
 
 // Same zone-to-area lookup used on the public application form
 // (food-box-application.html), kept identical so a zone scanned here
@@ -939,7 +939,7 @@ function renderTable(apps) {
     var dispColor = disp <= 1500 ? 'color:var(--green);' : 'color:var(--red);';
     var date = app.created_at ? new Date(app.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '–';
     var status = resolveStatus(app);
-    var statusLabel = status === 'active' ? 'Confirmed' : status;
+    var statusLabel = status === 'confirmed' ? 'Confirmed' : status;
     var statusBadge = '<span class="badge badge-' + status + '">' + statusLabel + '</span>';
     if (app.translation_pending) statusBadge += '<span class="badge badge-translation">🌐</span>';
     // Tags
@@ -950,7 +950,7 @@ function renderTable(apps) {
     if (tags.indexOf('ll') !== -1) tagHtml += '<span class="tag-pill tag-ll">📚 LL</span>';
     var isLongTerm = tags.indexOf('long_term') !== -1 || !!app.is_long_term;
     var boxesDisplay = '–';
-    if (['approved','active'].indexOf(status) !== -1 && app.boxes_received != null) {
+    if (['approved','confirmed'].indexOf(status) !== -1 && app.boxes_received != null) {
       boxesDisplay = app.boxes_received + (isLongTerm ? ' / ∞' : (app.max_boxes ? ' / ' + app.max_boxes : ''));
     }
     var name = app.full_name_en || app.full_name || '–';
@@ -1177,13 +1177,13 @@ function renderModal(app, members, urlMap) {
   body += '</div>';
 
   // ── STAT BAND (status / boxes / household) ──
-  var isActiveCase = status === 'approved' || status === 'active';
+  var isActiveCase = status === 'approved' || status === 'confirmed';
   var receivedSoFar = app.boxes_received != null ? app.boxes_received : 0;
   var boxesValText;
   if (!isActiveCase) boxesValText = '–';
   else if (isLongTerm) boxesValText = receivedSoFar + ' &middot; ♾';
   else boxesValText = receivedSoFar + ' / ' + (app.max_boxes != null ? app.max_boxes : '–');
-  var statusLbl = status === 'active' ? 'Confirmed' : (status.charAt(0).toUpperCase() + status.slice(1));
+  var statusLbl = status === 'confirmed' ? 'Confirmed' : (status.charAt(0).toUpperCase() + status.slice(1));
   var householdCount = 1 + (members ? members.length : 0);
   body += '<div class="stat-band">';
   body += '<div class="stat-band-item"><div class="stat-band-lbl">Status</div><div class="stat-band-val">' + statusLbl + '</div></div>';
@@ -1432,7 +1432,7 @@ function renderModal(app, members, urlMap) {
   body += '<div style="display:flex;gap:8px;align-items:center;">';
   body += '<select class="edit-field" id="status-dropdown" style="max-width:220px;">';
   STATUS_OPTIONS.forEach(function(opt){
-    var lbl = opt === 'active' ? 'Confirmed' : (opt.charAt(0).toUpperCase() + opt.slice(1));
+    var lbl = opt === 'confirmed' ? 'Confirmed' : (opt.charAt(0).toUpperCase() + opt.slice(1));
     body += '<option value="'+opt+'"'+(opt===status?' selected':'')+'>'+lbl+'</option>';
   });
   body += '</select>';
@@ -1443,13 +1443,13 @@ function renderModal(app, members, urlMap) {
   // ── ACTIONS per status ──
   var actions = '';
   if (status === 'new' || status === 'pending') {
-    actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\''+app.id+'\',\'active\')">✓ Approve and Confirm</button>';
+    actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\''+app.id+'\',\'confirmed\')">✓ Approve and Confirm</button>';
     actions += '<button class="modal-actions btn-reject-full" onclick="updateStatus(\''+app.id+'\',\'rejected\')">Reject</button>';
     actions += '<button class="modal-actions btn-duplicate" onclick="openDuplicatePicker(\''+app.id+'\')">Duplicate</button>';
   } else if (status === 'approved') {
-    actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\''+app.id+'\',\'active\')">⚡ Confirm — sending another box</button>';
+    actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\''+app.id+'\',\'confirmed\')">⚡ Confirm — sending another box</button>';
     actions += '<button class="modal-actions btn-archive" onclick="updateStatus(\''+app.id+'\',\'archived\')">Archive</button>';
-  } else if (status === 'active') {
+  } else if (status === 'confirmed') {
     actions += '<button class="modal-actions btn-approve-full" onclick="updateStatus(\''+app.id+'\',\'approved\')">📦 Box delivered</button>';
     actions += '<button class="modal-actions btn-archive" onclick="updateStatus(\''+app.id+'\',\'archived\')">Archive</button>';
   }
@@ -1533,7 +1533,7 @@ function csvEscape(val) {
 // are being phased out in favour of per-child records. A household can
 // have more than one qualifying child, so each gets its own export row.
 function exportConfirmedCSV() {
-  var confirmed = allApps.filter(function(a) { return resolveStatus(a) === 'active'; });
+  var confirmed = allApps.filter(function(a) { return resolveStatus(a) === 'confirmed'; });
   if (confirmed.length === 0) { alert('No Confirmed cases to export right now.'); return; }
 
   var ids = confirmed.map(function(a) { return a.id; });
@@ -3389,7 +3389,7 @@ function saveAssignment(id) {
   }).catch(function(e){ alert('Reassign failed: ' + e.message); });
 }
 
-function quickApprove(id) { updateStatus(id, 'active'); }
+function quickApprove(id) { updateStatus(id, 'confirmed'); }
 
 
 // ── CHANGE PASSWORD ───────────────────────────────────────────────

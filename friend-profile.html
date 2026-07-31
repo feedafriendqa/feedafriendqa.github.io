@@ -334,7 +334,7 @@ async function renderProfile(bundle) {
   var allFoodBox    = bundle.food_box || [];
 
   // These need to be defined early — addr and uniqueBabies both depend on them
-  var primaryFB = activeFoodBox.find(function(r){ return r.status === 'active' || r.status === 'approved' || r.status === 'long_term'; })
+  var primaryFB = activeFoodBox.find(function(r){ return r.status === 'confirmed' || r.status === 'approved' || r.status === 'long_term'; })
     || activeFoodBox[0];
   var members = primaryFB ? (bundle.food_box_members || []).filter(function(m){ return m.application_id === primaryFB.id; }) : [];
   var wbbRow = (bundle.welcome_baby || [])[0];
