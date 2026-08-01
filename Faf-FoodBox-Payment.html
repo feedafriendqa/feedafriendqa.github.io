@@ -58,6 +58,17 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .success-t{font-family:"No
 .lbl{display:block;font-family:"Nunito",sans-serif;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#555;margin-bottom:5px}
 .inp{width:100%;padding:12px 14px;border:2px solid #e5e5dc;border-radius:12px;font-size:14px;font-family:"Nunito Sans",sans-serif;color:#111;background:#fafaf7;outline:none}
 .inp:focus{border-color:#1D7A47;background:#fff}
+.inp[disabled]{color:#888;background:#f0f0ec}
+
+/* ── AUTH GATE ── */
+.auth-gate{padding:20px}
+.auth-tabs{display:flex;border:2px solid #1D7A47;border-radius:10px;overflow:hidden;margin-bottom:18px}
+.auth-tab{flex:1;text-align:center;padding:10px;font-family:"Nunito",sans-serif;font-size:13px;font-weight:800;cursor:pointer;background:#fff;color:#1D7A47}
+.auth-tab.on{background:#1D7A47;color:#F5C330}
+.auth-err{color:#c0392b;font-size:12px;font-weight:700;margin-top:6px;display:none}
+.auth-btn{width:100%;padding:14px;border:none;border-radius:12px;background:#1D7A47;color:#F5C330;font-family:"Nunito",sans-serif;font-weight:900;font-size:15px;cursor:pointer;margin-top:6px}
+.auth-btn:disabled{opacity:.6}
+.auth-note{font-size:12px;color:#888;font-weight:600;margin-top:14px;line-height:1.5;text-align:center}
 .err{font-size:11px;color:#d14747;font-weight:700;margin-top:4px;display:none}
 
 /* ── PAYMENT METHOD ── */
@@ -137,8 +148,59 @@ body.lang-ar .pass-perks li::before{left:auto;right:0}
 
   <div class="header">
     <div class="h1" data-en="Almost<br>there, <em>friend.</em>" data-ar="على وشك<br><em>الانتهاء.</em>">Almost<br>there, <em>friend.</em></div>
-    <div class="sub" data-en="Confirm your details, then transfer to complete your sponsorship." data-ar="أكّد بياناتك، ثم حوّل المبلغ لإكمال تكفّلك.">Confirm your details, then transfer to complete your sponsorship.</div>
+    <div class="sub" data-en="Sign in to confirm your sponsorship — this keeps all your sponsorships in one place." data-ar="سجّل الدخول لتأكيد تكفّلك — هذا يبقي كل تكفّلاتك في مكان واحد.">Sign in to confirm your sponsorship — this keeps all your sponsorships in one place.</div>
   </div>
+
+  <div class="auth-gate" id="auth-gate">
+    <div class="auth-tabs">
+      <div class="auth-tab on" id="tab-signin" onclick="setAuthTab('signin')" data-en="Sign in" data-ar="تسجيل الدخول">Sign in</div>
+      <div class="auth-tab" id="tab-register" onclick="setAuthTab('register')" data-en="Create account" data-ar="إنشاء حساب">Create account</div>
+    </div>
+
+    <div id="signin-form">
+      <div class="field">
+        <label class="lbl" data-en="Email" data-ar="البريد الإلكتروني">Email</label>
+        <input class="inp" id="si-email" type="email" placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label class="lbl" data-en="Password" data-ar="كلمة المرور">Password</label>
+        <input class="inp" id="si-password" type="password" placeholder="••••••••">
+      </div>
+      <button class="auth-btn" id="signin-btn" onclick="doSignIn()" data-en="Sign in →" data-ar="تسجيل الدخول ←">Sign in →</button>
+      <div class="auth-err" id="signin-err"></div>
+    </div>
+
+    <div id="register-form" style="display:none">
+      <div class="row2">
+        <div class="field">
+          <label class="lbl" data-en="First name" data-ar="الاسم الأول">First name</label>
+          <input class="inp" id="reg-first" placeholder="">
+        </div>
+        <div class="field">
+          <label class="lbl" data-en="Surname" data-ar="اسم العائلة">Surname</label>
+          <input class="inp" id="reg-surname" placeholder="">
+        </div>
+      </div>
+      <div class="field">
+        <label class="lbl" data-en="Email" data-ar="البريد الإلكتروني">Email</label>
+        <input class="inp" id="reg-email" type="email" placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label class="lbl" data-en="WhatsApp (optional)" data-ar="واتساب (اختياري)">WhatsApp (optional)</label>
+        <input class="inp" id="reg-phone" placeholder="+974 XXXX XXXX">
+      </div>
+      <div class="field">
+        <label class="lbl" data-en="Password" data-ar="كلمة المرور">Password</label>
+        <input class="inp" id="reg-password" type="password" placeholder="Min. 6 characters">
+      </div>
+      <button class="auth-btn" id="register-btn" onclick="doRegister()" data-en="Create account & continue →" data-ar="إنشاء حساب والمتابعة ←">Create account & continue →</button>
+      <div class="auth-err" id="register-err"></div>
+    </div>
+
+    <div class="auth-note" data-en="We ask sponsors to have an account so you can track every box you've sponsored in one place, and so we can reach you about delivery." data-ar="نطلب من المتكفّلين إنشاء حساب لتتمكن من متابعة كل صندوق تكفّلت به في مكان واحد، ولنتمكن من التواصل معك بخصوص التوصيل.">We ask sponsors to have an account so you can track every box you've sponsored in one place, and so we can reach you about delivery.</div>
+  </div>
+
+  <div id="payment-content" style="display:none">
 
   <div class="summary" id="summary"></div>
 
@@ -229,21 +291,14 @@ body.lang-ar .pass-perks li::before{left:auto;right:0}
   </div>
 
   <div class="section" id="account-section">
-    <div class="section-h" data-en="Stay in the loop? Add a password" data-ar="هل تريد البقاء على اطلاع؟ أضف كلمة مرور" >Stay in the loop? Add a password</div>
-
-    <div class="password-wrap" id="password-wrap">
-      <input class="inp" id="pay-password" type="password" data-en-placeholder="Optional — leave blank to skip" data-ar-placeholder="اختياري — اتركه فارغاً للتخطي" placeholder="Optional — leave blank to skip">
-      <ul class="pass-perks">
-        <li data-en="Remembers your details for next time" data-ar="يتذكّر بياناتك للمرة القادمة">Remembers your details for next time</li>
-        <li data-en="Get alerts when your box is delivered" data-ar="تنبيهات عند توصيل صندوقك">Get alerts when your box is delivered</li>
-        <li data-en="See a record of all your orders" data-ar="اعرض سجل جميع طلباتك">See a record of all your orders</li>
-      </ul>
-    </div>
+    <div class="section-sub" id="signed-in-as" style="margin-bottom:0"></div>
   </div>
 
   <div class="cta-bar">
     <button class="cta-btn" id="continue-btn" disabled onclick="submitSponsorship()" data-en="Confirm Sponsorship →" data-ar="تأكيد التكفّل ←">Confirm Sponsorship →</button>
     <div class="cta-hint" id="cta-hint" data-en="Fill in your details and confirm payment to continue" data-ar="أدخل بياناتك وأكّد الدفع للمتابعة">Fill in your details and confirm payment to continue</div>
+  </div>
+
   </div>
 
 </div>
@@ -253,7 +308,7 @@ body.lang-ar .pass-perks li::before{left:auto;right:0}
   <div class="success-t" data-en="You're a sponsor!" data-ar="أنت الآن متكفّل!">You're a sponsor!</div>
   <div class="success-ref" id="success-ref">Ref: SP-2026-0001</div>
   <div class="success-d" id="success-d" data-en="Thank you for feeding a friend this month. We'll confirm your match and payment by email shortly." data-ar="شكراً لك على تغذية صديق هذا الشهر. سنؤكد مطابقتك ودفعك بالبريد الإلكتروني قريباً.">Thank you for feeding a friend this month. We'll confirm your match and payment by email shortly.</div>
-  <button class="success-btn" id="success-account-btn" onclick="window.location.href='Faf-FoodBox-Account.html'" style="display:none;margin-bottom:10px" data-en="View my account →" data-ar="عرض حسابي ←">View my account →</button>
+  <button class="success-btn" id="success-account-btn" onclick="window.location.href='my-payments.html'" style="margin-bottom:10px" data-en="View my sponsorships →" data-ar="عرض تكفّلاتي ←">View my sponsorships →</button>
   <button class="success-btn success-btn-sec" onclick="window.location.href='Faf-FoodBox-Landing.html'" data-en="Back to home" data-ar="العودة للرئيسية">Back to home</button>
 </div>
 
@@ -323,17 +378,13 @@ function checkReady(){
   var name = document.getElementById("pay-name").value.trim();
   var email = document.getElementById("pay-email").value.trim();
   var confirmed = document.getElementById("confirm-transferred").checked;
-  var pwd = document.getElementById("pay-password").value;
   var btn = document.getElementById("continue-btn");
   var hint = document.getElementById("cta-hint");
   var isAr = document.body.classList.contains("lang-ar");
 
   var nameOk = name.length > 1;
   var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  // Password is optional — blank skips account creation entirely. Anything
-  // typed must be a real usable password (Supabase Auth requires 6+ chars).
-  var passwordOk = pwd.length === 0 || pwd.length >= 6;
-  var ready = nameOk && emailOk && confirmed && passwordOk;
+  var ready = nameOk && emailOk && confirmed;
 
   btn.disabled = !ready;
   btn.classList.toggle("is-ready", ready);
@@ -350,8 +401,6 @@ function checkReady(){
     hint.textContent = isAr ? "أدخل بريدك الإلكتروني لتأكيد تكفّلك" : "Enter your email so we can confirm your sponsorship";
   } else if(!emailOk){
     hint.textContent = isAr ? "البريد الإلكتروني يبدو غير مكتمل" : "Email address looks incomplete";
-  } else if(!passwordOk){
-    hint.textContent = isAr ? "كلمة المرور تحتاج ٦ أحرف على الأقل، أو اتركها فارغة" : "Password needs at least 6 characters, or leave it blank";
   } else if(!confirmed){
     hint.textContent = isAr ? "أكّد أنك قمت أو ستقوم بالتحويل" : "Confirm you've made or will make the transfer";
   } else {
@@ -359,7 +408,7 @@ function checkReady(){
   }
 }
 
-["pay-name","pay-wa","pay-email","pay-password"].forEach(function(id){
+["pay-name","pay-wa","pay-email"].forEach(function(id){
   document.getElementById(id).addEventListener("input", checkReady);
 });
 document.getElementById("confirm-transferred").addEventListener("change", checkReady);
@@ -374,15 +423,16 @@ async function submitSponsorship(){
   var name = document.getElementById("pay-name").value.trim();
   var wa = document.getElementById("pay-wa").value.trim();
   var email = document.getElementById("pay-email").value.trim();
-  // No separate opt-in checkboxes anymore — setting a password is the one
-  // action that bundles all three benefits (remembered details, delivery
-  // alerts, order history). checkReady() already enforces 6+ chars or blank.
-  var password = document.getElementById("pay-password").value.trim();
-  var wantAccount = password.length >= 6;
-  var saveDetails = wantAccount;
-  var wantAlerts = wantAccount;
+  // Sponsoring now always requires a logged-in account (see the auth gate
+  // above), so "wants an account" is no longer a choice — it's a given.
+  // These three flags stay in the schema for historical/reporting reasons.
+  var wantAccount = true;
+  var saveDetails = true;
+  var wantAlerts = true;
 
   var sponsorshipId = sessionStorage.getItem("faf_sponsorship_id");
+  var currentUserId = window.currentAuthUser ? window.currentAuthUser.id : null;
+  var currentAccessToken = window.currentAuthSession ? window.currentAuthSession.access_token : null;
   var refNo = sessionStorage.getItem("faf_ref_no") || "SP-PENDING";
 
   try{
@@ -390,6 +440,7 @@ async function submitSponsorship(){
       var { data, error } = await window.sbClient
         .from("sponsorships")
         .update({
+          sponsor_id: currentUserId,
           sponsor_name: name,
           whatsapp: wa || null,
           email: email,
@@ -437,16 +488,22 @@ async function submitSponsorship(){
         }
       }
 
-      // Trigger confirmation email via the existing clever-responder Edge Function
+      // Trigger confirmation email via the existing clever-responder Edge Function.
+      // This call now requires the sponsor's own auth token — the function
+      // verifies it server-side and stamps sponsor_id/email from the
+      // verified session, as a backstop to the client-side update above.
       try{
         await fetch("https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + currentAccessToken
+          },
           body: JSON.stringify({
             type: "submit_sponsorship",
+            sponsorship_id: sponsorshipId,
             sponsor_name: name,
             whatsapp: wa || null,
-            email: email,
             ref_no: refNo,
             matched_family_ids: prefs.friends || (prefs.friend ? [prefs.friend] : []),
             box_count: prefs.boxCount || 1,
@@ -455,9 +512,7 @@ async function submitSponsorship(){
             amount: AMOUNT,
             pref_save_details: saveDetails,
             pref_delivery_alerts: wantAlerts,
-            pref_wants_account: wantAccount,
-            password: password || undefined,
-            account_url: wantAccount ? (window.location.href.replace("Faf-FoodBox-Payment.html","Faf-FoodBox-Account.html")) : undefined
+            pref_wants_account: wantAccount
           })
         });
       } catch(emailErr){
@@ -470,31 +525,15 @@ async function submitSponsorship(){
 
   document.getElementById("success-ref").textContent = (isArSubmit ? "المرجع: " : "Ref: ") + refNo;
 
-  // Create Supabase Auth account if user requested one
-  var accountCreated = false;
-  if(wantAccount && password && password.length >= 6 && window.sbClient){
-    try{
-      var authRes = await window.sbClient.auth.signUp({
-        email: email,
-        password: password,
-        options: { data: { sponsor_name: name } }
-      });
-      if(!authRes.error) accountCreated = true;
-    } catch(authErr){ console.warn("Auth signUp failed", authErr); }
-  }
-
-  // Save details to localStorage if requested (pre-fills next visit)
+  // Save details to localStorage (pre-fills next visit)
   if(saveDetails){
     localStorage.setItem("faf_saved_name", name);
     localStorage.setItem("faf_saved_email", email);
     if(wa) localStorage.setItem("faf_saved_wa", wa);
   }
 
-  if(accountCreated){
-    var acctBtn = document.getElementById("success-account-btn");
-    acctBtn.style.display = "inline-block";
-    if(isArSubmit) acctBtn.textContent = "عرض حسابي ←";
-  }
+  var acctBtn = document.getElementById("success-account-btn");
+  if(isArSubmit) acctBtn.textContent = "عرض تكفّلاتي ←";
 
   document.getElementById("main-shell").style.display = "none";
   document.getElementById("success-wrap").classList.add("show");
@@ -552,6 +591,125 @@ renderSummary();
     window.sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
 })();
+
+// ── Required login/registration gate ──
+// Sponsoring always requires a logged-in account (same shared Supabase Auth
+// + profiles table used across Feed a Friend Connect / index.html). Browsing
+// Landing/Preferences/ChooseFamily stays anonymous — this is the one point
+// in the funnel where we require it, right before payment.
+function setAuthTab(tab){
+  var isSignin = tab === "signin";
+  document.getElementById("tab-signin").classList.toggle("on", isSignin);
+  document.getElementById("tab-register").classList.toggle("on", !isSignin);
+  document.getElementById("signin-form").style.display = isSignin ? "" : "none";
+  document.getElementById("register-form").style.display = isSignin ? "none" : "";
+}
+
+function revealPaymentContent(user, profile){
+  window.currentAuthUser = user;
+  document.getElementById("auth-gate").style.display = "none";
+  document.getElementById("payment-content").style.display = "";
+  var isAr = document.body.classList.contains("lang-ar");
+  var displayName = profile ? ((profile.first_name || "") + " " + (profile.surname || "")).trim() : "";
+  if(displayName && !document.getElementById("pay-name").value){
+    document.getElementById("pay-name").value = displayName;
+  }
+  document.getElementById("pay-email").value = user.email;
+  document.getElementById("pay-email").disabled = true;
+  if(profile && profile.phone && !document.getElementById("pay-wa").value){
+    document.getElementById("pay-wa").value = profile.phone;
+  }
+  document.getElementById("signed-in-as").textContent = (isAr ? "مسجّل الدخول باسم: " : "Signed in as: ") + user.email;
+  checkReady();
+}
+
+async function checkAuthAndReveal(){
+  if(!window.sbClient) return;
+  var sessionRes = await window.sbClient.auth.getSession();
+  var session = sessionRes && sessionRes.data ? sessionRes.data.session : null;
+  if(!session){
+    document.getElementById("auth-gate").style.display = "";
+    document.getElementById("payment-content").style.display = "none";
+    return;
+  }
+  window.currentAuthSession = session;
+  var profileRes = await window.sbClient.from("profiles").select("first_name,surname,phone").eq("id", session.user.id).maybeSingle();
+  revealPaymentContent(session.user, profileRes ? profileRes.data : null);
+}
+
+async function doSignIn(){
+  var isAr = document.body.classList.contains("lang-ar");
+  var errEl = document.getElementById("signin-err");
+  var btn = document.getElementById("signin-btn");
+  errEl.style.display = "none";
+  var email = document.getElementById("si-email").value.trim();
+  var password = document.getElementById("si-password").value;
+  if(!email || !password){
+    errEl.textContent = isAr ? "الرجاء إدخال البريد الإلكتروني وكلمة المرور" : "Please enter your email and password";
+    errEl.style.display = "block";
+    return;
+  }
+  btn.disabled = true;
+  var res = await window.sbClient.auth.signInWithPassword({ email: email, password: password });
+  btn.disabled = false;
+  if(res.error){
+    errEl.textContent = isAr ? "بريد إلكتروني أو كلمة مرور غير صحيحة" : "Incorrect email or password";
+    errEl.style.display = "block";
+    return;
+  }
+  window.currentAuthSession = res.data.session;
+  var profileRes = await window.sbClient.from("profiles").select("first_name,surname,phone").eq("id", res.data.user.id).maybeSingle();
+  revealPaymentContent(res.data.user, profileRes ? profileRes.data : null);
+}
+
+async function doRegister(){
+  var isAr = document.body.classList.contains("lang-ar");
+  var errEl = document.getElementById("register-err");
+  var btn = document.getElementById("register-btn");
+  errEl.style.display = "none";
+  var firstName = document.getElementById("reg-first").value.trim();
+  var surname = document.getElementById("reg-surname").value.trim();
+  var email = document.getElementById("reg-email").value.trim();
+  var phone = document.getElementById("reg-phone").value.trim();
+  var password = document.getElementById("reg-password").value;
+  if(!firstName || !surname || !email || password.length < 6){
+    errEl.textContent = isAr ? "الرجاء إدخال الاسم الأول واسم العائلة والبريد الإلكتروني وكلمة مرور من ٦ أحرف على الأقل" : "Please fill in first name, surname, email, and a password of at least 6 characters";
+    errEl.style.display = "block";
+    return;
+  }
+  btn.disabled = true;
+  var signUpRes = await window.sbClient.auth.signUp({ email: email, password: password });
+  if(signUpRes.error){
+    btn.disabled = false;
+    errEl.textContent = signUpRes.error.message;
+    errEl.style.display = "block";
+    return;
+  }
+  var newUser = signUpRes.data.user;
+  // Lightweight sponsor profile — same shared `profiles` table as the full
+  // volunteer registration in index.html, but skipping the volunteer-only
+  // fields (dob, nationality, student/employment status, etc.) since a
+  // sponsor doesn't need to answer those to pay for a box.
+  var profileRes = await window.sbClient.from("profiles").insert({
+    id: newUser.id,
+    first_name: firstName,
+    surname: surname,
+    email: email,
+    phone: phone || null,
+    is_sponsor: true,
+    approved: true
+  });
+  btn.disabled = false;
+  if(profileRes.error){
+    errEl.textContent = profileRes.error.message;
+    errEl.style.display = "block";
+    return;
+  }
+  window.currentAuthSession = signUpRes.data.session;
+  revealPaymentContent(newUser, { first_name: firstName, surname: surname, phone: phone });
+}
+
+checkAuthAndReveal();
 </script>
 
 </body>
