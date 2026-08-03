@@ -75,7 +75,11 @@ header{
 .event-time{text-align:right;white-space:nowrap;flex-shrink:0;}
 .event-time .amt{font-size:17px;font-weight:700;color:var(--charcoal);}
 .badge{display:inline-block;margin-top:4px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+.upload-proof-btn{display:block;margin-top:8px;border:1.5px solid var(--green);background:#fff;color:var(--green);font-size:12px;font-weight:800;padding:6px 12px;border-radius:8px;cursor:pointer;}
+.upload-proof-btn:disabled{opacity:.6;cursor:default;}
 .badge-paid{background:#e0f7fa;color:#007a6e;}
+.badge-uploaded{background:#e5eefc;color:#2c5aa8;}
+.badge-discrepancy{background:#fde8e8;color:#a83232;}
 .badge-pending_payment{background:#fff3d6;color:#9a6800;}
 .badge-rejected{background:#fde8e8;color:#a83232;}
 .badge-default{background:#eceff1;color:#546e7a;}
@@ -216,6 +220,7 @@ html[dir="rtl"] .event-time{text-align:left;}
       <div class="events-card" id="spon-card" style="display:none">
         <div id="spon-list"></div>
       </div>
+      <input type="file" id="proof-file-input" accept="image/*" style="display:none" onchange="handleProofFileSelected(this)">
     </div>
 
     <div class="side-col">
@@ -322,8 +327,10 @@ function backToEmail(){
 }
 
 var PAYMENT_LABELS = {
-  paid: { en: "Paid", ar: "مدفوع", cls: "badge-paid" },
-  pending_payment: { en: "Pending", ar: "قيد الانتظار", cls: "badge-pending_payment" },
+  payment_received: { en: "Payment received", ar: "تم استلام الدفع", cls: "badge-paid" },
+  proof_uploaded: { en: "Proof uploaded — matching", ar: "تم رفع الإثبات — قيد المطابقة", cls: "badge-uploaded" },
+  pending_payment: { en: "Outstanding", ar: "مستحق", cls: "badge-pending_payment" },
+  discrepancy: { en: "Needs review", ar: "يحتاج مراجعة", cls: "badge-discrepancy" },
   rejected: { en: "Rejected", ar: "مرفوض", cls: "badge-rejected" }
 };
 
@@ -344,8 +351,8 @@ function renderList(rows){
   var totalBoxes = 0, totalAmount = 0, activeCount = 0;
   rows.forEach(function(r){
     totalBoxes += (r.box_count || 1);
-    if(r.payment_status === "paid") totalAmount += (r.amount || 0);
-    if(r.payment_status === "paid" || r.payment_status === "pending_payment") activeCount += 1;
+    if(r.payment_status === "payment_received") totalAmount += (r.amount || 0);
+    if(r.payment_status === "payment_received" || r.payment_status === "pending_payment" || r.payment_status === "proof_uploaded") activeCount += 1;
   });
   document.getElementById("stat-boxes").textContent = totalBoxes;
   document.getElementById("stat-amount").textContent = totalAmount;
@@ -366,12 +373,19 @@ function renderList(rows){
     var famCount = Array.isArray(r.matched_family_ids) ? r.matched_family_ids.length : 0;
     var boxLabel = (r.box_count || 1) + (isAr ? " صندوق" : ((r.box_count || 1) === 1 ? " box" : " boxes"));
     var famLabel = famCount + (isAr ? " عائلة" : (famCount === 1 ? " family" : " families"));
+    // Only offer upload while nothing usable has been submitted yet, or
+    // if we flagged a discrepancy and need a fresh screenshot to re-check.
+    var canUpload = r.payment_status === "pending_payment" || r.payment_status === "discrepancy";
+    var uploadBtn = canUpload
+      ? '<button class="upload-proof-btn" onclick="startProofUpload(\'' + r.id + '\')" data-en="Upload proof of payment" data-ar="رفع إثبات الدفع">Upload proof of payment</button>'
+      : '';
 
-    return '<div class="event-row">' +
+    return '<div class="event-row" id="spon-row-' + r.id + '">' +
       '<div class="event-thumb">\uD83D\uDCE6</div>' +
       '<div class="event-mid">' +
         '<div class="t">' + (r.ref_no || "") + '</div>' +
         '<div class="l">' + fmtDate(r.created_at) + ' \u00b7 ' + boxLabel + ' \u00b7 ' + famLabel + '</div>' +
+        uploadBtn +
       '</div>' +
       '<div class="event-time">' +
         '<div class="amt">QAR ' + (r.amount || 0) + '</div>' +
@@ -379,6 +393,60 @@ function renderList(rows){
       '</div>' +
     '</div>';
   }).join("");
+}
+
+var proofUploadTargetId = null;
+function startProofUpload(sponsorshipId){
+  proofUploadTargetId = sponsorshipId;
+  document.getElementById("proof-file-input").click();
+}
+
+async function handleProofFileSelected(fileInput){
+  var file = fileInput.files && fileInput.files[0];
+  fileInput.value = "";
+  if(!file || !proofUploadTargetId) return;
+  var sponsorshipId = proofUploadTargetId;
+  var rowEl = document.getElementById("spon-row-" + sponsorshipId);
+  var btn = rowEl ? rowEl.querySelector(".upload-proof-btn") : null;
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  if(btn){
+    btn.disabled = true;
+    btn.textContent = isAr ? "جارٍ الرفع…" : "Uploading…";
+  }
+
+  var reader = new FileReader();
+  reader.onload = async function(){
+    var base64 = reader.result.split(",")[1];
+    try{
+      var token = window.currentAuthSession ? window.currentAuthSession.access_token : null;
+      var res = await fetch(EDGE_FUNCTION_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({
+          type: "upload_payment_proof",
+          sponsorship_id: sponsorshipId,
+          image_base64: base64,
+          media_type: file.type || "image/jpeg"
+        })
+      });
+      var json = await res.json();
+      if(!res.ok || json.error){
+        alert((isAr ? "فشل الرفع: " : "Upload failed: ") + (json.error || res.status));
+        if(btn){ btn.disabled = false; btn.textContent = isAr ? "رفع إثبات الدفع" : "Upload proof of payment"; }
+        return;
+      }
+      // Refresh from the source of truth rather than patching locally —
+      // the edge function may have set payment_status server-side too.
+      loadSponsorships(window.currentAuthUser.id);
+    } catch(e){
+      alert((isAr ? "فشل الرفع: " : "Upload failed: ") + e.message);
+      if(btn){ btn.disabled = false; btn.textContent = isAr ? "رفع إثبات الدفع" : "Upload proof of payment"; }
+    }
+  };
+  reader.readAsDataURL(file);
 }
 
 async function loadSponsorships(userId){
@@ -390,7 +458,9 @@ async function loadSponsorships(userId){
   renderList(result.data || []);
 }
 
-function revealPaymentsContent(user){
+function revealPaymentsContent(user, session){
+  window.currentAuthUser = user;
+  window.currentAuthSession = session || null;
   document.getElementById("auth-wrap").style.display = "none";
   document.getElementById("payments-content").style.display = "grid";
   loadSponsorships(user.id);
@@ -408,7 +478,7 @@ async function checkAuthAndReveal(){
     document.getElementById("payments-content").style.display = "none";
     return;
   }
-  revealPaymentsContent(session.user);
+  revealPaymentsContent(session.user, session);
 }
 
 async function doSignIn(){
@@ -430,7 +500,7 @@ async function doSignIn(){
     errEl.style.display = "block";
     return;
   }
-  revealPaymentsContent(res.data.user);
+  revealPaymentsContent(res.data.user, res.data.session);
 }
 
 async function doRegister(){
@@ -471,7 +541,7 @@ async function doRegister(){
     errEl.style.display = "block";
     return;
   }
-  revealPaymentsContent(newUser);
+  revealPaymentsContent(newUser, signUpRes.data.session);
 }
 
 checkAuthAndReveal();

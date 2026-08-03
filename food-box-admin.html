@@ -377,6 +377,7 @@ select.edit-field{cursor:pointer;}
         <div class="welcome-name">Sponsorships</div>
         <div class="welcome-scope">Every confirmed case matched to a sponsor, with payment status.</div>
       </div>
+      <div id="payment-summary" style="margin-bottom:20px;"></div>
       <div class="filters">
         <label style="font-size:13px;font-weight:700;color:var(--muted);">Distribution:</label>
         <select id="distribution-filter" class="filter-btn" style="padding:8px 12px;" onchange="renderSponsorshipsTable()"></select>
@@ -1786,6 +1787,54 @@ function populateDistributionFilter() {
   sel.value = events.indexOf(prevValue) !== -1 ? prevValue : CURRENT_DISTRIBUTION;
 }
 
+// Groups sponsorships by project + distribution event and shows where
+// money actually stands for each: outstanding, proof uploaded (awaiting
+// bank match), payment received (matched), and discrepancies needing a
+// human look. Only Food Box feeds this today — Little Learners assessment
+// days etc. will show up here too once that program's pledges are wired
+// into the same payment-tracking model.
+function renderPaymentSummary() {
+  var groups = {};
+  allSponsorships.forEach(function(sp) {
+    var project = 'Food Box';
+    var event = sp.distribution_event || CURRENT_DISTRIBUTION;
+    var key = project + '||' + event;
+    if (!groups[key]) groups[key] = { project: project, event: event, outstanding: 0, uploaded: 0, received: 0, receivedAmount: 0, discrepancy: 0, rejected: 0 };
+    var g = groups[key];
+    if (sp.payment_status === 'pending_payment') g.outstanding++;
+    else if (sp.payment_status === 'proof_uploaded') g.uploaded++;
+    else if (sp.payment_status === 'payment_received') { g.received++; g.receivedAmount += (sp.amount || 0); }
+    else if (sp.payment_status === 'discrepancy') g.discrepancy++;
+    else if (sp.payment_status === 'rejected') g.rejected++;
+  });
+
+  var groupList = Object.values(groups).sort(function(a, b) {
+    if (a.event === CURRENT_DISTRIBUTION) return -1;
+    if (b.event === CURRENT_DISTRIBUTION) return 1;
+    return a.event < b.event ? 1 : -1;
+  });
+
+  var tileHtml = function(label, num, color, bg) {
+    return '<div style="flex:1;min-width:110px;background:' + bg + ';border-radius:var(--radius-sm);padding:12px 14px;">' +
+      '<div style="font-size:22px;font-weight:800;color:' + color + ';line-height:1;">' + num + '</div>' +
+      '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-top:4px;">' + label + '</div>' +
+    '</div>';
+  };
+
+  document.getElementById('payment-summary').innerHTML = groupList.map(function(g) {
+    var rejectedNote = g.rejected ? ('<span style="font-size:12px;color:var(--red);font-weight:700;margin-left:10px;">' + g.rejected + ' rejected</span>') : '';
+    return '<div style="border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:12px;background:#fff;">' +
+      '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;">' + g.project + ' \u2014 ' + g.event + rejectedNote + '</div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+        tileHtml('Outstanding', g.outstanding, 'var(--red)', 'var(--red-light)') +
+        tileHtml('Proof uploaded', g.uploaded, '#2c5aa8', '#e5eefc') +
+        tileHtml('Payment received', g.received + ' \u00b7 QAR ' + g.receivedAmount, 'var(--green-dark)', 'var(--green-light)') +
+        tileHtml('Discrepancies', g.discrepancy, 'var(--orange-dark)', 'var(--yellow-light)') +
+      '</div>' +
+    '</div>';
+  }).join('') || '<div style="color:var(--muted);font-size:13px;">No sponsorships yet.</div>';
+}
+
 // Matches each sponsorship to its case(s) via food_box_applications.sponsorship_id,
 // using the already-loaded allApps array rather than a second round-trip.
 function renderSponsorshipsTable() {
@@ -1798,6 +1847,7 @@ function renderSponsorshipsTable() {
   if (!visible.length) {
     document.getElementById('sponsorships-table').style.display = 'none';
     document.getElementById('sponsorships-empty').style.display = '';
+    renderPaymentSummary();
     return;
   }
   document.getElementById('sponsorships-table').style.display = '';
@@ -1852,6 +1902,7 @@ function renderSponsorshipsTable() {
       '<td>' + actionsHtml + '</td>' +
     '</tr>';
   }).join('');
+  renderPaymentSummary();
 }
 
 // ── SPONSORSHIP EDIT MODAL ──
@@ -1868,7 +1919,7 @@ function openSpEditModal(spId) {
   var sf = function(id,v){ return '<input class="edit-field" id="'+id+'" value="'+(v||'').toString().replace(/"/g,'&quot;')+'">'; };
   var sn = function(id,v){ return '<input class="edit-field" type="number" id="'+id+'" value="'+(v!=null&&v!==''?v:'')+'">'; };
   var di = function(lbl,html){ return '<div class="detail-item" style="margin-bottom:10px;"><div class="lbl">'+lbl+'</div>'+html+'</div>'; };
-  var statusOptions = ['pending_payment','paid','rejected'].map(function(s){
+  var statusOptions = ['pending_payment','proof_uploaded','payment_received','discrepancy','rejected'].map(function(s){
     return '<option value="'+s+'"'+(sp.payment_status===s?' selected':'')+'>'+s.replace(/_/g,' ')+'</option>';
   }).join('');
   var proofRow = sp.proof_path
@@ -1944,7 +1995,7 @@ function saveSponsorshipEdits(spId) {
     // chosen here, exactly like the dedicated Confirm/Release/Undo actions.
     if (linkedApp) {
       var casePatch = null;
-      if (newStatus === 'paid' && !linkedApp.is_sponsored) {
+      if (newStatus === 'payment_received' && !linkedApp.is_sponsored) {
         casePatch = { is_sponsored: true, sponsored_at: new Date().toISOString() };
       } else if (newStatus === 'rejected') {
         casePatch = { is_sponsored: false, sponsored_at: null, sponsorship_id: null, reserved_until: null, reserved_by_sponsorship_id: null };
@@ -2056,10 +2107,10 @@ function confirmSponsorshipPayment(id) {
     apiHeadersAsync().then(function(headers2) {
       return fetch(SUPABASE_URL + '/rest/v1/sponsorships?id=eq.' + app.sponsorship_id, {
         method: 'PATCH', headers: headers2,
-        body: JSON.stringify({ payment_status: 'paid' })
+        body: JSON.stringify({ payment_status: 'payment_received' })
       });
     }).catch(function(){});
-    if (currentSponsorship) currentSponsorship.payment_status = 'paid';
+    if (currentSponsorship) currentSponsorship.payment_status = 'payment_received';
     renderModal(app, currentMembers, currentDocUrlMap);
     if (document.getElementById('sponsorships-view').style.display !== 'none') renderSponsorshipsTable();
   }).catch(function(e){ alert('Update failed: ' + e.message); });
