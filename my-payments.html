@@ -24,8 +24,6 @@ h1,h2,h3{font-family:'League Spartan';color:var(--green);margin:0;font-weight:90
 a{text-decoration:none;color:inherit;}
 button{font-family:'Nunito Sans';cursor:pointer;}
 svg{display:block;}
-.icon{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
-.icon svg{width:100%;height:100%;}
 .max{max-width:1180px;margin:0 auto;padding:0 32px;}
 
 header{
@@ -46,7 +44,6 @@ header{
 .page-header h1{font-size:44px;}
 .page-intro{font-size:18px;color:var(--muted);line-height:1.6;max-width:640px;margin:12px 0 30px;}
 
-/* ── Desktop layout: sidebar (impact) + main list, side by side ── */
 .layout{display:grid;grid-template-columns:1fr 340px;gap:32px;align-items:start;margin-bottom:60px;}
 .main-col{min-width:0;}
 .side-col{display:flex;flex-direction:column;gap:20px;position:sticky;top:100px;}
@@ -87,12 +84,10 @@ header{
 .empty-state .ic{font-size:38px;display:block;margin-bottom:12px;}
 .empty-state a{color:var(--green);font-weight:700;text-decoration:underline;}
 
-/* ── Auth gate: full-width panel with centered card, like a real login screen ── */
 .auth-wrap{background:var(--panel);border-radius:24px;padding:56px 32px;margin:28px 0 60px;display:flex;justify-content:center;}
-.auth-gate{width:100%;max-width:440px;}
-.auth-tabs{display:flex;border:1.5px solid var(--green);border-radius:10px;overflow:hidden;margin-bottom:20px;}
-.auth-tab{flex:1;text-align:center;padding:11px;font-family:'League Spartan';font-size:15px;font-weight:800;cursor:pointer;background:#fff;color:var(--green);}
-.auth-tab.on{background:var(--green);color:#fff;}
+.auth-gate{width:100%;max-width:420px;}
+.auth-email-display{font-size:14px;color:var(--muted);margin:0 0 16px;padding:10px 14px;background:#fff;border:1px solid var(--line);border-radius:10px;}
+.auth-email-display b{color:var(--charcoal);font-weight:700;}
 .field{margin-bottom:14px;}
 .lbl{display:block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
 .inp{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;font-family:'Nunito Sans',sans-serif;color:var(--charcoal);background:#fff;outline:none;}
@@ -101,11 +96,11 @@ header{
 .auth-err{color:#a83232;font-size:12px;font-weight:700;margin-top:6px;display:none;}
 .auth-btn{width:100%;padding:15px;border:none;border-radius:10px;background:var(--green);color:#fff;font-family:'League Spartan';font-weight:800;font-size:16px;cursor:pointer;margin-top:8px;}
 .auth-btn:disabled{opacity:.6;}
+.auth-back{display:block;text-align:center;font-size:13px;font-weight:700;color:var(--green);margin-top:16px;cursor:pointer;}
 .auth-note{font-size:13px;color:var(--muted);margin-top:18px;line-height:1.5;text-align:center;}
 
-/* ── Arabic / RTL ── */
 html[lang="ar"] body, html[lang="ar"] h1, html[lang="ar"] h2, html[lang="ar"] h3, html[lang="ar"] p,
-html[lang="ar"] a, html[lang="ar"] span, html[lang="ar"] div, html[lang="ar"] button{
+html[lang="ar"] a, html[lang="ar"] span, html[lang="ar"] div, html[lang="ar"] button, html[lang="ar"] label{
   font-family:Cairo,'Nunito Sans',sans-serif;
 }
 html[dir="rtl"] header{flex-direction:row-reverse;}
@@ -115,14 +110,12 @@ html[dir="rtl"] .section-head,html[dir="rtl"] .event-row,html[dir="rtl"] .stat-r
 html[dir="rtl"] .event-mid{text-align:right;}
 html[dir="rtl"] .event-time{text-align:left;}
 
-/* ── Tablet ── */
 @media (max-width:900px){
   .layout{grid-template-columns:1fr;}
   .side-col{position:static;flex-direction:row;flex-wrap:wrap;}
   .impact-inner,.cta-side{flex:1;min-width:260px;}
 }
 
-/* ── Mobile ── */
 @media (max-width:640px){
   header{padding:14px 18px;}
   .brand-mark{height:40px;}
@@ -152,30 +145,35 @@ html[dir="rtl"] .event-time{text-align:left;}
 
   <div class="page-header">
     <h1 data-en="My Payments" data-ar="مدفوعاتي">My Payments</h1>
-    <div class="page-intro" data-en="Every box you've sponsored, in one place." data-ar="كل صندوق تكفّلت به، في مكان واحد.">Every box you've sponsored, in one place.</div>
+    <div class="page-intro" data-en="Connecting local giving with local impact." data-ar="نصل العطاء المحلي بالأثر المحلي.">Connecting local giving with local impact.</div>
   </div>
 
   <div class="auth-wrap" id="auth-wrap">
     <div class="auth-gate" id="auth-gate">
-      <div class="auth-tabs">
-        <div class="auth-tab on" id="tab-signin" onclick="setAuthTab('signin')" data-en="Sign in" data-ar="تسجيل الدخول">Sign in</div>
-        <div class="auth-tab" id="tab-register" onclick="setAuthTab('register')" data-en="Create account" data-ar="إنشاء حساب">Create account</div>
-      </div>
 
-      <div id="signin-form">
+      <div id="step-email">
+        <h3 style="font-size:20px;margin:0 0 16px;text-align:center;" data-en="End-to-end anonymous giving" data-ar="عطاء مجهول من البداية إلى النهاية">End-to-end anonymous giving</h3>
         <div class="field">
           <label class="lbl" data-en="Email" data-ar="البريد الإلكتروني">Email</label>
-          <input class="inp" id="si-email" type="email" placeholder="you@example.com">
+          <input class="inp" id="email-input" type="email" placeholder="you@example.com" autocomplete="email">
         </div>
+        <button class="auth-btn" id="continue-btn" onclick="handleContinue()" data-en="Continue →" data-ar="متابعة ←">Continue →</button>
+        <div class="auth-err" id="email-err"></div>
+      </div>
+
+      <div id="step-signin" style="display:none">
+        <div class="auth-email-display" id="signin-email-display"></div>
         <div class="field">
           <label class="lbl" data-en="Password" data-ar="كلمة المرور">Password</label>
-          <input class="inp" id="si-password" type="password" placeholder="••••••••">
+          <input class="inp" id="si-password" type="password" placeholder="••••••••" autocomplete="current-password">
         </div>
         <button class="auth-btn" id="signin-btn" onclick="doSignIn()" data-en="Sign in →" data-ar="تسجيل الدخول ←">Sign in →</button>
         <div class="auth-err" id="signin-err"></div>
+        <a class="auth-back" onclick="backToEmail()" data-en="Use a different email" data-ar="استخدام بريد إلكتروني مختلف">Use a different email</a>
       </div>
 
-      <div id="register-form" style="display:none">
+      <div id="step-register" style="display:none">
+        <div class="auth-email-display" id="register-email-display"></div>
         <div class="row2">
           <div class="field">
             <label class="lbl" data-en="First name" data-ar="الاسم الأول">First name</label>
@@ -187,19 +185,16 @@ html[dir="rtl"] .event-time{text-align:left;}
           </div>
         </div>
         <div class="field">
-          <label class="lbl" data-en="Email" data-ar="البريد الإلكتروني">Email</label>
-          <input class="inp" id="reg-email" type="email" placeholder="you@example.com">
-        </div>
-        <div class="field">
           <label class="lbl" data-en="WhatsApp (optional)" data-ar="واتساب (اختياري)">WhatsApp (optional)</label>
           <input class="inp" id="reg-phone" placeholder="+974 XXXX XXXX">
         </div>
         <div class="field">
           <label class="lbl" data-en="Password" data-ar="كلمة المرور">Password</label>
-          <input class="inp" id="reg-password" type="password" placeholder="Min. 6 characters">
+          <input class="inp" id="reg-password" type="password" placeholder="Min. 6 characters" autocomplete="new-password">
         </div>
         <button class="auth-btn" id="register-btn" onclick="doRegister()" data-en="Create account →" data-ar="إنشاء حساب ←">Create account →</button>
         <div class="auth-err" id="register-err"></div>
+        <a class="auth-back" onclick="backToEmail()" data-en="Use a different email" data-ar="استخدام بريد إلكتروني مختلف">Use a different email</a>
       </div>
 
       <div class="auth-note" data-en="We ask sponsors to have an account so you can track every box you've sponsored in one place, and so we can reach you about delivery." data-ar="نطلب من المتكفّلين إنشاء حساب لتتمكن من متابعة كل صندوق تكفّلت به في مكان واحد، ولنتمكن من التواصل معك بخصوص التوصيل.">We ask sponsors to have an account so you can track every box you've sponsored in one place, and so we can reach you about delivery.</div>
@@ -254,7 +249,9 @@ html[dir="rtl"] .event-time{text-align:left;}
 <script>
 var SUPABASE_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
 var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
+var EDGE_FUNCTION_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder";
 var sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+var checkedEmail = "";
 
 function setLang(lang){
   var isAr = lang === "ar";
@@ -276,12 +273,52 @@ document.getElementById("langToggleBtn").addEventListener("click", function(){
   setLang(sessionStorage.getItem("faf_lang") || "en");
 })();
 
-function setAuthTab(tab){
-  var isSignin = tab === "signin";
-  document.getElementById("tab-signin").classList.toggle("on", isSignin);
-  document.getElementById("tab-register").classList.toggle("on", !isSignin);
-  document.getElementById("signin-form").style.display = isSignin ? "" : "none";
-  document.getElementById("register-form").style.display = isSignin ? "none" : "";
+// ── Progressive, email-first auth ──
+// Step 1: email only. We check whether that email already has an account
+// (via the check_email_exists edge function, which never leaks anything
+// beyond a boolean) and branch straight to sign-in or registration —
+// never show both a sign-in and a register form at once.
+async function handleContinue(){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  var errEl = document.getElementById("email-err");
+  var btn = document.getElementById("continue-btn");
+  errEl.style.display = "none";
+  var email = document.getElementById("email-input").value.trim();
+  if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    errEl.textContent = isAr ? "الرجاء إدخال بريد إلكتروني صحيح" : "Please enter a valid email";
+    errEl.style.display = "block";
+    return;
+  }
+  btn.disabled = true;
+  try{
+    var res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "check_email_exists", email: email })
+    });
+    var json = await res.json();
+    checkedEmail = email;
+    document.getElementById("step-email").style.display = "none";
+    if(json.exists){
+      document.getElementById("signin-email-display").innerHTML = (isAr ? "تسجيل الدخول باسم " : "Signing in as ") + "<b>" + email + "</b>";
+      document.getElementById("step-signin").style.display = "";
+      document.getElementById("si-password").focus();
+    } else {
+      document.getElementById("register-email-display").innerHTML = (isAr ? "إنشاء حساب باسم " : "Creating an account for ") + "<b>" + email + "</b>";
+      document.getElementById("step-register").style.display = "";
+    }
+  } catch(e){
+    errEl.textContent = isAr ? "حدث خطأ ما — يرجى المحاولة مرة أخرى" : "Something went wrong — please try again";
+    errEl.style.display = "block";
+  }
+  btn.disabled = false;
+}
+
+function backToEmail(){
+  document.getElementById("step-signin").style.display = "none";
+  document.getElementById("step-register").style.display = "none";
+  document.getElementById("step-email").style.display = "";
+  document.getElementById("si-password").value = "";
 }
 
 var PAYMENT_LABELS = {
@@ -359,6 +396,10 @@ function revealPaymentsContent(user){
   loadSponsorships(user.id);
 }
 
+// Recognizes an existing Connect session automatically — Supabase Auth
+// persists the session in this origin's localStorage, so anyone already
+// signed in via index.html / connect-landing.html lands straight on their
+// payments here, with no gate shown at all.
 async function checkAuthAndReveal(){
   var sessionRes = await sbClient.auth.getSession();
   var session = sessionRes && sessionRes.data ? sessionRes.data.session : null;
@@ -375,18 +416,17 @@ async function doSignIn(){
   var errEl = document.getElementById("signin-err");
   var btn = document.getElementById("signin-btn");
   errEl.style.display = "none";
-  var email = document.getElementById("si-email").value.trim();
   var password = document.getElementById("si-password").value;
-  if(!email || !password){
-    errEl.textContent = isAr ? "الرجاء إدخال البريد الإلكتروني وكلمة المرور" : "Please enter your email and password";
+  if(!password){
+    errEl.textContent = isAr ? "الرجاء إدخال كلمة المرور" : "Please enter your password";
     errEl.style.display = "block";
     return;
   }
   btn.disabled = true;
-  var res = await sbClient.auth.signInWithPassword({ email: email, password: password });
+  var res = await sbClient.auth.signInWithPassword({ email: checkedEmail, password: password });
   btn.disabled = false;
   if(res.error){
-    errEl.textContent = isAr ? "بريد إلكتروني أو كلمة مرور غير صحيحة" : "Incorrect email or password";
+    errEl.textContent = isAr ? "كلمة مرور غير صحيحة" : "Incorrect password";
     errEl.style.display = "block";
     return;
   }
@@ -400,16 +440,15 @@ async function doRegister(){
   errEl.style.display = "none";
   var firstName = document.getElementById("reg-first").value.trim();
   var surname = document.getElementById("reg-surname").value.trim();
-  var email = document.getElementById("reg-email").value.trim();
   var phone = document.getElementById("reg-phone").value.trim();
   var password = document.getElementById("reg-password").value;
-  if(!firstName || !surname || !email || password.length < 6){
-    errEl.textContent = isAr ? "الرجاء إدخال الاسم الأول واسم العائلة والبريد الإلكتروني وكلمة مرور من ٦ أحرف على الأقل" : "Please fill in first name, surname, email, and a password of at least 6 characters";
+  if(!firstName || !surname || password.length < 6){
+    errEl.textContent = isAr ? "الرجاء إدخال الاسم الأول واسم العائلة وكلمة مرور من ٦ أحرف على الأقل" : "Please fill in first name, surname, and a password of at least 6 characters";
     errEl.style.display = "block";
     return;
   }
   btn.disabled = true;
-  var signUpRes = await sbClient.auth.signUp({ email: email, password: password });
+  var signUpRes = await sbClient.auth.signUp({ email: checkedEmail, password: password });
   if(signUpRes.error){
     btn.disabled = false;
     errEl.textContent = signUpRes.error.message;
@@ -421,7 +460,7 @@ async function doRegister(){
     id: newUser.id,
     first_name: firstName,
     surname: surname,
-    email: email,
+    email: checkedEmail,
     phone: phone || null,
     is_sponsor: true,
     approved: true
