@@ -377,6 +377,23 @@ select.edit-field{cursor:pointer;}
         <div class="welcome-name">Sponsorships</div>
         <div class="welcome-scope">Every confirmed case matched to a sponsor, with payment status.</div>
       </div>
+
+      <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
+        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px;">📅 Monthly pledge rounds</div>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Round name</label>
+            <input id="pledge-round-name" class="filter-btn" style="padding:8px 12px;" placeholder="e.g. September 2026 Distribution">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Distribution date</label>
+            <input id="pledge-round-date" type="date" class="filter-btn" style="padding:8px 12px;">
+          </div>
+          <button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="openPledgeRound()">+ Open round</button>
+        </div>
+        <div id="pledge-rounds-admin-list" style="font-size:13px;color:var(--muted);">Loading rounds…</div>
+      </div>
+
       <div id="payment-summary" style="margin-bottom:20px;"></div>
       <div class="filters">
         <label style="font-size:13px;font-weight:700;color:var(--muted);">Distribution:</label>
@@ -1746,12 +1763,69 @@ function showView(view) {
   if (view === 'approvals') loadApprovalsView();
 }
 
+// ── Monthly pledge rounds ──
+function loadPledgeRoundsAdmin() {
+  var listEl = document.getElementById('pledge-rounds-admin-list');
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/distribution_rounds?select=*&order=distribution_date.desc&limit=10', { headers: headers });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('status ' + r.status);
+    return r.json();
+  }).then(function(rounds) {
+    if (!rounds.length) { listEl.textContent = 'No rounds yet — open one above.'; return; }
+    var todayStr = new Date().toISOString().split('T')[0];
+    listEl.innerHTML = rounds.map(function(r) {
+      var pastCutoff = todayStr > r.edit_cutoff_date;
+      var statusLabel = r.status === 'matching_done' ? '✅ Matched' : r.status === 'completed' ? '📦 Completed' : (pastCutoff ? '⏰ Cutoff passed — ready to match' : '📝 Open for edits until ' + r.edit_cutoff_date);
+      var matchBtn = (r.status === 'open') ? ('<button class="btn-comment" style="background:' + (pastCutoff ? 'var(--green)' : '#ccc') + ';color:#fff;border:none;margin-left:8px;" onclick="runPledgeMatching(\'' + r.id + '\')">Run matching' + (pastCutoff ? '' : ' (early)') + '</button>') : '';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">' +
+        '<div><strong>' + r.name + '</strong> — ' + r.distribution_date + '<br><span style="font-size:12px;">' + statusLabel + '</span></div>' +
+        matchBtn +
+      '</div>';
+    }).join('');
+  }).catch(function(e) { listEl.textContent = 'Could not load rounds: ' + e.message; });
+}
+
+function openPledgeRound() {
+  var name = document.getElementById('pledge-round-name').value.trim();
+  var date = document.getElementById('pledge-round-date').value;
+  if (!name || !date) { alert('Please enter both a round name and distribution date.'); return; }
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST', headers: headers,
+      body: JSON.stringify({ type: 'admin_open_pledge_round', name: name, distribution_date: date })
+    });
+  }).then(function(r) { return r.json().then(function(j) { if (!r.ok || j.error) throw new Error(j.error || ('status ' + r.status)); return j; }); })
+    .then(function(json) {
+      alert('Round opened — ' + json.pledges_drafted + ' pledge(s) drafted for this round.');
+      document.getElementById('pledge-round-name').value = '';
+      document.getElementById('pledge-round-date').value = '';
+      loadPledgeRoundsAdmin();
+    }).catch(function(e) { alert('Could not open round: ' + e.message); });
+}
+
+function runPledgeMatching(roundId) {
+  if (!confirm('Run matching for this round now? This locks in real families for every pledge still pending, and emails sponsors their allocation. This should normally only be done after the edit cutoff has passed.')) return;
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST', headers: headers,
+      body: JSON.stringify({ type: 'admin_run_pledge_matching', round_id: roundId })
+    });
+  }).then(function(r) { return r.json().then(function(j) { if (!r.ok || j.error) throw new Error(j.error || ('status ' + r.status)); return j; }); })
+    .then(function(json) {
+      alert('Matched ' + json.matched_count + ' of ' + json.total_pending + ' pending pledge allocations.');
+      loadPledgeRoundsAdmin();
+      loadSponsorshipsView();
+    }).catch(function(e) { alert('Matching failed: ' + e.message); });
+}
+
 function loadSponsorshipsView() {
   var loadingEl = document.getElementById('sponsorships-loading');
   loadingEl.style.display = '';
   loadingEl.textContent = 'Loading sponsorships…';
   document.getElementById('sponsorships-table').style.display = 'none';
   document.getElementById('sponsorships-empty').style.display = 'none';
+  loadPledgeRoundsAdmin();
   apiHeadersAsync().then(function(headers) {
     return fetch(SUPABASE_URL + '/rest/v1/sponsorships?select=*&order=created_at.desc', { headers: headers });
   }).then(function(r) {

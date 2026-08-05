@@ -209,6 +209,43 @@ html[dir="rtl"] .event-time{text-align:left;}
 
     <div class="main-col">
       <div class="section-head">
+        <h2 data-en="Your monthly pledge" data-ar="تعهدك الشهري">Your monthly pledge</h2>
+      </div>
+
+      <div id="pledge-loading" style="color:var(--muted);font-size:14px;margin-bottom:24px;" data-en="Loading…" data-ar="جاري التحميل…">Loading…</div>
+
+      <div id="pledge-none" style="display:none;background:var(--panel);border-radius:16px;padding:22px;margin-bottom:28px;">
+        <p style="font-size:14px;color:var(--muted);margin:0 0 16px;" data-en="No standing pledge yet — set one up to sponsor boxes automatically every month." data-ar="لا يوجد تعهد قائم بعد — أنشئ واحداً لتكفّل الصناديق تلقائياً كل شهر.">No standing pledge yet — set one up to sponsor boxes automatically every month.</p>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+          <div>
+            <label class="lbl" data-en="Boxes per month" data-ar="عدد الصناديق شهرياً">Boxes per month</label>
+            <input class="inp" type="number" min="1" value="1" id="pledge-box-count" style="width:100px;">
+          </div>
+          <div>
+            <label class="lbl" data-en="Delivery" data-ar="التوصيل">Delivery</label>
+            <select class="inp" id="pledge-delivery-method" style="width:180px;">
+              <option value="vol" data-en="Volunteer delivers" data-ar="سائق متطوع">Volunteer delivers</option>
+              <option value="self" data-en="I deliver myself" data-ar="سأوصّل بنفسي">I deliver myself</option>
+            </select>
+          </div>
+          <button class="auth-btn" style="margin:0;width:auto;padding:12px 22px;" onclick="createPledgeClick()" data-en="Set up pledge →" data-ar="إنشاء التعهد ←">Set up pledge →</button>
+        </div>
+        <div class="auth-err" id="pledge-create-err"></div>
+      </div>
+
+      <div id="pledge-active" style="display:none;background:var(--panel);border-radius:16px;padding:22px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-family:'League Spartan';font-weight:900;font-size:20px;color:var(--green);" id="pledge-summary-boxes"></div>
+            <div style="font-size:13px;color:var(--muted);" id="pledge-summary-method"></div>
+          </div>
+          <button style="border:1.5px solid #c0392b;background:#fff;color:#c0392b;font-size:12px;font-weight:800;padding:8px 14px;border-radius:8px;cursor:pointer;" onclick="cancelPledgeClick()" data-en="Cancel my pledge" data-ar="إلغاء تعهدي">Cancel my pledge</button>
+        </div>
+      </div>
+
+      <div id="pledge-rounds-list"></div>
+
+      <div class="section-head" style="margin-top:36px;">
         <h2 data-en="Your sponsorships" data-ar="تكفّلاتك">Your sponsorships</h2>
       </div>
 
@@ -464,6 +501,7 @@ function revealPaymentsContent(user, session){
   document.getElementById("auth-wrap").style.display = "none";
   document.getElementById("payments-content").style.display = "grid";
   loadSponsorships(user.id);
+  loadPledgeData(user.id);
 }
 
 // Recognizes an existing Connect session automatically — Supabase Auth
@@ -542,6 +580,182 @@ async function doRegister(){
     return;
   }
   revealPaymentsContent(newUser, signUpRes.data.session);
+}
+
+// ── Monthly pledge management ──
+function authHeaders(){
+  var token = window.currentAuthSession ? window.currentAuthSession.access_token : null;
+  return { "Content-Type": "application/json", "Authorization": "Bearer " + token };
+}
+
+async function loadPledgeData(userId){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  document.getElementById("pledge-loading").style.display = "";
+  document.getElementById("pledge-none").style.display = "none";
+  document.getElementById("pledge-active").style.display = "none";
+
+  var pledgeRes = await sbClient.from("sponsor_pledges").select("*").eq("sponsor_id", userId).eq("status", "active").maybeSingle();
+  var pledge = pledgeRes && pledgeRes.data ? pledgeRes.data : null;
+  window.currentPledge = pledge;
+
+  document.getElementById("pledge-loading").style.display = "none";
+
+  if(!pledge){
+    document.getElementById("pledge-none").style.display = "";
+    document.getElementById("pledge-rounds-list").innerHTML = "";
+    return;
+  }
+
+  document.getElementById("pledge-active").style.display = "";
+  var boxLabel = pledge.box_count + (isAr ? " صندوق شهرياً" : (pledge.box_count === 1 ? " box / month" : " boxes / month"));
+  document.getElementById("pledge-summary-boxes").textContent = boxLabel;
+  document.getElementById("pledge-summary-method").textContent = pledge.delivery_method === "self"
+    ? (isAr ? "سأوصّل بنفسي" : "You deliver yourself")
+    : (isAr ? "يوصّلها متطوع" : "A volunteer delivers");
+
+  // Show any still-editable draft allocations for open rounds tied to
+  // this pledge — the sponsor can adjust box count or cancel just this
+  // round up until its cutoff.
+  var roundsRes = await sbClient
+    .from("sponsorships")
+    .select("*, distribution_rounds(name, distribution_date, edit_cutoff_date, status)")
+    .eq("pledge_id", pledge.id)
+    .order("created_at", { ascending: false });
+  var rows = (roundsRes && roundsRes.data) ? roundsRes.data : [];
+  renderPledgeRounds(rows);
+}
+
+function renderPledgeRounds(rows){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  var listEl = document.getElementById("pledge-rounds-list");
+  var todayStr = new Date().toISOString().split("T")[0];
+
+  listEl.innerHTML = rows.map(function(r){
+    var round = r.distribution_rounds;
+    if(!round) return "";
+    var editable = round.status === "open" && todayStr <= round.edit_cutoff_date && !r.matched_family_ids;
+    var matched = !!r.matched_family_ids;
+
+    var body;
+    if(editable){
+      body = '<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:10px;">' +
+        '<div><label class="lbl">' + (isAr ? "الصناديق" : "Boxes") + '</label>' +
+        '<input class="inp" type="number" min="1" value="' + r.box_count + '" id="round-box-' + r.id + '" style="width:90px;"></div>' +
+        '<button class="auth-btn" style="margin:0;width:auto;padding:10px 16px;font-size:13px;" onclick="saveRoundBoxCount(\'' + r.id + '\')">' + (isAr ? "حفظ" : "Save") + '</button>' +
+        '<button style="border:1.5px solid #c0392b;background:#fff;color:#c0392b;font-size:12px;font-weight:800;padding:10px 14px;border-radius:8px;cursor:pointer;" onclick="cancelRoundClick(\'' + r.id + '\')">' + (isAr ? "إلغاء لهذا الشهر" : "Skip this round") + '</button>' +
+        '</div>' +
+        '<div class="auth-err" id="round-err-' + r.id + '"></div>';
+    } else if(matched){
+      body = '<div style="font-size:13px;color:var(--muted);margin-top:6px;">' + (isAr ? "تمّت المطابقة \u2014 " : "Matched \u2014 ") + r.box_count + (isAr ? " صندوق" : (r.box_count === 1 ? " box" : " boxes")) + '</div>';
+    } else {
+      body = '<div style="font-size:13px;color:var(--muted);margin-top:6px;">' + (isAr ? "أُغلقت نافذة التعديل" : "Edit window closed") + '</div>';
+    }
+
+    return '<div class="events-card" style="padding:16px 20px;margin-bottom:14px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;">' +
+        '<div style="font-weight:700;font-size:15px;">' + round.name + '</div>' +
+        (editable ? '<div style="font-size:11px;color:var(--muted);">' + (isAr ? "عدّل قبل " : "Edit by ") + round.edit_cutoff_date + '</div>' : '') +
+      '</div>' +
+      body +
+    '</div>';
+  }).join("");
+}
+
+async function createPledgeClick(){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  var errEl = document.getElementById("pledge-create-err");
+  errEl.style.display = "none";
+  var boxCount = parseInt(document.getElementById("pledge-box-count").value, 10);
+  var deliveryMethod = document.getElementById("pledge-delivery-method").value;
+  if(!boxCount || boxCount < 1){
+    errEl.textContent = isAr ? "الرجاء إدخال عدد صحيح من الصناديق" : "Please enter a valid number of boxes";
+    errEl.style.display = "block";
+    return;
+  }
+  try{
+    var res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ type: "create_pledge", box_count: boxCount, delivery_method: deliveryMethod })
+    });
+    var json = await res.json();
+    if(!res.ok || json.error){
+      errEl.textContent = json.error || (isAr ? "حدث خطأ ما" : "Something went wrong");
+      errEl.style.display = "block";
+      return;
+    }
+    loadPledgeData(window.currentAuthUser.id);
+  } catch(e){
+    errEl.textContent = e.message;
+    errEl.style.display = "block";
+  }
+}
+
+async function cancelPledgeClick(){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  if(!window.currentPledge) return;
+  if(!confirm(isAr ? "هل أنت متأكد من إلغاء تعهدك الشهري؟" : "Are you sure you want to cancel your monthly pledge?")) return;
+  try{
+    var res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ type: "cancel_pledge", pledge_id: window.currentPledge.id })
+    });
+    var json = await res.json();
+    if(!res.ok || json.error){
+      alert(json.error || (isAr ? "حدث خطأ ما" : "Something went wrong"));
+      return;
+    }
+    loadPledgeData(window.currentAuthUser.id);
+  } catch(e){
+    alert(e.message);
+  }
+}
+
+async function saveRoundBoxCount(sponsorshipId){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  var errEl = document.getElementById("round-err-" + sponsorshipId);
+  var input = document.getElementById("round-box-" + sponsorshipId);
+  var boxCount = parseInt(input.value, 10);
+  if(!boxCount || boxCount < 1){
+    if(errEl){ errEl.textContent = isAr ? "عدد غير صالح" : "Invalid number"; errEl.style.display = "block"; }
+    return;
+  }
+  try{
+    var res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ type: "update_round_allocation", sponsorship_id: sponsorshipId, box_count: boxCount })
+    });
+    var json = await res.json();
+    if(!res.ok || json.error){
+      if(errEl){ errEl.textContent = json.error || (isAr ? "حدث خطأ ما" : "Something went wrong"); errEl.style.display = "block"; }
+      return;
+    }
+    loadPledgeData(window.currentAuthUser.id);
+  } catch(e){
+    if(errEl){ errEl.textContent = e.message; errEl.style.display = "block"; }
+  }
+}
+
+async function cancelRoundClick(sponsorshipId){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  if(!confirm(isAr ? "تخطي هذا الشهر فقط؟ سيبقى تعهدك الشهري نشطاً." : "Skip just this round? Your standing pledge stays active.")) return;
+  try{
+    var res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ type: "cancel_round_allocation", sponsorship_id: sponsorshipId })
+    });
+    var json = await res.json();
+    if(!res.ok || json.error){
+      alert(json.error || (isAr ? "حدث خطأ ما" : "Something went wrong"));
+      return;
+    }
+    loadPledgeData(window.currentAuthUser.id);
+  } catch(e){
+    alert(e.message);
+  }
 }
 
 checkAuthAndReveal();
