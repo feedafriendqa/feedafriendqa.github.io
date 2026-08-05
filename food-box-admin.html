@@ -308,9 +308,10 @@ select.edit-field{cursor:pointer;}
 
   <div class="main">
     <div class="view-switcher" id="view-switcher" style="display:none;margin-bottom:16px;">
-      <button class="filter-btn active" id="view-btn-cases" onclick="showView('cases')">📋 Cases</button>
+      <button class="filter-btn active" id="view-btn-cases" onclick="showView('cases')">📋 Cases<span id="driver-notes-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;" title="Cases with unread driver notes"></span></button>
       <button class="filter-btn" id="view-btn-sponsorships" onclick="showView('sponsorships')">💳 Sponsorships</button>
       <button class="filter-btn" id="view-btn-approvals" onclick="showView('approvals')">🚗 Approvals<span id="approvals-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
+      <button class="filter-btn" id="view-btn-messages" onclick="showView('messages')">💌 Messages<span id="messages-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
     </div>
     <div id="cases-view">
     <div class="welcome-banner">
@@ -457,6 +458,16 @@ select.edit-field{cursor:pointer;}
         </table>
         <div id="approvals-empty" class="empty" style="display:none;">No distributor sign-ups found.</div>
       </div>
+    </div>
+
+    <div id="messages-view" style="display:none;">
+      <div class="welcome-banner">
+        <div class="welcome-name">Thank-you Messages</div>
+        <div class="welcome-scope">Friends' messages to their sponsors — approve to send them on, reject to hold them back.</div>
+      </div>
+      <div id="messages-loading" class="loading"><div class="spinner-lg"></div>Loading messages…</div>
+      <div id="messages-list"></div>
+      <div id="messages-empty" class="empty" style="display:none;">No thank-you messages waiting for review.</div>
     </div>
   </div>
 
@@ -733,6 +744,21 @@ async function handleAdminSession(session) {
       var badge = document.getElementById('approvals-badge');
       if (!badge) return;
       if (rows && rows.length) { badge.textContent = rows.length; badge.style.display = 'inline-block'; }
+      else badge.style.display = 'none';
+    }).catch(function(){});
+
+    loadDriverNotesBadge();
+
+    apiHeadersAsync().then(function(headers) {
+      return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+        method: 'POST', headers: headers,
+        body: JSON.stringify({ type: 'admin_list_thankyou' })
+      });
+    }).then(function(r) { return r.json(); }).then(function(json) {
+      var badge = document.getElementById('messages-badge');
+      if (!badge) return;
+      var count = (json.messages || []).length;
+      if (count) { badge.textContent = count; badge.style.display = 'inline-block'; }
       else badge.style.display = 'none';
     }).catch(function(){});
 
@@ -1193,6 +1219,15 @@ function renderModal(app, members, urlMap) {
   body += '<div class="profile-name">' + name + '</div>';
   body += '<div class="profile-sub">' + (app.nationality || '–') + (app.qid_number ? ' &middot; QID ' + app.qid_number : '') + '</div>';
   body += '</div>';
+
+  // ── DRIVER NOTES BANNER (persistent, replaces old one-time popup) ──
+  if (app.driver_notes_flagged && app.driver_notes) {
+    body += '<div style="background:#FFF3E0;border:1px solid #FFB74D;border-radius:10px;padding:12px 14px;margin-bottom:14px;">';
+    body += '<div style="font-weight:800;font-size:12px;color:#8a5300;margin-bottom:4px;">🚩 NOTE FROM DRIVER</div>';
+    body += '<div style="font-size:13px;color:#5c3d00;margin-bottom:8px;">' + app.driver_notes.replace(/</g, '&lt;') + '</div>';
+    body += '<button class="btn-comment" style="background:#fff;font-size:12px;padding:5px 10px;" onclick="dismissDriverNote(\'' + app.id + '\')">Dismiss</button>';
+    body += '</div>';
+  }
 
   // ── STAT BAND (status / boxes / household) ──
   var isActiveCase = status === 'approved' || status === 'confirmed';
@@ -1756,11 +1791,86 @@ function showView(view) {
   document.getElementById('cases-view').style.display = (view === 'cases') ? '' : 'none';
   document.getElementById('sponsorships-view').style.display = (view === 'sponsorships') ? '' : 'none';
   document.getElementById('approvals-view').style.display = (view === 'approvals') ? '' : 'none';
+  document.getElementById('messages-view').style.display = (view === 'messages') ? '' : 'none';
   document.getElementById('view-btn-cases').classList.toggle('active', view === 'cases');
   document.getElementById('view-btn-sponsorships').classList.toggle('active', view === 'sponsorships');
   document.getElementById('view-btn-approvals').classList.toggle('active', view === 'approvals');
+  document.getElementById('view-btn-messages').classList.toggle('active', view === 'messages');
   if (view === 'sponsorships') loadSponsorshipsView();
   if (view === 'approvals') loadApprovalsView();
+  if (view === 'messages') loadMessagesView();
+}
+
+// ── Thank-you moderation queue ──
+function loadMessagesView() {
+  var loadingEl = document.getElementById('messages-loading');
+  var listEl = document.getElementById('messages-list');
+  var emptyEl = document.getElementById('messages-empty');
+  loadingEl.style.display = ''; listEl.innerHTML = ''; emptyEl.style.display = 'none';
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST', headers: headers,
+      body: JSON.stringify({ type: 'admin_list_thankyou' })
+    });
+  }).then(function(r) { return r.json().then(function(j) { if (!r.ok || j.error) throw new Error(j.error || ('status ' + r.status)); return j; }); })
+    .then(function(json) {
+      loadingEl.style.display = 'none';
+      var msgs = json.messages || [];
+      var badge = document.getElementById('messages-badge');
+      if (badge) { if (msgs.length) { badge.textContent = msgs.length; badge.style.display = 'inline-block'; } else badge.style.display = 'none'; }
+      if (!msgs.length) { emptyEl.style.display = ''; return; }
+      listEl.innerHTML = msgs.map(function(m) {
+        var app = m.food_box_applications || {};
+        var name = app.full_name_en || app.full_name || 'Unknown friend';
+        var when = m.created_at ? new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+        return '<div class="table-wrap" style="padding:16px;margin-bottom:12px;">' +
+          '<div style="font-weight:700;margin-bottom:4px;">' + name + '</div>' +
+          '<div style="font-size:12px;color:#888;margin-bottom:10px;">' + when + '</div>' +
+          (m.message ? '<div style="background:var(--bg,#f7f7f2);border-radius:8px;padding:12px;margin-bottom:10px;font-style:italic;">' + m.message.replace(/</g, '&lt;') + '</div>' : '') +
+          (m.photo_url ? '<a href="' + m.photo_url + '" target="_blank"><img src="' + m.photo_url + '" style="max-width:200px;border-radius:8px;margin-bottom:10px;display:block;"/></a>' : '') +
+          '<button class="btn-comment" style="background:var(--green);color:#fff;border:none;margin-right:8px;" onclick="moderateThankyou(\'' + m.id + '\',true)">✓ Approve &amp; send</button>' +
+          '<button class="btn-comment" style="background:#fff;" onclick="moderateThankyou(\'' + m.id + '\',false)">✕ Reject</button>' +
+          '</div>';
+      }).join('');
+    }).catch(function(e) { loadingEl.style.display = 'none'; emptyEl.textContent = 'Could not load messages: ' + e.message; emptyEl.style.display = ''; });
+}
+
+function moderateThankyou(messageId, approve) {
+  if (approve === false && !confirm('Reject this message? It will not be sent to the sponsor.')) return;
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST', headers: headers,
+      body: JSON.stringify({ type: 'admin_moderate_thankyou', message_id: messageId, approve: approve })
+    });
+  }).then(function(r) { return r.json().then(function(j) { if (!r.ok || j.error) throw new Error(j.error || ('status ' + r.status)); return j; }); })
+    .then(function() { loadMessagesView(); })
+    .catch(function(e) { alert('Could not update this message: ' + e.message); });
+}
+
+function dismissDriverNote(appId) {
+  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + appId, {
+    method: 'PATCH', headers: apiHeaders(),
+    body: JSON.stringify({ driver_notes_flagged: false })
+  }).then(function() {
+    var app = allApps.find(function(a){return a.id===appId;});
+    if (app) app.driver_notes_flagged = false;
+    if (currentAppId === appId) renderModal(app, currentMembers, currentDocUrlMap);
+    loadDriverNotesBadge();
+  }).catch(function(){});
+}
+
+// Persistent badge on the Cases tab for applications where a driver left
+// delivery notes — replaces the old one-time popup alert so it doesn't
+// get missed if admin wasn't looking at that moment.
+function loadDriverNotesBadge() {
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=id&driver_notes_flagged=eq.true', { headers: headers });
+  }).then(function(r) { return r.ok ? r.json() : []; }).then(function(rows) {
+    var badge = document.getElementById('driver-notes-badge');
+    if (!badge) return;
+    if (rows && rows.length) { badge.textContent = rows.length; badge.style.display = 'inline-block'; }
+    else badge.style.display = 'none';
+  }).catch(function(){});
 }
 
 // ── Monthly pledge rounds ──
