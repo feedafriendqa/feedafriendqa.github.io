@@ -396,6 +396,16 @@ select.edit-field{cursor:pointer;}
         <div id="pledge-rounds-admin-list" style="font-size:13px;color:var(--muted);">Loading rounds…</div>
       </div>
 
+      <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
+        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px;">👋 Awaiting a sponsor</div>
+        <div id="unmatched-panel" style="font-size:13px;color:var(--muted);">Loading…</div>
+      </div>
+
+      <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
+        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px;">🎁 Donors with unmatched capacity</div>
+        <div id="unmatched-donors-panel" style="font-size:13px;color:var(--muted);">Loading…</div>
+      </div>
+
       <div class="filters">
         <label style="font-size:13px;font-weight:700;color:var(--muted);">Distribution:</label>
         <select id="distribution-filter-sp" class="filter-btn" style="padding:8px 12px;" onchange="renderSponsorshipCards()"></select>
@@ -597,6 +607,7 @@ var currentMembers = [];
 var currentDocUrlMap = {};
 var currentSponsorship = null;
 var allSponsorships = [];
+var allActivePledges = [];
 var sponsorProfileMap = {};
 var allDistributors = [];
 var currentApprovalFilter = 'pending';
@@ -1939,13 +1950,21 @@ function loadSponsorshipsView() {
   var headers;
   apiHeadersAsync().then(function(h) {
     headers = h;
-    return fetch(SUPABASE_URL + '/rest/v1/sponsorships?select=*&order=created_at.desc', { headers: headers });
-  }).then(function(r) {
-    if (!r.ok) throw new Error('status ' + r.status);
-    return r.json();
-  }).then(function(rows) {
-    allSponsorships = rows || [];
-    var sponsorIds = Array.from(new Set(allSponsorships.map(function(sp){ return sp.sponsor_id; }).filter(Boolean)));
+    return Promise.all([
+      fetch(SUPABASE_URL + '/rest/v1/sponsorships?select=*&order=created_at.desc', { headers: headers }),
+      fetch(SUPABASE_URL + '/rest/v1/sponsor_pledges?select=*&status=eq.active', { headers: headers })
+    ]);
+  }).then(function(results) {
+    if (!results[0].ok) throw new Error('status ' + results[0].status);
+    return Promise.all(results.map(function(r){ return r.ok ? r.json() : []; }));
+  }).then(function(jsons) {
+    allSponsorships = jsons[0] || [];
+    allActivePledges = jsons[1] || [];
+    var sponsorIds = Array.from(new Set(
+      allSponsorships.map(function(sp){ return sp.sponsor_id; })
+        .concat(allActivePledges.map(function(p){ return p.sponsor_id; }))
+        .filter(Boolean)
+    ));
     if (!sponsorIds.length) return {};
     return fetch(SUPABASE_URL + '/rest/v1/profiles?select=id,first_name,surname,email,phone&id=in.(' + sponsorIds.join(',') + ')', { headers: headers })
       .then(function(r2) { return r2.ok ? r2.json() : []; })
@@ -2100,7 +2119,86 @@ function refreshSponsorshipViews() {
   renderPaymentCards();
 }
 
+// Confirmed families with no sponsorship row at all -- these never show up
+// anywhere else in this tab, since everything below is built from the
+// sponsorships table, and an unmatched family has none. Surfacing this
+// separately is what actually lets admin see the supply/demand balance:
+// too many of these and boxes are going unsponsored; too few and pledges
+// come back underfilled with nothing to match against.
+// Mirror of renderUnmatchedPanel, from the other side: donors who have
+// box capacity that hasn't gone to a family yet. Two distinct causes,
+// both worth surfacing together since they're the same underlying
+// problem (a donor's boxes sitting idle) even though they look different
+// in the data: (1) a sponsorship that got matched but came back
+// underfilled because the pool ran short, and (2) a standing pledge that
+// has never even been drafted into a round yet, so it has no sponsorship
+// row at all and would otherwise be invisible anywhere in this console.
+function renderUnmatchedDonorsPanel() {
+  var wrap = document.getElementById('unmatched-donors-panel');
+  var gaps = [];
+
+  allSponsorships.forEach(function(sp) {
+    if (sp.box_count == null) return;
+    var fam = getFamilyHtml(sp);
+    var gap = sp.box_count - fam.boxesAllocated;
+    if (gap > 0) {
+      var info = getSponsorInfo(sp);
+      gaps.push({
+        label: info.name || 'Unnamed sponsor',
+        gap: gap,
+        note: (sp.ref_no || '–') + (sp.pledge_id ? ' · monthly pledge' : '') + ' · ' + (sp.distribution_event || CURRENT_DISTRIBUTION)
+      });
+    }
+  });
+
+  var draftedPledgeIds = new Set(allSponsorships.map(function(sp){ return sp.pledge_id; }).filter(Boolean));
+  allActivePledges.forEach(function(p) {
+    if (draftedPledgeIds.has(p.id)) return;
+    var profile = sponsorProfileMap[p.sponsor_id];
+    var name = profile ? ((profile.first_name || '') + ' ' + (profile.surname || '')).trim() : 'Unnamed sponsor';
+    gaps.push({
+      label: name || 'Unnamed sponsor',
+      gap: p.box_count,
+      note: 'Standing pledge · never drafted into a round yet'
+    });
+  });
+
+  if (!gaps.length) {
+    wrap.innerHTML = '<div style="font-size:13px;color:var(--muted);">No donors are currently sitting on unmatched box capacity.</div>';
+    return;
+  }
+  var totalGap = gaps.reduce(function(s, g){ return s + g.gap; }, 0);
+  var rows = gaps.map(function(g) {
+    return '<div style="margin-bottom:4px;"><strong>' + g.label + '</strong> — ' + g.gap + ' box' + (g.gap === 1 ? '' : 'es') +
+      ' <span style="color:var(--muted);font-size:12px;">(' + g.note + ')</span></div>';
+  }).join('');
+  wrap.innerHTML = '<div style="font-size:13px;color:var(--text);margin-bottom:8px;"><strong>' + gaps.length + '</strong> donor' + (gaps.length === 1 ? '' : 's') + ' with unmatched capacity — <strong>' + totalGap + ' box' + (totalGap === 1 ? '' : 'es') + '</strong> total.</div>' +
+    '<div style="font-size:13px;line-height:1.6;">' + rows + '</div>';
+}
+
+function renderUnmatchedPanel() {
+  var unmatched = allApps.filter(function(a){ return a.status === 'confirmed' && !a.sponsorship_id; });
+  var wrap = document.getElementById('unmatched-panel');
+  if (!unmatched.length) {
+    wrap.innerHTML = '<div style="font-size:13px;color:var(--muted);">No confirmed families are currently waiting for a sponsor.</div>';
+    return;
+  }
+  var totalBoxes = unmatched.reduce(function(s, a){ return s + Math.ceil((a.household_size || 1) / 4); }, 0);
+  var rows = unmatched.map(function(a) {
+    var label = a.full_name_en || a.full_name || ('Case ' + a.id.slice(0,8));
+    var areaTxt = a.area_en || a.area;
+    var boxes = Math.ceil((a.household_size || 1) / 4);
+    return '<a onclick="viewApp(\'' + a.id + '\');showView(\'cases\')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;">' +
+      label + (areaTxt ? (' · ' + areaTxt) : '') + '</a>' +
+      ' <span style="color:var(--muted);font-size:12px;">(' + boxes + ' box' + (boxes === 1 ? '' : 'es') + ')</span>';
+  }).join('<br>');
+  wrap.innerHTML = '<div style="font-size:13px;color:var(--text);margin-bottom:8px;"><strong>' + unmatched.length + '</strong> confirmed famil' + (unmatched.length === 1 ? 'y' : 'ies') + ' waiting for a sponsor — <strong>' + totalBoxes + ' box' + (totalBoxes === 1 ? '' : 'es') + '</strong> total.</div>' +
+    '<div style="font-size:13px;line-height:1.7;">' + rows + '</div>';
+}
+
 function renderSponsorshipCards() {
+  renderUnmatchedPanel();
+  renderUnmatchedDonorsPanel();
   document.getElementById('sponsorships-loading').style.display = 'none';
   var visible = visibleSponsorships('distribution-filter-sp');
   var wrap = document.getElementById('sponsorships-cards');
