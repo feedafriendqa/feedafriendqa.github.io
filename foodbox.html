@@ -139,7 +139,7 @@ body.lang-ar .hero-h1,body.lang-ar .how-t,body.lang-ar .section-h{font-family:"N
     <span class="ic">📅</span>
     <div>
       <div class="label" data-en="Next distribution day" data-ar="يوم التوزيع القادم">Next distribution day</div>
-      <div class="date" data-en="Friday, 26 June 2026" data-ar="الجمعة، ٢٦ يونيو ٢٠٢٦">Friday, 26 June 2026</div>
+      <div class="date" id="dist-date-text" data-en="Friday, 26 June 2026" data-ar="الجمعة، ٢٦ يونيو ٢٠٢٦">Friday, 26 June 2026</div>
     </div>
   </div>
 
@@ -241,27 +241,32 @@ function showTab(t){
 async function startSponsorFlow(){
   // Create a lead row in Supabase right away, so even an abandoned
   // signup is captured. Store the row id for later steps to update.
-  // Distribution Date now comes from distribution_settings (publicly
-  // readable, admin-editable in food-box-admin.html) instead of a
-  // hardcoded string here that used to go stale every cycle.
+  // Distribution comes from distribution_rounds via a public view — the
+  // same single list used for monthly pledges and admin management.
+  // There's no separate "distribution date setting" anymore.
   var distributionLabel = "Distribution";
+  var distributionRoundId = null;
   try{
     if(window.sbClient){
       var { data: distRow } = await window.sbClient
-        .from("distribution_settings")
-        .select("label")
-        .eq("id", 1)
+        .from("current_distribution_public")
+        .select("id,name")
         .maybeSingle();
-      if(distRow && distRow.label) distributionLabel = distRow.label;
+      if(distRow && distRow.name){
+        distributionLabel = distRow.name;
+        distributionRoundId = distRow.id;
+      }
     }
   }catch(e){
-    console.warn("Could not load Distribution Date, using fallback", e);
+    console.warn("Could not load current distribution, using fallback", e);
   }
   try{
     if(window.sbClient){
+      var insertRow = { funnel_step: "started", source: "web_form", distribution_event: distributionLabel };
+      if(distributionRoundId) insertRow.round_id = distributionRoundId;
       var { data, error } = await window.sbClient
         .from("sponsorships")
-        .insert({ funnel_step: "started", source: "web_form", distribution_event: distributionLabel })
+        .insert(insertRow)
         .select()
         .single();
       if(!error && data){
@@ -304,6 +309,48 @@ function loadLandingStats(){
     });
 }
 loadLandingStats();
+
+// "Next distribution day" banner — was a hardcoded date that went stale.
+// Pulls the real date from distribution_rounds via the same public view
+// used above (there's no separate distribution date setting -- one
+// unified list of Distributions, same one used for monthly pledges).
+// Updates both data-en/data-ar attributes, not just the visible text,
+// since setLang() re-reads those attributes on every language toggle --
+// setting textContent alone would get silently reverted to the old
+// placeholder the moment the user switches language. If no distribution
+// has a date set yet, leaves the existing placeholder alone rather than
+// showing a blank.
+var AR_MONTHS = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+var AR_DAYS = ["الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+var EASTERN_ARABIC_DIGITS = ["٠","١","٢","٣","٤","٥","٦","٧","٨","٩"];
+function toEasternArabicDigits(n){
+  return String(n).replace(/[0-9]/g, function(d){ return EASTERN_ARABIC_DIGITS[+d]; });
+}
+function loadDistributionDate(){
+  if(!window.sbClient) return;
+  window.sbClient
+    .from("current_distribution_public")
+    .select("distribution_date")
+    .maybeSingle()
+    .then(function(res){
+      if(res.error || !res.data || !res.data.distribution_date) return;
+      var d = new Date(res.data.distribution_date + "T00:00:00");
+      if(isNaN(d.getTime())) return;
+      var enText = d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+      var arText = AR_DAYS[d.getDay()] + "، " + toEasternArabicDigits(d.getDate()) + " " + AR_MONTHS[d.getMonth()] + " " + toEasternArabicDigits(d.getFullYear());
+      var el = document.getElementById("dist-date-text");
+      if(el){
+        el.setAttribute("data-en", enText);
+        el.setAttribute("data-ar", arText);
+        var currentLang = sessionStorage.getItem("faf_lang") || "en";
+        el.innerHTML = currentLang === "ar" ? arText : enText;
+      }
+    })
+    .catch(function(e){
+      console.warn("Could not load Distribution Date banner, keeping placeholder", e);
+    });
+}
+loadDistributionDate();
 </script>
 
 </body>
