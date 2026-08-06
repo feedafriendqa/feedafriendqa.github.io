@@ -381,6 +381,22 @@ select.edit-field{cursor:pointer;}
       </div>
 
       <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
+        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px;">📅 Distribution Date</div>
+        <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px;">Shown to the public on the sponsor page and used to label new sponsorships. Update this each cycle instead of the old hardcoded text.</div>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Label</label>
+            <input id="distribution-date-label" class="filter-btn" style="padding:8px 12px;min-width:220px;" placeholder="e.g. August 2026 Distribution">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Date (optional)</label>
+            <input id="distribution-date-input" type="date" class="filter-btn" style="padding:8px 12px;">
+          </div>
+          <button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="saveDistributionDate()">Save</button>
+        </div>
+      </div>
+
+      <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
         <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px;">📅 Monthly pledge rounds</div>
         <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;">
           <div>
@@ -407,7 +423,7 @@ select.edit-field{cursor:pointer;}
       </div>
 
       <div class="filters">
-        <label style="font-size:13px;font-weight:700;color:var(--muted);">Distribution:</label>
+        <label style="font-size:13px;font-weight:700;color:var(--muted);">Distribution Date:</label>
         <select id="distribution-filter-sp" class="filter-btn" style="padding:8px 12px;" onchange="renderSponsorshipCards()"></select>
       </div>
       <div id="sponsorships-loading" class="loading"><div class="spinner-lg"></div>Loading sponsorships…</div>
@@ -423,7 +439,7 @@ select.edit-field{cursor:pointer;}
 
       <div id="payment-summary" style="margin-bottom:20px;"></div>
       <div class="filters">
-        <label style="font-size:13px;font-weight:700;color:var(--muted);">Distribution:</label>
+        <label style="font-size:13px;font-weight:700;color:var(--muted);">Distribution Date:</label>
         <select id="distribution-filter" class="filter-btn" style="padding:8px 12px;" onchange="renderPaymentCards()"></select>
         <button class="btn-comment" style="background:white;color:var(--red);border:1.5px solid var(--red);" onclick="clearDistribution()">🗑 Clear this distribution</button>
       </div>
@@ -614,7 +630,46 @@ var currentApprovalFilter = 'pending';
 // Single source of truth for "which distribution are we on" — bump this
 // when the next cycle starts. New sponsorships created by the public
 // funnel are tagged with this same value (see Faf-FoodBox-Payment.html).
-var CURRENT_DISTRIBUTION = 'July 2026 Distribution';
+// Now sourced from distribution_settings (single shared row, publicly
+// readable) instead of a hardcoded string that used to go stale every
+// cycle. loadDistributionDate() populates this on page load; the variable
+// name is kept internally to avoid touching every call site below.
+var CURRENT_DISTRIBUTION = 'Distribution Date';
+var CURRENT_DISTRIBUTION_DATE = null;
+
+function loadDistributionDate() {
+  return apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/distribution_settings?select=label,distribution_date&id=eq.1', { headers: headers });
+  }).then(function(r) { return r.ok ? r.json() : []; }).then(function(rows) {
+    if (rows && rows[0]) {
+      CURRENT_DISTRIBUTION = rows[0].label || CURRENT_DISTRIBUTION;
+      CURRENT_DISTRIBUTION_DATE = rows[0].distribution_date || null;
+    }
+    var labelEl = document.getElementById('distribution-date-label');
+    var dateEl = document.getElementById('distribution-date-input');
+    if (labelEl) labelEl.value = CURRENT_DISTRIBUTION;
+    if (dateEl) dateEl.value = CURRENT_DISTRIBUTION_DATE || '';
+  }).catch(function(){});
+}
+
+function saveDistributionDate() {
+  var label = document.getElementById('distribution-date-label').value.trim();
+  var dateVal = document.getElementById('distribution-date-input').value || null;
+  if (!label) { alert('Please enter a label, e.g. "August 2026 Distribution".'); return; }
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/distribution_settings?id=eq.1', {
+      method: 'PATCH', headers: headers,
+      body: JSON.stringify({ label: label, distribution_date: dateVal, updated_at: new Date().toISOString() })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('status ' + r.status);
+    CURRENT_DISTRIBUTION = label;
+    CURRENT_DISTRIBUTION_DATE = dateVal;
+    alert('Distribution Date updated.');
+    populateDistributionFilter();
+    refreshSponsorshipViews();
+  }).catch(function(e) { alert('Could not save: ' + e.message); });
+}
 var myRole = 'admin';
 var myLanguages = null;
 var myName = null;
@@ -741,6 +796,8 @@ async function handleAdminSession(session) {
   document.getElementById('my-cases-toggle').style.display = (myRole === 'super_admin') ? 'inline-block' : 'none';
   document.getElementById('view-switcher').style.display = (myRole === 'super_admin') ? 'flex' : 'none';
   myCasesOnly = (myRole !== 'super_admin');
+
+  loadDistributionDate();
 
   // Lightweight background check so the Approvals nav button shows a
   // pending-count badge the moment you log in, without paying the cost
@@ -2309,7 +2366,7 @@ function openSpEditModal(spId) {
     : '<span style="color:var(--muted);font-size:12px;">No proof uploaded yet</span>';
   var body = '<h3 style="margin:0 0 14px;">Edit sponsorship</h3>';
   body += di('Reference number', sf('spe-ref_no', sp.ref_no));
-  body += di('Distribution event', sf('spe-distribution_event', sp.distribution_event || CURRENT_DISTRIBUTION));
+  body += di('Distribution Date', sf('spe-distribution_event', sp.distribution_event || CURRENT_DISTRIBUTION));
   body += di('Sponsor name', sf('spe-sponsor_name', sp.sponsor_name));
   body += di('WhatsApp', sf('spe-whatsapp', sp.whatsapp));
   body += di('Email', sf('spe-email', sp.email));
