@@ -186,11 +186,11 @@ html[dir="rtl"] .page-footer{flex-direction:row-reverse;}
         <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/></svg></span>
         <span data-en="Home" data-ar="الرئيسية">Home</span>
       </a>
-      <a href="#">
+      <a href="share-care-browse-items.html">
         <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
         <span data-en="Browse Items" data-ar="تصفح الأغراض">Browse Items</span>
       </a>
-      <a href="#">
+      <a href="share-care-post-item.html">
         <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span data-en="Post an Item" data-ar="أضف غرضاً">Post an Item</span>
       </a>
@@ -198,9 +198,13 @@ html[dir="rtl"] .page-footer{flex-direction:row-reverse;}
         <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
         <span data-en="My Chats" data-ar="محادثاتي">My Chats</span>
       </a>
-      <a href="#">
+      <a href="share-care-my-account.html">
         <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg></span>
-        <span data-en="My Profile" data-ar="ملفي الشخصي">My Profile</span>
+        <span data-en="My Account" data-ar="حسابي">My Account</span>
+      </a>
+      <a href="share-care-login.html" id="authNavLink">
+        <span class="icon" id="authNavIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span data-en="Log In / Register" data-ar="تسجيل الدخول / إنشاء حساب" id="authNavText">Log In / Register</span>
       </a>
       <hr>
       <a href="https://connect.feedafriend.org">
@@ -215,12 +219,12 @@ html[dir="rtl"] .page-footer{flex-direction:row-reverse;}
     <p class="tagline" data-en-html="Give what you no longer need.&lt;br&gt;Help someone who truly does." data-ar-html="أعطِ ما لم تعد تحتاجه.&lt;br&gt;ساعد من يحتاجه فعلاً.">Give what you no longer need.<br>Help someone who truly does.</p>
 
     <div class="action-row">
-      <div class="search-bar">
+      <a class="search-bar" href="share-care-browse-items.html" style="cursor:pointer;">
         <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
         <span class="stext" data-en="Search items" data-ar="ابحث عن أغراض">Search items</span>
         <span class="search-filter"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg></span></span>
-      </div>
-      <a class="btn-post" href="#">
+      </a>
+      <a class="btn-post" href="share-care-post-item.html">
         <span class="plus-badge"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span></span>
         <span data-en="Post an Item" data-ar="أضف غرضاً">Post an Item</span>
       </a>
@@ -318,7 +322,7 @@ html[dir="rtl"] .page-footer{flex-direction:row-reverse;}
   <section class="posts-section">
     <div class="posts-head">
       <h2 data-en="Latest Posts" data-ar="أحدث الإعلانات">Latest Posts</h2>
-      <a href="#" data-en="View all →" data-ar="عرض الكل ←">View all →</a>
+      <a href="share-care-browse-items.html" data-en="View all →" data-ar="عرض الكل ←">View all →</a>
     </div>
     <div class="posts-scroll">
       <div class="post-card">
@@ -410,6 +414,45 @@ html[dir="rtl"] .page-footer{flex-direction:row-reverse;}
   document.addEventListener('click', (e) => {
     if (!navMenu.contains(e.target) && e.target !== menuBtn) navMenu.classList.remove('open');
   });
+
+  // Reflect signed-in state in the nav menu.
+  (function(){
+    const SUPABASE_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
+    function checkAuth(){
+      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      sb.auth.getSession().then(({ data: { session } }) => {
+        if (!session) return;
+        const authLink = document.getElementById('authNavLink');
+        const authText = document.getElementById('authNavText');
+        const authIcon = document.getElementById('authNavIcon');
+        const currentLang = document.documentElement.getAttribute('lang') === 'ar' ? 'ar' : 'en';
+        authLink.removeAttribute('href');
+        authLink.style.cursor = 'pointer';
+        authText.setAttribute('data-en', 'Log Out');
+        authText.setAttribute('data-ar', 'تسجيل الخروج');
+        authText.textContent = currentLang === 'ar' ? 'تسجيل الخروج' : 'Log Out';
+        authIcon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>';
+        authLink.addEventListener('click', async () => {
+          await sb.auth.signOut();
+          window.location.reload();
+        });
+      });
+    }
+    if (window.supabase) { checkAuth(); }
+    else {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+      script.onload = checkAuth;
+      script.onerror = function(){
+        const s2 = document.createElement('script');
+        s2.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+        s2.onload = checkAuth;
+        document.head.appendChild(s2);
+      };
+      document.head.appendChild(script);
+    }
+  })();
 </script>
 </body>
 </html>
