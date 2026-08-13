@@ -64,17 +64,26 @@ svg{display:block;}
 .tagline{font-size:15px;line-height:1.6;max-width:380px;margin:0 auto 40px;opacity:.94;font-weight:600;
   text-shadow:0 2px 12px rgba(0,0,0,.45);}
 
-.action-row{display:flex;gap:9px;align-items:stretch;width:100%;max-width:480px;}
+.action-row{display:flex;gap:9px;align-items:stretch;width:100%;max-width:480px;position:relative;}
 .search-bar{
   flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:8px;
   background:rgba(255,255,255,.96);border-radius:999px;padding:0 6px 0 14px;color:#4b4f57;height:48px;
 }
 .search-bar .icon{width:17px;height:17px;color:#08752F;flex-shrink:0;}
-.search-bar span.stext{flex:1;min-width:0;text-align:left;font-size:13.5px;font-weight:700;color:#71757d;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.search-bar input.stext{flex:1;min-width:0;text-align:left;font-size:13.5px;font-weight:700;color:#2B2F2C;
+  border:none;outline:none;background:none;padding:0;font-family:'Nunito Sans',sans-serif;}
+.search-bar input.stext::placeholder{color:#71757d;font-weight:700;}
 .search-filter{width:30px;height:30px;border-radius:50%;background:#F1F1F4;display:flex;align-items:center;
-  justify-content:center;flex-shrink:0;}
+  justify-content:center;flex-shrink:0;border:none;flex-shrink:0;}
+.search-filter.active{background:var(--green);}
+.search-filter.active .icon{color:#fff;}
 .search-filter .icon{width:14px;height:14px;color:var(--accent-dark);}
+.hero-filter-panel{position:absolute;top:56px;left:0;right:0;background:#fff;border-radius:16px;padding:10px;
+  display:none;flex-wrap:wrap;gap:7px;box-shadow:0 14px 34px rgba(20,30,15,.18);z-index:5;}
+.hero-filter-panel.open{display:flex;}
+.hero-filter-chip{border:1.5px solid var(--line);border-radius:999px;padding:7px 13px;font-size:12px;font-weight:700;
+  color:var(--muted);background:#fff;white-space:nowrap;}
+.hero-filter-chip.active{border-color:var(--green);background:#E7F3EB;color:var(--green-dark);}
 .btn-post{
   flex:0 0 auto;display:flex;align-items:center;gap:8px;background:var(--accent);color:#fff;font-weight:800;
   font-size:13.5px;padding:0 16px 0 5px;border-radius:999px;white-space:nowrap;height:48px;
@@ -84,12 +93,13 @@ svg{display:block;}
 
 @media(min-width:600px){
   .tagline{font-size:16px;max-width:440px;}
-  .search-bar span.stext{font-size:14.5px;}
+  .search-bar input.stext{font-size:14.5px;}
 }
 
 /* RTL */
 html[dir="rtl"] .search-bar{flex-direction:row-reverse;padding:0 14px 0 6px;}
-html[dir="rtl"] .search-bar span.stext{text-align:right;}
+html[dir="rtl"] .search-bar input.stext{text-align:right;}
+html[dir="rtl"] .hero-filter-panel{right:0;left:0;}
 html[dir="rtl"] .nav-menu{right:auto;left:20px;}
 html[dir="rtl"] .nav-menu a{flex-direction:row-reverse;}
 html[dir="rtl"] .tb-right{flex-direction:row-reverse;}
@@ -219,15 +229,26 @@ html[dir="rtl"] .page-footer{flex-direction:row-reverse;}
     <p class="tagline" data-en-html="Give what you no longer need.&lt;br&gt;Help someone who truly does." data-ar-html="أعطِ ما لم تعد تحتاجه.&lt;br&gt;ساعد من يحتاجه فعلاً.">Give what you no longer need.<br>Help someone who truly does.</p>
 
     <div class="action-row">
-      <a class="search-bar" href="share-care-browse-items.html" style="cursor:pointer;">
+      <form class="search-bar" id="heroSearchForm">
         <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
-        <span class="stext" data-en="Search items" data-ar="ابحث عن أغراض">Search items</span>
-        <span class="search-filter"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg></span></span>
-      </a>
+        <input type="text" class="stext" id="heroSearchInput" data-en-placeholder="Search items" data-ar-placeholder="ابحث عن أغراض" placeholder="Search items">
+        <button type="button" class="search-filter" id="heroFilterBtn" aria-label="Filter by category">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg></span>
+        </button>
+      </form>
       <a class="btn-post" href="share-care-post-item.html">
         <span class="plus-badge"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span></span>
         <span data-en="Post an Item" data-ar="أضف غرضاً">Post an Item</span>
       </a>
+      <div class="hero-filter-panel" id="heroFilterPanel">
+        <button type="button" class="hero-filter-chip active" data-value="all" data-en="All" data-ar="الكل">All</button>
+        <button type="button" class="hero-filter-chip" data-value="baby" data-en="Baby &amp; Kids" data-ar="أطفال ورضّع">Baby &amp; Kids</button>
+        <button type="button" class="hero-filter-chip" data-value="clothing" data-en="Clothing" data-ar="ملابس">Clothing</button>
+        <button type="button" class="hero-filter-chip" data-value="furniture" data-en="Furniture" data-ar="أثاث">Furniture</button>
+        <button type="button" class="hero-filter-chip" data-value="home" data-en="Home &amp; Living" data-ar="المنزل">Home &amp; Living</button>
+        <button type="button" class="hero-filter-chip" data-value="toys" data-en="Toys &amp; Books" data-ar="ألعاب وكتب">Toys &amp; Books</button>
+        <button type="button" class="hero-filter-chip" data-value="other" data-en="Other" data-ar="أخرى">Other</button>
+      </div>
     </div>
   </div>
 </section>
@@ -399,6 +420,8 @@ html[dir="rtl"] .page-footer{flex-direction:row-reverse;}
     });
     const toggleBtn = document.getElementById('langToggleBtn');
     if (toggleBtn) toggleBtn.textContent = lang === 'ar' ? toggleBtn.getAttribute('data-ar') : toggleBtn.getAttribute('data-en');
+    const heroInput = document.getElementById('heroSearchInput');
+    if (heroInput) heroInput.placeholder = lang === 'ar' ? heroInput.getAttribute('data-ar-placeholder') : heroInput.getAttribute('data-en-placeholder');
   }
   setLang('en');
   document.getElementById('langToggleBtn').addEventListener('click', () => {
@@ -413,6 +436,42 @@ html[dir="rtl"] .page-footer{flex-direction:row-reverse;}
   });
   document.addEventListener('click', (e) => {
     if (!navMenu.contains(e.target) && e.target !== menuBtn) navMenu.classList.remove('open');
+  });
+
+  // Hero search: typing + Enter (or the search icon) goes to Browse Items with the query pre-applied.
+  let heroCategory = 'all';
+  const heroSearchForm = document.getElementById('heroSearchForm');
+  const heroFilterBtn = document.getElementById('heroFilterBtn');
+  const heroFilterPanel = document.getElementById('heroFilterPanel');
+
+  function goToBrowseItems(){
+    const q = document.getElementById('heroSearchInput').value.trim();
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (heroCategory !== 'all') params.set('category', heroCategory);
+    const qs = params.toString();
+    window.location.href = 'share-care-browse-items.html' + (qs ? '?' + qs : '');
+  }
+  heroSearchForm.addEventListener('submit', (e) => { e.preventDefault(); goToBrowseItems(); });
+
+  heroFilterBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    heroFilterPanel.classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (!heroFilterPanel.contains(e.target) && e.target !== heroFilterBtn && !heroFilterBtn.contains(e.target)) {
+      heroFilterPanel.classList.remove('open');
+    }
+  });
+  document.querySelectorAll('.hero-filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.hero-filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      heroCategory = chip.getAttribute('data-value');
+      heroFilterBtn.classList.toggle('active', heroCategory !== 'all');
+      heroFilterPanel.classList.remove('open');
+      goToBrowseItems();
+    });
   });
 
   // Reflect signed-in state in the nav menu.
