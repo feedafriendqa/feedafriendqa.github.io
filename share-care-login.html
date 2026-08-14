@@ -145,8 +145,8 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
 
     <div class="auth-panel show" id="loginPanel">
       <div class="field-group">
-        <label class="field-label" data-en="Email" data-ar="البريد الإلكتروني">Email</label>
-        <input class="text-input" type="email" id="loginEmail" required>
+        <label class="field-label" data-en="Phone number" data-ar="رقم الهاتف">Phone number</label>
+        <input class="text-input" type="tel" id="loginPhone" placeholder="+974 5X XX XX XX" required>
       </div>
       <div class="field-group" style="margin-bottom:0;">
         <label class="field-label" data-en="Password" data-ar="كلمة المرور">Password</label>
@@ -157,36 +157,8 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     </div>
 
     <div class="auth-panel" id="registerPanel">
-      <div class="field-group">
-        <label class="field-label" data-en="Full name" data-ar="الاسم الكامل">Full name</label>
-        <input class="text-input" type="text" id="regName" required>
-      </div>
-      <div class="field-group">
-        <label class="field-label" data-en="Choose a username" data-ar="اختر اسم مستخدم">Choose a username</label>
-        <input class="text-input" type="text" id="regUsername" autocapitalize="off" autocomplete="off" required>
-        <span class="field-hint" id="regUsernameHint"></span>
-      </div>
-      <div class="field-group">
-        <label class="field-label" data-en="Email" data-ar="البريد الإلكتروني">Email</label>
-        <input class="text-input" type="email" id="regEmail" required>
-      </div>
-      <div class="field-group">
-        <label class="field-label" data-en="Password" data-ar="كلمة المرور">Password</label>
-        <input class="text-input" type="password" id="regPassword" required>
-      </div>
-      <div class="field-group">
-        <label class="field-label" data-en="WhatsApp number" data-ar="رقم الواتساب">WhatsApp number</label>
-        <input class="text-input" type="tel" id="regPhone" placeholder="+974 5X XX XX XX" required>
-      </div>
-      <div class="field-group" style="margin-bottom:0;">
-        <label class="field-label" data-en="Location" data-ar="الموقع">Location</label>
-        <div class="autocomplete-wrap">
-          <input class="text-input" type="text" id="regLocation" autocomplete="off" placeholder="Start typing your area..." required>
-          <div class="autocomplete-list" id="regLocationList"></div>
-        </div>
-      </div>
-      <span class="auth-error" id="registerError"></span>
-      <button type="button" class="auth-submit-btn" id="registerBtn" data-en="Create Account" data-ar="إنشاء الحساب">Create Account</button>
+      <p style="font-size:13.5px;color:var(--muted);line-height:1.6;margin:0 0 18px;" data-en="Creating an account takes a minute — you'll choose whether you want to give, receive, or both, right on the same page." data-ar="إنشاء الحساب يستغرق دقيقة — ستختار ما إذا كنت ترغب في العطاء أو الاستلام أو كليهما، في نفس الصفحة.">Creating an account takes a minute — you'll choose whether you want to give, receive, or both, right on the same page.</p>
+      <a id="goToCreateAccount" class="auth-submit-btn" style="display:block;text-align:center;text-decoration:none;" data-en="Create Account" data-ar="إنشاء الحساب">Create Account</a>
     </div>
   </div>
   <p class="redirect-note" id="redirectNote"></p>
@@ -205,6 +177,13 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
   function initApp(){
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let currentLang = 'en';
+
+  // Must derive the auth email from the phone number identically to how
+  // share-care-create-account.html does it, or logins won't match up.
+  function phoneToAuthEmail(phone) {
+    const digits = (phone || '').replace(/[^0-9]/g, '');
+    return `p${digits}@sharecare.local`;
+  }
 
   // Where to send the person once they're signed in — e.g. login.html?redirect=post-item.html
   const params = new URLSearchParams(window.location.search);
@@ -253,116 +232,24 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
   })();
 
   document.getElementById('loginBtn').addEventListener('click', async () => {
-    const email = document.getElementById('loginEmail').value.trim();
+    const phone = document.getElementById('loginPhone').value.trim();
     const password = document.getElementById('loginPassword').value;
     const errEl = document.getElementById('loginError');
     errEl.style.display = 'none';
     const btn = document.getElementById('loginBtn');
     btn.disabled = true;
-    const { error } = await sb.auth.signInWithPassword({ email, password });
+    const authEmail = phoneToAuthEmail(phone);
+    const { error } = await sb.auth.signInWithPassword({ email: authEmail, password });
     btn.disabled = false;
     if (error) {
-      errEl.textContent = currentLang === 'ar' ? 'بيانات تسجيل الدخول غير صحيحة.' : 'Incorrect email or password.';
+      errEl.textContent = currentLang === 'ar' ? 'رقم الهاتف أو كلمة المرور غير صحيحة.' : 'Incorrect phone number or password.';
       errEl.style.display = 'block';
       return;
     }
     window.location.href = redirectTo;
   });
 
-  let regUsernameAvailable = false;
-  let regUsernameTimer = null;
-  document.getElementById('regUsername').addEventListener('input', (e) => {
-    const val = e.target.value.trim();
-    const hint = document.getElementById('regUsernameHint');
-    regUsernameAvailable = false;
-    clearTimeout(regUsernameTimer);
-    if (val.length < 3) { hint.textContent = ''; return; }
-    hint.className = 'field-hint';
-    hint.textContent = currentLang === 'ar' ? 'جارٍ التحقق...' : 'Checking availability...';
-    regUsernameTimer = setTimeout(async () => {
-      const { data } = await sb.from('share_care_account_username_check').select('username').eq('username', val).maybeSingle();
-      if (data) {
-        hint.className = 'field-hint error';
-        hint.textContent = currentLang === 'ar' ? 'مُستخدم بالفعل — جرّب آخر.' : 'Already taken — try another.';
-        regUsernameAvailable = false;
-      } else {
-        hint.className = 'field-hint ok';
-        hint.textContent = currentLang === 'ar' ? 'متاح' : 'Available';
-        regUsernameAvailable = true;
-      }
-    }, 500);
-  });
-
-  let regAllLocations = [];
-  (async () => {
-    const { data } = await sb.from('distribution_locations').select('name').eq('active', true).order('sort_order');
-    if (data) regAllLocations = data.map(d => d.name);
-  })();
-  const regLocInput = document.getElementById('regLocation');
-  const regLocList = document.getElementById('regLocationList');
-  regLocInput.addEventListener('input', () => {
-    const q = regLocInput.value.trim().toLowerCase();
-    if (!q) { regLocList.classList.remove('show'); return; }
-    const matches = regAllLocations.filter(n => n.toLowerCase().includes(q)).slice(0, 8);
-    regLocList.innerHTML = matches.map(n => `<div class="autocomplete-item" data-val="${n}">${n}</div>`).join('');
-    regLocList.classList.toggle('show', matches.length > 0);
-    regLocList.querySelectorAll('.autocomplete-item').forEach(item => {
-      item.addEventListener('click', () => { regLocInput.value = item.getAttribute('data-val'); regLocList.classList.remove('show'); });
-    });
-  });
-  document.addEventListener('click', (e) => { if (!regLocInput.contains(e.target) && !regLocList.contains(e.target)) regLocList.classList.remove('show'); });
-
-  document.getElementById('registerBtn').addEventListener('click', async () => {
-    const fullName = document.getElementById('regName').value.trim();
-    const username = document.getElementById('regUsername').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const password = document.getElementById('regPassword').value;
-    const phone = document.getElementById('regPhone').value.trim();
-    const location = document.getElementById('regLocation').value.trim();
-    const errEl = document.getElementById('registerError');
-    errEl.style.display = 'none';
-    errEl.style.color = '#B3382A';
-
-    if (!fullName || !username || !regUsernameAvailable || !email || !password || !phone || !location) {
-      errEl.textContent = currentLang === 'ar' ? 'يرجى إكمال جميع الحقول باسم مستخدم متاح.' : 'Please complete all fields with an available username.';
-      errEl.style.display = 'block';
-      return;
-    }
-
-    const btn = document.getElementById('registerBtn');
-    btn.disabled = true;
-    const { data: signUpData, error: signUpError } = await sb.auth.signUp({ email, password });
-    if (signUpError) {
-      btn.disabled = false;
-      errEl.textContent = signUpError.message;
-      errEl.style.display = 'block';
-      return;
-    }
-
-    if (!signUpData.session) {
-      btn.disabled = false;
-      errEl.style.color = 'var(--green-dark)';
-      errEl.textContent = currentLang === 'ar' ? 'تحقق من بريدك الإلكتروني لتأكيد الحساب، ثم سجّل الدخول.' : 'Check your email to confirm your account, then log in.';
-      errEl.style.display = 'block';
-      return;
-    }
-
-    const { error: insertError } = await sb.from('share_care_accounts').insert({
-      user_id: signUpData.user.id,
-      full_name: fullName,
-      username: username,
-      phone: phone,
-      email: email,
-      location: location
-    });
-    btn.disabled = false;
-    if (insertError) {
-      errEl.textContent = insertError.message;
-      errEl.style.display = 'block';
-      return;
-    }
-    window.location.href = redirectTo;
-  });
+  document.getElementById('goToCreateAccount').setAttribute('href', 'share-care-create-account.html?redirect=' + encodeURIComponent(redirectTo));
   }
 
   if (window.supabase) { initApp(); }
