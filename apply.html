@@ -25,8 +25,8 @@ body.ar{direction:rtl;}
 
 /* HERO */
 .hero{text-align:center;padding:20px 20px 16px;color:white;width:100%;max-width:480px;}
-.hero-logo{width:76px;height:76px;background:white;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.2);}
-.hero-logo img{width:60px;height:60px;object-fit:contain;}
+.hero-logo{width:84px;height:84px;background:white;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.2);}
+.hero-logo img{width:80px;height:80px;object-fit:cover;}
 .hero h1{font-size:21px;font-weight:900;margin-bottom:3px;}
 .hero p{font-size:13px;opacity:0.75;}
 
@@ -253,9 +253,6 @@ body.ar{direction:rtl;}
     <div class="screen-title" id="status-greeting"></div>
     <div class="screen-sub" id="status-sub-text"></div>
 
-    <!-- Driven independently of the status pipeline above (last_delivered_at /
-         thanked_at / upcoming_trip_date) so it can't interfere with the
-         approved/archived reapply logic, whatever shape that ends up in. -->
     <div class="status-card" id="upcoming-card" style="display:none;background:#FFF8E6">
       <div class="status-icon">🚚</div>
       <div class="status-body">
@@ -561,13 +558,6 @@ function setLang(lang) {
   document.getElementById('inp-wa').placeholder = lang === 'ar' ? '+٩٧٤ ٥xxx xxxx' : '+974 5xxx xxxx';
   refreshLegacyToggleText();
 
-  // The static labels above are all the setLang() loop ever touched — none
-  // of the actual status content (greeting, title, message) was, since
-  // that's rendered dynamically by showStatusScreen() rather than coming
-  // from the T dictionary. Re-running it from the cached currentApp fixes
-  // that, but only when the status screen is the one actually showing —
-  // otherwise switching language from, say, the home screen would force a
-  // navigation nobody asked for.
   if (currentApp && document.getElementById('screen-status').classList.contains('active')) {
     showStatusScreen(currentApp.status || 'approved', currentApp, !!currentApp.ok);
   }
@@ -577,6 +567,14 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Converts Arabic-Indic digits (٠-٩) to Western digits (0-9). Used for both
+// the QID field and the WhatsApp number field, since either can be typed
+// using the Arabic numeral keyboard on the Arabic version of this page, and
+// the backend lookup only matches on Western digits.
+function toWesternDigits(str) {
+  return (str || '').replace(/[٠-٩]/g, function(d) { return d.charCodeAt(0) - 0x0660; });
 }
 
 // ── VERIFY ────────────────────────────────────────────────────────
@@ -600,8 +598,8 @@ function refreshLegacyToggleText() {
 
 async function doVerify() {
   if (legacyMode) return doVerifyLegacy();
-  var qid = document.getElementById('inp-qid').value.trim().replace(/[٠-٩]/g, function(d) { return d.charCodeAt(0) - 0x0660; });
-  var wa = document.getElementById('inp-wa').value.trim();
+  var qid = toWesternDigits(document.getElementById('inp-qid').value.trim());
+  var wa = toWesternDigits(document.getElementById('inp-wa').value.trim());
   var errEl = document.getElementById('verify-err');
   var btn = document.getElementById('verify-btn');
   var ar = currentLang === 'ar';
@@ -640,16 +638,12 @@ async function doVerify() {
         errEl.textContent = ar ? 'رقم الواتساب غير مطابق لسجلاتنا.' : 'WhatsApp number does not match our records.';
         errEl.classList.add('show'); return;
       }
-      // Has a status but can't reapply — show status screen anyway
       currentApp = data;
       showStatusScreen(data.status || error.replace('status_', ''), data, false);
       return;
     }
 
     currentApp = data;
-    // long_term's own STATUS_CONTENT message already says "request your
-    // next box below" — canReapply needs to actually match that, not just
-    // fire for 'approved'.
     showStatusScreen(data.status || 'approved', data, data.status === 'approved' || data.status === 'long_term');
 
   } catch(e) {
@@ -662,7 +656,7 @@ async function doVerify() {
 }
 
 async function doVerifyLegacy() {
-  var wa = document.getElementById('inp-wa').value.trim();
+  var wa = toWesternDigits(document.getElementById('inp-wa').value.trim());
   var pw = document.getElementById('inp-password').value.trim();
   var errEl = document.getElementById('verify-err');
   var btn = document.getElementById('verify-btn');
@@ -886,9 +880,6 @@ function showStatusScreen(status, data, canReapply) {
   document.getElementById('status-greeting').textContent = ar ? ('أهلاً ' + name + '!') : ('Hello, ' + name + '!');
   document.getElementById('status-sub-text').textContent = ar ? 'هذه حالة طلبك الحالية.' : 'Here is your current application status.';
 
-  // Driven by last_delivered_at/thanked_at/upcoming_trip_date, independent
-  // of the status pipeline above — so this can't break the existing
-  // approved/archived/reapply logic no matter what shape that's in.
   var upcomingCard = document.getElementById('upcoming-card');
   var deliveredCard = document.getElementById('delivered-card');
   if (data.last_delivered_at) {
@@ -914,16 +905,12 @@ function showStatusScreen(status, data, canReapply) {
     deliveredCard.style.display = 'none';
   }
 
-  // Status card
   var card = document.getElementById('status-card');
   card.className = 'status-card ' + status;
   document.getElementById('status-icon').textContent = content.icon;
   document.getElementById('status-title').textContent = langContent.title;
   document.getElementById('status-msg').textContent = langContent.msg;
 
-  // Document upload — only relevant before a decision has been made.
-  // Independent of canReapply, since new/pending applicants are exactly
-  // the ones who can't reapply yet.
   var pendingDocsSection = document.getElementById('pending-docs-section');
   if (data.status === 'new' || data.status === 'pending') {
     pendingDocsSection.style.display = 'block';
@@ -940,7 +927,6 @@ function showStatusScreen(status, data, canReapply) {
     pendingDocsSection.style.display = 'none';
   }
 
-  // Allowance bar (show if has boxes data)
   var allowanceWrap = document.getElementById('allowance-wrap');
   if (data.boxes_received !== undefined && data.max_boxes) {
     allowanceWrap.style.display = 'block';
@@ -956,7 +942,6 @@ function showStatusScreen(status, data, canReapply) {
     allowanceWrap.style.display = 'none';
   }
 
-  // Reapply section (only if approved and within allowance)
   var reapplySection = document.getElementById('reapply-section');
   if (canReapply) {
     reapplySection.style.display = 'block';
@@ -981,12 +966,6 @@ function showStatusScreen(status, data, canReapply) {
     document.getElementById('reapply-plate-label').textContent = ar ? 'اضغط لرفع لوحة عنوانك الجديدة' : 'Tap to upload your new blue address plate';
     document.getElementById('lbl-new-addr').textContent = ar ? 'العنوان الجديد' : 'New address';
 
-    // Each question only appears when it's actually relevant — asking
-    // about diapers/formula/pregnancy unconditionally on every reapply,
-    // regardless of whether it could possibly apply, is what this
-    // replaces. doReapply() below checks these same flags again before
-    // deciding what to send, so an ineligible/hidden question can never
-    // accidentally overwrite a real existing answer with a blank one.
     diaperQuestionVisible = !!(data.already_has_diapers && data.diaper_eligible_child);
     formulaQuestionVisible = !!(!data.already_has_formula && data.formula_eligible_baby);
     pregnancyQuestionVisible = !!data.adult_female_present;
@@ -1035,10 +1014,6 @@ var diaperChoice = null; // 'yes' | 'no' | null
 var diaperSizeVal = null;
 var formulaChoice = null; // 'yes' | 'no' | null
 var pregnantChoice = null; // 'yes' | 'no' | null
-// Set by showStatusScreen each time it runs — doReapply() reads these to
-// decide whether to include a field in the update at all, so a question
-// that was never shown (ineligible) can't send a value that clears a real
-// existing answer.
 var diaperQuestionVisible = false;
 var formulaQuestionVisible = false;
 var pregnancyQuestionVisible = false;
@@ -1129,7 +1104,7 @@ function resetLocationChoice() {
 }
 
 function resetDiaperFormulaChoice(existingDiaperSize, existingFormula) {
-  diaperChoice = null; // null = still need diapers (default whenever this question is shown at all); 'no' = opted out via checkbox
+  diaperChoice = null;
   diaperSizeVal = null;
   formulaChoice = null;
   document.getElementById('chk-no-diapers').checked = false;
@@ -1151,9 +1126,6 @@ function resetDiaperFormulaChoice(existingDiaperSize, existingFormula) {
   if (existingDiaperSize && DIAPER_SIZES.indexOf(existingDiaperSize) !== -1) {
     diaperSizeVal = existingDiaperSize;
   }
-  // No pre-fill needed for formula — this question is only ever shown when
-  // already_has_formula is false (that's the eligibility gate itself), so
-  // there's never an existing value to start from; it's always a fresh ask.
 }
 
 function selectReapplyDiaper(pill) {
@@ -1163,11 +1135,6 @@ function selectReapplyDiaper(pill) {
   updateReapplyBtn();
 }
 
-// Replaces the old yes/no "does anyone need diapers" toggle — eligibility
-// already confirms they do (that's the only reason this question is
-// visible at all), so the real question is just the size, with this as a
-// lightweight escape hatch for "actually, not anymore" (e.g. potty-trained
-// early, despite still being under 4).
 function toggleNoDiapers() {
   var optedOut = document.getElementById('chk-no-diapers').checked;
   diaperChoice = optedOut ? 'no' : null;
@@ -1197,8 +1164,6 @@ function resetPregnancyChoice(existingIsPregnant) {
   document.getElementById('pregnant-no-btn').classList.remove('selected');
   document.getElementById('due-date-block').style.display = 'none';
   document.getElementById('inp-due-date').value = '';
-  // Pre-fill from whatever's already on file, same convention as diaper
-  // size / formula brand above — they can change it either way.
   if (existingIsPregnant) choosePregnant(true);
 }
 
@@ -1271,10 +1236,6 @@ function handleReapplyPlate(input) {
   });
 }
 
-// Reuses the same generic upload_document action the original application
-// form uses for salary proof — rent proof is new (doc_key 'rent_proof'
-// writes to rent_proof_path, added alongside this feature), but the upload
-// mechanism itself didn't need anything new built for it.
 function handlePendingDoc(input, docKey) {
   if (!input.files || !input.files[0]) return;
   var file = input.files[0];
@@ -1328,12 +1289,6 @@ async function doReapply() {
   document.getElementById('reapply-btn-text').textContent = ar ? 'جاري التأكيد...' : 'Confirming...';
   errEl.classList.remove('show');
 
-  // Each field is only included when its question was actually shown and
-  // eligible — omitted entirely otherwise, never sent as null/cleared, so
-  // a hidden/ineligible question can't wipe a real existing answer.
-  // (diaperChoice is never literally 'yes' in this model — null means
-  // "still need it, size below applies"; 'no' means opted out via the
-  // checkbox — so the value sent has to be driven off that, not a 'yes' check.)
   var extrasPayload = { type: 'update_reapply_extras', application_id: currentApp.id };
   if (diaperQuestionVisible) {
     extrasPayload.diaper_size = diaperChoice === 'no' ? 'Not needed' : diaperSizeVal;
@@ -1346,8 +1301,6 @@ async function doReapply() {
     extrasPayload.due_date = pregnantChoice === 'yes' ? (document.getElementById('inp-due-date').value || null) : null;
   }
 
-  // Fire-and-forget: this is supplementary info, not eligibility-critical,
-  // so it shouldn't block or risk the actual box confirmation below.
   fetch(EDGE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
@@ -1394,10 +1347,11 @@ async function doReapply() {
   }
 }
 
-// Arabic numerals
+// Arabic numerals — live-convert as the user types, for both the QID field
+// and the WhatsApp number field.
 document.addEventListener('input', function(e) {
-  if (e.target.id === 'inp-qid') {
-    e.target.value = e.target.value.replace(/[٠-٩]/g, function(d) { return d.charCodeAt(0) - 0x0660; });
+  if (e.target.id === 'inp-qid' || e.target.id === 'inp-wa') {
+    e.target.value = toWesternDigits(e.target.value);
   }
 });
 
