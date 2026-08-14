@@ -599,7 +599,8 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     let donationId = quotaInfo.today_donation_id;
     if (!donationId) {
       const { data: donation, error: donationError } = await sb.from('share_care_donations').insert({
-        giver_whatsapp: whatsapp
+        giver_whatsapp: whatsapp,
+        posted_by_user_id: session.user.id
       }).select('id').single();
       if (donationError) {
         submitBtn.disabled = false;
