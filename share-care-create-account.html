@@ -376,7 +376,7 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     <h2 data-en="Account created" data-ar="تم إنشاء الحساب">Account created</h2>
     <p id="confirmMessage" data-en="You're all set. You can now give or request an item." data-ar="أنت جاهز الآن. يمكنك الآن منح أو طلب غرض.">You're all set. You can now give or request an item.</p>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-      <a href="share-care-post-item.html" style="background:var(--green);color:#fff;font-weight:800;font-size:13.5px;padding:12px 20px;border-radius:999px;" data-en="Post an Item" data-ar="أضف غرضاً">Post an Item</a>
+      <a href="share-care-post-item.html" id="confirmPrimaryBtn" style="background:var(--green);color:#fff;font-weight:800;font-size:13.5px;padding:12px 20px;border-radius:999px;" data-en="Post an Item" data-ar="أضف غرضاً">Post an Item</a>
       <a href="share-care-browse-items.html" id="confirmSecondaryBtn" style="background:var(--accent);color:#fff;font-weight:800;font-size:13.5px;padding:12px 20px;border-radius:999px;" data-en="Browse Items" data-ar="تصفح الأغراض">Browse Items</a>
     </div>
   </div>
@@ -841,6 +841,33 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
         ? 'أنت جاهز الآن. تم إنشاء ملفك كمستفيد أيضاً — سنُبلغك عند إيجاد تبرع مناسب.'
         : "You're all set. Your receiver profile has been created too — we'll notify you when a suitable donation is found.";
     }
+
+    // Send them back to wherever they actually came from (e.g. Post an Item, if that's
+    // what triggered the login-gate → register handoff), instead of always parking on a
+    // generic screen. Falls back to a sensible label for unrecognized redirect targets.
+    const primaryBtn = document.getElementById('confirmPrimaryBtn');
+    primaryBtn.setAttribute('href', redirectTo);
+    const labelsByTarget = {
+      'share-care-post-item.html': { en: 'Post an Item', ar: 'أضف غرضاً' },
+      'share-care-browse-items.html': { en: 'Browse Items', ar: 'تصفح الأغراض' },
+      'share-care-my-account.html': { en: 'Go to My Account', ar: 'اذهب إلى حسابي' },
+      'share-care-receiver-profile.html': { en: 'Finish Receiver Details', ar: 'أكمل بيانات المستفيد' }
+    };
+    const label = labelsByTarget[redirectTo] || { en: 'Continue', ar: 'متابعة' };
+    primaryBtn.setAttribute('data-en', label.en);
+    primaryBtn.setAttribute('data-ar', label.ar);
+    primaryBtn.textContent = currentLang === 'ar' ? label.ar : label.en;
+
+    // If the redirect target already is Browse Items, swap the secondary button to
+    // My Account instead of showing the same destination twice.
+    if (redirectTo === 'share-care-browse-items.html') {
+      const secondaryBtn = document.getElementById('confirmSecondaryBtn');
+      secondaryBtn.setAttribute('href', 'share-care-my-account.html');
+      secondaryBtn.setAttribute('data-en', 'Go to My Account');
+      secondaryBtn.setAttribute('data-ar', 'اذهب إلى حسابي');
+      secondaryBtn.textContent = currentLang === 'ar' ? 'اذهب إلى حسابي' : 'Go to My Account';
+    }
+
     document.getElementById('confirmScreen').classList.add('show');
   });
   }
