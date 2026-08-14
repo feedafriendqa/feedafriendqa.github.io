@@ -48,12 +48,18 @@ header{display:flex;align-items:center;justify-content:space-between;padding:16p
 .photo-hero .caption{position:absolute;bottom:14px;left:20px;right:20px;}
 .photo-hero .eyebrow{font-size:10.5px;font-weight:800;letter-spacing:.14em;color:#fff;text-transform:uppercase;opacity:.9;}
 .photo-hero h1{font-size:22px;color:#fff;}
+html{scroll-behavior:smooth;}
+#formWrap{scroll-margin-top:20px;}
 
-.benefits{display:flex;flex-direction:column;gap:7px;padding:16px 20px 4px;max-width:640px;margin:0 auto;}
-.benefit-row{display:flex;gap:11px;align-items:center;background:var(--panel);border-radius:12px;padding:9px 12px;}
-.benefit-row .icon-wrap{width:30px;height:30px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.benefit-row .icon-wrap .icon{width:14px;height:14px;color:var(--green-dark);}
-.benefit-row p{margin:0;font-size:12.5px;font-weight:700;color:var(--charcoal);line-height:1.3;}
+.benefits{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:16px 20px 4px;max-width:640px;margin:0 auto;}
+.benefit-tile{background:var(--panel);border-radius:12px;padding:12px 10px;text-align:center;}
+.benefit-tile .icon-wrap{width:30px;height:30px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 7px;}
+.benefit-tile .icon-wrap .icon{width:14px;height:14px;color:var(--green-dark);}
+.benefit-tile p{margin:0;font-size:11.5px;font-weight:700;color:var(--charcoal);line-height:1.3;}
+.benefits-cta-wrap{max-width:640px;margin:12px auto 0;padding:0 20px;}
+.benefits-cta-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--green);color:#fff;
+  font-weight:800;font-size:14px;padding:14px;border:none;border-radius:999px;}
+.benefits-cta-btn .icon{width:15px;height:15px;}
 
 .privacy-note{display:flex;gap:12px;align-items:flex-start;background:var(--panel);border-radius:16px;padding:16px 18px;margin:18px 0;}
 .privacy-note .icon-wrap{width:34px;height:34px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -62,7 +68,64 @@ header{display:flex;align-items:center;justify-content:space-between;padding:16p
 .privacy-note b{color:var(--charcoal);}
 
 form{margin-top:4px;}
+html{scroll-behavior:smooth;}
+#formWrap{scroll-margin-top:20px;}
 .field-group{margin-bottom:22px;}
+.household-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.hh-option{border:1.5px solid var(--line);border-radius:12px;padding:14px;text-align:center;font-size:13.5px;font-weight:700;
+  color:var(--muted);cursor:pointer;background:#fff;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.hh-option .icon{width:20px;height:20px;}
+.hh-option.selected{border-color:var(--green);background:#E7F3EB;color:var(--green-dark);}
+
+.verify-box{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;margin-top:10px;}
+.verify-status{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;}
+.verify-status.pending{color:var(--muted);}
+.verify-status.yes{color:var(--green-dark);}
+.verify-status.no{color:var(--muted);}
+
+.member-card{border:1.5px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;background:#fff;}
+.member-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.member-tag{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-dark);
+  background:#EDEFFA;padding:4px 10px;border-radius:999px;}
+.remove-member{width:30px;height:30px;border-radius:8px;background:#FDEDEA;color:#B3382A;border:none;
+  display:flex;align-items:center;justify-content:center;}
+.remove-member .icon{width:14px;height:14px;}
+
+.relationship-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.rel-chip{border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;
+  color:var(--muted);cursor:pointer;background:#fff;}
+.rel-chip.selected{border-color:var(--accent);background:#EDEFFA;color:var(--accent-dark);}
+
+.scan-zone{border:1.5px dashed var(--line);border-radius:14px;padding:18px;text-align:center;cursor:pointer;background:var(--panel);}
+.scan-zone .icon{width:26px;height:26px;color:var(--muted);margin:0 auto 8px;}
+.scan-zone-label{font-size:13px;font-weight:700;color:var(--muted);}
+.scan-zone-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.scan-zone.scanning{opacity:.6;pointer-events:none;}
+.scan-zone.done{border-style:solid;border-color:var(--green);background:#E7F3EB;}
+
+.scanned-info{display:none;margin-top:12px;}
+.scanned-info.show{display:block;}
+.scanned-field{display:flex;justify-content:space-between;font-size:13px;background:var(--panel);border-radius:9px;
+  padding:9px 12px;margin-bottom:6px;}
+.scanned-field span{color:var(--muted);}
+.scanned-field b{color:var(--charcoal);}
+
+.family-section{display:none;}
+.family-section.show{display:block;}
+.add-member-btn{display:inline-flex;align-items:center;gap:7px;background:none;border:1.5px dashed var(--accent);color:var(--accent-dark);
+  font-weight:700;font-size:13px;padding:12px 16px;border-radius:14px;width:100%;justify-content:center;}
+.add-member-btn .icon{width:15px;height:15px;}
+
+.hh-size-display{display:flex;align-items:center;gap:10px;background:var(--panel);border-radius:12px;padding:14px 16px;}
+.hh-size-num{font-weight:800;font-size:22px;color:var(--green-dark);}
+.hh-size-label{font-size:12.5px;color:var(--muted);font-weight:600;}
+
+.intent-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.intent-option{border:1.5px solid var(--line);border-radius:14px;padding:14px 6px;text-align:center;cursor:pointer;background:#fff;}
+.intent-option.active{border-color:var(--green);background:#E7F3EB;}
+.intent-option .icon{width:20px;height:20px;color:var(--muted);margin:0 auto 6px;}
+.intent-option.active .icon{color:var(--green-dark);}
+.intent-option span.label{display:block;font-size:11.5px;font-weight:800;color:var(--charcoal);}
 .field-label{display:block;font-weight:800;font-size:13.5px;color:var(--charcoal);margin-bottom:8px;}
 .field-hint{display:block;font-weight:600;font-size:11.5px;color:var(--muted);margin-top:5px;}
 .field-hint.error{color:#B3382A;}
@@ -113,10 +176,13 @@ html[dir="rtl"] body{direction:rtl;}
 html[dir="rtl"] header{flex-direction:row-reverse;}
 html[dir="rtl"] .nav-menu{right:auto;left:20px;}
 html[dir="rtl"] .nav-menu a{flex-direction:row-reverse;}
-html[dir="rtl"] .benefit-row{flex-direction:row-reverse;text-align:right;}
+html[dir="rtl"] .benefit-tile{text-align:center;}
 html[dir="rtl"] .privacy-note{flex-direction:row-reverse;text-align:right;}
 html[dir="rtl"] .location-row{flex-direction:row-reverse;}
 html[dir="rtl"] .pin-btn{flex-direction:row-reverse;}
+html[dir="rtl"] .member-card-head{flex-direction:row-reverse;}
+html[dir="rtl"] .scanned-field{flex-direction:row-reverse;}
+html[dir="rtl"] .hh-size-display{flex-direction:row-reverse;}
 html[dir="rtl"] footer{flex-direction:row-reverse;}
 </style>
 </head>
@@ -147,9 +213,9 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
       <span data-en="My Chats" data-ar="محادثاتي">My Chats</span>
     </a>
-    <a href="#">
+    <a href="share-care-my-account.html">
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg></span>
-      <span data-en="My Profile" data-ar="ملفي الشخصي">My Profile</span>
+      <span data-en="My Account" data-ar="حسابي">My Account</span>
     </a>
     <hr>
     <a href="https://connect.feedafriend.org">
@@ -169,22 +235,29 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
 </div>
 
 <div class="benefits">
-  <div class="benefit-row">
+  <div class="benefit-tile">
     <div class="icon-wrap"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/></svg></span></div>
-    <p data-en="Manage your posted items in one place" data-ar="أدر أغراضك المنشورة في مكان واحد">Manage your posted items in one place</p>
+    <p data-en="Manage your items" data-ar="أدر أغراضك">Manage your items</p>
   </div>
-  <div class="benefit-row">
+  <div class="benefit-tile">
     <div class="icon-wrap"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span></div>
-    <p data-en="Chat with your matches once you're connected" data-ar="تواصل مع مطابقاتك بمجرد الاتصال">Chat with your matches once you're connected</p>
+    <p data-en="Chat with matches" data-ar="تواصل مع مطابقاتك">Chat with matches</p>
   </div>
-  <div class="benefit-row">
+  <div class="benefit-tile">
     <div class="icon-wrap"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span></div>
-    <p data-en="View full profiles once a match is suggested" data-ar="اعرض الملفات الكاملة عند اقتراح مطابقة">View full profiles once a match is suggested</p>
+    <p data-en="View full profiles" data-ar="اعرض الملفات الكاملة">View full profiles</p>
   </div>
-  <div class="benefit-row">
+  <div class="benefit-tile">
     <div class="icon-wrap"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span></div>
-    <p data-en="Get matched to items and requests near you" data-ar="احصل على مطابقة مع الأغراض والطلبات القريبة منك">Get matched to items and requests near you</p>
+    <p data-en="Get matched nearby" data-ar="احصل على مطابقة قريبة">Get matched nearby</p>
   </div>
+</div>
+
+<div class="benefits-cta-wrap">
+  <button type="button" class="benefits-cta-btn" id="benefitsCtaBtn">
+    <span data-en="Create Account" data-ar="إنشاء الحساب">Create Account</span>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span>
+  </button>
 </div>
 
 <div class="max">
@@ -195,6 +268,25 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
 
   <div class="form-wrap" id="formWrap">
     <form id="accountForm">
+
+      <div class="field-group">
+        <label class="field-label" data-en="What brings you here?" data-ar="ما الذي جاء بك إلى هنا؟">What brings you here?</label>
+        <div class="intent-grid" id="intentGrid">
+          <div class="intent-option active" data-value="give">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/></svg></span>
+            <span class="label" data-en="Give items" data-ar="أعطِ أغراضاً">Give items</span>
+          </div>
+          <div class="intent-option" data-value="receive">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span>
+            <span class="label" data-en="Receive items" data-ar="استلم أغراضاً">Receive items</span>
+          </div>
+          <div class="intent-option" data-value="both">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span>
+            <span class="label" data-en="Both" data-ar="كلاهما">Both</span>
+          </div>
+        </div>
+        <span class="field-hint" id="intentHint" data-en="If you'd like to receive items too, you'll add a few extra household details right after this." data-ar="إذا كنت ترغب أيضاً في استلام أغراض، فستضيف بعض تفاصيل الأسرة الإضافية مباشرة بعد هذا." style="display:none;">If you'd like to receive items too, you'll add a few extra household details right after this.</span>
+      </div>
 
       <div class="field-group">
         <label class="field-label" data-en="Full name" data-ar="الاسم الكامل">Full name</label>
@@ -218,6 +310,12 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       </div>
 
       <div class="field-group">
+        <label class="field-label" data-en="Password" data-ar="كلمة المرور">Password</label>
+        <input class="text-input" type="password" id="password" autocomplete="new-password" minlength="6" required>
+        <span class="field-hint" id="passwordHint" data-en="At least 6 characters. You'll use this to log back in." data-ar="6 أحرف على الأقل. ستستخدمها لتسجيل الدخول لاحقاً.">At least 6 characters. You'll use this to log back in.</span>
+      </div>
+
+      <div class="field-group">
         <label class="field-label" data-en="Location" data-ar="الموقع">Location</label>
         <div class="location-row">
           <div class="autocomplete-wrap">
@@ -232,6 +330,42 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
         <span class="field-hint" id="pinHint" data-en="Or tap Pin to use your current location for better matches nearby." data-ar="أو اضغط على تحديد لاستخدام موقعك الحالي لمطابقات أفضل قريبة منك.">Or tap Pin to use your current location for better matches nearby.</span>
       </div>
 
+      <div id="receiverFields" style="display:none;">
+        <div class="field-group">
+          <label class="field-label" data-en="Household" data-ar="الأسرة">Household</label>
+          <div class="household-grid" id="householdGrid">
+            <div class="hh-option" data-value="single">
+              <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg></span>
+              <span data-en="Single" data-ar="فرد واحد">Single</span>
+            </div>
+            <div class="hh-option" data-value="family">
+              <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="8" r="2.6"/><circle cx="17" cy="8" r="2.6"/><circle cx="12" cy="14" r="2.6"/><path d="M2 21c0-2.8 2.2-5 5-5M22 21c0-2.8-2.2-5-5-5M6 21c0-2.8 2.7-5 6-5s6 2.2 6 5"/></svg></span>
+              <span data-en="Family" data-ar="عائلة">Family</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" data-en="Scan your QID" data-ar="امسح بطاقتك الشخصية">Scan your QID</label>
+          <span class="field-hint" style="margin:0 0 12px;" data-en="We read your name, date of birth and gender directly from the card — nothing is typed by hand. If this matches an approved Feed a Friend case, we link it automatically." data-ar="نقرأ اسمك وتاريخ ميلادك وجنسك مباشرة من البطاقة — لا يتم إدخال أي شيء يدوياً. إذا تطابقت مع حالة معتمدة لدى فيد أ فريند، سنربطها تلقائياً.">We read your name, date of birth and gender directly from the card — nothing is typed by hand. If this matches an approved Feed a Friend case, we link it automatically.</span>
+          <div id="primaryMemberSlot"></div>
+        </div>
+
+        <div class="field-group family-section" id="familySection">
+          <label class="field-label" data-en="Family members" data-ar="أفراد العائلة">Family members</label>
+          <div id="membersList"></div>
+          <button type="button" class="add-member-btn" id="addMemberBtn">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+            <span data-en="Scan another family member" data-ar="امسح فرداً آخر من العائلة">Scan another family member</span>
+          </button>
+          <div class="hh-size-display" style="margin-top:14px;">
+            <span class="hh-size-num" id="hhSizeNum">1</span>
+            <span class="hh-size-label" data-en="household members scanned so far" data-ar="عدد أفراد الأسرة الممسوحين حتى الآن">household members scanned so far</span>
+          </div>
+        </div>
+      </div>
+
+
       <span class="error-text" id="formError" data-en="Please complete all fields with a unique username." data-ar="يرجى إكمال جميع الحقول باسم مستخدم فريد.">Please complete all fields with a unique username.</span>
 
       <button type="submit" class="submit-btn" id="submitBtn">
@@ -244,10 +378,10 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
   <div class="confirm-screen" id="confirmScreen">
     <div class="confirm-ic"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></div>
     <h2 data-en="Account created" data-ar="تم إنشاء الحساب">Account created</h2>
-    <p data-en="You're all set. You can now give or request an item." data-ar="أنت جاهز الآن. يمكنك الآن منح أو طلب غرض.">You're all set. You can now give or request an item.</p>
+    <p id="confirmMessage" data-en="You're all set. You can now give or request an item." data-ar="أنت جاهز الآن. يمكنك الآن منح أو طلب غرض.">You're all set. You can now give or request an item.</p>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
       <a href="share-care-post-item.html" style="background:var(--green);color:#fff;font-weight:800;font-size:13.5px;padding:12px 20px;border-radius:999px;" data-en="Post an Item" data-ar="أضف غرضاً">Post an Item</a>
-      <a href="share-care-receiver-profile.html" style="background:var(--accent);color:#fff;font-weight:800;font-size:13.5px;padding:12px 20px;border-radius:999px;" data-en="Request an Item" data-ar="اطلب غرضاً">Request an Item</a>
+      <a href="share-care-browse-items.html" id="confirmSecondaryBtn" style="background:var(--accent);color:#fff;font-weight:800;font-size:13.5px;padding:12px 20px;border-radius:999px;" data-en="Browse Items" data-ar="تصفح الأغراض">Browse Items</a>
     </div>
   </div>
 
@@ -268,6 +402,16 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
   let currentLang = 'en';
   let pinnedCoords = null;
 
+  // Where to send the person once their account is created — e.g. create-account.html?redirect=share-care-post-item.html
+  const params = new URLSearchParams(window.location.search);
+  const redirectTo = params.get('redirect') || 'share-care-post-item.html';
+
+  // If already signed in, skip straight to the redirect target
+  (async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) window.location.href = redirectTo;
+  })();
+
   function setLang(lang){
     currentLang = lang;
     document.documentElement.setAttribute('lang', lang);
@@ -285,6 +429,201 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
   }
   setLang('en');
   document.getElementById('langToggleBtn').addEventListener('click', () => setLang(currentLang === 'ar' ? 'en' : 'ar'));
+
+  let selectedIntent = 'give';
+  document.querySelectorAll('.intent-option[data-value]').forEach(opt => {
+    if (opt.closest('#intentGrid')) {
+      opt.addEventListener('click', () => {
+        document.querySelectorAll('#intentGrid .intent-option').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        selectedIntent = opt.getAttribute('data-value');
+        const showReceiver = selectedIntent !== 'give';
+        document.getElementById('intentHint').style.display = showReceiver ? 'block' : 'none';
+        document.getElementById('receiverFields').style.display = showReceiver ? 'block' : 'none';
+      });
+    }
+  });
+
+  let selectedHousehold = null;
+  document.querySelectorAll('#householdGrid .hh-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      document.querySelectorAll('#householdGrid .hh-option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      selectedHousehold = opt.getAttribute('data-value');
+      document.getElementById('familySection').classList.toggle('show', selectedHousehold === 'family');
+    });
+  });
+
+  // ===== QID scanning — reads name/DOB/gender straight from the card for the
+  // primary applicant and any family members, and checks verification =====
+  let members = [];
+  let memberSeq = 0;
+  let alreadyRegisteredFriendId = null;
+  const relOptions = [
+    { v: 'spouse', en: 'Spouse', ar: 'الزوج/الزوجة' },
+    { v: 'child', en: 'Child', ar: 'طفل' },
+    { v: 'parent', en: 'Parent', ar: 'والد/والدة' },
+    { v: 'other', en: 'Other', ar: 'آخر' }
+  ];
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function convertDob(d) {
+    const parts = (d || '').split('/');
+    if (parts.length !== 3) return null;
+    const [dd, mm, yyyy] = parts;
+    if (!yyyy || yyyy.length !== 4) return null;
+    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+  }
+
+  function updateHouseholdSizeDisplay() {
+    const scannedCount = members.filter(m => m.qid_number).length;
+    document.getElementById('hhSizeNum').textContent = scannedCount;
+  }
+
+  function buildScanCard(member, opts) {
+    const card = document.createElement('div');
+    card.className = opts.isPrimary ? '' : 'member-card';
+    card.setAttribute('data-member-id', member.id);
+
+    const relRow = opts.isPrimary ? '' : `
+      <div class="relationship-row">
+        ${relOptions.map(r => `<div class="rel-chip" data-rel="${r.v}">${currentLang === 'ar' ? r.ar : r.en}</div>`).join('')}
+      </div>`;
+
+    const headRow = opts.isPrimary ? '' : `
+      <div class="member-card-head">
+        <span class="member-tag">${currentLang === 'ar' ? 'فرد من العائلة' : 'Family member'}</span>
+        <button type="button" class="remove-member"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span></button>
+      </div>`;
+
+    card.innerHTML = `
+      ${headRow}
+      ${relRow}
+      <div class="scan-zone" data-scan-zone>
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg></span>
+        <div class="scan-zone-label" data-en="Tap to scan QID (front)" data-ar="اضغط لمسح البطاقة (الوجه الأمامي)">${currentLang === 'ar' ? 'اضغط لمسح البطاقة (الوجه الأمامي)' : 'Tap to scan QID (front)'}</div>
+        <div class="scan-zone-sub">${currentLang === 'ar' ? 'تتم معالجة الصورة فوراً، ولا يتم تخزينها' : 'Photo is processed instantly, not stored'}</div>
+        <input type="file" accept="image/*" capture="environment" data-file-input style="display:none;">
+      </div>
+      <div class="scanned-info" data-scanned-info>
+        <div class="scanned-field"><span>${currentLang === 'ar' ? 'الاسم' : 'Name'}</span><b data-field="name"></b></div>
+        <div class="scanned-field"><span>${currentLang === 'ar' ? 'الرقم الشخصي' : 'QID'}</span><b data-field="qid"></b></div>
+        <div class="scanned-field"><span>${currentLang === 'ar' ? 'تاريخ الميلاد' : 'Date of birth'}</span><b data-field="dob"></b></div>
+        <div class="scanned-field"><span>${currentLang === 'ar' ? 'الجنس' : 'Gender'}</span><b data-field="gender"></b></div>
+        ${opts.isPrimary ? `<div class="verify-box" data-verify-box style="display:none;"><div class="verify-status pending" data-verify-status></div></div>` : ''}
+      </div>
+    `;
+
+    if (!opts.isPrimary) {
+      card.querySelectorAll('[data-rel]').forEach(chip => {
+        chip.addEventListener('click', () => {
+          card.querySelectorAll('[data-rel]').forEach(c => c.classList.remove('selected'));
+          chip.classList.add('selected');
+          member.relationship = chip.getAttribute('data-rel');
+        });
+      });
+      card.querySelector('.remove-member').addEventListener('click', () => {
+        members = members.filter(m => m.id !== member.id);
+        card.remove();
+        updateHouseholdSizeDisplay();
+      });
+    }
+
+    const scanZone = card.querySelector('[data-scan-zone]');
+    const fileInput = card.querySelector('[data-file-input]');
+    scanZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      scanZone.classList.add('scanning');
+      scanZone.querySelector('.scan-zone-label').textContent = currentLang === 'ar' ? 'جارٍ المسح...' : 'Scanning...';
+      try {
+        const base64 = await fileToBase64(file);
+        const resp = await fetch(`${SUPABASE_URL}/functions/v1/scan-qid`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ images: { front: { type: file.type, data: base64 } } })
+        });
+        const result = await resp.json();
+        if (result.error || !result.qid_number) throw new Error(result.error || 'Could not read card');
+
+        member.qid_number = result.qid_number;
+        member.full_name = result.name;
+        member.gender = (result.gender || '').toLowerCase().startsWith('f') ? 'female' : 'male';
+        member.dob = result.dob || null;
+
+        card.querySelector('[data-field="name"]').textContent = result.name || '—';
+        card.querySelector('[data-field="qid"]').textContent = result.qid_number || '—';
+        card.querySelector('[data-field="dob"]').textContent = result.dob || '—';
+        card.querySelector('[data-field="gender"]').textContent = result.gender || '—';
+        card.querySelector('[data-scanned-info]').classList.add('show');
+        scanZone.classList.remove('scanning');
+        scanZone.classList.add('done');
+        scanZone.querySelector('.scan-zone-label').textContent = currentLang === 'ar' ? 'تم المسح — اضغط لإعادة المسح' : 'Scanned — tap to rescan';
+
+        if (opts.isPrimary) {
+          const vBox = card.querySelector('[data-verify-box]');
+          const vStatus = card.querySelector('[data-verify-status]');
+          vBox.style.display = 'block';
+          vStatus.className = 'verify-status pending';
+          vStatus.textContent = currentLang === 'ar' ? 'جارٍ التحقق...' : 'Checking verification...';
+          const { data: vData } = await sb.rpc('check_share_care_verification', { p_qid: result.qid_number, p_whatsapp: null });
+          if (vData && vData.length && vData[0].is_verified) {
+            member.friend_id = vData[0].matched_friend_id;
+            member.verified = true;
+            member.verified_sources = vData[0].sources;
+            const { data: already } = await sb.rpc('check_existing_receiver_by_friend', { p_friend_id: member.friend_id });
+            if (already) {
+              alreadyRegisteredFriendId = member.friend_id;
+              vStatus.className = 'verify-status yes';
+              vStatus.textContent = currentLang === 'ar'
+                ? 'أنت مُسجّل بالفعل كمستفيد — لا حاجة لإضافة تفاصيل إضافية.'
+                : "You're already registered as a recipient — no extra details needed.";
+            } else {
+              const labels = vData[0].sources.map(s => s === 'food_box' ? (currentLang === 'ar' ? 'صندوق طعام' : 'Food Box') : (currentLang === 'ar' ? 'المتعلمون الصغار' : 'Little Learners'));
+              vStatus.className = 'verify-status yes';
+              vStatus.textContent = (currentLang === 'ar' ? 'موثّق: ' : 'Verified: ') + labels.join(', ');
+            }
+          } else {
+            member.verified = false;
+            vStatus.className = 'verify-status no';
+            vStatus.textContent = currentLang === 'ar' ? 'لم يُعثر على تطابق — تم التسجيل كغير موثّق' : 'No existing record found — registering as unverified';
+          }
+        }
+        updateHouseholdSizeDisplay();
+      } catch (err) {
+        scanZone.classList.remove('scanning');
+        scanZone.querySelector('.scan-zone-label').textContent = currentLang === 'ar' ? 'تعذّر القراءة — اضغط للمحاولة مرة أخرى' : 'Could not read card — tap to try again';
+      }
+    });
+
+    return card;
+  }
+
+  memberSeq++;
+  const primaryMember = { id: 'm' + memberSeq, relationship: 'self', qid_number: null, full_name: null, dob: null, gender: null, friend_id: null, verified: false, verified_sources: [] };
+  members.push(primaryMember);
+  document.getElementById('primaryMemberSlot').appendChild(buildScanCard(primaryMember, { isPrimary: true }));
+
+  document.getElementById('addMemberBtn').addEventListener('click', () => {
+    memberSeq++;
+    const member = { id: 'm' + memberSeq, relationship: 'other', qid_number: null, full_name: null, dob: null, gender: null };
+    members.push(member);
+    document.getElementById('membersList').appendChild(buildScanCard(member, { isPrimary: false }));
+  });
+
+  document.getElementById('benefitsCtaBtn').addEventListener('click', () => {
+    document.getElementById('formWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => document.getElementById('fullName').focus({ preventScroll: true }), 450);
+  });
 
   const menuBtn = document.getElementById('menuToggleBtn');
   const navMenu = document.getElementById('navMenu');
@@ -374,10 +713,23 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     const username = document.getElementById('username').value.trim();
     const phone = document.getElementById('phone').value.trim();
     const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
     const location = document.getElementById('location').value.trim();
     const errorEl = document.getElementById('formError');
 
-    if (!fullName || !username || !usernameAvailable || !phone || !email || !location) {
+    if (!fullName || !username || !usernameAvailable || !phone || !email || !password || password.length < 6 || !location) {
+      errorEl.textContent = currentLang === 'ar'
+        ? 'يرجى إكمال جميع الحقول باسم مستخدم متاح وكلمة مرور من 6 أحرف على الأقل.'
+        : 'Please complete all fields with an available username and a password of at least 6 characters.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    const wantsReceiver = (selectedIntent === 'receive' || selectedIntent === 'both');
+    if (wantsReceiver && !alreadyRegisteredFriendId && (!selectedHousehold || !primaryMember.qid_number)) {
+      errorEl.textContent = currentLang === 'ar'
+        ? 'يرجى اختيار نوع الأسرة ومسح بطاقتك الشخصية لإكمال التسجيل كمستفيد.'
+        : 'Please select a household type and scan your QID to finish registering as a recipient.';
       errorEl.style.display = 'block';
       return;
     }
@@ -386,7 +738,31 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
 
-    const { error } = await sb.from('share_care_accounts').insert({
+    // Step 1: create the actual login credentials in Supabase Auth.
+    const { data: signUpData, error: signUpError } = await sb.auth.signUp({ email, password });
+    if (signUpError) {
+      submitBtn.disabled = false;
+      errorEl.textContent = signUpError.message;
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    // Some Supabase projects require email confirmation before a session exists.
+    // In that case we can't yet attach a profile row tied to auth.uid() (RLS), so
+    // ask them to confirm their email, then log in — the profile is created on first login-linked visit.
+    if (!signUpData.session) {
+      submitBtn.disabled = false;
+      errorEl.style.color = 'var(--green-dark)';
+      errorEl.textContent = currentLang === 'ar'
+        ? 'تحقق من بريدك الإلكتروني لتأكيد الحساب، ثم سجّل الدخول لإكمال ملفك الشخصي.'
+        : 'Check your email to confirm your account, then log in to finish setting up your profile.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    // Step 2: create the profile row, linked to the new auth user.
+    const { error: insertError } = await sb.from('share_care_accounts').insert({
+      user_id: signUpData.user.id,
       full_name: fullName,
       username: username,
       phone: phone,
@@ -396,17 +772,66 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       lng: pinnedCoords ? pinnedCoords.lng : null
     });
 
-    if (error) {
+    if (insertError) {
       submitBtn.disabled = false;
-      if (error.code === '23505') {
+      if (insertError.code === '23505') {
         alert(currentLang === 'ar' ? 'اسم المستخدم هذا أصبح مُستخدماً للتو — جرّب اسماً آخر.' : 'That username was just taken — please try another.');
       } else {
-        alert((currentLang === 'ar' ? 'حدث خطأ: ' : 'Something went wrong: ') + error.message);
+        alert((currentLang === 'ar' ? 'حدث خطأ: ' : 'Something went wrong: ') + insertError.message);
       }
       return;
     }
 
+    // Step 3: if they chose to receive items too (and aren't already a known receiver),
+    // create the receiver profile right here — reusing the username/phone/location we
+    // already collected above, never asking for them twice.
+    if ((selectedIntent === 'receive' || selectedIntent === 'both') && !alreadyRegisteredFriendId) {
+      const scannedMembers = members.filter(m => m.qid_number);
+      const householdSize = scannedMembers.length;
+
+      const { data: receiverRow, error: receiverError } = await sb.from('share_care_receivers').insert({
+        user_id: signUpData.user.id,
+        username: username,
+        full_name: primaryMember.full_name || fullName,
+        whatsapp: phone,
+        qid_number: primaryMember.qid_number,
+        friend_id: primaryMember.friend_id || null,
+        location: location,
+        household_type: selectedHousehold,
+        household_size: householdSize,
+        verified: !!primaryMember.verified,
+        verified_sources: primaryMember.verified_sources || [],
+        language: currentLang
+      }).select('id').single();
+
+      if (!receiverError && receiverRow) {
+        const memberRecords = scannedMembers.map(m => ({
+          receiver_id: receiverRow.id,
+          is_primary: m.relationship === 'self',
+          relationship: m.relationship || 'other',
+          qid_number: m.qid_number,
+          full_name: m.full_name,
+          dob: m.dob ? convertDob(m.dob) : null,
+          gender: m.gender,
+          friend_id: m.friend_id || null
+        }));
+        if (memberRecords.length) await sb.from('share_care_receiver_members').insert(memberRecords);
+      }
+    }
+
     document.getElementById('formWrap').classList.add('hide');
+    const confirmMsg = document.getElementById('confirmMessage');
+    if (selectedIntent === 'give') {
+      confirmMsg.textContent = currentLang === 'ar' ? 'أنت جاهز الآن. يمكنك الآن منح غرض.' : "You're all set. You can now give an item.";
+    } else if (alreadyRegisteredFriendId) {
+      confirmMsg.textContent = currentLang === 'ar'
+        ? 'أنت جاهز الآن. حسابك متصل بملفك المُسجّل مسبقاً كمستفيد.'
+        : "You're all set. Your account is linked to your existing receiver profile.";
+    } else {
+      confirmMsg.textContent = currentLang === 'ar'
+        ? 'أنت جاهز الآن. تم إنشاء ملفك كمستفيد أيضاً — سنُبلغك عند إيجاد تبرع مناسب.'
+        : "You're all set. Your receiver profile has been created too — we'll notify you when a suitable donation is found.";
+    }
     document.getElementById('confirmScreen').classList.add('show');
   });
   }
