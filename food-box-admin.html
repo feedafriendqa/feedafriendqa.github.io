@@ -866,14 +866,19 @@ function loadApps() {
     langFilter = '&submission_lang=in.(' + myLanguages.join(',') + ')';
   }
 
-  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=*&order=created_at.desc&limit=5000' + langFilter, {
-    headers: apiHeaders()
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=*&order=created_at.desc&limit=5000' + langFilter, {
+      headers: headers
+    });
   }).then(function(r) { return r.json(); }).then(function(data) {
     var apps = Array.isArray(data) ? data : [];
     if (myRole !== 'super_admin' && myLanguages && myLanguages.indexOf('bn') !== -1) {
       apps = apps.filter(function(a) { return a.submission_lang === 'bn' || a.nationality === 'Bangladeshi'; });
     }
-    if (apps.length === 0) apps = getDummyApps();
+    if (apps.length === 0) {
+      apps = getDummyApps();
+      showDemoDataWarning();
+    }
     // Apply auto-assignment and status resolution
     var toSave = [];
     apps.forEach(function(app) {
@@ -904,6 +909,7 @@ function loadApps() {
     document.getElementById('table-loading').style.display = 'none';
   }).catch(function() {
     allApps = getDummyApps();
+    showDemoDataWarning();
     updateStats();
     filterApps();
     document.getElementById('table-loading').style.display = 'none';
@@ -941,6 +947,20 @@ function loadAllMembersForSearch() {
   fetchPage(0).then(function() {
     filterApps(); // re-run current search now that member data is available
   }).catch(function(e) { console.error('Failed to load members for search:', e.message); });
+}
+
+// If the real fetch above ever fails or returns nothing, we fall back to fake
+// sample data so the UI doesn't just look broken — but that must never happen
+// silently again. This is exactly how the "only 7 cases / only 2 cases" bug
+// went undetected for so long: the dummy data rendered as if it were real.
+function showDemoDataWarning() {
+  var existing = document.getElementById('demo-data-warning');
+  if (existing) return;
+  var banner = document.createElement('div');
+  banner.id = 'demo-data-warning';
+  banner.style.cssText = 'position:sticky;top:0;z-index:9999;background:#B3382A;color:#fff;font-weight:800;font-size:14px;padding:12px 18px;text-align:center;';
+  banner.textContent = '⚠️ Could not load real case data from Supabase — you are viewing SAMPLE/DEMO data, not real cases. Check your connection or contact tech support.';
+  document.body.insertBefore(banner, document.body.firstChild);
 }
 
 function getDummyApps() {
