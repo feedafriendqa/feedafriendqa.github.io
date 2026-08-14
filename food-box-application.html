@@ -847,6 +847,50 @@ function checkDuplicateQID(qidNumber, name, context) {
   });
 }
 
+// ── QID FIELD LOCKING ────────────────────────────────────────────────────
+// QID number fields (applicant + members) are readonly by default and are
+// only ever filled in two ways: (1) auto-fill from a successful scan, which
+// leaves them locked, or (2) manual entry used solely as a fallback when the
+// scan can't read a QID number, which re-locks itself the moment the typed
+// value clears the duplicate check. Either way, once a QID value is on the
+// page it can't be hand-edited afterward to swap in a different, unchecked
+// QID — closing the bypass where a duplicate check passes for one QID and
+// the field is then edited to something that was never checked.
+function lockQIDField(el) {
+  if (!el) return;
+  el.setAttribute('readonly', 'readonly');
+  el.style.background = '#f0f4f0';
+  el.style.color = '#4a4a4a';
+  el.style.cursor = 'not-allowed';
+}
+
+function unlockQIDFieldForManualEntry(el) {
+  if (!el) return;
+  el.removeAttribute('readonly');
+  el.style.background = '';
+  el.style.color = '';
+  el.style.cursor = '';
+}
+
+// Wires a one-time blur handler so a manually-typed QID (the fallback path
+// when a scan can't read one) still goes through the same duplicate check
+// as a scanned QID, and gets locked again the moment it passes.
+function wireManualQIDFallback(el, getNameFn, context) {
+  if (!el || el.dataset.dupWired) return;
+  el.dataset.dupWired = '1';
+  el.addEventListener('blur', function() {
+    var val = el.value.trim();
+    if (!val) return;
+    checkDuplicateQID(val, getNameFn(), context).then(function(isDup) {
+      if (isDup) {
+        el.value = '';
+      } else {
+        lockQIDField(el);
+      }
+    });
+  });
+}
+
 var ZONE_AREA = {
   1:'Al Bidda',2:'Al Bidda',3:'Musheirib',4:'Musheirib',5:'Al Najada',
   6:'Old Al Ghanim',7:'Al Souq',10:'Wadi Al Sail',11:'Rumeilah',12:'Al Bidda',
@@ -1125,7 +1169,9 @@ function scanQID(frontFile, backFile) {
       var qnEl = document.getElementById('inp-qidnum');
       var natEl = document.getElementById('inp-nationality');
       if (fnEl) { fnEl.removeAttribute('readonly'); fnEl.style.background=''; fnEl.style.color=''; fnEl.style.cursor=''; }
-      if (qnEl) { qnEl.removeAttribute('readonly'); qnEl.style.background=''; qnEl.style.color=''; qnEl.style.cursor=''; }
+      // QID number is deliberately left locked here (see lockQIDField note
+      // above) — it's only unlocked further down, and only as a fallback if
+      // the scan couldn't read a QID number at all.
       // Unconditional, same as the two fields above — even if the scan
       // can't read a nationality off this particular card, the field still
       // needs to become a normal interactive dropdown rather than staying
@@ -1154,6 +1200,34 @@ function scanQID(frontFile, backFile) {
       var e = document.getElementById('scraped-expiry'); if (e) e.textContent = parsed.expiry_date || '–';
       var sp = document.getElementById('scraped-sponsor'); if (sp) sp.textContent = parsed.sponsor || '–';
       if (scraped) scraped.classList.add('visible');
+      // Applicant-level duplicate check — mirrors the household-member check
+      // below. The QID lookup itself has no status filter (it flags a match
+      // whether the existing record is approved, rejected, or archived), so
+      // this closes the gap where a person already in the system could
+      // submit a brand-new "first time" application undetected client-side.
+      if (parsed.qid_number) {
+        // Field stays locked either way — a duplicate just clears the value,
+        // it doesn't need unlocking first.
+        checkDuplicateQID(parsed.qid_number, parsed.full_name, 'applicant').then(function(isDup) {
+          if (isDup) {
+            var fnEl2 = document.getElementById('inp-fullname');
+            var qnEl2 = document.getElementById('inp-qidnum');
+            if (fnEl2) fnEl2.value = '';
+            if (qnEl2) qnEl2.value = '';
+            if (scraped) scraped.classList.remove('visible');
+            updateProgress();
+          }
+        });
+      } else if (qnEl) {
+        // Scan couldn't read a QID number off the card — fall back to
+        // manual entry, but still gate it behind the same duplicate check
+        // (on blur) and re-lock it the moment it passes.
+        unlockQIDFieldForManualEntry(qnEl);
+        wireManualQIDFallback(qnEl, function() {
+          var el = document.getElementById('inp-fullname');
+          return el ? el.value : '';
+        }, 'applicant');
+      }
       updateProgress();
   }).catch(function(e) {
     if (status) status.querySelector('span').textContent = currentLang === 'ar' ? 'تعذّرت القراءة — أدخل يدوياً.' : 'Scan failed — please fill in manually.';
@@ -1234,6 +1308,8 @@ function scanMemberQID(n) {
       var se = document.getElementById('m' + n + '-scraped-expiry'); if (se) se.textContent = parsed.expiry_date || '–';
       if (scrapedEl) scrapedEl.classList.add('visible');
       if (parsed.qid_number) {
+        // Field is readonly by default (see markup) and stays that way here
+        // too — a duplicate just clears the value, no unlocking needed.
         checkDuplicateQID(parsed.qid_number, parsed.full_name, 'member').then(function(isDup) {
           if (isDup) {
             var idEl2 = document.getElementById('m' + n + '-idnum');
@@ -1243,6 +1319,15 @@ function scanMemberQID(n) {
             if (scrapedEl) scrapedEl.classList.remove('visible');
           }
         });
+      } else if (idEl) {
+        // Scan couldn't read this member's QID number — fall back to manual
+        // entry, still gated behind the same duplicate check (on blur) and
+        // re-locked the moment it passes.
+        unlockQIDFieldForManualEntry(idEl);
+        wireManualQIDFallback(idEl, function() {
+          var el = document.getElementById('m' + n + '-name');
+          return el ? el.value : '';
+        }, 'member');
       }
       updateProgress();
   }).catch(function(e) {
@@ -1405,7 +1490,7 @@ function buildMemberCard(n) {
   h += '<div class="field"><label>' + (ar ? 'تاريخ الميلاد' : 'Date of birth') + ' <span class="req">*</span></label><input type="date" id="m' + n + '-dob" onchange="handleMemberDOB(' + n + ')"></div>';
   h += '</div>';
   h += '<div class="field-row">';
-  h += '<div class="field"><label>' + (ar ? 'رقم الهوية' : 'ID number') + '</label><input type="text" id="m' + n + '-idnum" placeholder="28xxxxxxxxx" data-en="28xxxxxxxxx" data-ar="٢٨xxxxxxxxx"></div>';
+  h += '<div class="field"><label>' + (ar ? 'رقم الهوية' : 'ID number') + '</label><input type="text" id="m' + n + '-idnum" placeholder="' + (ar ? 'يُملأ تلقائياً من الهوية' : 'Auto-filled from QID') + '" data-en="28xxxxxxxxx" data-ar="٢٨xxxxxxxxx" readonly style="background:#f0f4f0;color:#9cbfa2;cursor:not-allowed;" maxlength="11"></div>';
   h += '<div class="field" id="m' + n + '-expiry-field"><label>' + (ar ? 'تاريخ الانتهاء' : 'Expiry date') + '</label><input type="date" id="m' + n + '-expiry"></div>';
   h += '</div>';
   h += '<div class="field"><label>' + (ar ? 'الجنس' : 'Gender') + ' <span class="req">*</span></label>';
