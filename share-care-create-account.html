@@ -302,11 +302,7 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       <div class="field-group">
         <label class="field-label" data-en="Phone number" data-ar="رقم الهاتف">Phone number</label>
         <input class="text-input" type="tel" id="phone" placeholder="+974 5X XX XX XX" required>
-      </div>
-
-      <div class="field-group">
-        <label class="field-label" data-en="Email" data-ar="البريد الإلكتروني">Email</label>
-        <input class="text-input" type="email" id="email" required>
+        <span class="field-hint" data-en="Used to log back in later." data-ar="يُستخدم لتسجيل الدخول لاحقاً.">Used to log back in later.</span>
       </div>
 
       <div class="field-group">
@@ -400,6 +396,17 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
   function initApp(){
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let currentLang = 'en';
+
+  // Phone number is the person's real login identity — no email, no SMS/OTP verification,
+  // matching how Food Box applications work today. Supabase Auth still needs an email under
+  // the hood, so we derive one deterministically from the phone digits. This is never shown
+  // to the user. IMPORTANT: this only works if "Confirm email" is turned OFF in the
+  // Supabase project's Auth settings — otherwise signup gets stuck waiting on a confirmation
+  // link sent to an address nobody can read.
+  function phoneToAuthEmail(phone) {
+    const digits = (phone || '').replace(/[^0-9]/g, '');
+    return `p${digits}@sharecare.local`;
+  }
   let pinnedCoords = null;
 
   // Where to send the person once their account is created — e.g. create-account.html?redirect=share-care-post-item.html
@@ -712,12 +719,11 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     const fullName = document.getElementById('fullName').value.trim();
     const username = document.getElementById('username').value.trim();
     const phone = document.getElementById('phone').value.trim();
-    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const location = document.getElementById('location').value.trim();
     const errorEl = document.getElementById('formError');
 
-    if (!fullName || !username || !usernameAvailable || !phone || !email || !password || password.length < 6 || !location) {
+    if (!fullName || !username || !usernameAvailable || !phone || !password || password.length < 6 || !location) {
       errorEl.textContent = currentLang === 'ar'
         ? 'يرجى إكمال جميع الحقول باسم مستخدم متاح وكلمة مرور من 6 أحرف على الأقل.'
         : 'Please complete all fields with an available username and a password of at least 6 characters.';
@@ -738,49 +744,52 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
 
-    // Step 1: create the actual login credentials in Supabase Auth.
-    const { data: signUpData, error: signUpError } = await sb.auth.signUp({ email, password });
-    if (signUpError) {
+    // Step 1: create the account via the share-care-signup edge function. It uses the
+    // admin API to pre-confirm just this account (email_confirm: true) without touching
+    // the project-wide "Confirm sign up" setting that staff/volunteer logins rely on, and
+    // writes the share_care_accounts row in the same request.
+    const authEmail = phoneToAuthEmail(phone);
+    let signupResult;
+    try {
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/share-care-signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({
+          phone, password, full_name: fullName, username,
+          location, lat: pinnedCoords ? pinnedCoords.lat : null, lng: pinnedCoords ? pinnedCoords.lng : null
+        })
+      });
+      signupResult = await resp.json();
+    } catch (err) {
       submitBtn.disabled = false;
-      errorEl.textContent = signUpError.message;
+      errorEl.textContent = currentLang === 'ar' ? 'تعذّر الاتصال بالخادم. حاول مرة أخرى.' : 'Could not reach the server. Please try again.';
       errorEl.style.display = 'block';
       return;
     }
 
-    // Some Supabase projects require email confirmation before a session exists.
-    // In that case we can't yet attach a profile row tied to auth.uid() (RLS), so
-    // ask them to confirm their email, then log in — the profile is created on first login-linked visit.
-    if (!signUpData.session) {
+    if (signupResult.error) {
       submitBtn.disabled = false;
-      errorEl.style.color = 'var(--green-dark)';
-      errorEl.textContent = currentLang === 'ar'
-        ? 'تحقق من بريدك الإلكتروني لتأكيد الحساب، ثم سجّل الدخول لإكمال ملفك الشخصي.'
-        : 'Check your email to confirm your account, then log in to finish setting up your profile.';
-      errorEl.style.display = 'block';
-      return;
-    }
-
-    // Step 2: create the profile row, linked to the new auth user.
-    const { error: insertError } = await sb.from('share_care_accounts').insert({
-      user_id: signUpData.user.id,
-      full_name: fullName,
-      username: username,
-      phone: phone,
-      email: email,
-      location: location,
-      lat: pinnedCoords ? pinnedCoords.lat : null,
-      lng: pinnedCoords ? pinnedCoords.lng : null
-    });
-
-    if (insertError) {
-      submitBtn.disabled = false;
-      if (insertError.code === '23505') {
-        alert(currentLang === 'ar' ? 'اسم المستخدم هذا أصبح مُستخدماً للتو — جرّب اسماً آخر.' : 'That username was just taken — please try another.');
+      if (signupResult.error === 'phone_already_registered') {
+        errorEl.textContent = currentLang === 'ar' ? 'هذا الرقم مُسجّل بالفعل — جرّب تسجيل الدخول بدلاً من ذلك.' : 'That phone number is already registered — try logging in instead.';
+      } else if (/username/i.test(signupResult.error) || /23505/.test(signupResult.error)) {
+        errorEl.textContent = currentLang === 'ar' ? 'اسم المستخدم هذا أصبح مُستخدماً للتو — جرّب اسماً آخر.' : 'That username was just taken — please try another.';
       } else {
-        alert((currentLang === 'ar' ? 'حدث خطأ: ' : 'Something went wrong: ') + insertError.message);
+        errorEl.textContent = (currentLang === 'ar' ? 'حدث خطأ: ' : 'Something went wrong: ') + signupResult.error;
       }
+      errorEl.style.display = 'block';
       return;
     }
+
+    // Step 2: log in client-side to establish the session (the account was created
+    // server-side, so this browser doesn't have one yet).
+    const { data: signInData, error: signInError } = await sb.auth.signInWithPassword({ email: authEmail, password });
+    if (signInError) {
+      submitBtn.disabled = false;
+      errorEl.textContent = currentLang === 'ar' ? 'تم إنشاء الحساب، لكن تعذّر تسجيل الدخول تلقائياً. يرجى تسجيل الدخول يدوياً.' : 'Account created, but automatic login failed. Please log in manually.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    const signUpData = signInData;
 
     // Step 3: if they chose to receive items too (and aren't already a known receiver),
     // create the receiver profile right here — reusing the username/phone/location we
