@@ -225,10 +225,21 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     });
   });
 
-  // If already signed in, skip straight to the redirect target
+  // If already signed in AND that session has a real Share & Care account, skip
+  // straight to the redirect target. A session can exist without a matching account
+  // row here — this Supabase project is shared with Food Box / Little Learners staff
+  // logins, and any of those (or a stale/abandoned Share & Care session) would
+  // otherwise cause an infinite bounce with pages that gate on having an account
+  // (they'd see "please log in", come back here, get auto-redirected away, repeat).
   (async () => {
     const { data: { session } } = await sb.auth.getSession();
-    if (session) window.location.href = redirectTo;
+    if (!session) return;
+    const { data: account } = await sb.from('share_care_accounts').select('id').eq('user_id', session.user.id).maybeSingle();
+    if (account) {
+      window.location.href = redirectTo;
+    } else {
+      await sb.auth.signOut();
+    }
   })();
 
   document.getElementById('loginBtn').addEventListener('click', async () => {

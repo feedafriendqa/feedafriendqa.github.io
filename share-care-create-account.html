@@ -413,10 +413,19 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
   const params = new URLSearchParams(window.location.search);
   const redirectTo = params.get('redirect') || 'share-care-post-item.html';
 
-  // If already signed in, skip straight to the redirect target
+  // If already signed in AND that session has a real Share & Care account, skip
+  // straight to the redirect target. See share-care-login.html for why a session
+  // can exist here without a matching account (shared Supabase project across
+  // Food Box / Little Learners / Share & Care staff and receiver logins).
   (async () => {
     const { data: { session } } = await sb.auth.getSession();
-    if (session) window.location.href = redirectTo;
+    if (!session) return;
+    const { data: account } = await sb.from('share_care_accounts').select('id').eq('user_id', session.user.id).maybeSingle();
+    if (account) {
+      window.location.href = redirectTo;
+    } else {
+      await sb.auth.signOut();
+    }
   })();
 
   function setLang(lang){
