@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Account | Share &amp; Care</title>
+<title>My Profile | Share &amp; Care</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Nunito+Sans:wght@400;500;600;700&family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -122,6 +122,83 @@ html[dir="rtl"] .match-row{flex-direction:row-reverse;}
 html[dir="rtl"] .chevron{transform:rotate(180deg);}
 html[dir="rtl"] .item-card.open .chevron{transform:rotate(90deg);}
 html[dir="rtl"] footer{flex-direction:row-reverse;}
+
+/* ===== My Profile ===== */
+.profile-tabs{display:flex;gap:8px;max-width:720px;margin:14px auto 0;padding:0 20px;}
+.profile-tab{flex:1;text-align:center;padding:11px;border-radius:999px;font-weight:800;font-size:13px;
+  background:var(--panel);color:var(--muted);cursor:pointer;}
+.profile-tab.active{background:var(--green);color:#fff;}
+
+.profile-panel{display:none;max-width:720px;margin:0 auto;padding:18px 20px 40px;}
+.profile-panel.show{display:block;}
+
+.profile-note{display:flex;gap:11px;align-items:flex-start;background:#EDEFFA;border-radius:14px;padding:13px 15px;margin-bottom:18px;}
+.profile-note .icon-wrap{width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;}
+.profile-note .icon-wrap .icon{width:13px;height:13px;}
+.profile-note p{flex:1;min-width:0;font-size:12px;color:var(--accent-dark);line-height:1.5;margin:0;}
+
+.profile-card{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px;}
+.profile-card-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:12px;}
+.profile-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:12px;}
+.profile-row:last-child{border-bottom:none;}
+.profile-row-label{font-size:12.5px;color:var(--muted);font-weight:600;flex-shrink:0;}
+.profile-row-value{font-size:13.5px;color:var(--charcoal);font-weight:700;text-align:right;}
+html[dir="rtl"] .profile-row-value{text-align:left;}
+
+.profile-username{font-size:22px;font-weight:800;text-align:center;margin-bottom:8px;}
+.profile-badge-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+.profile-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;padding:6px 14px;border-radius:999px;}
+.profile-badge.verified{background:#E7F3EB;color:var(--green-dark);}
+.profile-badge.unverified{background:var(--panel);color:var(--muted);}
+.profile-badge .icon{width:13px;height:13px;}
+
+.member-list-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);}
+.member-list-row:last-child{border-bottom:none;}
+.member-avatar{width:38px;height:38px;border-radius:50%;background:var(--panel);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent-dark);}
+.member-avatar .icon{width:17px;height:17px;}
+.member-list-info{flex:1;min-width:0;}
+.member-list-name{font-size:13.5px;font-weight:800;}
+.member-list-meta{font-size:11.5px;color:var(--muted);font-weight:600;}
+.member-you-tag{font-size:10px;font-weight:800;color:var(--green-dark);background:#E7F3EB;padding:2px 8px;border-radius:999px;margin-left:6px;}
+html[dir="rtl"] .member-you-tag{margin-left:0;margin-right:6px;}
+
+.no-profile-state{text-align:center;padding:40px 20px;}
+.no-profile-state .icon{width:36px;height:36px;color:#C7CFC7;margin:0 auto 14px;}
+.no-profile-state p{font-size:13.5px;color:var(--muted);margin:0 0 16px;line-height:1.5;}
+.no-profile-state a{display:inline-block;background:var(--green);color:#fff;font-weight:800;font-size:13.5px;padding:12px 22px;border-radius:999px;}
+
+/* Ported add-member scan component (matches create-account.html) */
+.member-card{border:1.5px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;background:#fff;}
+.member-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.member-tag{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-dark);
+  background:#EDEFFA;padding:4px 10px;border-radius:999px;}
+.relationship-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.rel-chip{border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;
+  color:var(--muted);cursor:pointer;background:#fff;}
+.rel-chip.selected{border-color:var(--accent);background:#EDEFFA;color:var(--accent-dark);}
+.scan-zone{border:1.5px dashed var(--line);border-radius:14px;padding:18px;text-align:center;cursor:pointer;background:var(--panel);}
+.scan-zone .icon{width:26px;height:26px;color:var(--muted);margin:0 auto 8px;}
+.scan-zone-label{font-size:13px;font-weight:700;color:var(--muted);}
+.scan-zone-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.scan-zone.scanning{opacity:.6;pointer-events:none;}
+.scan-zone.done{border-style:solid;border-color:var(--green);background:#E7F3EB;}
+.scanned-info{display:none;margin-top:12px;}
+.scanned-info.show{display:block;}
+.scanned-field{display:flex;justify-content:space-between;font-size:13px;background:var(--panel);border-radius:9px;
+  padding:9px 12px;margin-bottom:6px;}
+.scanned-field span{color:var(--muted);}
+.scanned-field b{color:var(--charcoal);}
+.add-member-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:none;border:1.5px dashed var(--accent);color:var(--accent-dark);
+  font-weight:700;font-size:13px;padding:12px 16px;border-radius:14px;width:100%;margin-top:6px;}
+.add-member-btn .icon{width:15px;height:15px;}
+.save-member-btn{width:100%;background:var(--green);color:#fff;font-weight:800;font-size:13.5px;padding:13px;border:none;border-radius:999px;margin-top:6px;}
+.save-member-btn:disabled{opacity:.5;}
+
+html[dir="rtl"] .profile-note{flex-direction:row-reverse;text-align:right;}
+html[dir="rtl"] .member-list-row{flex-direction:row-reverse;}
+html[dir="rtl"] .profile-row{flex-direction:row-reverse;}
+html[dir="rtl"] .member-card-head{flex-direction:row-reverse;}
+html[dir="rtl"] .scanned-field{flex-direction:row-reverse;}
 </style>
 </head>
 <body>
@@ -172,41 +249,73 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
 </header>
 
 <div class="page-head">
-  <h1 data-en="My Matches" data-ar="مطابقاتي">My Matches</h1>
-  <p data-en="Items you've posted, and who's interested in them." data-ar="الأغراض التي نشرتها، ومن يهتم بها.">Items you've posted, and who's interested in them.</p>
+  <h1 data-en="My Profile" data-ar="ملفي الشخصي">My Profile</h1>
+  <p data-en="See exactly what givers see about you, and manage your household details." data-ar="شاهد بالضبط ما يراه المانحون عنك، وأدر تفاصيل أسرتك.">See exactly what givers see about you, and manage your household details.</p>
 </div>
 
 <div class="signed-out-note" id="signedOutNote" style="display:none;">
-  <p data-en="Log in to see your posted items and matches." data-ar="سجّل الدخول لرؤية أغراضك المنشورة ومطابقاتها.">Log in to see your posted items and matches.</p>
-  <a href="share-care-login.html?redirect=share-care-my-account.html" data-en="Log In" data-ar="تسجيل الدخول">Log In</a>
+  <p data-en="Log in to see your profile." data-ar="سجّل الدخول لرؤية ملفك الشخصي.">Log in to see your profile.</p>
+  <a href="share-care-login.html?redirect=share-care-my-profile.html" data-en="Log In" data-ar="تسجيل الدخول">Log In</a>
 </div>
 
-<div class="empty-state" id="emptyState" style="display:none;">
-  <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/></svg></span>
-  <p data-en="You haven't posted any items yet." data-ar="لم تنشر أي أغراض بعد.">You haven't posted any items yet.</p>
-</div>
+<div id="profileContent" style="display:none;">
+  <div class="profile-tabs">
+    <div class="profile-tab active" data-tab="public" data-en="Public Profile" data-ar="الملف العام">Public Profile</div>
+    <div class="profile-tab" data-tab="private" data-en="Private Details" data-ar="التفاصيل الخاصة">Private Details</div>
+  </div>
 
-<div class="item-list" id="itemList"></div>
+  <!-- ===== PUBLIC ===== -->
+  <div class="profile-panel show" id="publicPanel">
+    <div class="profile-note">
+      <div class="icon-wrap"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span></div>
+      <p data-en="This is exactly what someone sees about you when you show interest in an item — never your real name, phone, or exact address." data-ar="هذا بالضبط ما يراه شخص ما عنك عند إبداء اهتمامك بغرض ما — أبداً ليس اسمك الحقيقي أو هاتفك أو عنوانك الدقيق.">This is exactly what someone sees about you when you show interest in an item — never your real name, phone, or exact address.</p>
+    </div>
 
-<div class="receiver-cta" id="receiverCta" style="display:none;">
-  <div class="icon-wrap"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span></div>
-  <div class="cta-text"><b data-en="Want to receive items too?" data-ar="هل ترغب أيضاً في استلام أغراض؟">Want to receive items too?</b><span data-en="Add your household details anytime." data-ar="أضف تفاصيل أسرتك في أي وقت.">Add your household details anytime.</span></div>
-  <a href="share-care-receiver-profile.html" data-en="Add Details" data-ar="أضف التفاصيل">Add Details</a>
-</div>
+    <div id="noReceiverState" class="no-profile-state" style="display:none;">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <p data-en="You haven't registered as a receiver yet — a public profile only applies once you request items." data-ar="لم تُسجّل كمستفيد بعد — يظهر الملف العام فقط بعد طلبك للأغراض.">You haven't registered as a receiver yet — a public profile only applies once you request items.</p>
+      <a href="share-care-create-account.html" data-en="Register as a Receiver" data-ar="سجّل كمستفيد">Register as a Receiver</a>
+    </div>
 
-<div class="badge-legend">
-  <div class="icon-wrap"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="6" y="4" width="13" height="4.5"/><rect x="6" y="10.5" width="10" height="4.5"/></svg></span></div>
-  <p><b data-en="What the verified badge means:" data-ar="ماذا تعني شارة التوثيق:">What the verified badge means:</b> <span data-en="This is a verified beneficiary confirmed through Feed a Friend's programs — an approved case, not just a self-reported claim. No badge just means they're a regular Share &amp; Care member." data-ar="هذا مستفيد مُوثّق تم التحقق منه عبر برامج فيد أ فريند — حالة مُعتمدة وليست مجرد ادّعاء ذاتي. عدم وجود شارة يعني فقط أنه عضو عادي في شارك و اهتم.">This is a verified beneficiary confirmed through Feed a Friend's programs — an approved case, not just a self-reported claim. No badge just means they're a regular Share &amp; Care member.</span></p>
-</div>
+    <div id="publicProfileCard" style="display:none;">
+      <div class="profile-username" id="pubUsername"></div>
+      <div class="profile-badge-row" id="pubBadgeRow"></div>
+      <div class="profile-card">
+        <div class="profile-card-title" data-en="About the household" data-ar="عن الأسرة">About the household</div>
+        <div class="profile-row"><span class="profile-row-label" data-en="Household" data-ar="الأسرة">Household</span><span class="profile-row-value" id="pubHousehold"></span></div>
+        <div class="profile-row"><span class="profile-row-label" data-en="Your age" data-ar="عمرك">Your age</span><span class="profile-row-value" id="pubAge"></span></div>
+        <div class="profile-row"><span class="profile-row-label" data-en="Gender" data-ar="الجنس">Gender</span><span class="profile-row-value" id="pubGender"></span></div>
+        <div class="profile-row" id="pubChildrenRow"><span class="profile-row-label" data-en="Children" data-ar="الأطفال">Children</span><span class="profile-row-value" id="pubChildren"></span></div>
+      </div>
+      <div class="profile-card" id="pubSituationCard" style="display:none;">
+        <div class="profile-card-title" data-en="Household situation" data-ar="وضع الأسرة">Household situation</div>
+        <p style="font-size:13.5px;line-height:1.6;margin:0;" id="pubSituationText"></p>
+      </div>
+    </div>
+  </div>
 
-<div class="modal-overlay" id="modalOverlay">
-  <div class="modal-sheet">
-    <div class="modal-badge-row" id="modalBadgeRow"></div>
-    <div class="modal-username" id="modalUsername" style="display:none;"></div>
-    <div class="modal-situation" id="modalSituation"></div>
-    <div class="modal-note" id="modalNote"></div>
-    <button type="button" class="modal-btn" id="modalChooseBtn" data-en="Choose This Match" data-ar="اختر هذه المطابقة">Choose This Match</button>
-    <button type="button" class="modal-btn-secondary" id="modalCloseBtn" data-en="Close" data-ar="إغلاق">Close</button>
+  <!-- ===== PRIVATE ===== -->
+  <div class="profile-panel" id="privatePanel">
+    <div class="profile-card">
+      <div class="profile-card-title" data-en="Your details" data-ar="بياناتك">Your details</div>
+      <div class="profile-row"><span class="profile-row-label" data-en="Full name" data-ar="الاسم الكامل">Full name</span><span class="profile-row-value" id="privFullName"></span></div>
+      <div class="profile-row"><span class="profile-row-label" data-en="Username" data-ar="اسم المستخدم">Username</span><span class="profile-row-value" id="privUsername"></span></div>
+      <div class="profile-row"><span class="profile-row-label" data-en="Phone" data-ar="الهاتف">Phone</span><span class="profile-row-value" id="privPhone"></span></div>
+      <div class="profile-row"><span class="profile-row-label" data-en="Location" data-ar="الموقع">Location</span><span class="profile-row-value" id="privLocation"></span></div>
+    </div>
+
+    <div class="profile-card" id="privHouseholdCard" style="display:none;">
+      <div class="profile-card-title" data-en="Household members" data-ar="أفراد الأسرة">Household members</div>
+      <div id="memberList"></div>
+    </div>
+
+    <div id="addMemberSection" style="display:none;">
+      <button type="button" class="add-member-btn" id="addMemberToggleBtn">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span data-en="Add a family member" data-ar="أضف فرداً من العائلة">Add a family member</span>
+      </button>
+      <div id="addMemberForm" style="display:none;"></div>
+    </div>
   </div>
 </div>
 
@@ -220,59 +329,290 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
   const SUPABASE_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
 
-  const CATEGORY_META = {
-    baby:      { en:'Baby & Kids',    ar:'أطفال ورضّع',  color2:'#065923', icon:'<path d="M9 12a3 3 0 1 1 6 0c0 2-3 3-3 5"/><circle cx="12" cy="20" r=".6" fill="currentColor" stroke="none"/>' },
-    clothing:  { en:'Clothing',       ar:'ملابس',         color2:'#454E78', icon:'<path d="M9 4 6 7l2 2-2 11h12L16 9l2-2-3-3-3 2z"/>' },
-    furniture: { en:'Furniture',      ar:'أثاث',          color2:'#08752F', icon:'<path d="M4 10l8-6 8 6"/><path d="M6 9v10h12V9"/>' },
-    home:      { en:'Home & Living',  ar:'المنزل',        color2:'#08752F', icon:'<path d="M4 10l8-6 8 6"/><path d="M6 9v10h12V9"/>' },
-    toys:      { en:'Toys & Books',   ar:'ألعاب وكتب',    color2:'#5B65A3', icon:'<circle cx="12" cy="9" r="4"/><path d="M8 21l4-6 4 6"/>' },
-    other:     { en:'Other',          ar:'أخرى',          color2:'#6B7570', icon:'<circle cx="12" cy="12" r="8"/>' }
-  };
-  const STATUS_META = {
-    available: { en:'Available',   ar:'متاح',        color:'#08752F' },
-    reserved:  { en:'Reserved',    ar:'محجوز',        color:'#C98A2C' },
-    matched:   { en:'Matched',     ar:'تم التوفيق',   color:'#717EC4' },
-    given:     { en:'Unavailable', ar:'غير متاح',     color:'#6B7570' },
-    removed:   { en:'Unavailable', ar:'غير متاح',     color:'#6B7570' }
-  };
-  const VERIFIED_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="6" y="4" width="13" height="4.5"/><rect x="6" y="10.5" width="10" height="4.5"/></svg>';
-  const PERSON_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>';
-
-  function yearsAgo(y, m){
-    const d = new Date();
-    d.setFullYear(d.getFullYear() - y);
-    d.setMonth(d.getMonth() - (m || 0));
-    return d.toISOString();
-  }
-  const DEMO_ITEM = {
-    id: 'demo-item', title: 'Wooden high chair', category: 'baby', status: 'available',
-    photo_url: 'https://images.unsplash.com/photo-1637183611372-13f666acaa81?fm=jpg&q=60&w=800&auto=format&fit=crop',
-    created_at: new Date().toISOString(), interest_count: 3
-  };
-  const DEMO_MATCHES = [
-    {
-      interest_id: 'demo-1', status: 'pending', verified: true, badge_type: 'family',
-      created_at: yearsAgo(0, 2), username: 'um_yaman',
-      child_dobs: [yearsAgo(10), yearsAgo(8), yearsAgo(3), yearsAgo(0, 2)]
-    },
-    {
-      interest_id: 'demo-2', status: 'pending', verified: true, badge_type: 'friend',
-      created_at: yearsAgo(0, 3), username: 'faisal_k',
-      applicant_dob: yearsAgo(26), applicant_gender: 'male'
-    },
-    {
-      interest_id: 'demo-3', status: 'pending', verified: false, badge_type: null,
-      created_at: yearsAgo(0, 5), username: 'sara_q92', household_situation: 'Just moved to Doha, small family with one toddler.'
-    }
-  ];
-
   function initApp(){
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let currentLang = 'en';
-  let currentUserId = null;
-  let matchesCache = {};
-  let activeItem = null;
 
+  let accountRow = null;
+  let receiverRow = null;
+  let memberRows = [];
+
+  // Age computed exactly the way the giver-facing side would want to see it —
+  // months for babies/toddlers, years otherwise. Matches the phrasing already
+  // used elsewhere in the app ("Family with 4 kids aged 10, 8, 3, 2mo").
+  function computeAgeLabel(dobStr){
+    if (!dobStr) return null;
+    const dob = new Date(dobStr);
+    const now = new Date();
+    let months = (now.getFullYear() - dob.getFullYear()) * 12 + (now.getMonth() - dob.getMonth());
+    if (now.getDate() < dob.getDate()) months--;
+    if (months < 0) months = 0;
+    const years = Math.floor(months / 12);
+    if (years < 2) return currentLang === 'ar' ? `${months} شهراً` : `${months} month${months === 1 ? '' : 's'}`;
+    return currentLang === 'ar' ? `${years} سنة` : `${years} year${years === 1 ? '' : 's'}`;
+  }
+
+  function relationshipLabel(rel){
+    const map = {
+      self:   { en: 'You',     ar: 'أنت' },
+      spouse: { en: 'Spouse',  ar: 'الزوج/الزوجة' },
+      child:  { en: 'Child',   ar: 'طفل' },
+      parent: { en: 'Parent',  ar: 'والد/والدة' },
+      other:  { en: 'Other',   ar: 'آخر' }
+    };
+    const entry = map[rel] || map.other;
+    return currentLang === 'ar' ? entry.ar : entry.en;
+  }
+
+  async function loadProfile(){
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session){
+      document.getElementById('signedOutNote').style.display = 'block';
+      document.getElementById('profileContent').style.display = 'none';
+      return;
+    }
+    document.getElementById('signedOutNote').style.display = 'none';
+    document.getElementById('profileContent').style.display = 'block';
+
+    const [{ data: account }, { data: receiver }] = await Promise.all([
+      sb.from('share_care_accounts').select('*').eq('user_id', session.user.id).maybeSingle(),
+      sb.from('share_care_receivers').select('*').eq('user_id', session.user.id).maybeSingle()
+    ]);
+    accountRow = account;
+    receiverRow = receiver;
+
+    if (receiver){
+      const { data: members } = await sb.from('share_care_receiver_members')
+        .select('*').eq('receiver_id', receiver.id).order('created_at', { ascending: true });
+      memberRows = members || [];
+    } else {
+      memberRows = [];
+    }
+
+    renderPublicPanel();
+    renderPrivatePanel();
+  }
+
+  function renderPublicPanel(){
+    const noReceiverState = document.getElementById('noReceiverState');
+    const publicCard = document.getElementById('publicProfileCard');
+    if (!receiverRow){
+      noReceiverState.style.display = 'block';
+      publicCard.style.display = 'none';
+      return;
+    }
+    noReceiverState.style.display = 'none';
+    publicCard.style.display = 'block';
+
+    document.getElementById('pubUsername').textContent = receiverRow.username || (accountRow && accountRow.username) || '';
+
+    const badgeRow = document.getElementById('pubBadgeRow');
+    if (receiverRow.verified){
+      const isFamily = receiverRow.household_type === 'family';
+      badgeRow.innerHTML = `<span class="profile-badge verified"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="6" y="4" width="13" height="4.5"/><rect x="6" y="10.5" width="10" height="4.5"/></svg></span>${currentLang === 'ar' ? ('مُوثّق — ' + (isFamily ? 'عائلة' : 'فرد')) : ('FAF Verified — ' + (isFamily ? 'Family' : 'Friend'))}</span>`;
+    } else {
+      badgeRow.innerHTML = `<span class="profile-badge unverified">${currentLang === 'ar' ? 'غير مُوثّق' : 'Not verified'}</span>`;
+    }
+
+    document.getElementById('pubHousehold').textContent = receiverRow.household_type === 'family'
+      ? (currentLang === 'ar' ? 'عائلة' : 'Family')
+      : (currentLang === 'ar' ? 'فرد واحد' : 'Single');
+
+    const primary = memberRows.find(m => m.relationship === 'self') || memberRows.find(m => m.is_primary);
+    document.getElementById('pubAge').textContent = (primary && primary.dob) ? computeAgeLabel(primary.dob) : (currentLang === 'ar' ? 'غير محدد' : 'Not set');
+    document.getElementById('pubGender').textContent = (primary && primary.gender)
+      ? (primary.gender === 'female' ? (currentLang === 'ar' ? 'أنثى' : 'Female') : (currentLang === 'ar' ? 'ذكر' : 'Male'))
+      : (currentLang === 'ar' ? 'غير محدد' : 'Not set');
+
+    const children = memberRows.filter(m => m.relationship === 'child' && m.dob);
+    const childrenRow = document.getElementById('pubChildrenRow');
+    if (children.length){
+      childrenRow.style.display = 'flex';
+      document.getElementById('pubChildren').textContent = children.map(c => computeAgeLabel(c.dob)).join(', ');
+    } else {
+      childrenRow.style.display = 'none';
+    }
+
+    const situationCard = document.getElementById('pubSituationCard');
+    const situationText = receiverRow.verified ? receiverRow.needs_notes : (accountRow ? accountRow.household_situation : null);
+    if (situationText){
+      situationCard.style.display = 'block';
+      document.getElementById('pubSituationText').textContent = situationText;
+    } else {
+      situationCard.style.display = 'none';
+    }
+  }
+
+  function renderPrivatePanel(){
+    document.getElementById('privFullName').textContent = (accountRow && accountRow.full_name) || '—';
+    document.getElementById('privUsername').textContent = (accountRow && accountRow.username) || (receiverRow && receiverRow.username) || '—';
+    document.getElementById('privPhone').textContent = (accountRow && accountRow.phone) || (receiverRow && receiverRow.whatsapp) || '—';
+    document.getElementById('privLocation').textContent = (accountRow && accountRow.location) || (receiverRow && receiverRow.location) || '—';
+
+    const householdCard = document.getElementById('privHouseholdCard');
+    const memberList = document.getElementById('memberList');
+    if (memberRows.length){
+      householdCard.style.display = 'block';
+      memberList.innerHTML = memberRows.map(m => {
+        const relLabel = relationshipLabel(m.relationship);
+        const ageLabel = m.dob ? computeAgeLabel(m.dob) : '';
+        return `<div class="member-list-row">
+          <div class="member-avatar"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg></span></div>
+          <div class="member-list-info">
+            <div class="member-list-name">${m.full_name || (currentLang === 'ar' ? 'بدون اسم' : 'Unnamed')}${m.is_primary ? `<span class="member-you-tag">${currentLang === 'ar' ? 'أنت' : 'You'}</span>` : ''}</div>
+            <div class="member-list-meta">${relLabel}${ageLabel ? ' · ' + ageLabel : ''}</div>
+          </div>
+        </div>`;
+      }).join('');
+    } else {
+      householdCard.style.display = 'none';
+    }
+
+    document.getElementById('addMemberSection').style.display = receiverRow ? 'block' : 'none';
+  }
+
+  // ===== Tabs =====
+  document.querySelectorAll('.profile-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.getAttribute('data-tab');
+      document.getElementById('publicPanel').classList.toggle('show', target === 'public');
+      document.getElementById('privatePanel').classList.toggle('show', target === 'private');
+    });
+  });
+
+  // ===== Add family member — QID scan, same mechanism as create-account.html =====
+  function fileToBase64(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+  function convertDob(d){
+    const parts = (d || '').split('/');
+    if (parts.length !== 3) return null;
+    const [dd, mm, yyyy] = parts;
+    if (!yyyy || yyyy.length !== 4) return null;
+    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+  }
+
+  const relOptions = [
+    { v: 'spouse', en: 'Spouse', ar: 'الزوج/الزوجة' },
+    { v: 'child', en: 'Child', ar: 'طفل' },
+    { v: 'parent', en: 'Parent', ar: 'والد/والدة' },
+    { v: 'other', en: 'Other', ar: 'آخر' }
+  ];
+  let newMember = null;
+
+  function buildAddMemberCard(){
+    newMember = { relationship: 'other', qid_number: null, full_name: null, dob: null, gender: null };
+    const container = document.getElementById('addMemberForm');
+    container.innerHTML = `
+      <div class="member-card">
+        <div class="relationship-row" id="newMemberRelRow">
+          ${relOptions.map(r => `<div class="rel-chip" data-rel="${r.v}">${currentLang === 'ar' ? r.ar : r.en}</div>`).join('')}
+        </div>
+        <div class="scan-zone" id="newMemberScanZone">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg></span>
+          <div class="scan-zone-label" id="newMemberScanLabel">${currentLang === 'ar' ? 'اضغط لمسح البطاقة (الوجه الأمامي)' : 'Tap to scan QID (front)'}</div>
+          <div class="scan-zone-sub">${currentLang === 'ar' ? 'تتم معالجة الصورة فوراً، ولا يتم تخزينها' : 'Photo is processed instantly, not stored'}</div>
+          <input type="file" accept="image/*" id="newMemberFileInput" style="display:none;">
+        </div>
+        <div class="scanned-info" id="newMemberScannedInfo">
+          <div class="scanned-field"><span>${currentLang === 'ar' ? 'الاسم' : 'Name'}</span><b id="newMemberFieldName"></b></div>
+          <div class="scanned-field"><span>${currentLang === 'ar' ? 'الرقم الشخصي' : 'QID'}</span><b id="newMemberFieldQid"></b></div>
+          <div class="scanned-field"><span>${currentLang === 'ar' ? 'تاريخ الميلاد' : 'Date of birth'}</span><b id="newMemberFieldDob"></b></div>
+          <div class="scanned-field"><span>${currentLang === 'ar' ? 'الجنس' : 'Gender'}</span><b id="newMemberFieldGender"></b></div>
+        </div>
+        <button type="button" class="save-member-btn" id="saveMemberBtn" disabled>${currentLang === 'ar' ? 'حفظ فرد العائلة' : 'Save family member'}</button>
+        <div style="color:#B3382A;font-size:12.5px;margin-top:8px;display:none;" id="newMemberError"></div>
+      </div>
+    `;
+
+    container.querySelectorAll('[data-rel]').forEach(chip => {
+      chip.addEventListener('click', () => {
+        container.querySelectorAll('[data-rel]').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+        newMember.relationship = chip.getAttribute('data-rel');
+      });
+    });
+
+    const scanZone = document.getElementById('newMemberScanZone');
+    const fileInput = document.getElementById('newMemberFileInput');
+    scanZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      scanZone.classList.add('scanning');
+      document.getElementById('newMemberScanLabel').textContent = currentLang === 'ar' ? 'جارٍ المسح...' : 'Scanning...';
+      try {
+        const base64 = await fileToBase64(file);
+        const resp = await fetch(`${SUPABASE_URL}/functions/v1/scan-qid`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ images: { front: { type: file.type, data: base64 } } })
+        });
+        const result = await resp.json();
+        if (result.error || !result.qid_number) throw new Error(result.error || 'Could not read card');
+
+        newMember.qid_number = result.qid_number;
+        newMember.full_name = result.name;
+        newMember.gender = (result.gender || '').toLowerCase().startsWith('f') ? 'female' : 'male';
+        newMember.dob = result.dob || null;
+
+        document.getElementById('newMemberFieldName').textContent = result.name || '—';
+        document.getElementById('newMemberFieldQid').textContent = result.qid_number || '—';
+        document.getElementById('newMemberFieldDob').textContent = result.dob || '—';
+        document.getElementById('newMemberFieldGender').textContent = result.gender || '—';
+        document.getElementById('newMemberScannedInfo').classList.add('show');
+        scanZone.classList.remove('scanning');
+        scanZone.classList.add('done');
+        document.getElementById('newMemberScanLabel').textContent = currentLang === 'ar' ? 'تم المسح — اضغط لإعادة المسح' : 'Scanned — tap to rescan';
+        document.getElementById('saveMemberBtn').disabled = false;
+      } catch (err){
+        scanZone.classList.remove('scanning');
+        document.getElementById('newMemberScanLabel').textContent = currentLang === 'ar' ? 'تعذّر القراءة — اضغط للمحاولة مرة أخرى' : 'Could not read card — tap to try again';
+      }
+    });
+
+    document.getElementById('saveMemberBtn').addEventListener('click', async () => {
+      const errEl = document.getElementById('newMemberError');
+      errEl.style.display = 'none';
+      if (!newMember.qid_number || !receiverRow) return;
+      const btn = document.getElementById('saveMemberBtn');
+      btn.disabled = true;
+      const { error } = await sb.from('share_care_receiver_members').insert({
+        receiver_id: receiverRow.id,
+        is_primary: false,
+        relationship: newMember.relationship,
+        qid_number: newMember.qid_number,
+        full_name: newMember.full_name,
+        dob: newMember.dob ? convertDob(newMember.dob) : null,
+        gender: newMember.gender
+      });
+      if (error){
+        btn.disabled = false;
+        errEl.textContent = (currentLang === 'ar' ? 'حدث خطأ: ' : 'Something went wrong: ') + error.message;
+        errEl.style.display = 'block';
+        return;
+      }
+      document.getElementById('addMemberForm').style.display = 'none';
+      document.getElementById('addMemberForm').innerHTML = '';
+      document.getElementById('addMemberToggleBtn').style.display = 'block';
+      await loadProfile();
+    });
+  }
+
+  document.getElementById('addMemberToggleBtn').addEventListener('click', () => {
+    document.getElementById('addMemberToggleBtn').style.display = 'none';
+    document.getElementById('addMemberForm').style.display = 'block';
+    buildAddMemberCard();
+  });
+
+  // ===== Language toggle =====
   function setLang(lang){
     currentLang = lang;
     document.documentElement.setAttribute('lang', lang);
@@ -283,280 +623,31 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     });
     const toggleBtn = document.getElementById('langToggleBtn');
     if (toggleBtn) toggleBtn.textContent = lang === 'ar' ? toggleBtn.getAttribute('data-ar') : toggleBtn.getAttribute('data-en');
+    renderPublicPanel();
+    renderPrivatePanel();
   }
   setLang('en');
   document.getElementById('langToggleBtn').addEventListener('click', () => setLang(currentLang === 'ar' ? 'en' : 'ar'));
 
+  // ===== Nav menu toggle =====
   const menuBtn = document.getElementById('menuToggleBtn');
   const navMenu = document.getElementById('navMenu');
-  menuBtn.addEventListener('click', (e) => { e.stopPropagation(); navMenu.classList.toggle('open'); });
-  document.addEventListener('click', (e) => { if (!navMenu.contains(e.target) && e.target !== menuBtn) navMenu.classList.remove('open'); });
-
-  function timeAgo(dateStr){
-    const diffMs = Date.now() - new Date(dateStr).getTime();
-    const hours = Math.floor(diffMs / 3600000);
-    if (hours < 1) return currentLang === 'ar' ? 'الآن' : 'Just now';
-    if (hours < 24) return currentLang === 'ar' ? `منذ ${hours} س` : `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return currentLang === 'ar' ? `منذ ${days} يوم` : `${days}d ago`;
-  }
-
-  function ageFromDob(dobStr){
-    const dob = new Date(dobStr);
-    const now = new Date();
-    let years = now.getFullYear() - dob.getFullYear();
-    let months = now.getMonth() - dob.getMonth();
-    if (now.getDate() < dob.getDate()) months--;
-    if (months < 0) { years--; months += 12; }
-    if (years < 1) return { value: Math.max(months, 0), unit: 'months' };
-    return { value: years, unit: 'years' };
-  }
-
-  function joinWithAnd(list, lang){
-    if (list.length === 0) return '';
-    if (list.length === 1) return list[0];
-    const last = list[list.length - 1];
-    const rest = list.slice(0, -1);
-    return lang === 'ar' ? rest.join('، ') + ' و' + last : rest.join(', ') + ' and ' + last;
-  }
-
-  function situationText(m){
-    if (!m.verified) {
-      if (m.household_situation && m.household_situation.trim()) return m.household_situation.trim();
-      return currentLang === 'ar' ? 'لم يشارك وضع أسرته بعد.' : "Hasn't shared their household situation yet.";
-    }
-    if (m.badge_type === 'family') {
-      if (m.child_dobs && m.child_dobs.length > 0) {
-        const ages = m.child_dobs.map(d => {
-          const a = ageFromDob(d);
-          if (currentLang === 'ar') return a.unit === 'years' ? `${a.value}` : `${a.value} أشهر`;
-          return a.unit === 'years' ? `${a.value}` : `${a.value} months`;
-        });
-        const n = m.child_dobs.length;
-        return currentLang === 'ar'
-          ? `عائلة لديها ${n} أطفال أعمارهم ${joinWithAnd(ages, 'ar')}`
-          : `Family with ${n} kid${n === 1 ? '' : 's'} aged ${joinWithAnd(ages, 'en')}`;
-      }
-      return currentLang === 'ar' ? 'عائلة مُوثّقة' : 'Verified family';
-    }
-    if (m.badge_type === 'friend') {
-      if (m.applicant_dob) {
-        const a = ageFromDob(m.applicant_dob);
-        const ageTxt = a.unit === 'years' ? a.value : (currentLang === 'ar' ? `${a.value} أشهر` : `${a.value} months`);
-        const label = m.applicant_gender === 'male'
-          ? (currentLang === 'ar' ? 'أعزب' : 'Bachelor')
-          : m.applicant_gender === 'female'
-            ? (currentLang === 'ar' ? 'عزباء' : 'Single woman')
-            : (currentLang === 'ar' ? 'فرد' : 'Individual');
-        return currentLang === 'ar' ? `${label} بعمر ${ageTxt}` : `${label} aged ${ageTxt}`;
-      }
-      return currentLang === 'ar' ? 'فرد مُوثّق' : 'Verified individual';
-    }
-    return currentLang === 'ar' ? 'عضو في شارك و اهتم' : 'Share & Care member';
-  }
-
-  function badgeLabel(m){
-    if (!m.verified) return null;
-    return currentLang === 'ar' ? 'موثّق FAF' : 'FAF Verified';
-  }
-
-  function renderMatchRow(m){
-    const row = document.createElement('div');
-    row.className = 'match-row';
-    const badgeLbl = badgeLabel(m);
-    const badgeHtml = badgeLbl
-      ? `<span class="match-badge verified"><span class="icon">${VERIFIED_ICON}</span>${badgeLbl}</span>`
-      : `<span class="match-badge" style="background:var(--panel);color:var(--muted);">${currentLang === 'ar' ? 'غير مُوثّق' : 'Not verified'}</span>`;
-    const statusTagHtml = m.status !== 'pending'
-      ? `<span class="match-status-tag ${m.status}">${m.status === 'matched' ? (currentLang === 'ar' ? 'تم الاختيار' : 'Chosen') : (currentLang === 'ar' ? 'لم يُختر' : 'Not chosen')}</span>`
-      : '';
-    const usernameHtml = m.username ? `<span class="match-username">@${m.username}</span>` : '';
-    row.innerHTML = `
-      <div class="match-avatar"><span class="icon">${PERSON_ICON}</span></div>
-      <div class="match-info">
-        <div class="match-badge-row">${badgeHtml}${usernameHtml}</div>
-        <div class="match-time">${timeAgo(m.created_at)}</div>
-      </div>
-      ${statusTagHtml}
-    `;
-    row.addEventListener('click', () => openMatchModal(m));
-    return row;
-  }
-
-  function openMatchModal(m){
-    const badgeLbl = badgeLabel(m);
-    const badgeSpan = badgeLbl
-      ? `<span class="modal-badge verified"><span class="icon">${VERIFIED_ICON}</span>${badgeLbl}</span>`
-      : `<span class="modal-badge unverified">${currentLang === 'ar' ? 'غير مُوثّق' : 'Not verified'}</span>`;
-    const usernameSpan = m.username ? `<span class="modal-username">@${m.username}</span>` : '';
-    document.getElementById('modalBadgeRow').innerHTML = badgeSpan + usernameSpan;
-    document.getElementById('modalUsername').style.display = 'none';
-    document.getElementById('modalSituation').textContent = situationText(m);
-    document.getElementById('modalNote').style.color = 'var(--muted)';
-    document.getElementById('modalNote').textContent = m.verified
-      ? (currentLang === 'ar'
-          ? 'مستفيد مُوثّق تم التحقق منه عبر برامج فيد أ فريند. ستبقى الهوية الكاملة مجهولة حتى تختار هذه المطابقة.'
-          : "A verified beneficiary confirmed through Feed a Friend's programs. Full identity stays anonymous until you choose this match.")
-      : (currentLang === 'ar'
-          ? 'ستبقى بيانات التواصل مخفية حتى تختار هذه المطابقة.'
-          : 'Contact details stay hidden until you choose this match.');
-    const chooseBtn = document.getElementById('modalChooseBtn');
-    if (m.status === 'matched') {
-      chooseBtn.textContent = currentLang === 'ar' ? 'تم اختيار هذه المطابقة' : 'Already chosen';
-      chooseBtn.disabled = true;
-    } else if (m.status === 'declined') {
-      chooseBtn.textContent = currentLang === 'ar' ? 'تم اختيار مطابقة أخرى' : 'Another match was chosen';
-      chooseBtn.disabled = true;
-    } else {
-      chooseBtn.textContent = currentLang === 'ar' ? 'اختر هذه المطابقة' : 'Choose This Match';
-      chooseBtn.disabled = false;
-    }
-    chooseBtn.onclick = async () => {
-      if (activeItem.id === 'demo-item') {
-        document.getElementById('modalNote').style.color = 'var(--green-dark)';
-        document.getElementById('modalNote').textContent = currentLang === 'ar'
-          ? 'هذا مجرد معاينة — لن يتم حفظ أي شيء.'
-          : "This is just a preview — nothing will be saved.";
-        return;
-      }
-      chooseBtn.disabled = true;
-      chooseBtn.textContent = currentLang === 'ar' ? 'جارٍ الحفظ...' : 'Saving...';
-      const { error } = await sb.rpc('choose_item_match', { p_item_id: activeItem.id, p_interest_id: m.interest_id });
-      if (error) {
-        alert((currentLang === 'ar' ? 'حدث خطأ: ' : 'Something went wrong: ') + error.message);
-        chooseBtn.disabled = false;
-        chooseBtn.textContent = currentLang === 'ar' ? 'اختر هذه المطابقة' : 'Choose This Match';
-        return;
-      }
-      document.getElementById('modalOverlay').classList.remove('open');
-      delete matchesCache[activeItem.id];
-      await loadItems();
-    };
-    document.getElementById('modalOverlay').classList.add('open');
-  }
-  document.getElementById('modalCloseBtn').addEventListener('click', () => {
-    document.getElementById('modalOverlay').classList.remove('open');
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    navMenu.classList.toggle('open');
   });
-  document.getElementById('modalOverlay').addEventListener('click', (e) => {
-    if (e.target === document.getElementById('modalOverlay')) document.getElementById('modalOverlay').classList.remove('open');
+  document.addEventListener('click', (e) => {
+    if (!navMenu.contains(e.target) && e.target !== menuBtn) navMenu.classList.remove('open');
   });
 
-  function matchPriority(m){
-    if (m.verified && m.badge_type === 'family') return 0;
-    if (m.verified && m.badge_type === 'friend') return 1;
-    return 2;
-  }
-
-  function prioritySortMatches(matches){
-    return matches.slice().sort((a, b) => {
-      const pa = matchPriority(a), pb = matchPriority(b);
-      if (pa !== pb) return pa - pb;
-      return new Date(a.created_at) - new Date(b.created_at);
-    });
-  }
-
-  async function toggleItemCard(card, item){
-    const isOpen = card.classList.contains('open');
-    document.querySelectorAll('.item-card.open').forEach(c => { if (c !== card) c.classList.remove('open'); });
-    card.classList.toggle('open', !isOpen);
-    if (isOpen) return;
-    activeItem = item;
-    const panel = card.querySelector('.matches-panel');
-    if (matchesCache[item.id]) { renderMatchesPanel(panel, matchesCache[item.id]); return; }
-    if (item.id === 'demo-item') {
-      matchesCache[item.id] = prioritySortMatches(DEMO_MATCHES);
-      renderMatchesPanel(panel, matchesCache[item.id]);
-      return;
-    }
-    panel.innerHTML = `<div class="loading-row">${currentLang === 'ar' ? 'جارٍ التحميل...' : 'Loading...'}</div>`;
-    const { data, error } = await sb.rpc('get_item_matches', { p_item_id: item.id });
-    if (error) { panel.innerHTML = `<div class="no-matches">${currentLang === 'ar' ? 'تعذّر التحميل.' : 'Could not load matches.'}</div>`; return; }
-    matchesCache[item.id] = prioritySortMatches(data || []);
-    renderMatchesPanel(panel, matchesCache[item.id]);
-  }
-
-  function renderMatchesPanel(panel, matches){
-    panel.innerHTML = '';
-    if (!matches || matches.length === 0) {
-      panel.innerHTML = `<div class="no-matches">${currentLang === 'ar' ? 'لا يوجد أحد مهتم بعد.' : 'No one has expressed interest yet.'}</div>`;
-      return;
-    }
-    matches.forEach(m => panel.appendChild(renderMatchRow(m)));
-  }
-
-  function renderItemCard(item){
-    const meta = CATEGORY_META[item.category] || CATEGORY_META.other;
-    const statusMeta = STATUS_META[item.status] || STATUS_META.available;
-    const firstPhoto = item.photo_url ? item.photo_url.split(',')[0].trim() : null;
-    const card = document.createElement('div');
-    card.className = 'item-card';
-    card.innerHTML = `
-      <div class="item-card-head">
-        <div class="item-thumb" style="background:${meta.color2};">
-          ${firstPhoto ? `<img src="${firstPhoto}" alt="">` : `<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${meta.icon}</svg></span>`}
-        </div>
-        <div class="item-card-info">
-          <div class="item-card-title">${item.title}</div>
-          <div class="item-card-meta">
-            <span class="status-pill"><span class="status-dot" style="background:${statusMeta.color};"></span>${currentLang === 'ar' ? statusMeta.ar : statusMeta.en}</span>
-            <span class="interest-count">${item.interest_count} ${currentLang === 'ar' ? 'مهتم' : (item.interest_count === 1 ? 'interested' : 'interested')}</span>
-          </div>
-        </div>
-        <span class="icon chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-      </div>
-      <div class="matches-panel"></div>
-    `;
-    card.querySelector('.item-card-head').addEventListener('click', () => toggleItemCard(card, item));
-    return card;
-  }
-
-  function renderDemoSection(){
-    const listEl = document.getElementById('itemList');
-    const label = document.createElement('p');
-    label.style.cssText = 'font-size:11.5px;font-weight:800;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin:4px 2px 2px;';
-    label.setAttribute('data-en', 'Preview — tap to try it');
-    label.setAttribute('data-ar', 'معاينة — اضغط للتجربة');
-    label.textContent = currentLang === 'ar' ? 'معاينة — اضغط للتجربة' : 'Preview — tap to try it';
-    listEl.appendChild(label);
-    listEl.appendChild(renderItemCard(DEMO_ITEM));
-  }
-
-  async function loadItems(){
-    const listEl = document.getElementById('itemList');
-    const emptyEl = document.getElementById('emptyState');
-    const { data: items, error } = await sb.from('share_care_items')
-      .select('id, title, category, status, photo_url, created_at')
-      .eq('posted_by_user_id', currentUserId)
-      .order('created_at', { ascending: false });
-    if (error || !items || items.length === 0) {
-      listEl.innerHTML = '';
-      emptyEl.style.display = 'block';
-      renderDemoSection();
-      return;
-    }
-    emptyEl.style.display = 'none';
-    const ids = items.map(i => i.id);
-    const { data: interestRows } = await sb.from('share_care_item_interests').select('item_id').in('item_id', ids);
-    const counts = {};
-    (interestRows || []).forEach(r => { counts[r.item_id] = (counts[r.item_id] || 0) + 1; });
-    listEl.innerHTML = '';
-    items.forEach(item => {
-      item.interest_count = counts[item.id] || 0;
-      listEl.appendChild(renderItemCard(item));
-    });
-  }
-
+  // ===== Auth-aware nav swap =====
   (async () => {
     const { data: { session } } = await sb.auth.getSession();
-    if (!session) {
-      document.getElementById('signedOutNote').style.display = 'block';
-      renderDemoSection();
-      return;
-    }
-    currentUserId = session.user.id;
+    if (!session) return;
     const authLink = document.getElementById('authNavLink');
     const authText = document.getElementById('authNavText');
     const authIcon = document.getElementById('authNavIcon');
+    if (!authLink) return;
     authLink.removeAttribute('href');
     authLink.style.cursor = 'pointer';
     authText.setAttribute('data-en', 'Log Out');
@@ -564,10 +655,9 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     authText.textContent = currentLang === 'ar' ? 'تسجيل الخروج' : 'Log Out';
     authIcon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>';
     authLink.addEventListener('click', async () => { await sb.auth.signOut(); window.location.reload(); });
-    const { data: hasReceiver } = await sb.rpc('has_receiver_profile');
-    if (!hasReceiver) document.getElementById('receiverCta').style.display = 'flex';
-    await loadItems();
   })();
+
+  loadProfile();
   }
 
   if (window.supabase) { initApp(); }
