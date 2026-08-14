@@ -69,11 +69,13 @@ svg{display:block;}
   flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:8px;
   background:rgba(255,255,255,.96);border-radius:999px;padding:0 6px 0 14px;color:#4b4f57;height:48px;
 }
-.search-bar .icon{width:17px;height:17px;color:#08752F;flex-shrink:0;}
-.search-bar span.stext{flex:1;min-width:0;text-align:left;font-size:13.5px;font-weight:700;color:#71757d;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.search-bar .icon{width:17px;height:17px;color:#08752F;flex-shrink:0;cursor:pointer;}
+.search-bar input.stext{flex:1;min-width:0;text-align:left;font-size:13.5px;font-weight:700;color:#4b4f57;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:none;background:transparent;outline:none;
+  padding:0;font-family:inherit;}
+.search-bar input.stext::placeholder{color:#71757d;font-weight:700;}
 .search-filter{width:30px;height:30px;border-radius:50%;background:#F1F1F4;display:flex;align-items:center;
-  justify-content:center;flex-shrink:0;}
+  justify-content:center;flex-shrink:0;text-decoration:none;}
 .search-filter .icon{width:14px;height:14px;color:var(--accent-dark);}
 .btn-post{
   flex:0 0 auto;display:flex;align-items:center;gap:8px;background:var(--accent);color:#fff;font-weight:800;
@@ -84,12 +86,12 @@ svg{display:block;}
 
 @media(min-width:600px){
   .tagline{font-size:16px;max-width:440px;}
-  .search-bar span.stext{font-size:14.5px;}
+  .search-bar input.stext{font-size:14.5px;}
 }
 
 /* RTL */
 html[dir="rtl"] .search-bar{flex-direction:row-reverse;padding:0 14px 0 6px;}
-html[dir="rtl"] .search-bar span.stext{text-align:right;}
+html[dir="rtl"] .search-bar input.stext{text-align:right;}
 html[dir="rtl"] .nav-menu{right:auto;left:20px;}
 html[dir="rtl"] .nav-menu a{flex-direction:row-reverse;}
 html[dir="rtl"] .tb-right{flex-direction:row-reverse;}
@@ -221,8 +223,8 @@ html[dir="rtl"] .page-footer{flex-direction:row-reverse;}
     <div class="action-row">
       <div class="search-bar">
         <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
-        <span class="stext" data-en="Search items" data-ar="ابحث عن أغراض">Search items</span>
-        <span class="search-filter"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg></span></span>
+        <input class="stext" id="heroSearchInput" type="text" data-en-placeholder="Search items" data-ar-placeholder="ابحث عن أغراض" placeholder="Search items">
+        <a class="search-filter" href="share-care-browse-items.html"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg></span></a>
       </div>
       <a class="btn-post" href="share-care-post-item.html">
         <span class="plus-badge"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span></span>
@@ -402,10 +404,23 @@ html[dir="rtl"] .page-footer{flex-direction:row-reverse;}
       const htm = lang === 'ar' ? el.getAttribute('data-ar-html') : el.getAttribute('data-en-html');
       if (htm !== null) el.innerHTML = htm;
     });
+    const heroSearchInput = document.getElementById('heroSearchInput');
+    if (heroSearchInput) {
+      heroSearchInput.placeholder = lang === 'ar' ? heroSearchInput.getAttribute('data-ar-placeholder') : heroSearchInput.getAttribute('data-en-placeholder');
+    }
     const toggleBtn = document.getElementById('langToggleBtn');
     if (toggleBtn) toggleBtn.textContent = lang === 'ar' ? toggleBtn.getAttribute('data-ar') : toggleBtn.getAttribute('data-en');
   }
   setLang('en');
+
+  function goToSearch() {
+    const val = document.getElementById('heroSearchInput').value.trim();
+    window.location.href = 'share-care-browse-items.html' + (val ? '?q=' + encodeURIComponent(val) : '');
+  }
+  document.getElementById('heroSearchInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') goToSearch();
+  });
+  document.querySelector('.search-bar .icon').addEventListener('click', goToSearch);
   document.getElementById('langToggleBtn').addEventListener('click', () => {
     const current = document.documentElement.getAttribute('lang') === 'ar' ? 'ar' : 'en';
     setLang(current === 'ar' ? 'en' : 'ar');

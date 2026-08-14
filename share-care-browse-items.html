@@ -321,6 +321,26 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     renderItems();
   });
 
+  // Pick up a search/category handed off from elsewhere (e.g. the homepage's
+  // hero search bar) via ?q= and ?category= URL params.
+  (() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const qParam = urlParams.get('q');
+    const categoryParam = urlParams.get('category');
+    if (qParam) {
+      searchTerm = qParam.trim().toLowerCase();
+      document.getElementById('searchInput').value = qParam;
+    }
+    if (categoryParam) {
+      const matchingChip = document.querySelector('.cat-chip[data-value="' + categoryParam + '"]');
+      if (matchingChip) {
+        document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+        matchingChip.classList.add('active');
+        activeCategory = categoryParam;
+      }
+    }
+  })();
+
   function timeAgo(dateStr){
     const diffMs = Date.now() - new Date(dateStr).getTime();
     const hours = Math.floor(diffMs / 3600000);
