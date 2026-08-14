@@ -932,19 +932,21 @@ function loadApps() {
 function loadAllMembersForSearch() {
   membersByApp = {};
   var pageSize = 1000;
-  function fetchPage(offset) {
+  function fetchPage(offset, headers) {
     return fetch(SUPABASE_URL + '/rest/v1/food_box_members?select=application_id,full_name,full_name_en,qid_number,whatsapp&order=id&offset=' + offset + '&limit=' + pageSize, {
-      headers: apiHeaders()
+      headers: headers
     }).then(function(r) { return r.json(); }).then(function(rows) {
       rows = Array.isArray(rows) ? rows : [];
       rows.forEach(function(m) {
         if (!membersByApp[m.application_id]) membersByApp[m.application_id] = [];
         membersByApp[m.application_id].push(m);
       });
-      if (rows.length === pageSize) return fetchPage(offset + pageSize); // more pages to go
+      if (rows.length === pageSize) return fetchPage(offset + pageSize, headers); // more pages to go
     });
   }
-  fetchPage(0).then(function() {
+  apiHeadersAsync().then(function(headers) {
+    return fetchPage(0, headers);
+  }).then(function() {
     filterApps(); // re-run current search now that member data is available
   }).catch(function(e) { console.error('Failed to load members for search:', e.message); });
 }
@@ -1183,36 +1185,38 @@ function viewApp(id) {
   renderModal(app, [], {});
   // Fetch real members if not demo
   if (!id.startsWith('demo')) {
-    fetch(SUPABASE_URL + '/rest/v1/food_box_members?application_id=eq.' + id + '&select=*', {
-      headers: apiHeaders()
-    }).then(function(r){return r.json();}).then(function(members){
-      members = members || [];
-      currentMembers = members;
-      renderModal(app, members, {});
+    apiHeadersAsync().then(function(headers) {
+      fetch(SUPABASE_URL + '/rest/v1/food_box_members?application_id=eq.' + id + '&select=*', {
+        headers: headers
+      }).then(function(r){return r.json();}).then(function(members){
+        members = members || [];
+        currentMembers = members;
+        renderModal(app, members, {});
 
-      var paths = [app.qid_front_path, app.qid_back_path, app.blue_plate_path, app.salary_proof_path];
-      members.forEach(function(m) { paths.push(m.qid_front_path, m.qid_back_path, m.birth_cert_path); });
-      var adminDocs = Array.isArray(app.admin_documents) ? app.admin_documents : [];
-      adminDocs.forEach(function(d) { paths.push(d.path); });
-      fetchDocumentUrls(paths).then(function(urlMap) {
-        currentDocUrlMap = urlMap;
-        if (currentAppId === id) renderModal(app, members, urlMap);
-      });
-    }).catch(function(){});
+        var paths = [app.qid_front_path, app.qid_back_path, app.blue_plate_path, app.salary_proof_path];
+        members.forEach(function(m) { paths.push(m.qid_front_path, m.qid_back_path, m.birth_cert_path); });
+        var adminDocs = Array.isArray(app.admin_documents) ? app.admin_documents : [];
+        adminDocs.forEach(function(d) { paths.push(d.path); });
+        fetchDocumentUrls(paths).then(function(urlMap) {
+          currentDocUrlMap = urlMap;
+          if (currentAppId === id) renderModal(app, members, urlMap);
+        });
+      }).catch(function(){});
 
-    // Sponsorship details (super admin only feature, but harmless to fetch
-    // regardless — the section itself is gated on myRole in renderModal).
-    if (myRole === 'super_admin' && app.sponsorship_id) {
-      fetch(SUPABASE_URL + '/rest/v1/sponsorships?id=eq.' + app.sponsorship_id + '&select=*', {
-        headers: apiHeaders()
-      }).then(function(r){ return r.json(); }).then(function(rows){
-        currentSponsorship = (Array.isArray(rows) && rows[0]) ? rows[0] : {};
-        if (currentAppId === id) renderModal(app, currentMembers, currentDocUrlMap);
-      }).catch(function(){
-        currentSponsorship = {};
-        if (currentAppId === id) renderModal(app, currentMembers, currentDocUrlMap);
-      });
-    }
+      // Sponsorship details (super admin only feature, but harmless to fetch
+      // regardless — the section itself is gated on myRole in renderModal).
+      if (myRole === 'super_admin' && app.sponsorship_id) {
+        fetch(SUPABASE_URL + '/rest/v1/sponsorships?id=eq.' + app.sponsorship_id + '&select=*', {
+          headers: headers
+        }).then(function(r){ return r.json(); }).then(function(rows){
+          currentSponsorship = (Array.isArray(rows) && rows[0]) ? rows[0] : {};
+          if (currentAppId === id) renderModal(app, currentMembers, currentDocUrlMap);
+        }).catch(function(){
+          currentSponsorship = {};
+          if (currentAppId === id) renderModal(app, currentMembers, currentDocUrlMap);
+        });
+      }
+    });
   }
 }
 
@@ -1645,8 +1649,10 @@ function exportConfirmedCSV() {
   var btn = document.querySelector('[onclick="exportConfirmedCSV()"]');
   if (btn) { btn.textContent = 'Preparing export…'; btn.disabled = true; }
 
-  fetch(SUPABASE_URL + '/rest/v1/food_box_members?application_id=in.(' + ids.join(',') + ')&select=application_id,full_name,dob,diaper_size,needs_formula', {
-    headers: apiHeaders()
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_members?application_id=in.(' + ids.join(',') + ')&select=application_id,full_name,dob,diaper_size,needs_formula', {
+      headers: headers
+    });
   }).then(function(r) {
     if (!r.ok) throw new Error('Could not load household members (' + r.status + ')');
     return r.json();
@@ -1904,9 +1910,11 @@ function moderateThankyou(messageId, approve) {
 }
 
 function dismissDriverNote(appId) {
-  fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + appId, {
-    method: 'PATCH', headers: apiHeaders(),
-    body: JSON.stringify({ driver_notes_flagged: false })
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + appId, {
+      method: 'PATCH', headers: headers,
+      body: JSON.stringify({ driver_notes_flagged: false })
+    });
   }).then(function() {
     var app = allApps.find(function(a){return a.id===appId;});
     if (app) app.driver_notes_flagged = false;
@@ -3623,8 +3631,10 @@ function saveNewMember(appId) {
 // the check entirely) or no match exists.
 function checkMemberQidDuplicate(qidNumber) {
   if (!qidNumber) return Promise.resolve(null);
-  return fetch(SUPABASE_URL + '/rest/v1/food_box_members?qid_number=eq.' + encodeURIComponent(qidNumber) + '&select=id,full_name,application_id&limit=1', {
-    headers: apiHeaders()
+  return apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_members?qid_number=eq.' + encodeURIComponent(qidNumber) + '&select=id,full_name,application_id&limit=1', {
+      headers: headers
+    });
   }).then(function(r) {
     if (!r.ok) throw new Error('Lookup failed (' + r.status + ')');
     return r.json();
