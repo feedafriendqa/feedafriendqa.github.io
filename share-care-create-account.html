@@ -288,9 +288,10 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
         <span class="field-hint" id="intentHint" data-en="If you'd like to receive items too, you'll add a few extra household details right after this." data-ar="إذا كنت ترغب أيضاً في استلام أغراض، فستضيف بعض تفاصيل الأسرة الإضافية مباشرة بعد هذا." style="display:none;">If you'd like to receive items too, you'll add a few extra household details right after this.</span>
       </div>
 
-      <div class="field-group">
+      <div class="field-group" id="fullNameGroup">
         <label class="field-label" data-en="Full name" data-ar="الاسم الكامل">Full name</label>
         <input class="text-input" type="text" id="fullName" required>
+        <span class="field-hint" id="fullNameHint" data-en="" data-ar="" style="display:none;"></span>
       </div>
 
       <div class="field-group">
@@ -456,6 +457,12 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
         const showReceiver = selectedIntent !== 'give';
         document.getElementById('intentHint').style.display = showReceiver ? 'block' : 'none';
         document.getElementById('receiverFields').style.display = showReceiver ? 'block' : 'none';
+        // When receiving is involved, the name comes from the QID scan instead of being
+        // typed — no point asking for it twice.
+        const fullNameGroup = document.getElementById('fullNameGroup');
+        const fullNameInput = document.getElementById('fullName');
+        fullNameGroup.style.display = showReceiver ? 'none' : 'block';
+        fullNameInput.required = !showReceiver;
       });
     }
   });
@@ -527,7 +534,7 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
         <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg></span>
         <div class="scan-zone-label" data-en="Tap to scan QID (front)" data-ar="اضغط لمسح البطاقة (الوجه الأمامي)">${currentLang === 'ar' ? 'اضغط لمسح البطاقة (الوجه الأمامي)' : 'Tap to scan QID (front)'}</div>
         <div class="scan-zone-sub">${currentLang === 'ar' ? 'تتم معالجة الصورة فوراً، ولا يتم تخزينها' : 'Photo is processed instantly, not stored'}</div>
-        <input type="file" accept="image/*" capture="environment" data-file-input style="display:none;">
+        <input type="file" accept="image/*" data-file-input style="display:none;">
       </div>
       <div class="scanned-info" data-scanned-info>
         <div class="scanned-field"><span>${currentLang === 'ar' ? 'الاسم' : 'Name'}</span><b data-field="name"></b></div>
@@ -725,14 +732,18 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
   // ===== Submit =====
   document.getElementById('accountForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const fullName = document.getElementById('fullName').value.trim();
+    const fullNameTyped = document.getElementById('fullName').value.trim();
     const username = document.getElementById('username').value.trim();
     const phone = document.getElementById('phone').value.trim();
     const password = document.getElementById('password').value;
     const location = document.getElementById('location').value.trim();
     const errorEl = document.getElementById('formError');
+    const wantsReceiver = (selectedIntent === 'receive' || selectedIntent === 'both');
 
-    if (!fullName || !username || !usernameAvailable || !phone || !password || password.length < 6 || !location) {
+    // Give-only: name is typed. Receiving: name comes from the QID scan instead.
+    const effectiveFullName = wantsReceiver ? (primaryMember.full_name || fullNameTyped) : fullNameTyped;
+
+    if (!effectiveFullName || !username || !usernameAvailable || !phone || !password || password.length < 6 || !location) {
       errorEl.textContent = currentLang === 'ar'
         ? 'يرجى إكمال جميع الحقول باسم مستخدم متاح وكلمة مرور من 6 أحرف على الأقل.'
         : 'Please complete all fields with an available username and a password of at least 6 characters.';
@@ -740,7 +751,6 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       return;
     }
 
-    const wantsReceiver = (selectedIntent === 'receive' || selectedIntent === 'both');
     if (wantsReceiver && !alreadyRegisteredFriendId && (!selectedHousehold || !primaryMember.qid_number)) {
       errorEl.textContent = currentLang === 'ar'
         ? 'يرجى اختيار نوع الأسرة ومسح بطاقتك الشخصية لإكمال التسجيل كمستفيد.'
@@ -764,7 +774,7 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
         body: JSON.stringify({
-          phone, password, full_name: fullName, username,
+          phone, password, full_name: effectiveFullName, username,
           location, lat: pinnedCoords ? pinnedCoords.lat : null, lng: pinnedCoords ? pinnedCoords.lng : null
         })
       });
@@ -810,7 +820,7 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       const { data: receiverRow, error: receiverError } = await sb.from('share_care_receivers').insert({
         user_id: signUpData.user.id,
         username: username,
-        full_name: primaryMember.full_name || fullName,
+        full_name: primaryMember.full_name || effectiveFullName,
         whatsapp: phone,
         qid_number: primaryMember.qid_number,
         friend_id: primaryMember.friend_id || null,
