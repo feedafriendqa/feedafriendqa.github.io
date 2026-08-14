@@ -180,7 +180,7 @@ body.ar{direction:rtl;}
       <p style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;" id="home-q">What would you like to do?</p>
       <p style="font-size:12px;color:var(--muted);margin-bottom:8px;" id="home-sub">Choose an option below</p>
 
-      <a class="home-btn new" href="food-box-application.html">
+      <a class="home-btn new" href="food-box-application.html" id="apply-new-link">
         <div class="home-btn-icon">📝</div>
         <div class="home-btn-text">
           <h3 id="home-new-title">Apply for the first time</h3>
@@ -405,12 +405,12 @@ body.ar{direction:rtl;}
     </div>
     <div class="capture-confirm" id="ty-photo-confirm" style="display:none;">
       <p id="ty-photo-confirm-label">Photo attached ✓</p>
-      <button class="btn btn-back" type="button" onclick="clearThankyouPhoto()">Remove photo</button>
+      <button class="btn btn-back" type="button" onclick="clearThankyouPhoto()" id="ty-remove-photo-btn">Remove photo</button>
     </div>
     <button class="btn btn-green" id="ty-submit-btn" style="margin-top:14px;" onclick="submitThankyou()">
       <span id="ty-submit-text">Send thank-you →</span>
     </button>
-    <button class="btn btn-back" onclick="showScreen('screen-status')" style="margin-top:12px;">← Back</button>
+    <button class="btn btn-back" onclick="showScreen('screen-status')" style="margin-top:12px;" id="ty-back-btn">← Back</button>
   </div>
 
   <!-- SUCCESS -->
@@ -472,6 +472,13 @@ var T = {
     'success-month-label': 'Food box distribution',
     's-success-sub': 'Our team will deliver to your registered address. You will receive a WhatsApp message before delivery.',
     'success-back-btn': '← Home',
+    'ty-title': 'Write a thank-you',
+    'ty-sub': "This goes to whoever sponsored your box. Your name and contact details are never shared — it's sent anonymously.",
+    'lbl-ty-message': 'Your message',
+    'ty-photo-label': 'Tap to add a photo (optional)',
+    'ty-photo-confirm-label': 'Photo attached ✓',
+    'ty-remove-photo-btn': 'Remove photo',
+    'ty-back-btn': '← Back',
   },
   ar: {
     'hero-title': 'صندوق طعامي',
@@ -501,6 +508,13 @@ var T = {
     'success-month-label': 'توزيع صندوق الطعام',
     's-success-sub': 'سيقوم فريقنا بالتوصيل إلى عنوانك المسجل. ستتلقى رسالة على واتساب قبل التسليم.',
     'success-back-btn': '→ الرئيسية',
+    'ty-title': 'كتابة رسالة شكر',
+    'ty-sub': 'تصل هذه الرسالة إلى من قام برعاية صندوقك. اسمك وبياناتك لا تُشارك أبداً — تُرسل دون الكشف عن هويتك.',
+    'lbl-ty-message': 'رسالتك',
+    'ty-photo-label': 'اضغط لإضافة صورة (اختياري)',
+    'ty-photo-confirm-label': 'تم إرفاق الصورة ✓',
+    'ty-remove-photo-btn': 'إزالة الصورة',
+    'ty-back-btn': '→ رجوع',
   }
 };
 
@@ -556,6 +570,15 @@ function setLang(lang) {
   });
   document.getElementById('inp-qid').placeholder = lang === 'ar' ? '٢٨xxxxxxxxx' : '28xxxxxxxxx';
   document.getElementById('inp-wa').placeholder = lang === 'ar' ? '+٩٧٤ ٥xxx xxxx' : '+974 5xxx xxxx';
+  var tyMsgEl = document.getElementById('inp-ty-message');
+  if (tyMsgEl) tyMsgEl.placeholder = lang === 'ar' ? 'اكتب شكرك بكلماتك...' : 'Say thank you in your own words...';
+  var tySubmitTextEl = document.getElementById('ty-submit-text');
+  if (tySubmitTextEl) tySubmitTextEl.textContent = lang === 'ar' ? 'إرسال الشكر ←' : 'Send thank-you →';
+  // Carry the current language into the new-application form so switching
+  // to Arabic here doesn't dump someone into an English form they never
+  // asked for.
+  var applyNewLink = document.getElementById('apply-new-link');
+  if (applyNewLink) applyNewLink.href = 'food-box-application.html?lang=' + lang;
   refreshLegacyToggleText();
 
   if (currentApp && document.getElementById('screen-status').classList.contains('active')) {
@@ -966,12 +989,17 @@ function showStatusScreen(status, data, canReapply) {
     document.getElementById('reapply-plate-label').textContent = ar ? 'اضغط لرفع لوحة عنوانك الجديدة' : 'Tap to upload your new blue address plate';
     document.getElementById('lbl-new-addr').textContent = ar ? 'العنوان الجديد' : 'New address';
 
-    diaperQuestionVisible = !!(data.already_has_diapers && data.diaper_eligible_child);
+    // Shows for ANY household with a diaper-eligible child (under 4),
+    // whether or not diaper_size was ever set before — previously this
+    // was gated on already_has_diapers too, which meant a family with a
+    // brand-new baby who'd never been issued diapers could never request
+    // them through reapply at all (had to go through an admin instead).
+    diaperQuestionVisible = !!data.diaper_eligible_child;
     formulaQuestionVisible = !!(!data.already_has_formula && data.formula_eligible_baby);
     pregnancyQuestionVisible = !!data.adult_female_present;
 
     document.getElementById('diaper-question-block').style.display = diaperQuestionVisible ? 'block' : 'none';
-    document.getElementById('lbl-needs-diapers').textContent = ar ? 'حدّث مقاس الحفاضات إذا كبر طفلك' : 'Update diaper size if your child has grown';
+    document.getElementById('lbl-needs-diapers').textContent = ar ? 'حفاضات لطفلك' : 'Diapers for your child';
     document.getElementById('lbl-chk-no-diapers').textContent = ar ? 'لم نعد بحاجة إلى حفاضات' : 'We no longer need diapers';
 
     document.getElementById('formula-question-block').style.display = formulaQuestionVisible ? 'block' : 'none';
@@ -1019,6 +1047,18 @@ var formulaQuestionVisible = false;
 var pregnancyQuestionVisible = false;
 
 var DIAPER_SIZES = ['NB (Newborn)', 'S (Size 1)', 'M (Size 2)', 'L (Size 3)', 'XL (Size 4)', 'XXL (Size 5)'];
+// Display-only Arabic labels — the value saved to the backend (dataset.val)
+// always stays the English string above, since that's what's already on
+// file for existing applicants (e.g. "XL (Size 4)"). Only what the pill
+// shows on screen changes with language.
+var DIAPER_SIZE_LABELS_AR = {
+  'NB (Newborn)': 'حديثي الولادة (NB)',
+  'S (Size 1)': 'قياس 1 (S)',
+  'M (Size 2)': 'قياس 2 (M)',
+  'L (Size 3)': 'قياس 3 (L)',
+  'XL (Size 4)': 'قياس 4 (XL)',
+  'XXL (Size 5)': 'قياس 5 (XXL)'
+};
 
 function openThankyou() {
   document.getElementById('inp-ty-message').value = '';
@@ -1113,12 +1153,13 @@ function resetDiaperFormulaChoice(existingDiaperSize, existingFormula) {
   document.getElementById('formula-no-btn').classList.remove('selected');
 
   var pillsContainer = document.getElementById('reapply-diaper-pills');
+  var arPills = currentLang === 'ar';
   pillsContainer.innerHTML = '';
   DIAPER_SIZES.forEach(function(s) {
     var pill = document.createElement('div');
     pill.className = 'diaper-pill';
     pill.dataset.val = s;
-    pill.textContent = s;
+    pill.textContent = arPills ? (DIAPER_SIZE_LABELS_AR[s] || s) : s;
     pill.onclick = function() { selectReapplyDiaper(pill); };
     if (s === existingDiaperSize) pill.classList.add('selected');
     pillsContainer.appendChild(pill);
@@ -1319,7 +1360,15 @@ async function doReapply() {
       return;
     }
 
-    var month = data.confirmed_for || (ar ? 'التوزيع القادم' : 'Next distribution');
+    // data.confirmed_for is always the English month name from the backend
+    // (it runs a fixed Postgres to_char format) — for Arabic we compute the
+    // same "next calendar month" date client-side instead and format it
+    // with the ar-QA locale, the same way anticipated-date-note already does.
+    var confirmedMonthDate = new Date();
+    confirmedMonthDate.setMonth(confirmedMonthDate.getMonth() + 1);
+    var month = ar
+      ? confirmedMonthDate.toLocaleDateString('ar-QA', { year: 'numeric', month: 'long' })
+      : (data.confirmed_for || confirmedMonthDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'long' }));
     document.getElementById('success-month').textContent = month;
     document.getElementById('success-month-label').textContent = ar ? 'توزيع صندوق الطعام' : 'Food box distribution';
     document.getElementById('s-success-title').textContent = ar ? 'تم التأكيد!' : "You're confirmed!";
@@ -1347,13 +1396,12 @@ async function doReapply() {
   }
 }
 
-// Arabic numerals — live-convert as the user types, for both the QID field
-// and the WhatsApp number field.
-document.addEventListener('input', function(e) {
-  if (e.target.id === 'inp-qid' || e.target.id === 'inp-wa') {
-    e.target.value = toWesternDigits(e.target.value);
-  }
-});
+// Arabic-Indic digits (٠-٩) typed into the QID or WhatsApp field are left
+// on screen exactly as typed — we don't rewrite them to Western digits
+// live, since that reads as "my Arabic keyboard typed English numbers" to
+// the person filling it in. Matching against the backend still works
+// either way: doVerify() and doVerifyLegacy() both run toWesternDigits()
+// on the field value at submit time, right before the lookup.
 
 refreshLegacyToggleText();
 </script>

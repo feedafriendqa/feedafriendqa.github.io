@@ -498,6 +498,7 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
         <input type="file" id="blue-plate-upload" accept="image/*" onchange="scanBluePlate(this)">
 </div>
       <div class="qid-scanning" id="plate-scan-status"><div class="spinner"></div><span id="plate-scan-msg">Scanning address plate…</span></div>
+      <div class="err-msg" id="plate-scan-err" style="display:none;margin-bottom:10px;"></div>
       <div class="field-row">
         <div class="field"><label id="lbl-zone">Zone</label><input type="text" id="inp-zone" data-numfield="true" inputmode="numeric" placeholder="e.g. 38" data-en="e.g. 38" data-ar="مثال: ٣٨" oninput="lookupZoneArea(this.value)"></div>
         <div class="field"><label id="lbl-street">Street</label><input type="text" id="inp-street" data-numfield="true" inputmode="numeric" placeholder="e.g. 920" data-en="e.g. 920" data-ar="مثال: ٩٢٠"></div>
@@ -1342,8 +1343,11 @@ function scanBluePlate(input) {
   var file = input.files[0];
   var zone = document.getElementById('blue-plate-zone');
   var status = document.getElementById('plate-scan-status');
+  var errEl = document.getElementById('plate-scan-err');
+  var ar = currentLang === 'ar';
   if (zone) zone.classList.add('uploaded');
   if (status) status.classList.add('visible');
+  if (errEl) errEl.style.display = 'none';
 
   fileToBase64(file).then(function(b64) {
     return fetch(EDGE_URL, {
@@ -1352,6 +1356,19 @@ function scanBluePlate(input) {
       body: JSON.stringify({ type: 'scan_plate', image_base64: b64, media_type: file.type || 'image/jpeg' })
     }).then(function(r) { return r.json(); }).then(function(data) {
       var parsed = data.data || {};
+      // Previously this silently did nothing when the scan came back
+      // empty — from the person's point of view the upload just "didn't
+      // work" with zero explanation. Surface it and let them fall back to
+      // typing the address manually below.
+      if (!parsed.zone && !parsed.street && !parsed.building) {
+        if (errEl) {
+          errEl.textContent = ar
+            ? 'تعذّرت قراءة اللوحة بوضوح. يرجى تجربة صورة أوضح أو إدخال العنوان يدوياً أدناه.'
+            : "Couldn't read that plate clearly. Please try a clearer photo, or enter your address manually below.";
+          errEl.style.display = 'block';
+        }
+        return;
+      }
       if (parsed.zone) document.getElementById('inp-zone').value = parsed.zone;
       if (parsed.street) document.getElementById('inp-street').value = parsed.street;
       if (parsed.building) document.getElementById('inp-building').value = parsed.building;
@@ -1376,6 +1393,12 @@ function scanBluePlate(input) {
     });
   }).catch(function(e) {
     console.error('Blue plate scan error:', e);
+    if (errEl) {
+      errEl.textContent = ar
+        ? 'حدث خطأ أثناء رفع الصورة. يرجى المحاولة مرة أخرى أو إدخال العنوان يدوياً.'
+        : 'Something went wrong uploading that photo. Please try again, or enter your address manually.';
+      errEl.style.display = 'block';
+    }
   }).finally(function() {
     if (status) setTimeout(function() { status.classList.remove('visible'); }, 1500);
   });
@@ -1686,6 +1709,15 @@ function markMemberSaved(n) {
 
 function saveMemberAndNext(n) {
   if (!markMemberSaved(n)) return;
+  // addMember() hides the top "Add household member" button as soon as a
+  // card is open, on the assumption the person will use this card's own
+  // "Save and add new member" button to add the next one. But if they
+  // instead save via "Save member and go to next section" (this path),
+  // that assumption breaks — this card is now closed, no card is open,
+  // yet the only way to add a second person stayed hidden. Bring it back
+  // any time a card gets closed this way.
+  var addBtn = document.getElementById('add-member-btn');
+  if (addBtn) addBtn.style.display = 'flex';
   var sectionTitle = document.getElementById('sec3-title');
   var target = sectionTitle ? (sectionTitle.closest('.section') || sectionTitle) : null;
   if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2105,6 +2137,15 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   document.addEventListener('input', clearThisFieldError);
   document.addEventListener('change', clearThisFieldError);
+
+  // Honor a ?lang=ar param so links coming from the Arabic side of the
+  // reapply/status page (apply.html) land here already in Arabic, instead
+  // of dumping someone who was just using the Arabic app into an English
+  // form with no indication they can switch.
+  var langParam = new URLSearchParams(window.location.search).get('lang');
+  if (langParam === 'ar' || langParam === 'en') {
+    setLang(langParam);
+  }
 });
 </script>
 </body>
