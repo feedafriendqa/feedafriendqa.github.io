@@ -122,6 +122,25 @@ html[dir="rtl"] .match-row{flex-direction:row-reverse;}
 html[dir="rtl"] .chevron{transform:rotate(180deg);}
 html[dir="rtl"] .item-card.open .chevron{transform:rotate(90deg);}
 html[dir="rtl"] footer{flex-direction:row-reverse;}
+.account-tabs{display:flex;gap:8px;max-width:720px;margin:14px auto 0;padding:0 20px;}
+.account-tab{flex:1;text-align:center;padding:11px;border-radius:999px;font-weight:800;font-size:13px;
+  background:var(--panel);color:var(--muted);cursor:pointer;}
+.account-tab.active{background:var(--accent);color:#fff;}
+.account-panel{display:none;}
+.account-panel.show{display:block;}
+
+.saved-item-card{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:12px;display:flex;gap:12px;align-items:center;margin-bottom:12px;}
+.saved-item-thumb{width:56px;height:56px;border-radius:12px;flex-shrink:0;background:var(--panel);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.saved-item-thumb img{width:100%;height:100%;object-fit:cover;}
+.saved-item-thumb .icon{width:22px;height:22px;color:var(--muted);}
+.saved-item-info{flex:1;min-width:0;}
+.saved-item-title{font-weight:800;font-size:13.5px;margin-bottom:3px;}
+.saved-item-meta{font-size:11.5px;color:var(--muted);}
+.saved-item-unavailable{font-size:10.5px;font-weight:800;color:#B3382A;background:#FDEDEA;padding:2px 8px;border-radius:999px;display:inline-block;margin-top:3px;}
+.saved-item-remove{width:32px;height:32px;border-radius:50%;background:var(--panel);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.saved-item-remove .icon{width:14px;height:14px;color:var(--muted);}
+
+html[dir="rtl"] .saved-item-card{flex-direction:row-reverse;}
 </style>
 </head>
 <body>
@@ -147,7 +166,11 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
       <span data-en="Post an Item" data-ar="أضف غرضاً">Post an Item</span>
     </a>
-    <a href="#">
+    <a href="share-care-request-item.html">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.5L17 7.5V19a2 2 0 0 1-2 2z"/></svg></span>
+      <span data-en="Request an Item" data-ar="اطلب غرضاً">Request an Item</span>
+    </a>
+    <a href="share-care-my-chats.html">
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
       <span data-en="My Chats" data-ar="محادثاتي">My Chats</span>
     </a>
@@ -172,31 +195,48 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
 </header>
 
 <div class="page-head">
-  <h1 data-en="My Matches" data-ar="مطابقاتي">My Matches</h1>
-  <p data-en="Items you've posted, and who's interested in them." data-ar="الأغراض التي نشرتها، ومن يهتم بها.">Items you've posted, and who's interested in them.</p>
+  <h1 data-en="My Account" data-ar="حسابي">My Account</h1>
+  <p data-en="Items you've given, requested, and saved." data-ar="الأغراض التي أعطيتها، طلبتها، وحفظتها.">Items you've given, requested, and saved.</p>
 </div>
 
 <div class="signed-out-note" id="signedOutNote" style="display:none;">
-  <p data-en="Log in to see your posted items and matches." data-ar="سجّل الدخول لرؤية أغراضك المنشورة ومطابقاتها.">Log in to see your posted items and matches.</p>
+  <p data-en="Log in to see your account." data-ar="سجّل الدخول لرؤية حسابك.">Log in to see your account.</p>
   <a href="share-care-login.html?redirect=share-care-my-account.html" data-en="Log In" data-ar="تسجيل الدخول">Log In</a>
 </div>
 
-<div class="empty-state" id="emptyState" style="display:none;">
-  <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/></svg></span>
-  <p data-en="You haven't posted any items yet." data-ar="لم تنشر أي أغراض بعد.">You haven't posted any items yet.</p>
-</div>
+<div id="accountContent">
+  <div class="account-tabs">
+    <div class="account-tab active" data-tab="giving" data-en="Giving" data-ar="أعطي">Giving</div>
+    <div class="account-tab" data-tab="saved" data-en="Saved" data-ar="محفوظ">Saved</div>
+  </div>
 
-<div class="item-list" id="itemList"></div>
+  <div class="account-panel show" id="givingPanel">
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/></svg></span>
+      <p data-en="You haven't posted any items yet." data-ar="لم تنشر أي أغراض بعد.">You haven't posted any items yet.</p>
+    </div>
 
-<div class="receiver-cta" id="receiverCta" style="display:none;">
-  <div class="icon-wrap"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span></div>
-  <div class="cta-text"><b data-en="Want to receive items too?" data-ar="هل ترغب أيضاً في استلام أغراض؟">Want to receive items too?</b><span data-en="Add your household details anytime." data-ar="أضف تفاصيل أسرتك في أي وقت.">Add your household details anytime.</span></div>
-  <a href="share-care-receiver-profile.html" data-en="Add Details" data-ar="أضف التفاصيل">Add Details</a>
-</div>
+    <div class="item-list" id="itemList"></div>
 
-<div class="badge-legend">
-  <div class="icon-wrap"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="6" y="4" width="13" height="4.5"/><rect x="6" y="10.5" width="10" height="4.5"/></svg></span></div>
-  <p><b data-en="What the verified badge means:" data-ar="ماذا تعني شارة التوثيق:">What the verified badge means:</b> <span data-en="This is a verified beneficiary confirmed through Feed a Friend's programs — an approved case, not just a self-reported claim. No badge just means they're a regular Share &amp; Care member." data-ar="هذا مستفيد مُوثّق تم التحقق منه عبر برامج فيد أ فريند — حالة مُعتمدة وليست مجرد ادّعاء ذاتي. عدم وجود شارة يعني فقط أنه عضو عادي في شارك و اهتم.">This is a verified beneficiary confirmed through Feed a Friend's programs — an approved case, not just a self-reported claim. No badge just means they're a regular Share &amp; Care member.</span></p>
+    <div class="receiver-cta" id="receiverCta" style="display:none;">
+      <div class="icon-wrap"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span></div>
+      <div class="cta-text"><b data-en="Want to receive items too?" data-ar="هل ترغب أيضاً في استلام أغراض؟">Want to receive items too?</b><span data-en="Add your household details anytime." data-ar="أضف تفاصيل أسرتك في أي وقت.">Add your household details anytime.</span></div>
+      <a href="share-care-receiver-profile.html" data-en="Add Details" data-ar="أضف التفاصيل">Add Details</a>
+    </div>
+
+    <div class="badge-legend">
+      <div class="icon-wrap"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="6" y="4" width="13" height="4.5"/><rect x="6" y="10.5" width="10" height="4.5"/></svg></span></div>
+      <p><b data-en="What the verified badge means:" data-ar="ماذا تعني شارة التوثيق:">What the verified badge means:</b> <span data-en="This is a verified beneficiary confirmed through Feed a Friend's programs — an approved case, not just a self-reported claim. No badge just means they're a regular Share &amp; Care member." data-ar="هذا مستفيد مُوثّق تم التحقق منه عبر برامج فيد أ فريند — حالة مُعتمدة وليست مجرد ادّعاء ذاتي. عدم وجود شارة يعني فقط أنه عضو عادي في شارك و اهتم.">This is a verified beneficiary confirmed through Feed a Friend's programs — an approved case, not just a self-reported claim. No badge just means they're a regular Share &amp; Care member.</span></p>
+    </div>
+  </div>
+
+  <div class="account-panel" id="savedPanel">
+    <div class="empty-state" id="savedEmptyState">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v17l-6-4.2L6 21V4z"/></svg></span>
+      <p data-en="Nothing saved yet — tap \"Save for Later\" on an item to keep track of it here." data-ar="لا يوجد شيء محفوظ بعد — اضغط على \"احفظ لاحقاً\" في أي غرض لتتبعه هنا.">Nothing saved yet — tap "Save for Later" on an item to keep track of it here.</p>
+    </div>
+    <div id="savedList" style="padding:14px 20px 40px;max-width:720px;margin:0 auto;"></div>
+  </div>
 </div>
 
 <div class="modal-overlay" id="modalOverlay">
@@ -545,6 +585,87 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       listEl.appendChild(renderItemCard(item));
     });
   }
+
+  // ===== Saved Items =====
+  let savedItemsLoaded = false;
+  async function loadSavedItems(){
+    if (!currentUserId) return;
+    const listEl = document.getElementById('savedList');
+    const emptyEl = document.getElementById('savedEmptyState');
+    const { data: savedRows, error } = await sb.from('share_care_saved_items')
+      .select('id, item_id, created_at')
+      .eq('user_id', currentUserId)
+      .order('created_at', { ascending: false });
+    if (error || !savedRows || savedRows.length === 0){
+      listEl.innerHTML = '';
+      emptyEl.style.display = 'block';
+      return;
+    }
+    const itemIds = savedRows.map(r => r.item_id);
+    const { data: items } = await sb.from('share_care_items')
+      .select('id, title, category, status, photo_url, location')
+      .in('id', itemIds);
+    const itemsById = {};
+    (items || []).forEach(i => { itemsById[i.id] = i; });
+
+    emptyEl.style.display = 'none';
+    listEl.innerHTML = savedRows.map(row => {
+      const item = itemsById[row.item_id];
+      if (!item){
+        // item was deleted entirely — still show a minimal removable row
+        return `<div class="saved-item-card" data-saved-id="${row.id}">
+          <div class="saved-item-thumb"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/></svg></span></div>
+          <div class="saved-item-info">
+            <div class="saved-item-title">${currentLang === 'ar' ? 'لم يعد هذا الغرض متاحاً' : 'This item no longer exists'}</div>
+          </div>
+          <button type="button" class="saved-item-remove" data-remove-saved="${row.id}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span></button>
+        </div>`;
+      }
+      const photo = item.photo_url ? item.photo_url.split(',')[0].trim() : null;
+      const thumbInner = photo
+        ? `<img src="${photo}" alt="">`
+        : `<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/></svg></span>`;
+      const isAvailable = item.status === 'available';
+      const unavailableTag = !isAvailable
+        ? `<span class="saved-item-unavailable">${currentLang === 'ar' ? 'لم يعد متاحاً' : 'No longer available'}</span>`
+        : '';
+      const card = `<div class="saved-item-card" data-saved-id="${row.id}">
+        <a href="share-care-item-detail.html?id=${item.id}" style="flex:1;min-width:0;display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit;">
+          <div class="saved-item-thumb">${thumbInner}</div>
+          <div class="saved-item-info">
+            <div class="saved-item-title">${item.title}</div>
+            <div class="saved-item-meta">${item.location || ''}</div>
+            ${unavailableTag}
+          </div>
+        </a>
+        <button type="button" class="saved-item-remove" data-remove-saved="${row.id}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span></button>
+      </div>`;
+      return card;
+    }).join('');
+
+    listEl.querySelectorAll('[data-remove-saved]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const savedId = btn.getAttribute('data-remove-saved');
+        await sb.from('share_care_saved_items').delete().eq('id', savedId);
+        loadSavedItems();
+      });
+    });
+  }
+
+  document.querySelectorAll('.account-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.account-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.getAttribute('data-tab');
+      document.getElementById('givingPanel').classList.toggle('show', target === 'giving');
+      document.getElementById('savedPanel').classList.toggle('show', target === 'saved');
+      if (target === 'saved' && !savedItemsLoaded && currentUserId){
+        savedItemsLoaded = true;
+        loadSavedItems();
+      }
+    });
+  });
 
   (async () => {
     const { data: { session } } = await sb.auth.getSession();

@@ -105,6 +105,19 @@ html[dir="rtl"] .header-right{flex-direction:row-reverse;}
 html[dir="rtl"] .nav-menu{right:auto;left:20px;}
 html[dir="rtl"] .nav-menu a{flex-direction:row-reverse;}
 html[dir="rtl"] footer{flex-direction:row-reverse;}
+.browse-tabs{display:flex;gap:8px;max-width:720px;margin:0 auto;padding:14px 20px 0;}
+.browse-tab{flex:1;text-align:center;padding:11px;border-radius:999px;font-weight:800;font-size:13px;
+  background:var(--panel);color:var(--muted);cursor:pointer;}
+.browse-tab.active{background:var(--accent);color:#fff;}
+
+.request-browse-card{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;}
+.request-browse-cat{font-size:10.5px;font-weight:800;color:var(--accent-dark);background:#EDEFFA;padding:3px 9px;
+  border-radius:999px;display:inline-block;margin-bottom:8px;}
+.request-browse-desc{font-size:14px;color:var(--charcoal);line-height:1.45;margin-bottom:10px;}
+.request-browse-meta{font-size:11.5px;color:var(--muted);margin-bottom:12px;}
+.request-claim-btn{width:100%;background:var(--green);color:#fff;font-weight:800;font-size:13px;padding:12px;
+  border:none;border-radius:999px;}
+.request-claim-btn:disabled{opacity:.5;}
 </style>
 </head>
 <body>
@@ -132,7 +145,11 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
       <span data-en="Post an Item" data-ar="أضف غرضاً">Post an Item</span>
     </a>
-    <a href="#">
+    <a href="share-care-request-item.html">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.5L17 7.5V19a2 2 0 0 1-2 2z"/></svg></span>
+      <span data-en="Request an Item" data-ar="اطلب غرضاً">Request an Item</span>
+    </a>
+    <a href="share-care-my-chats.html">
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
       <span data-en="My Chats" data-ar="محادثاتي">My Chats</span>
     </a>
@@ -174,6 +191,11 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
 </div>
 <div class="nearme-error" id="nearMeError" data-en="Couldn't get your location. Check your device's location permissions and try again." data-ar="تعذّر تحديد موقعك. تحقق من إذن الموقع في جهازك وحاول مرة أخرى.">Couldn't get your location. Check your device's location permissions and try again.</div>
 
+<div class="browse-tabs">
+  <div class="browse-tab active" data-tab="items" data-en="Available Items" data-ar="الأغراض المتاحة">Available Items</div>
+  <div class="browse-tab" data-tab="requests" data-en="Items Requested" data-ar="الأغراض المطلوبة">Items Requested</div>
+</div>
+
 <div class="chip-scroll" id="categoryChips">
   <div class="cat-chip active" data-value="all" data-en="All" data-ar="الكل">All</div>
   <div class="cat-chip" data-value="baby" data-en="Baby &amp; Kids" data-ar="أطفال ورضّع">Baby &amp; Kids</div>
@@ -193,6 +215,7 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
 </div>
 
 <div class="items-grid" id="itemsGrid"></div>
+<div id="requestsGrid" style="display:none;max-width:720px;margin:0 auto;padding:0 20px;"></div>
 
 <div class="empty-state" id="emptyState" style="display:none;">
   <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
@@ -222,8 +245,11 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let currentLang = 'en';
   let activeCategory = 'all';
+  let activeTab = 'items';
   let searchTerm = '';
   let allItems = [];
+  let allRequests = [];
+  let currentUserId = null;
   let nearMeActive = false;
   let userCoords = null;
   let locationCoords = {}; // { "Al Waab": {lat, lng}, ... }
@@ -311,6 +337,16 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     if (!navMenu.contains(e.target) && e.target !== menuBtn) navMenu.classList.remove('open');
   });
 
+  document.querySelectorAll('.browse-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.browse-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeTab = tab.getAttribute('data-tab');
+      document.getElementById('nearMeBtn').style.display = activeTab === 'requests' ? 'none' : 'flex';
+      renderItems();
+    });
+  });
+
   document.querySelectorAll('.cat-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
@@ -355,6 +391,18 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
   }
 
   function renderItems(){
+    const itemsGrid = document.getElementById('itemsGrid');
+    const requestsGrid = document.getElementById('requestsGrid');
+    itemsGrid.style.display = activeTab === 'items' ? 'grid' : 'none';
+    requestsGrid.style.display = activeTab === 'requests' ? 'block' : 'none';
+    if (activeTab === 'requests') {
+      renderRequestCards();
+    } else {
+      renderItemCards();
+    }
+  }
+
+  function renderItemCards(){
     const grid = document.getElementById('itemsGrid');
     const emptyState = document.getElementById('emptyState');
     const countEl = document.getElementById('resultsCount');
@@ -390,6 +438,7 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
 
     grid.innerHTML = '';
     if (filtered.length === 0) {
+      emptyState.querySelector('p').textContent = currentLang === 'ar' ? 'لا توجد أغراض مطابقة لبحثك.' : 'No items match your search.';
       emptyState.style.display = 'block';
       return;
     }
@@ -424,13 +473,74 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     });
   }
 
+  function renderRequestCards(){
+    const grid = document.getElementById('requestsGrid');
+    const emptyState = document.getElementById('emptyState');
+    const countEl = document.getElementById('resultsCount');
+    document.getElementById('sortNote').style.display = 'none';
+
+    const filtered = allRequests.filter(req => {
+      const matchesCategory = activeCategory === 'all' || req.category === activeCategory;
+      const matchesSearch = !searchTerm || req.description.toLowerCase().includes(searchTerm);
+      return matchesCategory && matchesSearch;
+    });
+
+    countEl.textContent = currentLang === 'ar'
+      ? `${filtered.length} غرض مطلوب`
+      : `${filtered.length} item${filtered.length === 1 ? '' : 's'} requested`;
+
+    grid.innerHTML = '';
+    if (filtered.length === 0) {
+      emptyState.querySelector('p').textContent = currentLang === 'ar' ? 'لا توجد طلبات مطابقة لبحثك.' : 'No requests match your search.';
+      emptyState.style.display = 'block';
+      return;
+    }
+    emptyState.style.display = 'none';
+
+    filtered.forEach(req => {
+      const meta = CATEGORY_META[req.category] || CATEGORY_META.other;
+      const card = document.createElement('div');
+      card.className = 'request-browse-card';
+      card.innerHTML = `
+        <span class="request-browse-cat">${currentLang === 'ar' ? meta.ar : meta.en}</span>
+        <div class="request-browse-desc">${req.description}</div>
+        <div class="request-browse-meta">${timeAgo(req.created_at)}</div>
+        <button type="button" class="request-claim-btn" data-request-id="${req.id}" data-en="Claim &amp; Chat" data-ar="اطلب المطابقة وابدأ المحادثة">${currentLang === 'ar' ? 'اطلب المطابقة وابدأ المحادثة' : 'Claim & Chat'}</button>
+      `;
+      grid.appendChild(card);
+    });
+
+    grid.querySelectorAll('.request-claim-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!currentUserId) {
+          window.location.href = 'share-care-login.html?redirect=share-care-browse-items.html';
+          return;
+        }
+        btn.disabled = true;
+        const requestId = btn.getAttribute('data-request-id');
+        const { error } = await sb.rpc('claim_request', { p_request_id: requestId });
+        if (error) {
+          btn.disabled = false;
+          alert(error.message);
+          return;
+        }
+        window.location.href = 'share-care-my-chats.html';
+      });
+    });
+  }
+
   (async () => {
-    const [itemsRes, locationsRes] = await Promise.all([
+    const [itemsRes, locationsRes, requestsRes, sessionRes] = await Promise.all([
       sb.from('share_care_items')
         .select('id, title, category, description, location, created_at, status, photo_url')
         .eq('status', 'available')
         .order('created_at', { ascending: false }),
-      sb.from('distribution_locations').select('name, lat, lng').eq('active', true)
+      sb.from('distribution_locations').select('name, lat, lng').eq('active', true),
+      sb.from('share_care_requests')
+        .select('id, category, description, created_at, status')
+        .eq('status', 'open')
+        .order('created_at', { ascending: false }),
+      sb.auth.getSession()
     ]);
     if (!itemsRes.error && itemsRes.data) {
       allItems = itemsRes.data;
@@ -441,6 +551,12 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
           locationCoords[loc.name] = { lat: loc.lat, lng: loc.lng };
         }
       });
+    }
+    if (!requestsRes.error && requestsRes.data) {
+      allRequests = requestsRes.data;
+    }
+    if (sessionRes.data && sessionRes.data.session) {
+      currentUserId = sessionRes.data.session.user.id;
     }
     renderItems();
   })();

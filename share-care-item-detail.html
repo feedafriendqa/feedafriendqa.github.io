@@ -133,7 +133,11 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
       <span data-en="Post an Item" data-ar="أضف غرضاً">Post an Item</span>
     </a>
-    <a href="#">
+    <a href="share-care-request-item.html">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.5L17 7.5V19a2 2 0 0 1-2 2z"/></svg></span>
+      <span data-en="Request an Item" data-ar="اطلب غرضاً">Request an Item</span>
+    </a>
+    <a href="share-care-my-chats.html">
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
       <span data-en="My Chats" data-ar="محادثاتي">My Chats</span>
     </a>
@@ -273,6 +277,8 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
   let signedIn = false;
   let currentUserId = null;
   let monthlyLimitReached = false;
+  let isSuspended = false;
+  let suspendedUntil = null;
   let authResolved = false;
 
   function applyLimitStateIfReady(){
@@ -307,15 +313,15 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       window.location.reload();
     });
 
-    // Check this account's interest count for the current calendar month (limit: 2).
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    const { count } = await sb.from('share_care_item_interests')
-      .select('id', { count: 'exact', head: true })
-      .eq('requester_user_id', currentUserId)
-      .gte('created_at', startOfMonth.toISOString());
-    monthlyLimitReached = (count || 0) >= 2;
+    // Match the real enforcement used at match-time (choose_item_match /
+    // claim_request): only actual matches count toward the limit, not every
+    // interest expressed. Browsing and expressing interest stay free — this
+    // was previously counting raw interests, which could lock someone out
+    // after 2 unsuccessful attempts even with nothing actually received.
+    const { data: usage } = await sb.rpc('get_monthly_usage', { p_user_id: currentUserId });
+    monthlyLimitReached = usage ? (usage.is_suspended || usage.total_used >= usage.monthly_limit) : false;
+    isSuspended = usage ? usage.is_suspended : false;
+    suspendedUntil = usage ? usage.suspended_until : null;
     authResolved = true;
     applyLimitStateIfReady();
     initSavedState();
@@ -519,9 +525,16 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     }
     if (monthlyLimitReached) {
       errEl.style.color = '#B3382A';
-      errEl.textContent = currentLang === 'ar'
-        ? 'لقد استخدمت طلبَي هذا الشهر. تُفتح طلبات جديدة الشهر القادم.'
-        : "You've used both of your requests for this month. New requests open next month.";
+      if (isSuspended) {
+        const untilDate = suspendedUntil ? new Date(suspendedUntil).toLocaleDateString(currentLang === 'ar' ? 'ar' : 'en', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+        errEl.textContent = currentLang === 'ar'
+          ? `لا يمكنك طلب أو استلام أغراض حالياً. سيُستعاد وصولك في ${untilDate}.`
+          : `You can't request or receive items right now. Access will be restored on ${untilDate}.`;
+      } else {
+        errEl.textContent = currentLang === 'ar'
+          ? 'لقد استخدمت طلبَي هذا الشهر. تُفتح طلبات جديدة الشهر القادم.'
+          : "You've used both of your requests for this month. New requests open next month.";
+      }
       errEl.style.display = 'block';
       return;
     }

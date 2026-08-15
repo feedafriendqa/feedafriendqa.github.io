@@ -729,8 +729,24 @@ document.addEventListener('DOMContentLoaded', async function() {
 async function handleAdminSession(session) {
   var result = await sb.from('faf_user_roles').select('role,portals,languages,display_name').eq('email', session.user.email).maybeSingle();
   var role = result.data;
-  myRole = role ? role.role : 'admin';
-  myLanguages = role ? role.languages : null;
+
+  if (!role) {
+    // No staff record for this account. Never default to admin access —
+    // sign out and show a clear message instead of silently letting an
+    // unrecognized account into the admin app with a fabricated role.
+    await sb.auth.signOut();
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('admin-app').style.display = 'none';
+    var errEl = document.getElementById('login-err');
+    errEl.textContent = 'This account is not set up with staff access. Contact your administrator.';
+    errEl.style.display = 'block';
+    var btnEl = document.getElementById('login-btn');
+    btnEl.textContent = 'Sign in →'; btnEl.disabled = false;
+    return;
+  }
+
+  myRole = role.role;
+  myLanguages = role.languages;
 
   // First name only, for the greeting and for scoping "my cases".
   // Prefer a real display_name (e.g. "Alliyah Choudhary" -> "Alliyah").

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Profile | Share &amp; Care</title>
+<title>Request an Item | Share &amp; Care</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Nunito+Sans:wght@400;500;600;700&family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -122,87 +122,53 @@ html[dir="rtl"] .match-row{flex-direction:row-reverse;}
 html[dir="rtl"] .chevron{transform:rotate(180deg);}
 html[dir="rtl"] .item-card.open .chevron{transform:rotate(90deg);}
 html[dir="rtl"] footer{flex-direction:row-reverse;}
+/* ===== Request an Item ===== */
+.usage-card{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:16px 18px;margin:0 auto 18px;max-width:720px;}
+.usage-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.usage-label{font-size:12.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+.usage-count{font-size:13px;font-weight:800;color:var(--charcoal);}
+.usage-bar{height:8px;border-radius:999px;background:var(--panel);overflow:hidden;}
+.usage-bar-fill{height:100%;background:var(--green);border-radius:999px;transition:width .3s;}
+.usage-bar-fill.full{background:#E85D5D;}
+.usage-note{font-size:11.5px;color:var(--muted);margin-top:8px;}
 
-/* ===== My Profile ===== */
-.profile-tabs{display:flex;gap:8px;max-width:720px;margin:14px auto 0;padding:0 20px;}
-.profile-tab{flex:1;text-align:center;padding:11px;border-radius:999px;font-weight:800;font-size:13px;
-  background:var(--panel);color:var(--muted);cursor:pointer;}
-.profile-tab.active{background:var(--accent);color:#fff;}
+.suspended-card{background:#FDEDEA;border:1.5px solid #F0B4A8;border-radius:16px;padding:18px;margin:0 auto 18px;max-width:720px;text-align:center;}
+.suspended-card .icon{width:28px;height:28px;color:#B3382A;margin:0 auto 10px;}
+.suspended-card p{font-size:13.5px;color:#8a2a20;line-height:1.5;margin:0;}
 
-.profile-panel{display:none;max-width:720px;margin:0 auto;padding:18px 20px 40px;}
-.profile-panel.show{display:block;}
-
-.profile-note{display:flex;gap:11px;align-items:flex-start;background:#EDEFFA;border-radius:14px;padding:13px 15px;margin-bottom:18px;}
-.profile-note .icon-wrap{width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;}
-.profile-note .icon-wrap .icon{width:13px;height:13px;}
-.profile-note p{flex:1;min-width:0;font-size:12px;color:var(--accent-dark);line-height:1.5;margin:0;}
-
-.profile-card{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px;}
-.profile-card-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:12px;}
-.profile-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:12px;}
-.profile-row:last-child{border-bottom:none;}
-.profile-row-label{font-size:12.5px;color:var(--muted);font-weight:600;flex-shrink:0;}
-.profile-row-value{font-size:13.5px;color:var(--charcoal);font-weight:700;text-align:right;}
-html[dir="rtl"] .profile-row-value{text-align:left;}
-
-.profile-username{font-size:22px;font-weight:800;text-align:center;margin-bottom:8px;}
-.profile-badge-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
-.profile-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;padding:6px 14px;border-radius:999px;}
-.profile-badge.verified{background:#E7F3EB;color:var(--green-dark);}
-.profile-badge.unverified{background:var(--panel);color:var(--muted);}
-.profile-badge .icon{width:13px;height:13px;}
-
-.member-list-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);}
-.member-list-row:last-child{border-bottom:none;}
-.member-avatar{width:38px;height:38px;border-radius:50%;background:var(--panel);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent-dark);}
-.member-avatar .icon{width:17px;height:17px;}
-.member-list-info{flex:1;min-width:0;}
-.member-list-name{font-size:13.5px;font-weight:800;}
-.member-list-meta{font-size:11.5px;color:var(--muted);font-weight:600;}
-.member-you-tag{font-size:10px;font-weight:800;color:var(--green-dark);background:#E7F3EB;padding:2px 8px;border-radius:999px;margin-left:6px;}
-html[dir="rtl"] .member-you-tag{margin-left:0;margin-right:6px;}
-
-.no-profile-state{text-align:center;padding:40px 20px;}
-.no-profile-state .icon{width:36px;height:36px;color:#C7CFC7;margin:0 auto 14px;}
-.no-profile-state p{font-size:13.5px;color:var(--muted);margin:0 0 16px;line-height:1.5;}
-.no-profile-state a{display:inline-block;background:var(--green);color:#fff;font-weight:800;font-size:13.5px;padding:12px 22px;border-radius:999px;}
-
-/* Ported add-member scan component (matches create-account.html) */
-.member-card{border:1.5px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;background:#fff;}
-.member-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.member-tag{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-dark);
-  background:#EDEFFA;padding:4px 10px;border-radius:999px;}
-.relationship-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
-.rel-chip{border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;
+.request-form-card{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:18px;margin:0 auto 24px;max-width:720px;}
+.request-form-card .field-group{margin-bottom:16px;}
+.request-form-card .field-group:last-child{margin-bottom:0;}
+.request-form-card label{display:block;font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:8px;}
+.cat-select-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.cat-select-chip{border:1.5px solid var(--line);border-radius:12px;padding:11px;text-align:center;font-size:12.5px;font-weight:700;
   color:var(--muted);cursor:pointer;background:#fff;}
-.rel-chip.selected{border-color:var(--accent);background:#EDEFFA;color:var(--accent-dark);}
-.scan-zone{border:1.5px dashed var(--line);border-radius:14px;padding:18px;text-align:center;cursor:pointer;background:var(--panel);}
-.scan-zone .icon{width:26px;height:26px;color:var(--muted);margin:0 auto 8px;}
-.scan-zone-label{font-size:13px;font-weight:700;color:var(--muted);}
-.scan-zone-sub{font-size:11px;color:var(--muted);margin-top:3px;}
-.scan-zone.scanning{opacity:.6;pointer-events:none;}
-.scan-zone.done{border-style:solid;border-color:var(--green);background:#E7F3EB;}
-.scanned-info{display:none;margin-top:12px;}
-.scanned-info.show{display:block;}
-.scanned-field{display:flex;justify-content:space-between;font-size:13px;background:var(--panel);border-radius:9px;
-  padding:9px 12px;margin-bottom:6px;}
-.scanned-field span{color:var(--muted);}
-.scanned-field b{color:var(--charcoal);}
-.add-member-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:none;border:1.5px dashed var(--accent);color:var(--accent-dark);
-  font-weight:700;font-size:13px;padding:12px 16px;border-radius:14px;width:100%;margin-top:6px;}
-.add-member-btn .icon{width:15px;height:15px;}
-.save-member-btn{width:100%;background:var(--green);color:#fff;font-weight:800;font-size:13.5px;padding:13px;border:none;border-radius:999px;margin-top:6px;}
-.situation-textarea{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;font-family:inherit;
-  font-size:13.5px;resize:vertical;box-sizing:border-box;}
-.situation-saved-note{display:none;color:var(--green-dark);font-size:12px;font-weight:700;margin-top:8px;}
-.situation-saved-note.show{display:block;}
-.save-member-btn:disabled{opacity:.5;}
+.cat-select-chip.selected{border-color:var(--accent);background:#EDEFFA;color:var(--accent-dark);}
+.request-textarea{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;font-family:inherit;
+  font-size:13.5px;resize:vertical;box-sizing:border-box;min-height:80px;}
+.request-hint{font-size:11.5px;color:var(--muted);margin-top:6px;display:block;}
+.request-submit-btn{width:100%;background:var(--green);color:#fff;font-weight:800;font-size:14px;padding:14px;
+  border:none;border-radius:999px;margin-top:6px;}
+.request-submit-btn:disabled{opacity:.5;}
 
-html[dir="rtl"] .profile-note{flex-direction:row-reverse;text-align:right;}
-html[dir="rtl"] .member-list-row{flex-direction:row-reverse;}
-html[dir="rtl"] .profile-row{flex-direction:row-reverse;}
-html[dir="rtl"] .member-card-head{flex-direction:row-reverse;}
-html[dir="rtl"] .scanned-field{flex-direction:row-reverse;}
+.section-title{font-size:14.5px;font-weight:800;max-width:720px;margin:0 auto 14px;padding:0 20px;}
+.request-card{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:12px;
+  max-width:720px;margin-left:auto;margin-right:auto;display:flex;align-items:center;gap:12px;}
+.request-card-info{flex:1;min-width:0;}
+.request-card-category{font-size:10.5px;font-weight:800;color:var(--accent-dark);background:#EDEFFA;padding:2px 8px;
+  border-radius:999px;display:inline-block;margin-bottom:5px;}
+.request-card-desc{font-size:13px;color:var(--charcoal);line-height:1.4;}
+.request-status-pill{font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;flex-shrink:0;}
+.request-status-pill.open{background:#FFF4E0;color:#9a6b0a;}
+.request-status-pill.claimed{background:#EDEFFA;color:var(--accent-dark);}
+.request-status-pill.given{background:#E7F3EB;color:var(--green-dark);}
+.request-card-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
+.request-cancel-btn{font-size:11px;font-weight:800;color:#B3382A;background:#FDEDEA;padding:6px 12px;border-radius:999px;border:none;}
+.request-chat-btn{font-size:11px;font-weight:800;color:var(--green-dark);background:#E7F3EB;padding:6px 12px;border-radius:999px;
+  border:none;text-decoration:none;text-align:center;}
+
+html[dir="rtl"] .usage-row{flex-direction:row-reverse;}
+html[dir="rtl"] .request-card{flex-direction:row-reverse;}
 </style>
 </head>
 <body>
@@ -257,82 +223,50 @@ html[dir="rtl"] .scanned-field{flex-direction:row-reverse;}
 </header>
 
 <div class="page-head">
-  <h1 data-en="My Profile" data-ar="ملفي الشخصي">My Profile</h1>
-  <p data-en="See exactly what givers see about you, and manage your household details." data-ar="شاهد بالضبط ما يراه المانحون عنك، وأدر تفاصيل أسرتك.">See exactly what givers see about you, and manage your household details.</p>
+  <h1 data-en="Request an Item" data-ar="اطلب غرضاً">Request an Item</h1>
+  <p data-en="Describe one specific thing you need — givers can reach out directly, no waiting for a match." data-ar="صف شيئاً واحداً محدداً تحتاجه — يمكن للمانحين التواصل معك مباشرة، دون انتظار مطابقة.">Describe one specific thing you need — givers can reach out directly, no waiting for a match.</p>
 </div>
 
 <div class="signed-out-note" id="signedOutNote" style="display:none;">
-  <p data-en="Log in to see your profile." data-ar="سجّل الدخول لرؤية ملفك الشخصي.">Log in to see your profile.</p>
-  <a href="share-care-login.html?redirect=share-care-my-profile.html" data-en="Log In" data-ar="تسجيل الدخول">Log In</a>
+  <p data-en="Log in to request an item." data-ar="سجّل الدخول لطلب غرض.">Log in to request an item.</p>
+  <a href="share-care-login.html?redirect=share-care-request-item.html" data-en="Log In" data-ar="تسجيل الدخول">Log In</a>
 </div>
 
-<div id="profileContent" style="display:none;">
-  <div class="profile-tabs">
-    <div class="profile-tab active" data-tab="public" data-en="Public Profile" data-ar="الملف العام">Public Profile</div>
-    <div class="profile-tab" data-tab="private" data-en="Private Details" data-ar="التفاصيل الخاصة">Private Details</div>
+<div id="requestPageContent" style="display:none;">
+  <div class="usage-card" id="usageCard">
+    <div class="usage-row">
+      <span class="usage-label" data-en="This month" data-ar="هذا الشهر">This month</span>
+      <span class="usage-count" id="usageCountText"></span>
+    </div>
+    <div class="usage-bar"><div class="usage-bar-fill" id="usageBarFill"></div></div>
+    <div class="usage-note" data-en="Taking an item and requesting an item both count toward the same monthly total of 2." data-ar="أخذ غرض وطلب غرض كلاهما يُحتسب ضمن نفس الحد الشهري البالغ 2.">Taking an item and requesting an item both count toward the same monthly total of 2.</div>
   </div>
 
-  <!-- ===== PUBLIC ===== -->
-  <div class="profile-panel show" id="publicPanel">
-    <div class="profile-note">
-      <div class="icon-wrap"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span></div>
-      <p data-en="This is exactly what someone sees about you when you show interest in an item — never your real name, phone, or exact address." data-ar="هذا بالضبط ما يراه شخص ما عنك عند إبداء اهتمامك بغرض ما — أبداً ليس اسمك الحقيقي أو هاتفك أو عنوانك الدقيق.">This is exactly what someone sees about you when you show interest in an item — never your real name, phone, or exact address.</p>
-    </div>
-
-    <div id="noReceiverState" class="no-profile-state" style="display:none;">
-      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span>
-      <p data-en="You haven't registered as a receiver yet — a public profile only applies once you request items." data-ar="لم تُسجّل كمستفيد بعد — يظهر الملف العام فقط بعد طلبك للأغراض.">You haven't registered as a receiver yet — a public profile only applies once you request items.</p>
-      <a href="share-care-create-account.html" data-en="Register as a Receiver" data-ar="سجّل كمستفيد">Register as a Receiver</a>
-    </div>
-
-    <div id="publicProfileCard" style="display:none;">
-      <div class="profile-username" id="pubUsername"></div>
-      <div class="profile-badge-row" id="pubBadgeRow"></div>
-      <div class="profile-card">
-        <div class="profile-card-title" data-en="About the household" data-ar="عن الأسرة">About the household</div>
-        <div class="profile-row"><span class="profile-row-label" data-en="Household" data-ar="الأسرة">Household</span><span class="profile-row-value" id="pubHousehold"></span></div>
-        <div class="profile-row"><span class="profile-row-label" data-en="Your age" data-ar="عمرك">Your age</span><span class="profile-row-value" id="pubAge"></span></div>
-        <div class="profile-row"><span class="profile-row-label" data-en="Gender" data-ar="الجنس">Gender</span><span class="profile-row-value" id="pubGender"></span></div>
-        <div class="profile-row" id="pubChildrenRow"><span class="profile-row-label" data-en="Children" data-ar="الأطفال">Children</span><span class="profile-row-value" id="pubChildren"></span></div>
-      </div>
-      <div class="profile-card" id="pubSituationCard" style="display:none;">
-        <div class="profile-card-title" data-en="Household situation" data-ar="وضع الأسرة">Household situation</div>
-        <p style="font-size:13.5px;line-height:1.6;margin:0;" id="pubSituationText"></p>
-      </div>
-    </div>
+  <div class="suspended-card" id="suspendedCard" style="display:none;">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg></span>
+    <p id="suspendedText"></p>
   </div>
 
-  <!-- ===== PRIVATE ===== -->
-  <div class="profile-panel" id="privatePanel">
-    <div class="profile-card">
-      <div class="profile-card-title" data-en="Your details" data-ar="بياناتك">Your details</div>
-      <div class="profile-row"><span class="profile-row-label" data-en="Full name" data-ar="الاسم الكامل">Full name</span><span class="profile-row-value" id="privFullName"></span></div>
-      <div class="profile-row"><span class="profile-row-label" data-en="Username" data-ar="اسم المستخدم">Username</span><span class="profile-row-value" id="privUsername"></span></div>
-      <div class="profile-row"><span class="profile-row-label" data-en="Phone" data-ar="الهاتف">Phone</span><span class="profile-row-value" id="privPhone"></span></div>
-      <div class="profile-row"><span class="profile-row-label" data-en="Location" data-ar="الموقع">Location</span><span class="profile-row-value" id="privLocation"></span></div>
+  <div class="request-form-card" id="requestFormCard">
+    <div class="field-group">
+      <label data-en="What kind of item?" data-ar="ما نوع الغرض؟">What kind of item?</label>
+      <div class="cat-select-grid" id="catSelectGrid"></div>
     </div>
-
-    <div class="profile-card" id="situationEditCard">
-      <div class="profile-card-title" data-en="Household situation" data-ar="وضع الأسرة">Household situation</div>
-      <span class="field-hint" style="display:block;margin-bottom:8px;" data-en="This is what a giver sees when deciding who to help — a short, honest description helps a lot." data-ar="هذا ما يراه المانح عند اختيار من يساعد — وصف قصير وصادق يساعد كثيراً.">This is what a giver sees when deciding who to help — a short, honest description helps a lot.</span>
-      <textarea id="situationTextarea" class="situation-textarea" rows="3" data-en-placeholder="e.g. Family of 5, recently lost income, need warm clothes for winter" data-ar-placeholder="مثال: عائلة من 5 أفراد، فقدت مصدر دخلها مؤخراً، تحتاج ملابس شتوية دافئة" placeholder="e.g. Family of 5, recently lost income, need warm clothes for winter"></textarea>
-      <button type="button" class="save-member-btn" id="saveSituationBtn" data-en="Save" data-ar="حفظ">Save</button>
-      <div class="situation-saved-note" id="situationSavedNote" data-en="Saved ✓" data-ar="تم الحفظ ✓">Saved ✓</div>
+    <div class="field-group">
+      <label data-en="Describe it specifically" data-ar="صفه بالتحديد">Describe it specifically</label>
+      <textarea class="request-textarea" id="requestDescription" data-en-placeholder="e.g. Baby clothes, size 6-12 months, for a boy" data-ar-placeholder="مثال: ملابس أطفال، مقاس 6-12 شهراً، لولد" placeholder="e.g. Baby clothes, size 6-12 months, for a boy"></textarea>
+      <span class="request-hint" data-en="Keep it to one specific type of item, not a general list — this helps givers know exactly if they can help." data-ar="اجعله نوعاً واحداً محدداً من الأغراض، وليس قائمة عامة — هذا يساعد المانحين على معرفة ما إذا كان بإمكانهم المساعدة بالتحديد.">Keep it to one specific type of item, not a general list — this helps givers know exactly if they can help.</span>
     </div>
-
-    <div class="profile-card" id="privHouseholdCard" style="display:none;">
-      <div class="profile-card-title" data-en="Household members" data-ar="أفراد الأسرة">Household members</div>
-      <div id="memberList"></div>
-    </div>
-
-    <div id="addMemberSection" style="display:none;">
-      <button type="button" class="add-member-btn" id="addMemberToggleBtn">
-        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
-        <span data-en="Add a family member" data-ar="أضف فرداً من العائلة">Add a family member</span>
-      </button>
-      <div id="addMemberForm" style="display:none;"></div>
-    </div>
+    <span class="field-hint" id="formError" style="display:none;color:#B3382A;"></span>
+    <button type="button" class="request-submit-btn" id="submitRequestBtn" data-en="Post Request" data-ar="انشر الطلب">Post Request</button>
   </div>
+
+  <div class="section-title" data-en="My Requests" data-ar="طلباتي">My Requests</div>
+  <div class="empty-state" id="emptyState" style="padding:20px 20px 40px;">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.5L17 7.5V19a2 2 0 0 1-2 2z"/></svg></span>
+    <p data-en="No requests yet — post one above." data-ar="لا توجد طلبات بعد — انشر طلباً أعلاه.">No requests yet — post one above.</p>
+  </div>
+  <div id="myRequestsList" style="padding-bottom:40px;"></div>
 </div>
 
 <footer>
@@ -348,308 +282,172 @@ html[dir="rtl"] .scanned-field{flex-direction:row-reverse;}
   function initApp(){
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let currentLang = 'en';
+  let currentUserId = null;
+  let selectedCategory = null;
+  let canSubmit = true;
 
-  let accountRow = null;
-  let receiverRow = null;
-  let memberRows = [];
+  const CATEGORIES = [
+    {v:'baby', en:'Baby &amp; Kids', ar:'أطفال ورضّع'},
+    {v:'clothing', en:'Clothing', ar:'ملابس'},
+    {v:'furniture', en:'Furniture', ar:'أثاث'},
+    {v:'home', en:'Home &amp; Living', ar:'المنزل'},
+    {v:'toys', en:'Toys &amp; Books', ar:'ألعاب وكتب'},
+    {v:'other', en:'Other', ar:'أخرى'}
+  ];
 
-  // Age computed exactly the way the giver-facing side would want to see it —
-  // months for babies/toddlers, years otherwise. Matches the phrasing already
-  // used elsewhere in the app ("Family with 4 kids aged 10, 8, 3, 2mo").
-  function computeAgeLabel(dobStr){
-    if (!dobStr) return null;
-    const dob = new Date(dobStr);
-    const now = new Date();
-    let months = (now.getFullYear() - dob.getFullYear()) * 12 + (now.getMonth() - dob.getMonth());
-    if (now.getDate() < dob.getDate()) months--;
-    if (months < 0) months = 0;
-    const years = Math.floor(months / 12);
-    if (years < 2) return currentLang === 'ar' ? `${months} شهراً` : `${months} month${months === 1 ? '' : 's'}`;
-    return currentLang === 'ar' ? `${years} سنة` : `${years} year${years === 1 ? '' : 's'}`;
+  function renderCategoryGrid(){
+    const grid = document.getElementById('catSelectGrid');
+    grid.innerHTML = CATEGORIES.map(c => `<div class="cat-select-chip" data-cat="${c.v}">${currentLang === 'ar' ? c.ar : c.en}</div>`).join('');
+    grid.querySelectorAll('.cat-select-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        grid.querySelectorAll('.cat-select-chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+        selectedCategory = chip.getAttribute('data-cat');
+      });
+    });
   }
 
-  function relationshipLabel(rel){
-    const map = {
-      self:   { en: 'You',     ar: 'أنت' },
-      spouse: { en: 'Spouse',  ar: 'الزوج/الزوجة' },
-      child:  { en: 'Child',   ar: 'طفل' },
-      parent: { en: 'Parent',  ar: 'والد/والدة' },
-      other:  { en: 'Other',   ar: 'آخر' }
-    };
-    const entry = map[rel] || map.other;
-    return currentLang === 'ar' ? entry.ar : entry.en;
+  function categoryLabel(v){
+    const c = CATEGORIES.find(x => x.v === v);
+    if (!c) return v;
+    return currentLang === 'ar' ? c.ar : c.en;
   }
 
-  async function loadProfile(){
+  async function loadPage(){
     const { data: { session } } = await sb.auth.getSession();
     if (!session){
       document.getElementById('signedOutNote').style.display = 'block';
-      document.getElementById('profileContent').style.display = 'none';
+      document.getElementById('requestPageContent').style.display = 'none';
       return;
     }
+    currentUserId = session.user.id;
     document.getElementById('signedOutNote').style.display = 'none';
-    document.getElementById('profileContent').style.display = 'block';
+    document.getElementById('requestPageContent').style.display = 'block';
 
-    const [{ data: account }, { data: receiver }] = await Promise.all([
-      sb.from('share_care_accounts').select('*').eq('user_id', session.user.id).maybeSingle(),
-      sb.from('share_care_receivers').select('*').eq('user_id', session.user.id).maybeSingle()
-    ]);
-    accountRow = account;
-    receiverRow = receiver;
-
-    if (receiver){
-      const { data: members } = await sb.from('share_care_receiver_members')
-        .select('*').eq('receiver_id', receiver.id).order('created_at', { ascending: true });
-      memberRows = members || [];
-    } else {
-      memberRows = [];
-    }
-
-    renderPublicPanel();
-    renderPrivatePanel();
+    await loadUsage();
+    await loadMyRequests();
   }
 
-  function renderPublicPanel(){
-    const noReceiverState = document.getElementById('noReceiverState');
-    const publicCard = document.getElementById('publicProfileCard');
-    if (!receiverRow){
-      noReceiverState.style.display = 'block';
-      publicCard.style.display = 'none';
+  async function loadUsage(){
+    const { data: usage, error } = await sb.rpc('get_monthly_usage', { p_user_id: currentUserId });
+    if (error || !usage) return;
+
+    const used = usage.total_used || 0;
+    const limit = usage.monthly_limit || 2;
+    document.getElementById('usageCountText').textContent = `${used} / ${limit}`;
+    const fill = document.getElementById('usageBarFill');
+    fill.style.width = Math.min(100, (used / limit) * 100) + '%';
+    fill.classList.toggle('full', used >= limit);
+
+    const suspendedCard = document.getElementById('suspendedCard');
+    const formCard = document.getElementById('requestFormCard');
+    canSubmit = true;
+
+    if (usage.is_suspended){
+      canSubmit = false;
+      suspendedCard.style.display = 'block';
+      const untilDate = new Date(usage.suspended_until).toLocaleDateString(currentLang === 'ar' ? 'ar' : 'en', { year: 'numeric', month: 'long', day: 'numeric' });
+      document.getElementById('suspendedText').textContent = currentLang === 'ar'
+        ? `لا يمكنك طلب أو استلام أغراض حالياً بسبب عدم حضور مُبلّغ عنه. سيُستعاد وصولك في ${untilDate}.`
+        : `You can't request or receive items right now due to a reported no-show. Access will be restored on ${untilDate}.`;
+      formCard.style.display = 'none';
+    } else if (used >= limit) {
+      canSubmit = false;
+      suspendedCard.style.display = 'none';
+      formCard.style.display = 'block';
+      document.getElementById('submitRequestBtn').disabled = true;
+    } else {
+      suspendedCard.style.display = 'none';
+      formCard.style.display = 'block';
+      document.getElementById('submitRequestBtn').disabled = false;
+    }
+  }
+
+  async function loadMyRequests(){
+    const { data: requests } = await sb.from('share_care_requests')
+      .select('id, category, description, status, created_at')
+      .eq('requester_user_id', currentUserId)
+      .order('created_at', { ascending: false });
+
+    const listEl = document.getElementById('myRequestsList');
+    const emptyEl = document.getElementById('emptyState');
+
+    if (!requests || requests.length === 0){
+      listEl.innerHTML = '';
+      emptyEl.style.display = 'block';
       return;
     }
-    noReceiverState.style.display = 'none';
-    publicCard.style.display = 'block';
+    emptyEl.style.display = 'none';
 
-    document.getElementById('pubUsername').textContent = receiverRow.username || (accountRow && accountRow.username) || '';
-
-    const badgeRow = document.getElementById('pubBadgeRow');
-    if (receiverRow.verified){
-      const isFamily = receiverRow.household_type === 'family';
-      badgeRow.innerHTML = `<span class="profile-badge verified"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="6" y="4" width="13" height="4.5"/><rect x="6" y="10.5" width="10" height="4.5"/></svg></span>${currentLang === 'ar' ? ('مُوثّق — ' + (isFamily ? 'عائلة' : 'فرد')) : ('FAF Verified — ' + (isFamily ? 'Family' : 'Friend'))}</span>`;
-    } else {
-      badgeRow.innerHTML = `<span class="profile-badge unverified">${currentLang === 'ar' ? 'غير مُوثّق' : 'Not verified'}</span>`;
-    }
-
-    document.getElementById('pubHousehold').textContent = receiverRow.household_type === 'family'
-      ? (currentLang === 'ar' ? 'عائلة' : 'Family')
-      : (currentLang === 'ar' ? 'فرد واحد' : 'Single');
-
-    const primary = memberRows.find(m => m.relationship === 'self') || memberRows.find(m => m.is_primary);
-    document.getElementById('pubAge').textContent = (primary && primary.dob) ? computeAgeLabel(primary.dob) : (currentLang === 'ar' ? 'غير محدد' : 'Not set');
-    document.getElementById('pubGender').textContent = (primary && primary.gender)
-      ? (primary.gender === 'female' ? (currentLang === 'ar' ? 'أنثى' : 'Female') : (currentLang === 'ar' ? 'ذكر' : 'Male'))
-      : (currentLang === 'ar' ? 'غير محدد' : 'Not set');
-
-    const children = memberRows.filter(m => m.relationship === 'child' && m.dob);
-    const childrenRow = document.getElementById('pubChildrenRow');
-    if (children.length){
-      childrenRow.style.display = 'flex';
-      document.getElementById('pubChildren').textContent = children.map(c => computeAgeLabel(c.dob)).join(', ');
-    } else {
-      childrenRow.style.display = 'none';
-    }
-
-    const situationCard = document.getElementById('pubSituationCard');
-    const situationText = receiverRow.verified ? receiverRow.needs_notes : (accountRow ? accountRow.household_situation : null);
-    if (situationText){
-      situationCard.style.display = 'block';
-      document.getElementById('pubSituationText').textContent = situationText;
-    } else {
-      situationCard.style.display = 'none';
-    }
-  }
-
-  function renderPrivatePanel(){
-    document.getElementById('privFullName').textContent = (accountRow && accountRow.full_name) || '—';
-    document.getElementById('privUsername').textContent = (accountRow && accountRow.username) || (receiverRow && receiverRow.username) || '—';
-    document.getElementById('privPhone').textContent = (accountRow && accountRow.phone) || (receiverRow && receiverRow.whatsapp) || '—';
-    document.getElementById('privLocation').textContent = (accountRow && accountRow.location) || (receiverRow && receiverRow.location) || '—';
-
-    const situationTextarea = document.getElementById('situationTextarea');
-    if (document.activeElement !== situationTextarea) { // don't clobber while the person is actively typing
-      const currentSituation = (receiverRow && receiverRow.verified) ? receiverRow.needs_notes : (accountRow ? accountRow.household_situation : null);
-      situationTextarea.value = currentSituation || '';
-    }
-
-    const householdCard = document.getElementById('privHouseholdCard');
-    const memberList = document.getElementById('memberList');
-    if (memberRows.length){
-      householdCard.style.display = 'block';
-      memberList.innerHTML = memberRows.map(m => {
-        const relLabel = relationshipLabel(m.relationship);
-        const ageLabel = m.dob ? computeAgeLabel(m.dob) : '';
-        return `<div class="member-list-row">
-          <div class="member-avatar"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg></span></div>
-          <div class="member-list-info">
-            <div class="member-list-name">${m.full_name || (currentLang === 'ar' ? 'بدون اسم' : 'Unnamed')}${m.is_primary ? `<span class="member-you-tag">${currentLang === 'ar' ? 'أنت' : 'You'}</span>` : ''}</div>
-            <div class="member-list-meta">${relLabel}${ageLabel ? ' · ' + ageLabel : ''}</div>
-          </div>
-        </div>`;
-      }).join('');
-    } else {
-      householdCard.style.display = 'none';
-    }
-
-    document.getElementById('addMemberSection').style.display = receiverRow ? 'block' : 'none';
-  }
-
-  // ===== Tabs =====
-  document.querySelectorAll('.profile-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const target = tab.getAttribute('data-tab');
-      document.getElementById('publicPanel').classList.toggle('show', target === 'public');
-      document.getElementById('privatePanel').classList.toggle('show', target === 'private');
-    });
-  });
-
-  // ===== Add family member — QID scan, same mechanism as create-account.html =====
-  function fileToBase64(file){
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-  function convertDob(d){
-    const parts = (d || '').split('/');
-    if (parts.length !== 3) return null;
-    const [dd, mm, yyyy] = parts;
-    if (!yyyy || yyyy.length !== 4) return null;
-    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
-  }
-
-  const relOptions = [
-    { v: 'spouse', en: 'Spouse', ar: 'الزوج/الزوجة' },
-    { v: 'child', en: 'Child', ar: 'طفل' },
-    { v: 'parent', en: 'Parent', ar: 'والد/والدة' },
-    { v: 'other', en: 'Other', ar: 'آخر' }
-  ];
-  let newMember = null;
-
-  function buildAddMemberCard(){
-    newMember = { relationship: 'other', qid_number: null, full_name: null, dob: null, gender: null };
-    const container = document.getElementById('addMemberForm');
-    container.innerHTML = `
-      <div class="member-card">
-        <div class="relationship-row" id="newMemberRelRow">
-          ${relOptions.map(r => `<div class="rel-chip" data-rel="${r.v}">${currentLang === 'ar' ? r.ar : r.en}</div>`).join('')}
+    listEl.innerHTML = requests.map(r => {
+      const statusLabel = { open: currentLang === 'ar' ? 'مفتوح' : 'Open',
+        claimed: currentLang === 'ar' ? 'تمت المطابقة' : 'Claimed',
+        given: currentLang === 'ar' ? 'تم الاستلام' : 'Given',
+        cancelled: currentLang === 'ar' ? 'ملغى' : 'Cancelled' }[r.status] || r.status;
+      let actions = '';
+      if (r.status === 'open'){
+        actions = `<button type="button" class="request-cancel-btn" data-cancel="${r.id}">${currentLang === 'ar' ? 'إلغاء' : 'Cancel'}</button>`;
+      } else if (r.status === 'claimed' || r.status === 'given'){
+        actions = `<a href="share-care-my-chats.html" class="request-chat-btn">${currentLang === 'ar' ? 'اذهب للمحادثة' : 'Go to Chat'}</a>`;
+      }
+      return `<div class="request-card">
+        <div class="request-card-info">
+          <span class="request-card-category">${categoryLabel(r.category)}</span>
+          <div class="request-card-desc">${r.description}</div>
         </div>
-        <div class="scan-zone" id="newMemberScanZone">
-          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg></span>
-          <div class="scan-zone-label" id="newMemberScanLabel">${currentLang === 'ar' ? 'اضغط لمسح البطاقة (الوجه الأمامي)' : 'Tap to scan QID (front)'}</div>
-          <div class="scan-zone-sub">${currentLang === 'ar' ? 'تتم معالجة الصورة فوراً، ولا يتم تخزينها' : 'Photo is processed instantly, not stored'}</div>
-          <input type="file" accept="image/*" id="newMemberFileInput" style="display:none;">
+        <div class="request-card-actions">
+          <span class="request-status-pill ${r.status}">${statusLabel}</span>
+          ${actions}
         </div>
-        <div class="scanned-info" id="newMemberScannedInfo">
-          <div class="scanned-field"><span>${currentLang === 'ar' ? 'الاسم' : 'Name'}</span><b id="newMemberFieldName"></b></div>
-          <div class="scanned-field"><span>${currentLang === 'ar' ? 'الرقم الشخصي' : 'QID'}</span><b id="newMemberFieldQid"></b></div>
-          <div class="scanned-field"><span>${currentLang === 'ar' ? 'تاريخ الميلاد' : 'Date of birth'}</span><b id="newMemberFieldDob"></b></div>
-          <div class="scanned-field"><span>${currentLang === 'ar' ? 'الجنس' : 'Gender'}</span><b id="newMemberFieldGender"></b></div>
-        </div>
-        <button type="button" class="save-member-btn" id="saveMemberBtn" disabled>${currentLang === 'ar' ? 'حفظ فرد العائلة' : 'Save family member'}</button>
-        <div style="color:#B3382A;font-size:12.5px;margin-top:8px;display:none;" id="newMemberError"></div>
-      </div>
-    `;
+      </div>`;
+    }).join('');
 
-    container.querySelectorAll('[data-rel]').forEach(chip => {
-      chip.addEventListener('click', () => {
-        container.querySelectorAll('[data-rel]').forEach(c => c.classList.remove('selected'));
-        chip.classList.add('selected');
-        newMember.relationship = chip.getAttribute('data-rel');
+    listEl.querySelectorAll('[data-cancel]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        await sb.from('share_care_requests').update({ status: 'cancelled' }).eq('id', btn.getAttribute('data-cancel'));
+        await loadUsage();
+        await loadMyRequests();
       });
     });
-
-    const scanZone = document.getElementById('newMemberScanZone');
-    const fileInput = document.getElementById('newMemberFileInput');
-    scanZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      scanZone.classList.add('scanning');
-      document.getElementById('newMemberScanLabel').textContent = currentLang === 'ar' ? 'جارٍ المسح...' : 'Scanning...';
-      try {
-        const base64 = await fileToBase64(file);
-        const resp = await fetch(`${SUPABASE_URL}/functions/v1/scan-qid`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-          body: JSON.stringify({ images: { front: { type: file.type, data: base64 } } })
-        });
-        const result = await resp.json();
-        if (result.error || !result.qid_number) throw new Error(result.error || 'Could not read card');
-
-        newMember.qid_number = result.qid_number;
-        newMember.full_name = result.name;
-        newMember.gender = (result.gender || '').toLowerCase().startsWith('f') ? 'female' : 'male';
-        newMember.dob = result.dob || null;
-
-        document.getElementById('newMemberFieldName').textContent = result.name || '—';
-        document.getElementById('newMemberFieldQid').textContent = result.qid_number || '—';
-        document.getElementById('newMemberFieldDob').textContent = result.dob || '—';
-        document.getElementById('newMemberFieldGender').textContent = result.gender || '—';
-        document.getElementById('newMemberScannedInfo').classList.add('show');
-        scanZone.classList.remove('scanning');
-        scanZone.classList.add('done');
-        document.getElementById('newMemberScanLabel').textContent = currentLang === 'ar' ? 'تم المسح — اضغط لإعادة المسح' : 'Scanned — tap to rescan';
-        document.getElementById('saveMemberBtn').disabled = false;
-      } catch (err){
-        scanZone.classList.remove('scanning');
-        document.getElementById('newMemberScanLabel').textContent = currentLang === 'ar' ? 'تعذّر القراءة — اضغط للمحاولة مرة أخرى' : 'Could not read card — tap to try again';
-      }
-    });
-
-    document.getElementById('saveMemberBtn').addEventListener('click', async () => {
-      const errEl = document.getElementById('newMemberError');
-      errEl.style.display = 'none';
-      if (!newMember.qid_number || !receiverRow) return;
-      const btn = document.getElementById('saveMemberBtn');
-      btn.disabled = true;
-      const { error } = await sb.from('share_care_receiver_members').insert({
-        receiver_id: receiverRow.id,
-        is_primary: false,
-        relationship: newMember.relationship,
-        qid_number: newMember.qid_number,
-        full_name: newMember.full_name,
-        dob: newMember.dob ? convertDob(newMember.dob) : null,
-        gender: newMember.gender
-      });
-      if (error){
-        btn.disabled = false;
-        errEl.textContent = (currentLang === 'ar' ? 'حدث خطأ: ' : 'Something went wrong: ') + error.message;
-        errEl.style.display = 'block';
-        return;
-      }
-      document.getElementById('addMemberForm').style.display = 'none';
-      document.getElementById('addMemberForm').innerHTML = '';
-      document.getElementById('addMemberToggleBtn').style.display = 'block';
-      await loadProfile();
-    });
   }
 
-  document.getElementById('addMemberToggleBtn').addEventListener('click', () => {
-    document.getElementById('addMemberToggleBtn').style.display = 'none';
-    document.getElementById('addMemberForm').style.display = 'block';
-    buildAddMemberCard();
-  });
+  document.getElementById('submitRequestBtn').addEventListener('click', async () => {
+    const errEl = document.getElementById('formError');
+    errEl.style.display = 'none';
+    const description = document.getElementById('requestDescription').value.trim();
 
-  // ===== Household situation editor =====
-  document.getElementById('saveSituationBtn').addEventListener('click', async () => {
-    const text = document.getElementById('situationTextarea').value.trim();
-    const btn = document.getElementById('saveSituationBtn');
-    const savedNote = document.getElementById('situationSavedNote');
+    if (!canSubmit){
+      errEl.textContent = currentLang === 'ar' ? 'لقد وصلت إلى حدك الشهري.' : "You've reached your monthly limit.";
+      errEl.style.display = 'block';
+      return;
+    }
+    if (!selectedCategory || !description){
+      errEl.textContent = currentLang === 'ar' ? 'يرجى اختيار فئة وكتابة وصف.' : 'Please select a category and write a description.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    const btn = document.getElementById('submitRequestBtn');
     btn.disabled = true;
-    savedNote.classList.remove('show');
-    const { error } = await sb.rpc('update_my_household_situation', { p_text: text || null });
+    const { error } = await sb.from('share_care_requests').insert({
+      requester_user_id: currentUserId,
+      category: selectedCategory,
+      description: description
+    });
     btn.disabled = false;
-    if (error) return;
-    // Keep the in-memory rows consistent so switching tabs shows the update immediately
-    if (receiverRow && receiverRow.verified) receiverRow.needs_notes = text || null;
-    else if (accountRow) accountRow.household_situation = text || null;
-    savedNote.classList.add('show');
-    renderPublicPanel();
-    setTimeout(() => savedNote.classList.remove('show'), 2500);
+
+    if (error){
+      errEl.textContent = (currentLang === 'ar' ? 'حدث خطأ: ' : 'Something went wrong: ') + error.message;
+      errEl.style.display = 'block';
+      return;
+    }
+
+    document.getElementById('requestDescription').value = '';
+    document.querySelectorAll('.cat-select-chip').forEach(c => c.classList.remove('selected'));
+    selectedCategory = null;
+    await loadUsage();
+    await loadMyRequests();
   });
 
   // ===== Language toggle =====
@@ -663,10 +461,10 @@ html[dir="rtl"] .scanned-field{flex-direction:row-reverse;}
     });
     const toggleBtn = document.getElementById('langToggleBtn');
     if (toggleBtn) toggleBtn.textContent = lang === 'ar' ? toggleBtn.getAttribute('data-ar') : toggleBtn.getAttribute('data-en');
-    const situationTextarea = document.getElementById('situationTextarea');
-    situationTextarea.placeholder = lang === 'ar' ? situationTextarea.getAttribute('data-ar-placeholder') : situationTextarea.getAttribute('data-en-placeholder');
-    renderPublicPanel();
-    renderPrivatePanel();
+    const descTextarea = document.getElementById('requestDescription');
+    descTextarea.placeholder = lang === 'ar' ? descTextarea.getAttribute('data-ar-placeholder') : descTextarea.getAttribute('data-en-placeholder');
+    renderCategoryGrid();
+    if (currentUserId) loadMyRequests();
   }
   setLang('en');
   document.getElementById('langToggleBtn').addEventListener('click', () => setLang(currentLang === 'ar' ? 'en' : 'ar'));
@@ -699,7 +497,7 @@ html[dir="rtl"] .scanned-field{flex-direction:row-reverse;}
     authLink.addEventListener('click', async () => { await sb.auth.signOut(); window.location.reload(); });
   })();
 
-  loadProfile();
+  loadPage();
   }
 
   if (window.supabase) { initApp(); }
