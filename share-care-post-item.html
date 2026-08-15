@@ -92,7 +92,7 @@ textarea.text-input{resize:vertical;min-height:70px;font-family:'Nunito Sans';}
 .photo-zone{border:1.5px dashed var(--line);border-radius:14px;padding:16px;text-align:center;cursor:pointer;background:var(--panel);}
 .photo-zone.uploading{opacity:.6;pointer-events:none;}
 .photo-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
-.photo-thumb{position:relative;width:72px;height:72px;border-radius:12px;overflow:hidden;background:var(--panel);}
+.photo-thumb{position:relative;width:96px;aspect-ratio:4/3;border-radius:12px;overflow:hidden;background:var(--panel);}
 .photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
 .photo-thumb-remove{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.55);
   color:#fff;display:flex;align-items:center;justify-content:center;border:none;padding:0;cursor:pointer;}
@@ -389,6 +389,11 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       reader.onload = () => {
         cropImgEl.src = reader.result;
         cropImgEl.onload = () => {
+          // Show the modal first so the frame actually has real dimensions to
+          // measure — measuring while still display:none always returns 0×0,
+          // which was making the photo render at zero size (invisible, just
+          // the black frame background showing through).
+          cropModal.classList.add('show');
           const frameRect = cropFrame.getBoundingClientRect();
           const naturalW = cropImgEl.naturalWidth;
           const naturalH = cropImgEl.naturalHeight;
@@ -402,7 +407,6 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
           };
           cropZoomSlider.value = 1;
           applyCropTransform();
-          cropModal.classList.add('show');
         };
       };
       reader.readAsDataURL(file);
@@ -661,7 +665,7 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
         <div class="photo-zone" data-role="photo-zone">
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 15l-5-5L5 19"/></svg></span>
           <div class="photo-zone-label" data-role="photo-zone-label" data-en="Tap to add a photo" data-ar="اضغط لإضافة صورة">Tap to add a photo</div>
-          <input type="file" accept="image/*" data-photo-input style="display:none;">
+          <input type="file" accept="image/*" multiple data-photo-input style="display:none;">
         </div>
       </div>
       <div class="field-group" style="margin-bottom:0;">
@@ -722,25 +726,29 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
 
     photoZone.addEventListener('click', () => photoInput.click());
     photoInput.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      photoInput.value = ''; // allow picking the same file again later
-      if (!file) return;
+      const files = Array.from(e.target.files);
+      photoInput.value = ''; // allow picking the same file(s) again later
+      if (!files.length) return;
 
-      const blob = await openCropModal(file);
-      if (!blob) return; // cancelled
+      for (const file of files) {
+        if (item.photos.length >= MAX_PHOTOS) break;
 
-      photoZone.classList.add('uploading');
-      photoZoneLabel.textContent = currentLang === 'ar' ? 'جارٍ الرفع...' : 'Uploading...';
-      const path = `${item.id}-${Date.now()}-${item.photos.length}.jpg`;
-      const { error: uploadError } = await sb.storage.from('share-care-item-photos').upload(path, blob, { contentType: 'image/jpeg' });
-      photoZone.classList.remove('uploading');
-      if (uploadError) {
-        photoZoneLabel.textContent = currentLang === 'ar' ? 'فشل الرفع — حاول مرة أخرى' : 'Upload failed — tap to retry';
-        return;
+        const blob = await openCropModal(file);
+        if (!blob) continue; // this one was cancelled — move on to the next selected photo
+
+        photoZone.classList.add('uploading');
+        photoZoneLabel.textContent = currentLang === 'ar' ? 'جارٍ الرفع...' : 'Uploading...';
+        const path = `${item.id}-${Date.now()}-${item.photos.length}.jpg`;
+        const { error: uploadError } = await sb.storage.from('share-care-item-photos').upload(path, blob, { contentType: 'image/jpeg' });
+        photoZone.classList.remove('uploading');
+        if (uploadError) {
+          photoZoneLabel.textContent = currentLang === 'ar' ? 'فشل الرفع — حاول مرة أخرى' : 'Upload failed — tap to retry';
+          continue;
+        }
+        const { data: urlData } = sb.storage.from('share-care-item-photos').getPublicUrl(path);
+        item.photos.push(urlData.publicUrl);
+        renderThumbs();
       }
-      const { data: urlData } = sb.storage.from('share-care-item-photos').getPublicUrl(path);
-      item.photos.push(urlData.publicUrl);
-      renderThumbs();
     });
     renderThumbs();
 
