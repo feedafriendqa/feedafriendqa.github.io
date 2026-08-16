@@ -835,7 +835,8 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
         body: JSON.stringify({
           phone, password, full_name: effectiveFullName, username, email: email || null,
-          location, lat: pinnedCoords ? pinnedCoords.lat : null, lng: pinnedCoords ? pinnedCoords.lng : null
+          location, lat: pinnedCoords ? pinnedCoords.lat : null, lng: pinnedCoords ? pinnedCoords.lng : null,
+          preferred_language: currentLang
         })
       });
       signupResult = await resp.json();

@@ -267,7 +267,10 @@ html[dir="rtl"] .msg-bubble.received{align-self:flex-end;border-bottom-left-radi
     <div class="chat-header">
       <div>
         <div class="chat-header-title" id="chatHeaderTitle"></div>
-        <div class="convo-role" id="chatHeaderRole"></div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <div class="convo-role" id="chatHeaderRole"></div>
+          <span id="chatHeaderLanguage" style="font-size:10.5px;font-weight:800;color:var(--muted);background:var(--panel);padding:2px 8px;border-radius:999px;display:none;"></span>
+        </div>
       </div>
       <button type="button" class="chat-header-close" id="chatCloseBtn"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span></button>
     </div>
@@ -424,6 +427,16 @@ html[dir="rtl"] .msg-bubble.received{align-self:flex-end;border-bottom-left-radi
     const roleEl = document.getElementById('chatHeaderRole');
     roleEl.textContent = convo.is_poster ? (currentLang === 'ar' ? 'أنت تُعطي' : "You're giving") : (currentLang === 'ar' ? 'أنت تطلب' : "You requested");
     roleEl.className = 'convo-role ' + (convo.is_poster ? 'giving' : 'requesting');
+
+    const langEl = document.getElementById('chatHeaderLanguage');
+    if (convo.counterpart_language) {
+      langEl.style.display = 'inline-block';
+      langEl.textContent = convo.counterpart_language === 'ar'
+        ? (currentLang === 'ar' ? 'يتحدث العربية' : 'Speaks Arabic')
+        : (currentLang === 'ar' ? 'يتحدث الإنجليزية' : 'Speaks English');
+    } else {
+      langEl.style.display = 'none';
+    }
 
     document.getElementById('whatsappReveal').classList.remove('show');
     document.getElementById('chatInput').value = '';

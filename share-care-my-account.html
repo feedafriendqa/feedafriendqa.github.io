@@ -143,6 +143,23 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
 .request-cancel-btn{font-size:11px;font-weight:800;color:#B3382A;background:#FDEDEA;padding:6px 12px;border-radius:999px;border:none;}
 .request-chat-btn{font-size:11px;font-weight:800;color:var(--green-dark);background:#E7F3EB;padding:6px 12px;border-radius:999px;border:none;text-decoration:none;text-align:center;}
 html[dir="rtl"] .request-card{flex-direction:row-reverse;}
+
+.mini-section-title{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;
+  margin:4px 0 10px;}
+.interest-card{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:12px;display:flex;gap:12px;
+  align-items:center;margin-bottom:10px;text-decoration:none;color:inherit;}
+.interest-thumb{width:52px;height:52px;border-radius:12px;flex-shrink:0;background:var(--panel);display:flex;
+  align-items:center;justify-content:center;overflow:hidden;}
+.interest-thumb img{width:100%;height:100%;object-fit:cover;}
+.interest-thumb .icon{width:20px;height:20px;color:var(--muted);}
+.interest-info{flex:1;min-width:0;}
+.interest-title{font-weight:800;font-size:13px;margin-bottom:3px;}
+.interest-meta{font-size:11.5px;color:var(--muted);}
+.interest-status-pill{font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;flex-shrink:0;}
+.interest-status-pill.pending{background:#FFF4E0;color:#9a6b0a;}
+.interest-status-pill.matched{background:#E7F3EB;color:var(--green-dark);}
+.interest-status-pill.declined{background:var(--panel);color:var(--muted);}
+html[dir="rtl"] .interest-card{flex-direction:row-reverse;}
 .saved-item-thumb{width:56px;height:56px;border-radius:12px;flex-shrink:0;background:var(--panel);display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .saved-item-thumb img{width:100%;height:100%;object-fit:cover;}
 .saved-item-thumb .icon{width:22px;height:22px;color:var(--muted);}
@@ -245,7 +262,14 @@ html[dir="rtl"] .saved-item-card{flex-direction:row-reverse;}
   </div>
 
   <div class="account-panel" id="requestingPanel">
-    <div class="empty-state" id="requestingEmptyState" style="padding:20px 20px 40px;">
+    <div class="mini-section-title" data-en="Items I've Shown Interest In" data-ar="الأغراض التي أبديت اهتماماً بها">Items I've Shown Interest In</div>
+    <div class="empty-state" id="interestsEmptyState" style="padding:6px 20px 30px;">
+      <p style="font-size:12.5px;" data-en="Nothing yet — browse items and tap \"I'm Interested\" to keep track here." data-ar="لا يوجد شيء بعد — تصفّح الأغراض واضغط \"أنا مهتم\" لتتبعها هنا.">Nothing yet — browse items and tap "I'm Interested" to keep track here.</p>
+    </div>
+    <div id="myInterestsList" style="padding-bottom:24px;max-width:720px;margin:0 auto;"></div>
+
+    <div class="mini-section-title" data-en="My Requests" data-ar="طلباتي">My Requests</div>
+    <div class="empty-state" id="requestingEmptyState" style="padding:6px 20px 40px;">
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.5L17 7.5V19a2 2 0 0 1-2 2z"/></svg></span>
       <p data-en="No requests yet — head to Request an Item to post one." data-ar="لا توجد طلبات بعد — اذهب إلى اطلب غرضاً لنشر طلب.">No requests yet — head to Request an Item to post one.</p>
       <a href="share-care-request-item.html" style="display:inline-block;margin-top:14px;background:var(--accent);color:#fff;font-weight:800;font-size:12.5px;padding:10px 20px;border-radius:999px;text-decoration:none;" data-en="Request an Item" data-ar="اطلب غرضاً">Request an Item</a>
@@ -466,13 +490,18 @@ html[dir="rtl"] .saved-item-card{flex-direction:row-reverse;}
           ? 'ستبقى بيانات التواصل مخفية حتى تختار هذه المطابقة.'
           : 'Contact details stay hidden until you choose this match.');
     const chooseBtn = document.getElementById('modalChooseBtn');
-    if (m.status === 'matched') {
-      chooseBtn.textContent = currentLang === 'ar' ? 'تم اختيار هذه المطابقة' : 'Already chosen';
+    if (activeItem.status === 'given') {
+      chooseBtn.textContent = m.status === 'matched'
+        ? (currentLang === 'ar' ? 'تم إعطاء الغرض لهذا الشخص' : 'Given to this person')
+        : (currentLang === 'ar' ? 'تم إعطاء الغرض لشخص آخر' : 'Given to someone else');
       chooseBtn.disabled = true;
-    } else if (m.status === 'declined') {
-      chooseBtn.textContent = currentLang === 'ar' ? 'تم اختيار مطابقة أخرى' : 'Another match was chosen';
+    } else if (m.status === 'matched') {
+      chooseBtn.textContent = currentLang === 'ar' ? 'المُختار حالياً — تحدّث معه في المحادثات' : 'Currently chosen — chat with them in My Chats';
       chooseBtn.disabled = true;
     } else {
+      // Choosing is lightweight and reversible up until the item is actually
+      // given — always available for anyone not already the current pick,
+      // even if a different person was matched earlier and it didn't work out.
       chooseBtn.textContent = currentLang === 'ar' ? 'اختر هذه المطابقة' : 'Choose This Match';
       chooseBtn.disabled = false;
     }
@@ -619,6 +648,46 @@ html[dir="rtl"] .saved-item-card{flex-direction:row-reverse;}
     const c = CATEGORY_META[v] || CATEGORY_META.other;
     return currentLang === 'ar' ? c.ar : c.en;
   }
+  // ===== Items I've expressed interest in =====
+  let interestsLoaded = false;
+  async function loadMyInterests(){
+    if (!currentUserId) return;
+    const { data: interests } = await sb.from('share_care_item_interests')
+      .select('id, status, created_at, item:share_care_items(id, title, photo_url, location, status)')
+      .eq('requester_user_id', currentUserId)
+      .order('created_at', { ascending: false });
+
+    const listEl = document.getElementById('myInterestsList');
+    const emptyEl = document.getElementById('interestsEmptyState');
+
+    if (!interests || interests.length === 0){
+      listEl.innerHTML = '';
+      emptyEl.style.display = 'block';
+      return;
+    }
+    emptyEl.style.display = 'none';
+
+    listEl.innerHTML = interests.map(i => {
+      const item = i.item;
+      if (!item) return ''; // item was deleted entirely
+      const statusLabel = { pending: currentLang === 'ar' ? 'قيد الانتظار' : 'Pending',
+        matched: currentLang === 'ar' ? 'تمت المطابقة' : 'Matched',
+        declined: currentLang === 'ar' ? 'لم يتم الاختيار' : 'Not chosen' }[i.status] || i.status;
+      const firstPhoto = item.photo_url ? item.photo_url.split(',')[0].trim() : null;
+      const thumbInner = firstPhoto
+        ? `<img src="${firstPhoto}" alt="">`
+        : `<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/></svg></span>`;
+      return `<a class="interest-card" href="share-care-item-detail.html?id=${item.id}">
+        <div class="interest-thumb">${thumbInner}</div>
+        <div class="interest-info">
+          <div class="interest-title">${item.title}</div>
+          <div class="interest-meta">${item.location || ''}</div>
+        </div>
+        <span class="interest-status-pill ${i.status}">${statusLabel}</span>
+      </a>`;
+    }).join('');
+  }
+
   async function loadMyRequests(){
     if (!currentUserId) return;
     const { data: requests } = await sb.from('share_care_requests')
@@ -748,6 +817,10 @@ html[dir="rtl"] .saved-item-card{flex-direction:row-reverse;}
       if (target === 'requesting' && !requestsLoaded && currentUserId){
         requestsLoaded = true;
         loadMyRequests();
+      }
+      if (target === 'requesting' && !interestsLoaded && currentUserId){
+        interestsLoaded = true;
+        loadMyInterests();
       }
     });
   });
