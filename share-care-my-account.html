@@ -130,6 +130,19 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
 .account-panel.show{display:block;}
 
 .saved-item-card{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:12px;display:flex;gap:12px;align-items:center;margin-bottom:12px;}
+
+.request-card{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;}
+.request-card-info{flex:1;min-width:0;}
+.request-card-category{font-size:10.5px;font-weight:800;color:var(--accent-dark);background:#EDEFFA;padding:2px 8px;border-radius:999px;display:inline-block;margin-bottom:5px;}
+.request-card-desc{font-size:13px;color:var(--charcoal);line-height:1.4;}
+.request-status-pill{font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;flex-shrink:0;}
+.request-status-pill.open{background:#FFF4E0;color:#9a6b0a;}
+.request-status-pill.claimed{background:#EDEFFA;color:var(--accent-dark);}
+.request-status-pill.given{background:#E7F3EB;color:var(--green-dark);}
+.request-card-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
+.request-cancel-btn{font-size:11px;font-weight:800;color:#B3382A;background:#FDEDEA;padding:6px 12px;border-radius:999px;border:none;}
+.request-chat-btn{font-size:11px;font-weight:800;color:var(--green-dark);background:#E7F3EB;padding:6px 12px;border-radius:999px;border:none;text-decoration:none;text-align:center;}
+html[dir="rtl"] .request-card{flex-direction:row-reverse;}
 .saved-item-thumb{width:56px;height:56px;border-radius:12px;flex-shrink:0;background:var(--panel);display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .saved-item-thumb img{width:100%;height:100%;object-fit:cover;}
 .saved-item-thumb .icon{width:22px;height:22px;color:var(--muted);}
@@ -207,6 +220,7 @@ html[dir="rtl"] .saved-item-card{flex-direction:row-reverse;}
 <div id="accountContent">
   <div class="account-tabs">
     <div class="account-tab active" data-tab="giving" data-en="Giving" data-ar="أعطي">Giving</div>
+    <div class="account-tab" data-tab="requesting" data-en="Requesting" data-ar="أطلب">Requesting</div>
     <div class="account-tab" data-tab="saved" data-en="Saved" data-ar="محفوظ">Saved</div>
   </div>
 
@@ -228,6 +242,15 @@ html[dir="rtl"] .saved-item-card{flex-direction:row-reverse;}
       <div class="icon-wrap"><span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="6" y="4" width="13" height="4.5"/><rect x="6" y="10.5" width="10" height="4.5"/></svg></span></div>
       <p><b data-en="What the verified badge means:" data-ar="ماذا تعني شارة التوثيق:">What the verified badge means:</b> <span data-en="This is a verified beneficiary confirmed through Feed a Friend's programs — an approved case, not just a self-reported claim. No badge just means they're a regular Share &amp; Care member." data-ar="هذا مستفيد مُوثّق تم التحقق منه عبر برامج فيد أ فريند — حالة مُعتمدة وليست مجرد ادّعاء ذاتي. عدم وجود شارة يعني فقط أنه عضو عادي في شارك و اهتم.">This is a verified beneficiary confirmed through Feed a Friend's programs — an approved case, not just a self-reported claim. No badge just means they're a regular Share &amp; Care member.</span></p>
     </div>
+  </div>
+
+  <div class="account-panel" id="requestingPanel">
+    <div class="empty-state" id="requestingEmptyState" style="padding:20px 20px 40px;">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.5L17 7.5V19a2 2 0 0 1-2 2z"/></svg></span>
+      <p data-en="No requests yet — head to Request an Item to post one." data-ar="لا توجد طلبات بعد — اذهب إلى اطلب غرضاً لنشر طلب.">No requests yet — head to Request an Item to post one.</p>
+      <a href="share-care-request-item.html" style="display:inline-block;margin-top:14px;background:var(--accent);color:#fff;font-weight:800;font-size:12.5px;padding:10px 20px;border-radius:999px;text-decoration:none;" data-en="Request an Item" data-ar="اطلب غرضاً">Request an Item</a>
+    </div>
+    <div id="myRequestsList" style="padding:14px 20px 40px;max-width:720px;margin:0 auto;"></div>
   </div>
 
   <div class="account-panel" id="savedPanel">
@@ -588,6 +611,61 @@ html[dir="rtl"] .saved-item-card{flex-direction:row-reverse;}
 
   // ===== Saved Items =====
   let savedItemsLoaded = false;
+  // ===== Requesting =====
+  let requestsLoaded = false;
+  function categoryLabel(v){
+    const c = CATEGORY_META[v] || CATEGORY_META.other;
+    return currentLang === 'ar' ? c.ar : c.en;
+  }
+  async function loadMyRequests(){
+    if (!currentUserId) return;
+    const { data: requests } = await sb.from('share_care_requests')
+      .select('id, category, description, status, created_at')
+      .eq('requester_user_id', currentUserId)
+      .order('created_at', { ascending: false });
+
+    const listEl = document.getElementById('myRequestsList');
+    const emptyEl = document.getElementById('requestingEmptyState');
+
+    if (!requests || requests.length === 0){
+      listEl.innerHTML = '';
+      emptyEl.style.display = 'block';
+      return;
+    }
+    emptyEl.style.display = 'none';
+
+    listEl.innerHTML = requests.map(r => {
+      const statusLabel = { open: currentLang === 'ar' ? 'مفتوح' : 'Open',
+        claimed: currentLang === 'ar' ? 'تمت المطابقة' : 'Claimed',
+        given: currentLang === 'ar' ? 'تم الاستلام' : 'Given',
+        cancelled: currentLang === 'ar' ? 'ملغى' : 'Cancelled' }[r.status] || r.status;
+      let actions = '';
+      if (r.status === 'open'){
+        actions = `<button type="button" class="request-cancel-btn" data-cancel="${r.id}">${currentLang === 'ar' ? 'إلغاء' : 'Cancel'}</button>`;
+      } else if (r.status === 'claimed' || r.status === 'given'){
+        actions = `<a href="share-care-my-chats.html" class="request-chat-btn">${currentLang === 'ar' ? 'اذهب للمحادثة' : 'Go to Chat'}</a>`;
+      }
+      return `<div class="request-card">
+        <div class="request-card-info">
+          <span class="request-card-category">${categoryLabel(r.category)}</span>
+          <div class="request-card-desc">${r.description}</div>
+        </div>
+        <div class="request-card-actions">
+          <span class="request-status-pill ${r.status}">${statusLabel}</span>
+          ${actions}
+        </div>
+      </div>`;
+    }).join('');
+
+    listEl.querySelectorAll('[data-cancel]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        await sb.from('share_care_requests').update({ status: 'cancelled' }).eq('id', btn.getAttribute('data-cancel'));
+        await loadMyRequests();
+      });
+    });
+  }
+
   async function loadSavedItems(){
     if (!currentUserId) return;
     const listEl = document.getElementById('savedList');
@@ -659,10 +737,15 @@ html[dir="rtl"] .saved-item-card{flex-direction:row-reverse;}
       tab.classList.add('active');
       const target = tab.getAttribute('data-tab');
       document.getElementById('givingPanel').classList.toggle('show', target === 'giving');
+      document.getElementById('requestingPanel').classList.toggle('show', target === 'requesting');
       document.getElementById('savedPanel').classList.toggle('show', target === 'saved');
       if (target === 'saved' && !savedItemsLoaded && currentUserId){
         savedItemsLoaded = true;
         loadSavedItems();
+      }
+      if (target === 'requesting' && !requestsLoaded && currentUserId){
+        requestsLoaded = true;
+        loadMyRequests();
       }
     });
   });

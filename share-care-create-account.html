@@ -319,6 +319,11 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       </div>
 
       <div class="field-group">
+        <label class="field-label" data-en="Email (optional)" data-ar="البريد الإلكتروني (اختياري)">Email (optional)</label>
+        <input class="text-input" type="email" id="email" data-en-placeholder="For registration confirmation and alerts" data-ar-placeholder="لتأكيد التسجيل والتنبيهات" placeholder="For registration confirmation and alerts">
+      </div>
+
+      <div class="field-group">
         <label class="field-label" data-en="Password" data-ar="كلمة المرور">Password</label>
         <input class="text-input" type="password" id="password" autocomplete="new-password" minlength="6" required>
         <span class="field-hint" id="passwordHint" data-en="At least 6 characters. You'll use this to log back in." data-ar="6 أحرف على الأقل. ستستخدمها لتسجيل الدخول لاحقاً.">At least 6 characters. You'll use this to log back in.</span>
@@ -455,6 +460,8 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     });
     const toggleBtn = document.getElementById('langToggleBtn');
     if (toggleBtn) toggleBtn.textContent = lang === 'ar' ? toggleBtn.getAttribute('data-ar') : toggleBtn.getAttribute('data-en');
+    const emailInput = document.getElementById('email');
+    if (emailInput) emailInput.placeholder = lang === 'ar' ? emailInput.getAttribute('data-ar-placeholder') : emailInput.getAttribute('data-en-placeholder');
   }
   setLang('en');
   document.getElementById('langToggleBtn').addEventListener('click', () => setLang(currentLang === 'ar' ? 'en' : 'ar'));
@@ -787,6 +794,7 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     const fullNameTyped = document.getElementById('fullName').value.trim();
     const username = document.getElementById('username').value.trim();
     const phone = document.getElementById('phone').value.trim();
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const location = document.getElementById('location').value.trim();
     const errorEl = document.getElementById('formError');
@@ -826,7 +834,7 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
         body: JSON.stringify({
-          phone, password, full_name: effectiveFullName, username,
+          phone, password, full_name: effectiveFullName, username, email: email || null,
           location, lat: pinnedCoords ? pinnedCoords.lat : null, lng: pinnedCoords ? pinnedCoords.lng : null
         })
       });

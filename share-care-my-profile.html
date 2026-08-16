@@ -192,6 +192,13 @@ html[dir="rtl"] .member-you-tag{margin-left:0;margin-right:6px;}
   font-weight:700;font-size:13px;padding:12px 16px;border-radius:14px;width:100%;margin-top:6px;}
 .add-member-btn .icon{width:15px;height:15px;}
 .save-member-btn{width:100%;background:var(--green);color:#fff;font-weight:800;font-size:13.5px;padding:13px;border:none;border-radius:999px;margin-top:6px;}
+.field-group{margin-bottom:16px;}
+.field-label{display:block;font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:7px;}
+.text-input{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;
+  font-family:inherit;box-sizing:border-box;}
+.field-hint{display:block;font-size:11.5px;color:var(--muted);margin-top:6px;}
+.field-hint.error{color:#B3382A;}
+.field-hint.ok{color:var(--green-dark);}
 .situation-textarea{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;font-family:inherit;
   font-size:13.5px;resize:vertical;box-sizing:border-box;}
 .situation-saved-note{display:none;color:var(--green-dark);font-size:12px;font-weight:700;margin-top:8px;}
@@ -306,13 +313,34 @@ html[dir="rtl"] .scanned-field{flex-direction:row-reverse;}
   <div class="profile-panel" id="privatePanel">
     <div class="profile-card">
       <div class="profile-card-title" data-en="Your details" data-ar="بياناتك">Your details</div>
-      <div class="profile-row"><span class="profile-row-label" data-en="Full name" data-ar="الاسم الكامل">Full name</span><span class="profile-row-value" id="privFullName"></span></div>
-      <div class="profile-row"><span class="profile-row-label" data-en="Username" data-ar="اسم المستخدم">Username</span><span class="profile-row-value" id="privUsername"></span></div>
-      <div class="profile-row"><span class="profile-row-label" data-en="Phone" data-ar="الهاتف">Phone</span><span class="profile-row-value" id="privPhone"></span></div>
-      <div class="profile-row"><span class="profile-row-label" data-en="Location" data-ar="الموقع">Location</span><span class="profile-row-value" id="privLocation"></span></div>
+      <div class="field-group">
+        <label class="field-label" data-en="Full name" data-ar="الاسم الكامل">Full name</label>
+        <input class="text-input" type="text" id="editFullName">
+      </div>
+      <div class="field-group">
+        <label class="field-label" data-en="Username" data-ar="اسم المستخدم">Username</label>
+        <input class="text-input" type="text" id="editUsername" autocapitalize="off" autocomplete="off">
+        <span class="field-hint" id="editUsernameHint"></span>
+      </div>
+      <div class="field-group">
+        <label class="field-label" data-en="Location" data-ar="الموقع">Location</label>
+        <input class="text-input" type="text" id="editLocation">
+      </div>
+      <div class="field-group">
+        <label class="field-label" data-en="Email (optional)" data-ar="البريد الإلكتروني (اختياري)">Email (optional)</label>
+        <input class="text-input" type="email" id="editEmail" data-en-placeholder="For registration confirmation and alerts" data-ar-placeholder="لتأكيد التسجيل والتنبيهات" placeholder="For registration confirmation and alerts">
+      </div>
+      <div class="profile-row" style="border-top:1px solid var(--line);padding-top:14px;margin-top:4px;">
+        <span class="profile-row-label" data-en="Phone" data-ar="الهاتف">Phone</span>
+        <span class="profile-row-value" id="privPhone"></span>
+      </div>
+      <span class="field-hint" style="display:block;margin-top:4px;" data-en="Phone can't be changed here since it's your login — contact support if it needs updating." data-ar="لا يمكن تغيير الهاتف من هنا لأنه وسيلة تسجيل دخولك — تواصل مع الدعم إذا احتجت لتحديثه.">Phone can't be changed here since it's your login — contact support if it needs updating.</span>
+      <span class="field-hint" id="profileSaveError" style="display:none;color:#B3382A;margin-top:8px;"></span>
+      <button type="button" class="save-member-btn" id="saveProfileBtn" data-en="Save Changes" data-ar="حفظ التغييرات">Save Changes</button>
+      <div class="situation-saved-note" id="profileSavedNote" data-en="Saved ✓" data-ar="تم الحفظ ✓">Saved ✓</div>
     </div>
 
-    <div class="profile-card" id="situationEditCard">
+    <div class="profile-card" id="situationEditCard" style="display:none;">
       <div class="profile-card-title" data-en="Household situation" data-ar="وضع الأسرة">Household situation</div>
       <span class="field-hint" style="display:block;margin-bottom:8px;" data-en="This is what a giver sees when deciding who to help — a short, honest description helps a lot." data-ar="هذا ما يراه المانح عند اختيار من يساعد — وصف قصير وصادق يساعد كثيراً.">This is what a giver sees when deciding who to help — a short, honest description helps a lot.</span>
       <textarea id="situationTextarea" class="situation-textarea" rows="3" data-en-placeholder="e.g. Family of 5, recently lost income, need warm clothes for winter" data-ar-placeholder="مثال: عائلة من 5 أفراد، فقدت مصدر دخلها مؤخراً، تحتاج ملابس شتوية دافئة" placeholder="e.g. Family of 5, recently lost income, need warm clothes for winter"></textarea>
@@ -460,10 +488,22 @@ html[dir="rtl"] .scanned-field{flex-direction:row-reverse;}
   }
 
   function renderPrivatePanel(){
-    document.getElementById('privFullName').textContent = (accountRow && accountRow.full_name) || '—';
-    document.getElementById('privUsername').textContent = (accountRow && accountRow.username) || (receiverRow && receiverRow.username) || '—';
+    const editFullName = document.getElementById('editFullName');
+    const editUsername = document.getElementById('editUsername');
+    const editLocation = document.getElementById('editLocation');
+    const editEmail = document.getElementById('editEmail');
+
+    // Don't clobber a field the person is actively typing into.
+    if (document.activeElement !== editFullName) editFullName.value = (accountRow && accountRow.full_name) || '';
+    if (document.activeElement !== editUsername) editUsername.value = (accountRow && accountRow.username) || (receiverRow && receiverRow.username) || '';
+    if (document.activeElement !== editLocation) editLocation.value = (accountRow && accountRow.location) || (receiverRow && receiverRow.location) || '';
+    if (document.activeElement !== editEmail) editEmail.value = (accountRow && accountRow.email) || '';
+
     document.getElementById('privPhone').textContent = (accountRow && accountRow.phone) || (receiverRow && receiverRow.whatsapp) || '—';
-    document.getElementById('privLocation').textContent = (accountRow && accountRow.location) || (receiverRow && receiverRow.location) || '—';
+
+    // Household situation only makes sense once someone actually intends to
+    // receive — hidden for pure givers with no receiver profile at all.
+    document.getElementById('situationEditCard').style.display = receiverRow ? 'block' : 'none';
 
     const situationTextarea = document.getElementById('situationTextarea');
     if (document.activeElement !== situationTextarea) { // don't clobber while the person is actively typing
@@ -634,6 +674,57 @@ html[dir="rtl"] .scanned-field{flex-direction:row-reverse;}
     buildAddMemberCard();
   });
 
+  // ===== Profile details editor =====
+  document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+    const fullName = document.getElementById('editFullName').value.trim();
+    const username = document.getElementById('editUsername').value.trim();
+    const location = document.getElementById('editLocation').value.trim();
+    const email = document.getElementById('editEmail').value.trim();
+    const btn = document.getElementById('saveProfileBtn');
+    const savedNote = document.getElementById('profileSavedNote');
+    const errEl = document.getElementById('profileSaveError');
+    const usernameHint = document.getElementById('editUsernameHint');
+
+    errEl.style.display = 'none';
+    usernameHint.textContent = '';
+    usernameHint.className = 'field-hint';
+
+    if (!fullName || !username || !location) {
+      errEl.textContent = currentLang === 'ar' ? 'الاسم واسم المستخدم والموقع مطلوبة.' : 'Full name, username, and location are required.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    savedNote.classList.remove('show');
+    const { data, error } = await sb.rpc('update_my_profile', {
+      p_full_name: fullName, p_username: username, p_location: location, p_email: email || null
+    });
+    btn.disabled = false;
+
+    if (error) {
+      errEl.textContent = (currentLang === 'ar' ? 'حدث خطأ: ' : 'Something went wrong: ') + error.message;
+      errEl.style.display = 'block';
+      return;
+    }
+    if (data && data.error === 'username_taken') {
+      usernameHint.className = 'field-hint error';
+      usernameHint.textContent = currentLang === 'ar' ? 'اسم المستخدم هذا مُستخدم بالفعل.' : 'That username is already taken.';
+      return;
+    }
+
+    // Keep in-memory data consistent so both tabs reflect the change immediately.
+    if (accountRow) {
+      accountRow.full_name = fullName;
+      accountRow.username = username;
+      accountRow.location = location;
+      accountRow.email = email || null;
+    }
+    savedNote.classList.add('show');
+    renderPublicPanel();
+    setTimeout(() => savedNote.classList.remove('show'), 2500);
+  });
+
   // ===== Household situation editor =====
   document.getElementById('saveSituationBtn').addEventListener('click', async () => {
     const text = document.getElementById('situationTextarea').value.trim();
@@ -665,6 +756,8 @@ html[dir="rtl"] .scanned-field{flex-direction:row-reverse;}
     if (toggleBtn) toggleBtn.textContent = lang === 'ar' ? toggleBtn.getAttribute('data-ar') : toggleBtn.getAttribute('data-en');
     const situationTextarea = document.getElementById('situationTextarea');
     situationTextarea.placeholder = lang === 'ar' ? situationTextarea.getAttribute('data-ar-placeholder') : situationTextarea.getAttribute('data-en-placeholder');
+    const editEmail = document.getElementById('editEmail');
+    editEmail.placeholder = lang === 'ar' ? editEmail.getAttribute('data-ar-placeholder') : editEmail.getAttribute('data-en-placeholder');
     renderPublicPanel();
     renderPrivatePanel();
   }
