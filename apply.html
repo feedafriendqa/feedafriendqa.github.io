@@ -540,7 +540,7 @@ var STATUS_CONTENT = {
     en: { title: "You're part of our long-term support", msg: "Your household is on our long-term support list with no limit on boxes. Confirm your details below to request your next box." },
     ar: { title: "أنت ضمن برنامج الدعم طويل الأمد", msg: "أسرتك مسجلة في قائمة الدعم طويل الأمد بدون حد لعدد الصناديق. أكّد بياناتك أدناه لطلب صندوقك القادم." }
   },
-  active: {
+  confirmed: {
     icon: '📦',
     en: { title: "Box confirmed!", msg: "Your food box is confirmed for the next distribution. Our team will be in touch about delivery." },
     ar: { title: "تم تأكيد صندوقك!", msg: "تم تأكيد صندوق طعامك للتوزيع القادم. سيتواصل فريقنا معك بشأن موعد التسليم." }
@@ -582,7 +582,7 @@ function setLang(lang) {
   refreshLegacyToggleText();
 
   if (currentApp && document.getElementById('screen-status').classList.contains('active')) {
-    showStatusScreen(currentApp.status || 'approved', currentApp, !!currentApp.ok);
+    showStatusScreen(currentApp.status || 'approved', currentApp, computeCanReapply(currentApp));
   }
 }
 
@@ -598,6 +598,18 @@ function showScreen(id) {
 // the backend lookup only matches on Western digits.
 function toWesternDigits(str) {
   return (str || '').replace(/[٠-٩]/g, function(d) { return d.charCodeAt(0) - 0x0660; });
+}
+
+// A household is only offered the "reapply" flow once they've actually
+// received at least one box — status alone (approved/long_term) isn't
+// enough, since admins can mark a case approved before boxes_received is
+// bumped. long_term households on 0 boxes still wait for their first
+// confirmation like anyone else.
+function computeCanReapply(data) {
+  if (!data) return false;
+  var statusOk = data.status === 'approved' || data.status === 'long_term';
+  var hasReceivedBox = (data.boxes_received || 0) >= 1;
+  return statusOk && hasReceivedBox;
 }
 
 // ── VERIFY ────────────────────────────────────────────────────────
@@ -667,7 +679,7 @@ async function doVerify() {
     }
 
     currentApp = data;
-    showStatusScreen(data.status || 'approved', data, data.status === 'approved' || data.status === 'long_term');
+    showStatusScreen(data.status || 'approved', data, computeCanReapply(data));
 
   } catch(e) {
     errEl.textContent = ar ? 'خطأ في الاتصال. يرجى المحاولة مرة أخرى.' : 'Connection error. Please try again.';
@@ -736,7 +748,7 @@ async function doVerifyLegacy() {
       resetCaptureScreen();
       showScreen('screen-capture-qid');
     } else if (data.ok) {
-      showStatusScreen(data.status || 'approved', data, true);
+      showStatusScreen(data.status || 'approved', data, computeCanReapply(data));
     } else {
       showStatusScreen(data.status || (data.error || '').replace('status_', ''), data, false);
     }
@@ -755,6 +767,40 @@ function fileToBase64(file) {
     reader.onload = function() { resolve(reader.result.split(',')[1]); };
     reader.onerror = reject;
     reader.readAsDataURL(file);
+  });
+}
+
+// Photos of documents (rent contracts, salary slips) taken straight from a
+// phone camera are commonly several MB, which once base64-encoded can push
+// past the edge function's request-size ceiling. Downscale and re-encode as
+// JPEG before uploading so a photo comes in well under that limit — PDFs
+// are left untouched since they can't be resized this way.
+var UPLOAD_MAX_DIMENSION = 1800;
+var UPLOAD_JPEG_QUALITY = 0.82;
+
+function compressUploadFile(file) {
+  if (!file.type || file.type.indexOf('image/') !== 0 || file.type === 'image/svg+xml') {
+    return Promise.resolve(file);
+  }
+  return new Promise(function(resolve) {
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function() {
+      URL.revokeObjectURL(url);
+      var scale = Math.min(1, UPLOAD_MAX_DIMENSION / Math.max(img.width, img.height));
+      if (scale >= 1) { resolve(file); return; }
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(function(blob) {
+        if (!blob) { resolve(file); return; }
+        resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+      }, 'image/jpeg', UPLOAD_JPEG_QUALITY);
+    };
+    img.onerror = function() { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
   });
 }
 
@@ -884,7 +930,7 @@ function confirmCaptureQID() {
   }).then(function() {
     currentApp.qid_number = capturedQIDParsed.qid_number;
     currentApp.name = currentApp.name || capturedQIDParsed.name;
-    showStatusScreen(currentApp.status || 'approved', currentApp, !!currentApp.ok);
+    showStatusScreen(currentApp.status || 'approved', currentApp, computeCanReapply(currentApp));
   }).catch(function() {
     document.getElementById('capture-err').textContent = ar ? 'تعذّر الحفظ. يرجى المحاولة مرة أخرى.' : 'Could not save. Please try again.';
     document.getElementById('capture-err').classList.add('show');
@@ -1286,25 +1332,34 @@ function handlePendingDoc(input, docKey) {
   var originalLabel = zoneEl.querySelector('p').textContent;
   zoneEl.querySelector('p').textContent = ar ? '⏳ جاري الرفع…' : '⏳ Uploading…';
 
-  fileToBase64(file).then(function(b64) {
-    return fetch(EDGE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
-      body: JSON.stringify({
-        type: 'upload_document',
-        application_id: currentApp.id,
-        doc_key: docKey,
-        file_base64: b64,
-        media_type: file.type || 'image/jpeg'
-      })
+  compressUploadFile(file).then(function(uploadFile) {
+    return fileToBase64(uploadFile).then(function(b64) {
+      return fetch(EDGE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+        body: JSON.stringify({
+          type: 'upload_document',
+          application_id: currentApp.id,
+          doc_key: docKey,
+          file_base64: b64,
+          media_type: uploadFile.type || 'image/jpeg'
+        })
+      });
     });
   }).then(function(r) { return r.json(); }).then(function(raw) {
-    if (raw.data && raw.data.ok) {
+    // The upload_document edge function returns {ok:true, path} at the
+    // TOP LEVEL of the response body — not nested under a "data" key. The
+    // old check here (`raw.data && raw.data.ok`) was therefore always
+    // false, so every upload — including ones that saved to storage just
+    // fine — was reported to the applicant as "Could not upload the
+    // file." This is the fix for that: check raw.ok directly, the same
+    // way the admin console's own upload handler already does.
+    if (raw.ok) {
       zoneEl.style.display = 'none';
       doneEl.style.display = 'block';
     } else {
       zoneEl.querySelector('p').textContent = originalLabel;
-      alert(ar ? 'تعذّر رفع الملف. حاول مرة أخرى.' : 'Could not upload the file. Please try again.');
+      alert(ar ? 'تعذّر رفع الملف. حاول مرة أخرى.' : (raw.error ? 'Could not upload the file: ' + raw.error : 'Could not upload the file. Please try again.'));
     }
   }).catch(function() {
     zoneEl.querySelector('p').textContent = originalLabel;
