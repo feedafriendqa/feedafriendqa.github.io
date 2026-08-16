@@ -1499,9 +1499,10 @@ function renderModal(app, members, urlMap) {
     members.forEach(function(m, idx) {
       body += '<div class="member-card">';
       var ageStr = displayAge(m.dob);
-      body += '<div class="member-card-header">👤 '+(m.full_name||'Member '+(idx+1))+' <span style="font-size:11px;font-weight:400;color:var(--muted);">· '+(m.role||'')+(ageStr?' · '+ageStr:'')+' · '+(m.gender||'')+'</span></div>';
+      body += '<div class="member-card-header">👤 '+(m.full_name_en||m.full_name||'Member '+(idx+1))+(m.translation_pending?' <span class="badge badge-translation" title="Arabic name — English translation needs review">🌐</span>':'')+' <span style="font-size:11px;font-weight:400;color:var(--muted);">· '+(m.role||'')+(ageStr?' · '+ageStr:'')+' · '+(m.gender||'')+'</span></div>';
       body += '<div class="member-card-grid">';
       body += di('Full name',m.full_name||'–');
+      body += di('Full name (EN)', (m.full_name_en||'–') + (m.translation_pending?' <span class="badge badge-translation" style="margin-left:4px;">🌐 needs review</span>':''));
       body += di('QID number',m.qid_number||'–');
       body += di('Date of birth', m.dob ? (m.dob + (displayAge(m.dob) ? ' <span style="color:var(--muted);font-weight:600;">(' + displayAge(m.dob) + ')</span>' : '')) : '–');
       body += di('Role',m.role||'–');
@@ -3340,6 +3341,7 @@ function toggleEditMemberPanel(appId, memberId) {
 
   h += '<div class="add-member-field-grid">';
   h += '<div><label>Full name *</label><input id="' + s + '-name" value="'+(member.full_name||'').toString().replace(/"/g,'&quot;')+'"></div>';
+  h += '<div><label>Full name (EN)'+(member.translation_pending?' <span class="badge badge-translation" style="margin-left:4px;">🌐 needs review</span>':'')+'</label><input id="' + s + '-name-en" value="'+(member.full_name_en||'').toString().replace(/"/g,'&quot;')+'" placeholder="English spelling"></div>';
   h += '<div><label>QID number</label><input id="' + s + '-qidnum" value="'+(member.qid_number||'').toString().replace(/"/g,'&quot;')+'"></div>';
   h += '<div><label>Date of birth</label><input type="date" id="' + s + '-dob" value="'+(member.dob||'')+'" onchange="updateEditMemberAgeFields(\''+memberId+'\')"></div>';
   h += '<div><label>QID expiry</label><input type="date" id="' + s + '-expiry" value="'+(member.qid_expiry||'')+'"></div>';
@@ -3529,6 +3531,8 @@ function saveEditedMember(appId, memberId) {
 
   var payload = {
     full_name: name,
+    full_name_en: document.getElementById(s + '-name-en').value.trim() || null,
+    translation_pending: false, // saving this panel counts as the staff member having reviewed/approved the name
     qid_number: document.getElementById(s + '-qidnum').value.trim() || null,
     dob: document.getElementById(s + '-dob').value || null,
     qid_expiry: document.getElementById(s + '-expiry').value || null,
