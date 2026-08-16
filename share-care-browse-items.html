@@ -505,7 +505,11 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       const meta = CATEGORY_META[req.category] || CATEGORY_META.other;
       const card = document.createElement('div');
       card.className = 'request-browse-card';
+      const photoInner = req.photo_url
+        ? `<img src="${req.photo_url}" alt="" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;margin-bottom:12px;display:block;">`
+        : '';
       card.innerHTML = `
+        ${photoInner}
         <span class="request-browse-cat">${currentLang === 'ar' ? meta.ar : meta.en}</span>
         <div class="request-browse-desc">${req.description}</div>
         <div class="request-browse-meta">${timeAgo(req.created_at)}</div>
@@ -541,7 +545,7 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
         .order('created_at', { ascending: false }),
       sb.from('distribution_locations').select('name, lat, lng').eq('active', true),
       sb.from('share_care_requests')
-        .select('id, category, description, created_at, status')
+        .select('id, category, description, created_at, status, photo_url')
         .eq('status', 'open')
         .order('created_at', { ascending: false }),
       sb.auth.getSession()

@@ -195,6 +195,9 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     <span id="itemDistanceWrap" style="display:none;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M6 12h12M9 18h6"/></svg><span id="itemDistance"></span></span>
   </div>
 
+  <div id="deliveryBadge" style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;
+    padding:5px 12px;border-radius:999px;margin-top:8px;"></div>
+
   <div class="unavailable-note" id="unavailableNote" style="display:none;" data-en="This item is no longer available." data-ar="هذا الغرض لم يعد متاحاً.">This item is no longer available.</div>
 
   <div class="desc-block">
@@ -423,6 +426,17 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
     document.getElementById('itemPosted').textContent = timeAgo(item.created_at);
     document.getElementById('itemDescription').textContent = item.description || (currentLang === 'ar' ? 'لا يوجد وصف.' : 'No description provided.');
 
+    const deliveryBadge = document.getElementById('deliveryBadge');
+    if (item.delivery_available) {
+      deliveryBadge.style.background = '#E7F3EB';
+      deliveryBadge.style.color = 'var(--green-dark)';
+      deliveryBadge.textContent = currentLang === 'ar' ? '🚗 يمكن التوصيل لمستفيدين مُوثّقين' : '🚗 Can deliver to verified beneficiaries';
+    } else {
+      deliveryBadge.style.background = 'var(--panel)';
+      deliveryBadge.style.color = 'var(--muted)';
+      deliveryBadge.textContent = currentLang === 'ar' ? 'استلام فقط' : 'Collection only';
+    }
+
     const statusBadge = document.getElementById('statusBadge');
     const unavailableNote = document.getElementById('unavailableNote');
     const interestBtn = document.getElementById('interestBtn');
@@ -575,7 +589,7 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
       return;
     }
     const { data, error } = await sb.from('share_care_items')
-      .select('id, title, category, description, location, created_at, status, photo_url')
+      .select('id, title, category, description, location, created_at, status, photo_url, delivery_available')
       .eq('id', itemId)
       .maybeSingle();
     if (error || !data) {
