@@ -400,6 +400,8 @@ html[dir="rtl"] .page-footer{flex-direction:row-reverse;}
 <script>
   const SUPABASE_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
+
+  function initApp(){
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   function setLang(lang){
@@ -460,6 +462,17 @@ html[dir="rtl"] .page-footer{flex-direction:row-reverse;}
     authIcon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>';
     authLink.addEventListener('click', async () => { await sb.auth.signOut(); window.location.reload(); });
   })();
+  }
+
+  if (window.supabase) { initApp(); }
+  else {
+    document.addEventListener('DOMContentLoaded', () => {
+      const check = setInterval(() => {
+        if (window.supabase) { clearInterval(check); initApp(); }
+      }, 100);
+      setTimeout(() => clearInterval(check), 8000);
+    });
+  }
 </script>
 </body>
 </html>
