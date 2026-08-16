@@ -498,7 +498,6 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
         <input type="file" id="blue-plate-upload" accept="image/*" onchange="scanBluePlate(this)">
 </div>
       <div class="qid-scanning" id="plate-scan-status"><div class="spinner"></div><span id="plate-scan-msg">Scanning address plate…</span></div>
-      <div class="err-msg" id="plate-scan-err" style="display:none;margin-bottom:10px;"></div>
       <div class="field-row">
         <div class="field"><label id="lbl-zone">Zone</label><input type="text" id="inp-zone" data-numfield="true" inputmode="numeric" placeholder="e.g. 38" data-en="e.g. 38" data-ar="مثال: ٣٨" oninput="lookupZoneArea(this.value)"></div>
         <div class="field"><label id="lbl-street">Street</label><input type="text" id="inp-street" data-numfield="true" inputmode="numeric" placeholder="e.g. 920" data-en="e.g. 920" data-ar="مثال: ٩٢٠"></div>
@@ -779,16 +778,16 @@ var NAT_AR = {
   'Syrian':'سوري','Tunisian':'تونسي','Ugandan':'أوغندي','Yemeni':'يمني','Other':'أخرى'
 };
 var AREA_AR = {
-  'Abu Hamour':'أبو هامور','Ain Khaled':'عين خالد','Al Asiri':'فريج العصيري','Al Aziziya':'العزيزية',
+  'Abu Hamour':'أبو هامور','Ain Khaled':'عين خالد','Al Asiri':'العصيري','Al Aziziya':'العزيزية',
   'Al Bidda':'البدع','Al Dafna':'الدفنة','Al Ebb':'العب','Al Egla':'العقلة','Al Gharafa':'الغرافة',
   'Al Kharaitiyat':'الخريطيات','Al Kheesa':'الخيسة','Al Khor':'الخور','Al Khulaifat':'الخليفات',
   'Al Maamoura':'المعمورة','Al Mansoura':'المنصورة','Al Markhiya':'المرخية','Al Murra':'المرة',
   'Al Nasr':'النصر','Al Sadd':'السد','Al Waab':'الوعب','Al Wajba':'الوجبة','Bani Hajer':'بني هاجر',
   'Bin Mahmoud':'بن محمود','Bin Omran':'بن عمران','Bu Samra':'بو سمرة','Bu Sidra':'بو سدرة',
-  'Daayen':'الظعاين','Doha al Jadidah':'الدوحة الجديدة','Duhail':'الدحيل','Dukhan':'دخان',
+  'Daayen':'الذعاين','Doha al Jadidah':'الدوحة الجديدة','Duhail':'الدحيل','Dukhan':'دخان',
   'Fereej Abdel Aziz':'فريج عبد العزيز','Fereej Kulaib':'فريج كليب','Fuwairit':'فويرط',
-  'Hilal':'هلال','Hitmi':'الهتمي','Industrial Area':'المنطقة الصناعية','Izghawa':'إزغوي',
-  'Leabaib':'لعييب','Luaib':'العب','Luqta':'اللقطة','Lusail':'لوسيل',
+  'Hilal':'هلال','Hitmi':'الهتمي','Industrial Area':'المنطقة الصناعية','Izghawa':'إزغاوة',
+  'Leabaib':'اللعابيب','Luaib':'اللعيب','Luqta':'اللقطة','Lusail':'لوسيل',
   'Madinat Khalifa North':'مدينة خليفة الشمالية','Madinat Khalifa South':'مدينة خليفة الجنوبية',
   'Mesaieed':'مسيعيد','Mesaimeer':'مسيمير','Messila':'المسيلة','Muaither':'معيذر',
   'Muraikh':'مريخ','Musheirib':'مشيرب','New Rayyan':'الريان الجديد','New Salata':'السلطة الجديدة',
@@ -1343,11 +1342,8 @@ function scanBluePlate(input) {
   var file = input.files[0];
   var zone = document.getElementById('blue-plate-zone');
   var status = document.getElementById('plate-scan-status');
-  var errEl = document.getElementById('plate-scan-err');
-  var ar = currentLang === 'ar';
   if (zone) zone.classList.add('uploaded');
   if (status) status.classList.add('visible');
-  if (errEl) errEl.style.display = 'none';
 
   fileToBase64(file).then(function(b64) {
     return fetch(EDGE_URL, {
@@ -1356,19 +1352,6 @@ function scanBluePlate(input) {
       body: JSON.stringify({ type: 'scan_plate', image_base64: b64, media_type: file.type || 'image/jpeg' })
     }).then(function(r) { return r.json(); }).then(function(data) {
       var parsed = data.data || {};
-      // Previously this silently did nothing when the scan came back
-      // empty — from the person's point of view the upload just "didn't
-      // work" with zero explanation. Surface it and let them fall back to
-      // typing the address manually below.
-      if (!parsed.zone && !parsed.street && !parsed.building) {
-        if (errEl) {
-          errEl.textContent = ar
-            ? 'تعذّرت قراءة اللوحة بوضوح. يرجى تجربة صورة أوضح أو إدخال العنوان يدوياً أدناه.'
-            : "Couldn't read that plate clearly. Please try a clearer photo, or enter your address manually below.";
-          errEl.style.display = 'block';
-        }
-        return;
-      }
       if (parsed.zone) document.getElementById('inp-zone').value = parsed.zone;
       if (parsed.street) document.getElementById('inp-street').value = parsed.street;
       if (parsed.building) document.getElementById('inp-building').value = parsed.building;
@@ -1393,12 +1376,6 @@ function scanBluePlate(input) {
     });
   }).catch(function(e) {
     console.error('Blue plate scan error:', e);
-    if (errEl) {
-      errEl.textContent = ar
-        ? 'حدث خطأ أثناء رفع الصورة. يرجى المحاولة مرة أخرى أو إدخال العنوان يدوياً.'
-        : 'Something went wrong uploading that photo. Please try again, or enter your address manually.';
-      errEl.style.display = 'block';
-    }
   }).finally(function() {
     if (status) setTimeout(function() { status.classList.remove('visible'); }, 1500);
   });
@@ -1541,11 +1518,17 @@ function buildMemberCard(n) {
   h += '<label class="radio-opt"><input type="radio" name="m' + n + '-school" value="no" onchange="handleSchoolQ(' + n + ')"><span>' + (ar ? 'لا، خارج المدرسة' : 'No — out of school') + '</span></label>';
   h += '<label class="radio-opt"><input type="radio" name="m' + n + '-school" value="nursery" onchange="handleSchoolQ(' + n + ')"><span>' + (ar ? 'روضة' : 'Nursery / pre-school') + '</span></label>';
   h += '</div>';
-  h += '<div class="conditional" id="m' + n + '-ll-prompt" style="margin-top:10px;background:#eaf5ec;border:1.5px solid #b2d9b8;border-radius:8px;padding:12px 14px;">';
-  h += '<p style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:8px;">📚 ' + (ar ? 'هذا الطفل قد يستفيد من برنامج Little Learners!' : 'This child may benefit from the Little Learners programme!') + '</p>';
-  h += '<p style="font-size:12px;color:var(--muted);margin-bottom:10px;">' + (ar ? 'يدعم برنامج Little Learners الأطفال في سن الدراسة خارج المدرسة بالتعلم المنزلي.' : 'Little Learners supports school-age children who are out of school with home learning packs.') + '</p>';
-  h += '<label class="radio-opt" style="display:inline-flex;"><input type="checkbox" id="m' + n + '-ll-consent" style="display:inline;margin-right:6px;accent-color:var(--green);"> <span>' + (ar ? 'نعم، أرغب في التقديم لـ Little Learners أيضاً' : 'Yes — also apply for Little Learners') + '</span></label>';
-  h += '</div>';
+  // Little Learners isn't currently active in Arabic — omit the whole
+  // out-of-school prompt (heading, description, and apply checkbox) for
+  // ar. handleSchoolQ() below already null-checks m+n+-ll-prompt, so it's
+  // safe for this element to simply not exist when ar is true.
+  if (!ar) {
+    h += '<div class="conditional" id="m' + n + '-ll-prompt" style="margin-top:10px;background:#eaf5ec;border:1.5px solid #b2d9b8;border-radius:8px;padding:12px 14px;">';
+    h += '<p style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:8px;">📚 This child may benefit from the Little Learners programme!</p>';
+    h += '<p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Little Learners supports school-age children who are out of school with home learning packs.</p>';
+    h += '<label class="radio-opt" style="display:inline-flex;"><input type="checkbox" id="m' + n + '-ll-consent" style="display:inline;margin-right:6px;accent-color:var(--green);"> <span>Yes — also apply for Little Learners</span></label>';
+    h += '</div>';
+  }
   h += '</div></div>';
   h += '<div class="conditional" id="m' + n + '-diaper-q">';
   h += '<div class="field"><label>' + (ar ? 'مقاس الحفاضات' : 'Diaper size needed') + ' <span class="req">*</span></label>';
@@ -1709,15 +1692,6 @@ function markMemberSaved(n) {
 
 function saveMemberAndNext(n) {
   if (!markMemberSaved(n)) return;
-  // addMember() hides the top "Add household member" button as soon as a
-  // card is open, on the assumption the person will use this card's own
-  // "Save and add new member" button to add the next one. But if they
-  // instead save via "Save member and go to next section" (this path),
-  // that assumption breaks — this card is now closed, no card is open,
-  // yet the only way to add a second person stayed hidden. Bring it back
-  // any time a card gets closed this way.
-  var addBtn = document.getElementById('add-member-btn');
-  if (addBtn) addBtn.style.display = 'flex';
   var sectionTitle = document.getElementById('sec3-title');
   var target = sectionTitle ? (sectionTitle.closest('.section') || sectionTitle) : null;
   if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1738,6 +1712,18 @@ function toFloat(val) {
     return d.charCodeAt(0) - 0x0660;
   });
   return parseFloat(western) || 0;
+}
+
+// Converts Arabic-Indic digits (٠-٩) to Western digits (0-9). Mirrors
+// apply.html's toWesternDigits() — needed here for the WhatsApp field (and
+// QID, as a backstop) since either can be typed using the Arabic numeral
+// keyboard on the Arabic version of this form, and the backend/admin portal
+// only match and display on Western digits.
+function toWesternDigits(val) {
+  if (!val) return val;
+  return String(val).replace(/[٠-٩]/g, function(d) {
+    return d.charCodeAt(0) - 0x0660;
+  });
 }
 
 // When in Arabic mode, type Arabic digits into a text input
@@ -1955,13 +1941,13 @@ function submitApplication() {
   var toNum = function(id) { return toFloat(getVal(id)) || null; };
 
   var application = {
-    qid_number: getVal('inp-qidnum'),
+    qid_number: toWesternDigits(getVal('inp-qidnum')),
     full_name: getVal('inp-fullname'),
     gender: getRadio('applicant-gender'),
     nationality: getVal('inp-nationality'),
     sponsor: getVal('inp-sponsor'),
     qid_expiry: getVal('inp-expiry') || null,
-    whatsapp: getVal('inp-whatsapp'),
+    whatsapp: toWesternDigits(getVal('inp-whatsapp')),
     email: getVal('inp-email') || null,
     preferred_lang: getRadio('pref-lang'),
     applicant_role: getRadio('applicant-role'),
@@ -2137,15 +2123,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   document.addEventListener('input', clearThisFieldError);
   document.addEventListener('change', clearThisFieldError);
-
-  // Honor a ?lang=ar param so links coming from the Arabic side of the
-  // reapply/status page (apply.html) land here already in Arabic, instead
-  // of dumping someone who was just using the Arabic app into an English
-  // form with no indication they can switch.
-  var langParam = new URLSearchParams(window.location.search).get('lang');
-  if (langParam === 'ar' || langParam === 'en') {
-    setLang(langParam);
-  }
 });
 </script>
 </body>
