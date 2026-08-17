@@ -1054,7 +1054,7 @@ function updateStats() {
   document.getElementById('stat-boxes-needed').textContent = boxesNeeded;
   document.getElementById('stat-archived').textContent = scoped.filter(function(a){return resolveStatus(a)==='archived';}).length;
   document.getElementById('stat-translation').textContent = scoped.filter(function(a){return a.translation_pending;}).length;
-  document.getElementById('stat-wbb-review').textContent = scoped.filter(function(a){return a.is_pregnant && !a.wbb_case_created;}).length;
+  document.getElementById('stat-wbb-review').textContent = scoped.filter(function(a){return a.is_pregnant && !a.wbb_case_created && ['rejected','archived','duplicate'].indexOf(resolveStatus(a))===-1;}).length;
   document.getElementById('stat-qid-reapply-review').textContent = scoped.filter(function(a){return a.qid_reapply_review;}).length;
 }
 
@@ -1173,10 +1173,14 @@ function setFilterFromTile(status) {
     // handler actually creates the Welcome Baby case (see notify_welcome_baby),
     // so a handled pregnancy drops off this list on its own — no separate
     // "dismiss" action needed, and nothing here can grow stale.
+    // Also excludes cases that are rejected/archived/duplicate — a
+    // rejected applicant isn't getting a box, so there's nothing to
+    // verify with WBB regardless of the is_pregnant flag on file.
     currentFilter = 'all';
     document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
     var filtered = allApps.filter(function(a){
       if (!a.is_pregnant || a.wbb_case_created) return false;
+      if (['rejected','archived','duplicate'].indexOf(resolveStatus(a)) !== -1) return false;
       if (myCasesOnly && (a.assigned_to || autoAssign(a)) !== myName) return false;
       return true;
     });
