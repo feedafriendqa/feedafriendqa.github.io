@@ -738,16 +738,14 @@ async function doVerifyLegacy() {
     }
 
     currentApp = data;
-    if (data.needs_qid) {
-      document.getElementById('s-capture-title').textContent = ar ? 'خطوة أخيرة!' : 'Almost done!';
-      document.getElementById('s-capture-sub').textContent = ar
-        ? 'لا يوجد رقم هوية مسجل لديك بعد. يرجى رفع وجهي هويتك للتحقق مستقبلاً.'
-        : "We don't have a QID on file for you yet. Please upload both sides of your QID so we can verify you going forward.";
-      document.getElementById('capture-qid-front-label').textContent = ar ? 'اضغط لرفع الوجه الأمامي للهوية' : 'Tap to upload the front of your QID';
-      document.getElementById('capture-qid-back-label').textContent = ar ? 'اضغط لرفع الوجه الخلفي للهوية' : 'Tap to upload the back of your QID';
-      resetCaptureScreen();
-      showScreen('screen-capture-qid');
-    } else if (data.ok) {
+    // Households (or a member within them) with no QID on file used to be
+    // blocked here behind a forced QID-photo upload before they could do
+    // anything else. That's no longer required to reapply — let them go
+    // straight into the normal status/reapply screen. doReapply() checks
+    // currentApp.needs_qid and, if set, routes the submission to admin
+    // review (flagging the case so a team member follows up and collects
+    // QIDs for the household) instead of auto-confirming a box.
+    if (data.ok || data.needs_qid) {
       showStatusScreen(data.status || 'approved', data, computeCanReapply(data));
     } else {
       showStatusScreen(data.status || (data.error || '').replace('status_', ''), data, false);
@@ -1458,7 +1456,10 @@ async function doReapply() {
   }).catch(function() {});
 
   try {
-    var result = await sb.rpc('do_reapply', { p_application_id: currentApp.id });
+    // Households (or a member within them) with no QID on file don't get
+    // auto-confirmed for a box — the RPC instead flags the application for
+    // a team member to review and collect QIDs for the group.
+    var result = await sb.rpc('do_reapply', { p_application_id: currentApp.id, p_no_qid: !!currentApp.needs_qid });
     var data = result.data;
 
     if (!data || !data.ok) {
@@ -1466,6 +1467,19 @@ async function doReapply() {
       errEl.classList.add('show');
       btn.disabled = false;
       document.getElementById('reapply-btn-text').textContent = ar ? 'طلب صندوق الطعام ←' : 'Request my food box →';
+      return;
+    }
+
+    if (data.pending_review) {
+      document.getElementById('success-month').textContent = '';
+      document.getElementById('success-month-label').textContent = '';
+      document.getElementById('s-success-title').textContent = ar ? 'تم استلام طلبك' : 'Request received';
+      document.getElementById('s-success-sub').textContent = ar
+        ? 'سيتواصل معك أحد أفراد فريقنا لمراجعة طلبك. لا نزال بحاجة إلى صور بطاقات الهوية القطرية لجميع أفراد أسرتك لإكمال هذا الطلب.'
+        : 'A member of our team will follow up to review your request. We still need QIDs on file for everyone in your household to complete this.';
+      document.getElementById('remaining-tag').textContent = '';
+      document.getElementById('success-back-btn').textContent = ar ? '→ الرئيسية' : '← Home';
+      showScreen('screen-success');
       return;
     }
 

@@ -58,6 +58,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 .stat-card.sc-archived{background:linear-gradient(135deg,#546e7a,#90a4ae);}
 .stat-card.sc-review{background:linear-gradient(135deg,#7b5ea7,#a07fd4);}
 .stat-card.sc-wbb{background:linear-gradient(135deg,#ad1457,#f48fb1);}
+.stat-card.sc-qid-review{background:linear-gradient(135deg,#b45f06,#f0b660);}
 .stat-card .num{font-size:28px;font-weight:900;color:white;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,0.15);}
 .stat-card .lbl{font-size:12px;color:rgba(255,255,255,0.88);font-weight:700;margin-top:4px;}
 
@@ -330,6 +331,7 @@ select.edit-field{cursor:pointer;}
       <div class="stat-card sc-archived" onclick="setFilterFromTile('archived')"><div class="num" id="stat-archived">–</div><div class="lbl">Archived</div></div>
       <div class="stat-card sc-review" onclick="setFilterFromTile('review')"><div class="num" id="stat-translation">–</div><div class="lbl">Needs review</div></div>
       <div class="stat-card sc-wbb" onclick="setFilterFromTile('wbb_review')"><div class="num" id="stat-wbb-review">–</div><div class="lbl">🍼 Pregnant — verify WBB</div></div>
+      <div class="stat-card sc-qid-review" onclick="setFilterFromTile('qid_reapply_review')"><div class="num" id="stat-qid-reapply-review">–</div><div class="lbl">🪪 Reapplications without QIDs</div></div>
     </div>
 
     <div id="daily-quote" style="background:var(--green);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;color:white;"></div>
@@ -1053,6 +1055,7 @@ function updateStats() {
   document.getElementById('stat-archived').textContent = scoped.filter(function(a){return resolveStatus(a)==='archived';}).length;
   document.getElementById('stat-translation').textContent = scoped.filter(function(a){return a.translation_pending;}).length;
   document.getElementById('stat-wbb-review').textContent = scoped.filter(function(a){return a.is_pregnant && !a.wbb_case_created;}).length;
+  document.getElementById('stat-qid-reapply-review').textContent = scoped.filter(function(a){return a.qid_reapply_review;}).length;
 }
 
 var LANG_TAGS = {ar:'🇶🇦 AR',bn:'🇧🇩 BN',hi:'🇮🇳 HI',ur:'🇵🇰 UR',tl:'🇵🇭 TL',en:'🇬🇧 EN'};
@@ -1174,6 +1177,21 @@ function setFilterFromTile(status) {
     document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
     var filtered = allApps.filter(function(a){
       if (!a.is_pregnant || a.wbb_case_created) return false;
+      if (myCasesOnly && (a.assigned_to || autoAssign(a)) !== myName) return false;
+      return true;
+    });
+    renderTable(filtered); return;
+  }
+  if (status === 'qid_reapply_review') {
+    // Reapplications from households (or a member within them) with no QID
+    // on file — do_reapply() sets qid_reapply_review=true instead of
+    // auto-confirming when the applicant reapplied via the no-QID path.
+    // Clear qid_reapply_review on the application once a team member has
+    // followed up and collected the QIDs to drop it off this list.
+    currentFilter = 'all';
+    document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
+    var filtered = allApps.filter(function(a){
+      if (!a.qid_reapply_review) return false;
       if (myCasesOnly && (a.assigned_to || autoAssign(a)) !== myName) return false;
       return true;
     });
@@ -1449,8 +1467,13 @@ function renderModal(app, members, urlMap) {
   body += '<div class="detail-item"><div class="lbl">Due date</div>'+sd('ef-due_date',app.due_date)+'</div>';
   body += dif('Diaper size','ef-diaper_size',app.diaper_size);
   body += dif('Formula needed','ef-formula',app.formula);
+  // Set by do_reapply() when this household (or a member) reapplied with no
+  // QID on file — clear it once a team member has followed up and
+  // collected QIDs for everyone in the household, to drop it off the
+  // "Reapplications without QIDs" review tile.
+  body += '<div class="detail-item"><div class="lbl">🪪 QID reapply review?</div><select class="edit-field" id="ef-qid_reapply_review"><option value="true"'+(app.qid_reapply_review?' selected':'')+'>Yes — still needs review</option><option value="false"'+(!app.qid_reapply_review?' selected':'')+'>No — resolved</option></select></div>';
   body += '</div>';
-  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',full_name:\'ef-full_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\',diaper_size:\'ef-diaper_size\',formula:\'ef-formula\'})">Save applicant</button>';
+  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',full_name:\'ef-full_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\',diaper_size:\'ef-diaper_size\',formula:\'ef-formula\',qid_reapply_review:\'ef-qid_reapply_review|bool\'})">Save applicant</button>';
   body += accEnd;
   // ── ADDRESS (editable) ──
   body += accStart('address', 'Address');
