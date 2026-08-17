@@ -139,6 +139,8 @@ html[dir="rtl"] footer{flex-direction:row-reverse;}
 .request-status-pill.open{background:#FFF4E0;color:#9a6b0a;}
 .request-status-pill.claimed{background:#EDEFFA;color:var(--accent-dark);}
 .request-status-pill.given{background:#E7F3EB;color:var(--green-dark);}
+.request-status-pill.pending_review{background:#FFF4E0;color:#9a6b0a;}
+.request-status-pill.rejected{background:#FDEDEA;color:#B3382A;}
 .request-card-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
 .request-cancel-btn{font-size:11px;font-weight:800;color:#B3382A;background:#FDEDEA;padding:6px 12px;border-radius:999px;border:none;}
 .request-chat-btn{font-size:11px;font-weight:800;color:var(--green-dark);background:#E7F3EB;padding:6px 12px;border-radius:999px;border:none;text-decoration:none;text-align:center;}
@@ -318,11 +320,13 @@ html[dir="rtl"] .saved-item-card{flex-direction:row-reverse;}
     other:     { en:'Other',          ar:'أخرى',          color2:'#6B7570', icon:'<circle cx="12" cy="12" r="8"/>' }
   };
   const STATUS_META = {
+    pending_review: { en:'Awaiting Review', ar:'قيد المراجعة', color:'#C98A2C' },
     available: { en:'Available',   ar:'متاح',        color:'#08752F' },
     reserved:  { en:'Reserved',    ar:'محجوز',        color:'#C98A2C' },
     matched:   { en:'Matched',     ar:'تم التوفيق',   color:'#717EC4' },
     given:     { en:'Unavailable', ar:'غير متاح',     color:'#6B7570' },
-    removed:   { en:'Unavailable', ar:'غير متاح',     color:'#6B7570' }
+    removed:   { en:'Unavailable', ar:'غير متاح',     color:'#6B7570' },
+    rejected:  { en:'Not Approved', ar:'لم تتم الموافقة', color:'#B3382A' }
   };
   const VERIFIED_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="6" y="4" width="13" height="4.5"/><rect x="6" y="10.5" width="10" height="4.5"/></svg>';
   const PERSON_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>';
@@ -706,12 +710,14 @@ html[dir="rtl"] .saved-item-card{flex-direction:row-reverse;}
     emptyEl.style.display = 'none';
 
     listEl.innerHTML = requests.map(r => {
-      const statusLabel = { open: currentLang === 'ar' ? 'مفتوح' : 'Open',
+      const statusLabel = { pending_review: currentLang === 'ar' ? 'قيد المراجعة' : 'Awaiting Review',
+        open: currentLang === 'ar' ? 'مفتوح' : 'Open',
         claimed: currentLang === 'ar' ? 'تمت المطابقة' : 'Claimed',
         given: currentLang === 'ar' ? 'تم الاستلام' : 'Given',
-        cancelled: currentLang === 'ar' ? 'ملغى' : 'Cancelled' }[r.status] || r.status;
+        cancelled: currentLang === 'ar' ? 'ملغى' : 'Cancelled',
+        rejected: currentLang === 'ar' ? 'لم تتم الموافقة' : 'Not Approved' }[r.status] || r.status;
       let actions = '';
-      if (r.status === 'open'){
+      if (r.status === 'open' || r.status === 'pending_review'){
         actions = `<button type="button" class="request-cancel-btn" data-cancel="${r.id}">${currentLang === 'ar' ? 'إلغاء' : 'Cancel'}</button>`;
       } else if (r.status === 'claimed' || r.status === 'given'){
         actions = `<a href="share-care-my-chats.html" class="request-chat-btn">${currentLang === 'ar' ? 'اذهب للمحادثة' : 'Go to Chat'}</a>`;

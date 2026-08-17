@@ -76,6 +76,14 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 
 .not-authorized{text-align:center;padding:60px 20px;}
 .not-authorized p{font-size:14px;color:var(--muted);line-height:1.6;max-width:340px;margin:0 auto;}
+
+.admin-tabs{display:flex;gap:8px;margin-bottom:20px;}
+.admin-tab{flex:1;text-align:center;padding:11px;border-radius:999px;font-weight:800;font-size:13px;
+  background:var(--off-white);border:1.5px solid var(--border);color:var(--muted);cursor:pointer;}
+.admin-tab.active{background:var(--green);border-color:var(--green);color:#fff;}
+.admin-panel{display:none;}
+.admin-panel.show{display:block;}
+.pending-photo{width:100%;max-width:220px;aspect-ratio:4/3;object-fit:cover;border-radius:var(--radius-sm);display:block;margin-bottom:10px;}
 </style>
 </head>
 <body>
@@ -113,24 +121,52 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 </div>
 
 <div class="main" id="mainEl" style="display:none;">
-  <div class="welcome-banner">
-    <div class="welcome-name">Reviews</div>
-    <div class="welcome-scope">No-show reports and low ratings, both submitted with photo evidence — approving a no-show suspends that person from requesting or receiving items for 30 days.</div>
+  <div class="admin-tabs">
+    <div class="admin-tab active" data-tab="pending" id="tabBtnPending">Pending Posts</div>
+    <div class="admin-tab" data-tab="reviews" id="tabBtnReviews">Reviews</div>
   </div>
 
-  <div class="loading" id="loadingState"><div class="spinner-lg"></div>Loading reviews…</div>
+  <div class="admin-panel show" id="pendingPanel">
+    <div class="welcome-banner">
+      <div class="welcome-name">Pending Posts</div>
+      <div class="welcome-scope">New items and requests wait here before they're visible to anyone else. Approve to publish, or reject with a short reason so the poster knows why.</div>
+    </div>
 
-  <div id="noShowSection" style="display:none;">
-    <div class="section-title">No-Show Reports <span class="count-badge" id="noShowCount"></span></div>
-    <div id="noShowList"></div>
+    <div class="loading" id="pendingLoadingState"><div class="spinner-lg"></div>Loading pending posts…</div>
+
+    <div id="pendingItemsSection" style="display:none;">
+      <div class="section-title">Pending Items <span class="count-badge" id="pendingItemsCount"></span></div>
+      <div id="pendingItemsList"></div>
+    </div>
+
+    <div id="pendingRequestsSection" style="display:none;">
+      <div class="section-title">Pending Requests <span class="count-badge" id="pendingRequestsCount"></span></div>
+      <div id="pendingRequestsList"></div>
+    </div>
+
+    <div class="empty" id="pendingEmptyState" style="display:none;">Nothing waiting for approval right now.</div>
   </div>
 
-  <div id="lowRatingSection" style="display:none;">
-    <div class="section-title">Low Ratings <span class="count-badge" id="lowRatingCount"></span></div>
-    <div id="lowRatingList"></div>
-  </div>
+  <div class="admin-panel" id="reviewsPanel">
+    <div class="welcome-banner">
+      <div class="welcome-name">Reviews</div>
+      <div class="welcome-scope">No-show reports and low ratings, both submitted with photo evidence — approving a no-show suspends that person from requesting or receiving items for 30 days.</div>
+    </div>
 
-  <div class="empty" id="emptyState" style="display:none;">Nothing waiting for review right now.</div>
+    <div class="loading" id="loadingState"><div class="spinner-lg"></div>Loading reviews…</div>
+
+    <div id="noShowSection" style="display:none;">
+      <div class="section-title">No-Show Reports <span class="count-badge" id="noShowCount"></span></div>
+      <div id="noShowList"></div>
+    </div>
+
+    <div id="lowRatingSection" style="display:none;">
+      <div class="section-title">Low Ratings <span class="count-badge" id="lowRatingCount"></span></div>
+      <div id="lowRatingList"></div>
+    </div>
+
+    <div class="empty" id="emptyState" style="display:none;">Nothing waiting for review right now.</div>
+  </div>
 </div>
 
 <div class="not-authorized" id="notAuthorized" style="display:none;">
@@ -167,7 +203,123 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 
     document.getElementById('notAuthorized').style.display = 'none';
     document.getElementById('mainEl').style.display = 'block';
-    await loadReviews();
+    await loadPendingPosts();
+  }
+
+  document.getElementById('tabBtnPending').addEventListener('click', () => {
+    document.getElementById('tabBtnPending').classList.add('active');
+    document.getElementById('tabBtnReviews').classList.remove('active');
+    document.getElementById('pendingPanel').classList.add('show');
+    document.getElementById('reviewsPanel').classList.remove('show');
+    loadPendingPosts();
+  });
+  document.getElementById('tabBtnReviews').addEventListener('click', () => {
+    document.getElementById('tabBtnReviews').classList.add('active');
+    document.getElementById('tabBtnPending').classList.remove('active');
+    document.getElementById('reviewsPanel').classList.add('show');
+    document.getElementById('pendingPanel').classList.remove('show');
+    loadReviews();
+  });
+
+  async function loadPendingPosts(){
+    document.getElementById('pendingLoadingState').style.display = 'block';
+    document.getElementById('pendingItemsSection').style.display = 'none';
+    document.getElementById('pendingRequestsSection').style.display = 'none';
+    document.getElementById('pendingEmptyState').style.display = 'none';
+
+    const [itemsRes, requestsRes] = await Promise.all([
+      sb.from('share_care_items').select('id, title, category, description, location, photo_url, delivery_available, created_at').eq('status', 'pending_review').order('created_at', { ascending: true }),
+      sb.from('share_care_requests').select('id, category, description, photo_url, created_at').eq('status', 'pending_review').order('created_at', { ascending: true })
+    ]);
+
+    const items = itemsRes.data || [];
+    const requests = requestsRes.data || [];
+
+    document.getElementById('pendingLoadingState').style.display = 'none';
+
+    if (items.length === 0 && requests.length === 0){
+      document.getElementById('pendingEmptyState').style.display = 'block';
+      return;
+    }
+
+    if (items.length){
+      document.getElementById('pendingItemsSection').style.display = 'block';
+      document.getElementById('pendingItemsCount').textContent = items.length;
+      document.getElementById('pendingItemsList').innerHTML = items.map(item => {
+        const photo = item.photo_url ? item.photo_url.split(',')[0].trim() : null;
+        return `<div class="table-wrap">
+          <div class="review-top"><div class="review-subject">${item.title}</div></div>
+          <div class="review-meta">${item.category} · ${item.location} · ${item.delivery_available ? 'Can deliver' : 'Collection only'}</div>
+          ${item.description ? `<div class="review-context">${item.description}</div>` : ''}
+          ${photo ? `<a href="${photo}" target="_blank"><img class="pending-photo" src="${photo}"></a>` : ''}
+          <div class="review-actions">
+            <button type="button" class="btn-comment btn-approve-rating" data-approve-item="${item.id}">Approve</button>
+            <button type="button" class="btn-comment btn-reject" data-reject-item="${item.id}">Reject</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    if (requests.length){
+      document.getElementById('pendingRequestsSection').style.display = 'block';
+      document.getElementById('pendingRequestsCount').textContent = requests.length;
+      document.getElementById('pendingRequestsList').innerHTML = requests.map(req => {
+        const photo = req.photo_url ? req.photo_url.split(',')[0].trim() : null;
+        return `<div class="table-wrap">
+          <div class="review-top"><div class="review-subject">${req.category}: ${req.description}</div></div>
+          ${photo ? `<a href="${photo}" target="_blank"><img class="pending-photo" src="${photo}"></a>` : ''}
+          <div class="review-actions">
+            <button type="button" class="btn-comment btn-approve-rating" data-approve-request="${req.id}">Approve</button>
+            <button type="button" class="btn-comment btn-reject" data-reject-request="${req.id}">Reject</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    document.querySelectorAll('[data-approve-item]').forEach(btn => {
+      btn.addEventListener('click', () => handleItemReview(btn.getAttribute('data-approve-item'), true, null, btn));
+    });
+    document.querySelectorAll('[data-reject-item]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const reason = prompt('Reason for rejecting this item (shown to the poster):');
+        if (reason === null) return;
+        handleItemReview(btn.getAttribute('data-reject-item'), false, reason, btn);
+      });
+    });
+    document.querySelectorAll('[data-approve-request]').forEach(btn => {
+      btn.addEventListener('click', () => handleRequestReview(btn.getAttribute('data-approve-request'), true, null, btn));
+    });
+    document.querySelectorAll('[data-reject-request]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const reason = prompt('Reason for rejecting this request (shown to the poster):');
+        if (reason === null) return;
+        handleRequestReview(btn.getAttribute('data-reject-request'), false, reason, btn);
+      });
+    });
+  }
+
+  async function handleItemReview(itemId, approve, reason, btn){
+    const card = btn.closest('.table-wrap');
+    card.querySelectorAll('button').forEach(b => b.disabled = true);
+    const { error } = await sb.rpc('admin_review_item', { p_item_id: itemId, p_approve: approve, p_reason: reason });
+    if (error){
+      alert('Could not process this item: ' + error.message);
+      card.querySelectorAll('button').forEach(b => b.disabled = false);
+      return;
+    }
+    await loadPendingPosts();
+  }
+
+  async function handleRequestReview(requestId, approve, reason, btn){
+    const card = btn.closest('.table-wrap');
+    card.querySelectorAll('button').forEach(b => b.disabled = true);
+    const { error } = await sb.rpc('admin_review_request', { p_request_id: requestId, p_approve: approve, p_reason: reason });
+    if (error){
+      alert('Could not process this request: ' + error.message);
+      card.querySelectorAll('button').forEach(b => b.disabled = false);
+      return;
+    }
+    await loadPendingPosts();
   }
 
   document.getElementById('loginBtn').addEventListener('click', async () => {
