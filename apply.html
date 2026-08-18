@@ -1051,8 +1051,14 @@ function showStatusScreen(status, data, canReapply) {
   var reapplySection = document.getElementById('reapply-section');
   if (canReapply) {
     reapplySection.style.display = 'block';
+    // Prefer the area name actually on file (rec.area); fall back to the
+    // zone→area lookup used elsewhere on this page if area was never set.
+    // Showing just a bare zone number ("Zone 38") isn't something most
+    // people can confirm against — the area name ("Al Sadd") is.
+    var statusArea = data.area || (data.zone ? (ZONE_AREA[parseInt(data.zone, 10)] || null) : null);
     var parts = [data.building, data.unit ? (ar ? 'وحدة ' : 'Unit ') + data.unit : null,
       data.street ? (ar ? 'ش.' : 'St.') + data.street : null,
+      statusArea,
       data.zone ? (ar ? 'م.' : 'Zone ') + data.zone : null].filter(Boolean);
     document.getElementById('status-address').textContent = parts.join(', ') || (ar ? 'كما هو مسجل' : 'As registered');
     document.getElementById('lbl-delivery-addr').textContent = ar ? 'عنوان التوصيل' : 'Delivery address';
