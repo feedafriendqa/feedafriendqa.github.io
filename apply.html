@@ -461,6 +461,7 @@ var T = {
     'lbl-wa': 'WhatsApp Number',
     'verify-btn-text': 'Check my status →',
     'back-home-btn': '← Back',
+    'capture-back-btn': '← Back',
     'lbl-boxes': 'Boxes received',
     'lbl-delivery-addr': 'Delivery address',
     'lock-note-address': '🔒 On file — tell us below if this has changed',
@@ -497,6 +498,7 @@ var T = {
     'lbl-wa': 'رقم واتساب',
     'verify-btn-text': 'تحقق من حالتي ←',
     'back-home-btn': '→ رجوع',
+    'capture-back-btn': '→ رجوع',
     'lbl-boxes': 'الصناديق المستلمة',
     'lbl-delivery-addr': 'عنوان التوصيل',
     'lock-note-address': '🔒 مسجل لدينا — أخبرنا أدناه إذا تغيّر',
@@ -571,6 +573,8 @@ function setLang(lang) {
   });
   document.getElementById('inp-qid').placeholder = lang === 'ar' ? '٢٨xxxxxxxxx' : '28xxxxxxxxx';
   document.getElementById('inp-wa').placeholder = lang === 'ar' ? '+٩٧٤ ٥xxx xxxx' : '+974 5xxx xxxx';
+  var pwEl = document.getElementById('inp-password');
+  if (pwEl) pwEl.placeholder = lang === 'ar' ? 'اطلب كلمة التحقق من فريقنا إن لم تكن لديك' : "Ask our team if you don't have this";
   var tyMsgEl = document.getElementById('inp-ty-message');
   if (tyMsgEl) tyMsgEl.placeholder = lang === 'ar' ? 'اكتب شكرك بكلماتك...' : 'Say thank you in your own words...';
   var tySubmitTextEl = document.getElementById('ty-submit-text');
