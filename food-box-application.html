@@ -1474,7 +1474,7 @@ function buildMemberCard(n) {
   h += '<label class="radio-opt"><input type="radio" name="m' + n + '-doctype" value="qid" checked onchange="handleDocType(' + n + ')"><span>' + (ar ? 'هوية قطرية' : 'Qatar ID (QID)') + '</span></label>';
   h += '<span id="m' + n + '-bc-doctype-wrap" style="display:none;"><label class="radio-opt"><input type="radio" name="m' + n + '-doctype" value="birth-cert" onchange="handleDocType(' + n + ')"><span>' + (ar ? 'شهادة ميلاد قطرية' : 'Qatar birth cert.') + '</span></label></span>';
   h += '</div>';
-  h += '<p id="m' + n + '-doctype-hint" style="font-size:12px;color:var(--muted);margin:-4px 0 8px;">' + (ar ? 'أدخل تاريخ الميلاد أدناه أولاً لتحديد نوع الوثيقة — هوية قطرية للأعمار من سنة فأكثر، أو شهادة ميلاد قطرية للرضع دون سنة.' : 'Enter date of birth below first to determine the document type — a QID for ages 1 and over, or a Qatar birth certificate for babies under 1.') + '</p>';
+  h += '<p id="m' + n + '-doctype-hint" style="font-size:12px;color:var(--muted);margin:-4px 0 8px;">' + (ar ? 'أدخل تاريخ الميلاد أدناه أولاً لتحديد نوع الوثيقة.' : 'Enter date of birth below first to determine the document type.') + '</p>';
   h += '<div id="m' + n + '-qid-upload">';
   h += '<div class="qid-pair">';
   h += '<div class="qid-zone" id="m' + n + '-qid-front-zone"><div class="upload-icon">📄</div><p><strong>' + (ar ? 'الوجه الأمامي' : 'Front of QID') + '</strong></p><p>' + (ar ? 'اضغط للرفع' : 'Tap to upload') + '</p><input type="file" id="m' + n + '-qid-front" accept="image/*" onchange="handleMemberQIDFront(' + n + ',this)" style="display:none"></div>';
@@ -1873,6 +1873,18 @@ function validateApplication(members, memberFormIndices) {
       if (!nameEl || !nameEl.value.trim()) errors.push({ label: memberLabel + (ar ? ' — الاسم الكامل' : ' — full name'), target: flagFieldError(nameEl) || card });
       var dobEl = document.getElementById('m' + idx + '-dob');
       if (!dobEl || !dobEl.value) errors.push({ label: memberLabel + (ar ? ' — تاريخ الميلاد' : ' — date of birth'), target: flagFieldError(dobEl) || card });
+      // The phone field is shown for members 18+ and labelled "Required for
+      // adults 18+" with a red asterisk, but was never actually enforced
+      // here — only the name/DOB/gender/role checks below ran, so an adult
+      // household member (e.g. a husband or wife) could be submitted with
+      // no phone number at all despite the UI claiming it was mandatory.
+      if (dobEl && dobEl.value) {
+        var memberAgeYears = (new Date() - new Date(dobEl.value)) / (1000 * 60 * 60 * 24 * 365.25);
+        if (memberAgeYears >= 18) {
+          var phoneEl = document.getElementById('m' + idx + '-phone');
+          if (!phoneEl || !phoneEl.value.trim()) errors.push({ label: memberLabel + (ar ? ' — رقم الهاتف' : ' — phone number'), target: flagFieldError(phoneEl) || card });
+        }
+      }
       if (!card.querySelector('input[name="m' + idx + '-gender"]:checked')) {
         var mGenderInput = card.querySelector('input[name="m' + idx + '-gender"]');
         errors.push({ label: memberLabel + (ar ? ' — الجنس' : ' — gender'), target: flagFieldError(mGenderInput) || card });
@@ -2075,14 +2087,6 @@ function triggerFile(el) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Honor an inbound ?lang=ar (apply.html's "Submit a new application"
-  // link passes this through when someone is browsing in Arabic there) —
-  // this page previously always started in English regardless, which is
-  // why coming from the Arabic /apply page still landed on an English
-  // application form.
-  var _initialLang = new URLSearchParams(window.location.search).get('lang');
-  if (_initialLang === 'ar') setLang('ar');
-
   // Stepper buttons - use event listeners not inline onclick
   var minusBtn = document.getElementById('hh-minus');
   var plusBtn = document.getElementById('hh-plus');
