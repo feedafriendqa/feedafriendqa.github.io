@@ -1434,6 +1434,18 @@ function renderModal(app, members, urlMap) {
   // "Reapplications without QIDs" review tile.
   body += '<div class="detail-item"><div class="lbl">🪪 QID reapply review?</div><select class="edit-field" id="ef-qid_reapply_review"><option value="true"'+(app.qid_reapply_review?' selected':'')+'>Yes — still needs review</option><option value="false"'+(!app.qid_reapply_review?' selected':'')+'>No — resolved</option></select></div>';
   body += '</div>';
+  // Once QIDs have actually been collected for this household, this is the
+  // one action that both confirms their box (status -> 'confirmed', so it
+  // schedules for the next distribution the same way a normal reapply
+  // does) and clears them off the "Reapplications without QIDs" queue in a
+  // single step. It deliberately does NOT touch boxes_received or
+  // max_boxes — confirming a box only counts toward the allowance once it's
+  // actually delivered (see deliverBox()), so this can't reset or bump
+  // their allowance. Only shown while still flagged, since once resolved
+  // there's nothing left to confirm from here.
+  if (app.qid_reapply_review) {
+    body += '<button class="section-save-btn" style="margin-bottom:10px;" onclick="approveQidReapply(\''+app.id+'\')" id="approve-qid-reapply-btn">✅ Approve &amp; confirm box (QIDs collected)</button>';
+  }
   body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',full_name:\'ef-full_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\',diaper_size:\'ef-diaper_size\',formula:\'ef-formula\',qid_reapply_review:\'ef-qid_reapply_review|bool\'})">Save applicant</button>';
   body += accEnd;
   // ── ADDRESS (editable) ──
@@ -2100,6 +2112,38 @@ function deliverBox(id) {
     }
     updateStats(); filterApps(); closeModal();
   }).catch(function(e){ alert('Update failed: ' + e.message); });
+}
+
+// Resolves a "Reapplications without QIDs" case once a team member has
+// actually collected the household's QIDs (by whatever means — manual
+// upload, WhatsApp, in person). Calls the same do_reapply() RPC the public
+// apply.html page uses for a normal reapply confirmation (p_no_qid=false),
+// so the household gets the exact same outcome as anyone who reapplied with
+// a QID on file already: status -> 'confirmed' and first_box_month set for
+// the next distribution. It does NOT touch boxes_received or max_boxes —
+// those only change when the box is actually delivered (see deliverBox()) —
+// so this can never reset or bump the household's allowance.
+function approveQidReapply(id) {
+  if (id.startsWith('demo')) { alert('This is demo data — connect to Supabase to save changes.'); return; }
+  var app = allApps.find(function(a){ return a.id === id; });
+  if (!app) return;
+  var btn = document.getElementById('approve-qid-reapply-btn');
+  if (btn) { btn.textContent = 'Confirming…'; btn.disabled = true; }
+  sb.rpc('do_reapply', { p_application_id: id, p_no_qid: false }).then(function(result) {
+    // do_reapply() itself already sets qid_reapply_review=false on success
+    // (see its non-p_no_qid branch) — no separate update needed here.
+    if (result.error || !result.data || !result.data.ok) {
+      var msg = (result.error && result.error.message) || (result.data && result.data.error) || 'Unknown error';
+      throw new Error(msg);
+    }
+    app.status = 'confirmed';
+    app.qid_reapply_review = false;
+    app.first_box_month = result.data.confirmed_for || app.first_box_month;
+    updateStats(); filterApps(); closeModal();
+  }).catch(function(e) {
+    if (btn) { btn.textContent = '✅ Approve & confirm box (QIDs collected)'; btn.disabled = false; }
+    alert('Could not confirm: ' + e.message);
+  });
 }
 
 // ── VIEW SWITCHER (Cases / Sponsorships) ──
