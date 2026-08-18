@@ -526,6 +526,25 @@ select.edit-field{cursor:pointer;}
   </div>
 </div>
 
+<!-- REJECT REASON MODAL -->
+<div class="modal-overlay" id="reject-modal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <div style="font-weight:800;font-size:15px;">Reject application</div>
+      <button class="modal-close" onclick="closeRejectModal()">×</button>
+    </div>
+    <div class="modal-body" style="padding:20px;">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">This is shown to the friend on their status page, so they know why. Please keep it clear and respectful.</div>
+      <textarea id="reject-reason-input" rows="4" placeholder="e.g. Household income is above the eligibility threshold for this programme." style="width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-family:Nunito,sans-serif;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+      <div id="reject-reason-err" style="display:none;color:var(--red);font-size:12px;font-weight:700;margin-top:8px;"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn-comment" style="flex:1;background:white;color:var(--text);" onclick="closeRejectModal()">Cancel</button>
+        <button class="btn-comment" id="reject-confirm-btn" style="flex:1;background:var(--red);color:white;border:none;" onclick="confirmReject()">Reject application</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- PROFILE PHOTO CROP EDITOR -->
 <div class="modal-overlay" id="crop-editor-modal">
   <div class="modal" style="max-width:420px;">
@@ -1498,6 +1517,31 @@ function renderModal(app, members, urlMap) {
   body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{monthly_salary:\'ef-monthly_salary|num\',monthly_rent:\'ef-monthly_rent|num\',household_size:\'ef-household_size|num\',is_family:\'ef-is_family|bool\',boxes_received:\'ef-boxes_received|num\',max_boxes:\'ef-max_boxes|num\'})">Save financial</button>';
   body += accEnd;
 
+  // ── DELIVERY HISTORY (per-box month/year, so there's something concrete
+  // to point to when a family disputes their allowance — "boxes_received"
+  // alone is just a running total with no record of when each box was
+  // actually given). Entries can be back-filled for older deliveries
+  // that predate this feature, or logged automatically going forward —
+  // see deliverBox(), which appends an entry every time it's used. ──
+  var deliveryLog = Array.isArray(app.box_delivery_log) ? app.box_delivery_log.slice() : [];
+  deliveryLog.sort(function(a,b){ return (a.date||'') < (b.date||'') ? 1 : -1; });
+  body += accStart('delivery-log', 'Delivery history', deliveryLog.length ? '<span class="accordion-count">'+deliveryLog.length+'</span>' : '');
+  body += '<div id="delivery-log-list">';
+  if (deliveryLog.length === 0) {
+    body += '<div style="font-size:12px;color:var(--muted);padding:6px 0;">No delivery history on file yet.</div>';
+  } else {
+    deliveryLog.forEach(function(entry, i) {
+      body += '<div class="comment-entry"><div class="comment-meta">' + formatDeliveryLogDate(entry.date) + (entry.source === 'auto' ? ' · logged automatically' : ' · backfilled') +
+        ' <span style="cursor:pointer;color:var(--red);font-weight:800;float:right;" onclick="deleteDeliveryLogEntry(\''+app.id+'\','+i+')" title="Remove">×</span></div>' +
+        (entry.note ? '<div class="comment-text">' + String(entry.note).replace(/</g,'&lt;') + '</div>' : '') + '</div>';
+    });
+  }
+  body += '</div>';
+  body += '<div class="comment-input-row"><input type="month" id="delivery-log-month" class="edit-field" style="max-width:150px;">';
+  body += '<input type="text" id="delivery-log-note" class="edit-field" placeholder="Note (optional) — e.g. distribution round, area" style="flex:1;">';
+  body += '<button class="btn-comment" onclick="addDeliveryLogEntry(\''+app.id+'\')">Add</button></div>';
+  body += accEnd;
+
   // ── SUBMITTED DOCUMENTS (uploaded by the applicant during the application) ──
   body += accStart('documents', 'Submitted documents') + '<div class="detail-grid">';
   body += docLink('QID — front', app.qid_front_path, urlMap);
@@ -1615,15 +1659,27 @@ function renderModal(app, members, urlMap) {
     body += '<option value="'+opt+'"'+(opt===status?' selected':'')+'>'+lbl+'</option>';
   });
   body += '</select>';
-  body += '<button class="btn-comment" onclick="updateStatus(\''+app.id+'\', document.getElementById(\'status-dropdown\').value)">Update status</button>';
-  body += '</div></div>';
+  body += '<button class="btn-comment" onclick="handleStatusDropdownUpdate(\''+app.id+'\')">Update status</button>';
+  body += '</div>';
+  // Rejections need a reason on file (shown back to the friend on their
+  // status page), so surface whatever's currently saved here — and let an
+  // admin re-open the reject modal to change it, without having to flip
+  // the status away and back just to edit the wording.
+  if (status === 'rejected') {
+    body += '<div style="margin-top:10px;background:var(--red-light);border-radius:8px;padding:10px 12px;font-size:12px;">';
+    body += '<div style="font-weight:800;color:var(--red);margin-bottom:2px;">Rejection reason' + (app.rejection_reason ? '' : ' — none on file') + '</div>';
+    if (app.rejection_reason) body += '<div style="color:var(--text);margin-bottom:6px;">' + app.rejection_reason.replace(/</g,'&lt;') + '</div>';
+    body += '<button class="btn-comment" style="padding:4px 10px;font-size:11px;" onclick="openRejectModal(\''+app.id+'\')">' + (app.rejection_reason ? 'Edit reason' : 'Add reason') + '</button>';
+    body += '</div>';
+  }
+  body += '</div>';
   document.getElementById('modal-body').innerHTML = body;
 
   // ── ACTIONS per status ──
   var actions = '';
   if (status === 'new' || status === 'pending') {
     actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\''+app.id+'\',\'confirmed\')">✓ Approve and Confirm</button>';
-    actions += '<button class="modal-actions btn-reject-full" onclick="updateStatus(\''+app.id+'\',\'rejected\')">Reject</button>';
+    actions += '<button class="modal-actions btn-reject-full" onclick="openRejectModal(\''+app.id+'\')">Reject</button>';
     actions += '<button class="modal-actions btn-duplicate" onclick="openDuplicatePicker(\''+app.id+'\')">Duplicate</button>';
   } else if (status === 'approved') {
     actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\''+app.id+'\',\'confirmed\')">⚡ Confirm — sending another box</button>';
@@ -2024,6 +2080,82 @@ document.getElementById('crop-editor-modal').addEventListener('click', function(
 document.getElementById('modal').addEventListener('click', function(e){ if (e.target===this) closeModal(); });
 document.getElementById('duplicate-picker').addEventListener('click', function(e){ if (e.target===this) closeDuplicatePicker(); });
 
+// The generic status dropdown can select any STATUS_OPTIONS value,
+// including 'rejected' — route that one case through the reject modal
+// (so a reason is always captured) instead of flipping the status with
+// no explanation, the same as the dedicated Reject button does.
+function handleStatusDropdownUpdate(id) {
+  var status = document.getElementById('status-dropdown').value;
+  if (status === 'rejected') {
+    openRejectModal(id);
+    return;
+  }
+  updateStatus(id, status);
+}
+
+var rejectModalAppId = null;
+
+function openRejectModal(id) {
+  rejectModalAppId = id;
+  var app = allApps.find(function(a){ return a.id === id; });
+  document.getElementById('reject-reason-input').value = (app && app.rejection_reason) || '';
+  var errEl = document.getElementById('reject-reason-err');
+  errEl.style.display = 'none';
+  errEl.textContent = '';
+  document.getElementById('reject-modal').classList.add('visible');
+}
+
+function closeRejectModal() {
+  document.getElementById('reject-modal').classList.remove('visible');
+  rejectModalAppId = null;
+}
+
+function confirmReject() {
+  var id = rejectModalAppId;
+  if (!id) return;
+  var reason = document.getElementById('reject-reason-input').value.trim();
+  var errEl = document.getElementById('reject-reason-err');
+  if (!reason) {
+    errEl.textContent = 'Please give a reason — this is shown to the friend so they know why.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (id.startsWith('demo')) {
+    var demoApp = allApps.find(function(a){ return a.id === id; });
+    if (demoApp) { demoApp.status = 'rejected'; demoApp.rejection_reason = reason; }
+    closeRejectModal();
+    updateStats(); filterApps(); closeModal();
+    return;
+  }
+  var btn = document.getElementById('reject-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ status: 'rejected', rejection_reason: reason })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on food_box_applications.');
+    var idx = allApps.findIndex(function(a){return a.id===id;});
+    var app = idx !== -1 ? allApps[idx] : null;
+    if (app) { app.status = 'rejected'; app.rejection_reason = reason; }
+    closeRejectModal();
+    updateStats(); filterApps(); closeModal();
+  }).catch(function(e) {
+    errEl.textContent = 'Could not save: ' + e.message;
+    errEl.style.display = 'block';
+  }).finally(function() {
+    btn.disabled = false;
+    btn.textContent = 'Reject application';
+  });
+}
+document.getElementById('reject-modal').addEventListener('click', function(e){ if (e.target===this) closeRejectModal(); });
+
 function updateStatus(id, status) {
   if (id.startsWith('demo')) { alert('This is demo data — connect to Supabase to save changes.'); return; }
   apiHeadersAsync().then(function(headers) {
@@ -2055,11 +2187,14 @@ function deliverBox(id) {
   if (id.startsWith('demo')) { alert('This is demo data — connect to Supabase to save changes.'); return; }
   var app = allApps.find(function(a){ return a.id === id; });
   var nextCount = (app && app.boxes_received != null ? app.boxes_received : 0) + 1;
+  var nowIso = new Date().toISOString();
+  var existingLog = (app && Array.isArray(app.box_delivery_log)) ? app.box_delivery_log : [];
+  var nextLog = existingLog.concat([{ date: nowIso.slice(0,10), note: null, source: 'auto', logged_at: nowIso }]);
   apiHeadersAsync().then(function(headers) {
     return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
       method: 'PATCH',
       headers: Object.assign({'Prefer':'return=representation'}, headers),
-      body: JSON.stringify({ status: 'approved', boxes_received: nextCount, last_delivered_at: new Date().toISOString() })
+      body: JSON.stringify({ status: 'approved', boxes_received: nextCount, last_delivered_at: nowIso, box_delivery_log: nextLog })
     });
   }).then(function(r) {
     if (!r.ok) throw new Error('Save failed (' + r.status + ')');
@@ -2072,9 +2207,78 @@ function deliverBox(id) {
       updated.status = 'approved';
       updated.boxes_received = nextCount;
       updated.last_delivered_at = rows[0].last_delivered_at;
+      updated.box_delivery_log = rows[0].box_delivery_log;
     }
     updateStats(); filterApps(); closeModal();
   }).catch(function(e){ alert('Update failed: ' + e.message); });
+}
+
+// ── DELIVERY HISTORY (backfill + auto-log) ──────────────────────────────
+function formatDeliveryLogDate(d) {
+  if (!d) return '—';
+  // Accepts either "YYYY-MM" (from the <input type="month"> backfill field)
+  // or a full "YYYY-MM-DD" (from deliverBox's auto-log) and renders both
+  // as a friendly "Month YYYY" label — precision below a month isn't the
+  // point here, it's "which month/year did this box go out."
+  var parts = String(d).split('-');
+  var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
+  if (!y || !m) return d;
+  var dt = new Date(y, m - 1, 1);
+  return dt.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+}
+
+function addDeliveryLogEntry(id) {
+  var monthEl = document.getElementById('delivery-log-month');
+  var noteEl = document.getElementById('delivery-log-note');
+  var monthVal = monthEl.value; // "YYYY-MM" or ""
+  var note = noteEl.value.trim();
+  if (!monthVal) { alert('Please pick a month and year for this delivery.'); return; }
+
+  var app = allApps.find(function(a){ return a.id === id; });
+  if (!app) return;
+  var existingLog = Array.isArray(app.box_delivery_log) ? app.box_delivery_log : [];
+  var nextLog = existingLog.concat([{ date: monthVal, note: note || null, source: 'manual', logged_at: new Date().toISOString() }]);
+  saveDeliveryLog(id, nextLog, function() {
+    monthEl.value = '';
+    noteEl.value = '';
+  });
+}
+
+function deleteDeliveryLogEntry(id, index) {
+  var app = allApps.find(function(a){ return a.id === id; });
+  if (!app) return;
+  var existingLog = Array.isArray(app.box_delivery_log) ? app.box_delivery_log : [];
+  if (!confirm('Remove this delivery history entry?')) return;
+  var nextLog = existingLog.slice();
+  nextLog.splice(index, 1);
+  saveDeliveryLog(id, nextLog);
+}
+
+function saveDeliveryLog(id, nextLog, onSuccess) {
+  if (id.startsWith('demo')) {
+    var demoApp = allApps.find(function(a){ return a.id === id; });
+    if (demoApp) demoApp.box_delivery_log = nextLog;
+    if (onSuccess) onSuccess();
+    renderModal(demoApp, currentMembers, currentDocUrlMap);
+    return;
+  }
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ box_delivery_log: nextLog })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on food_box_applications.');
+    var idx = allApps.findIndex(function(a){return a.id===id;});
+    var app = idx !== -1 ? allApps[idx] : null;
+    if (app) app.box_delivery_log = rows[0].box_delivery_log;
+    if (onSuccess) onSuccess();
+    if (app) renderModal(app, currentMembers, currentDocUrlMap);
+  }).catch(function(e){ alert('Could not save delivery history: ' + e.message); });
 }
 
 // ── VIEW SWITCHER (Cases / Sponsorships) ──
