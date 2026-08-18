@@ -1390,6 +1390,45 @@ function fileToBase64(file) {
   });
 }
 
+// Full-resolution phone-camera photos of QIDs/plates/salary slips can run
+// several MB each, and this form uploads up to ~10 of them (main applicant +
+// every household member) all at once right after showing the "application
+// received" screen. On a slow or spotty mobile connection those large
+// parallel uploads were silently timing out or failing — the applicant
+// never saw an error (the success screen was already shown), so their QID
+// photos would just quietly never make it to storage. Downscaling before
+// upload — same approach already used on the reapply and admin document
+// upload paths — cuts payload size dramatically and makes that far less
+// likely.
+var DOC_UPLOAD_MAX_DIMENSION = 1800;
+var DOC_UPLOAD_JPEG_QUALITY = 0.82;
+
+function compressDocumentFile(file) {
+  if (!file || !file.type || file.type.indexOf('image/') !== 0 || file.type === 'image/svg+xml') {
+    return Promise.resolve(file);
+  }
+  return new Promise(function(resolve) {
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function() {
+      URL.revokeObjectURL(url);
+      var scale = Math.min(1, DOC_UPLOAD_MAX_DIMENSION / Math.max(img.width, img.height));
+      if (scale >= 1) { resolve(file); return; }
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(function(blob) {
+        if (!blob) { resolve(file); return; }
+        resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+      }, 'image/jpeg', DOC_UPLOAD_JPEG_QUALITY);
+    };
+    img.onerror = function() { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 // ── APPLICANT GENDER / PREGNANCY ──────────────────────────────────────────────
 function handleApplicantGender() {
   var genderEl = document.querySelector('input[name="applicant-gender"]:checked');
@@ -2040,9 +2079,13 @@ function showSuccessScreen(qid, whatsapp) {
 
 // Uploads one file to the private documents bucket via clever-responder
 // (the browser never talks to storage directly — the anon key alone can't
-// write to a private bucket, and shouldn't need to).
-function uploadOneDocument(applicationId, memberId, docKey, file) {
-  if (!file) return Promise.resolve();
+// write to a private bucket, and shouldn't need to). Downscales images
+// first (see compressDocumentFile above) and retries once on any failure —
+// previously this neither checked the response status/body nor retried, so
+// a dropped connection or a non-ok response from the server looked exactly
+// like a quiet success: nothing here ever surfaced it, and the applicant
+// had already seen the "application received" screen by the time this ran.
+function attemptDocumentUpload(applicationId, memberId, docKey, file) {
   return fileToBase64(file).then(function(b64) {
     return fetch(EDGE_URL, {
       method: 'POST',
@@ -2056,7 +2099,26 @@ function uploadOneDocument(applicationId, memberId, docKey, file) {
         media_type: file.type || 'image/jpeg'
       })
     });
-  }).catch(function(e) { console.error('Document upload failed (' + docKey + '):', e); });
+  }).then(function(r) {
+    return r.json().then(function(data) {
+      if (!r.ok || !data || !data.ok) throw new Error((data && data.error) || ('HTTP ' + r.status));
+      return data;
+    });
+  });
+}
+
+function uploadOneDocument(applicationId, memberId, docKey, file) {
+  if (!file) return Promise.resolve();
+  return compressDocumentFile(file).then(function(compressed) {
+    return attemptDocumentUpload(applicationId, memberId, docKey, compressed).catch(function(firstErr) {
+      console.warn('Document upload failed once (' + docKey + '), retrying:', firstErr);
+      return new Promise(function(resolve) { setTimeout(resolve, 2000); }).then(function() {
+        return attemptDocumentUpload(applicationId, memberId, docKey, compressed);
+      });
+    });
+  }).catch(function(e) {
+    console.error('Document upload failed after retry (' + docKey + '):', e);
+  });
 }
 
 function uploadAllApplicationDocuments(applicationId, memberIds, memberFormIndices) {
