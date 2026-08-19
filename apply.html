@@ -106,6 +106,7 @@ body.ar{direction:rtl;}
 .status-card.active{background:var(--blue-light);border:1.5px solid #a8d4f5;}
 .status-card.archived{background:var(--off-white);border:1.5px solid var(--border);}
 .status-card.duplicate{background:var(--red-light);border:1.5px solid #f5b8b8;}
+.status-card.blocked{background:#eceff1;border:1.5px solid #b0bec5;}
 .status-icon{font-size:32px;flex-shrink:0;}
 .status-body h3{font-size:15px;font-weight:900;margin-bottom:4px;}
 .status-body p{font-size:13px;line-height:1.5;}
@@ -121,6 +122,8 @@ body.ar{direction:rtl;}
 .status-card.archived .status-body p{color:var(--muted);}
 .status-card.duplicate .status-body h3{color:var(--red);}
 .status-card.duplicate .status-body p{color:var(--red);}
+.status-card.blocked .status-body h3{color:#263238;}
+.status-card.blocked .status-body p{color:#455a64;}
 
 /* ALLOWANCE */
 .allowance-wrap{background:var(--off-white);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:16px;}
@@ -557,6 +560,11 @@ var STATUS_CONTENT = {
     icon: '⚠️',
     en: { title: "Existing application", msg: "You have applied previously and cannot apply again. Please contact our team if you believe this is an error." },
     ar: { title: "طلب موجود مسبقاً", msg: "لقد قدمت طلباً من قبل ولا يمكنك التقديم مجدداً. يرجى التواصل مع فريقنا إذا كنت تعتقد أن هذا خطأ." }
+  },
+  blocked: {
+    icon: '🚫',
+    en: { title: "Unable to process this application", msg: "We're unable to move forward with this application. Please contact our team directly if you'd like to discuss this." },
+    ar: { title: "تعذر معالجة هذا الطلب", msg: "لا يمكننا المتابعة مع هذا الطلب. يرجى التواصل مباشرة مع فريقنا إذا كنت ترغب في مناقشة ذلك." }
   }
 };
 
