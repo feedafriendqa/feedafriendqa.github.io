@@ -192,6 +192,7 @@ select.edit-field{cursor:pointer;}
 .comment-type.wa{background:#e8f5e9;color:#2e7d32;}
 .comment-type.call{background:#e3f2fd;color:#1565c0;}
 .comment-type.note{background:#f3e5f5;color:#6a1b9a;}
+.comment-type.merge{background:#fff4e6;color:#a05a00;}
 .comment-text{font-size:13px;color:var(--text);line-height:1.4;}
 .comment-input-row{display:flex;gap:8px;margin-top:10px;align-items:flex-start;}
 .comment-type-select{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:var(--text);background:white;cursor:pointer;flex-shrink:0;}
@@ -541,12 +542,12 @@ select.edit-field{cursor:pointer;}
     </div>
     <div class="modal-body" style="padding:20px;">
       <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:14px;">Adjust profile photo</div>
-      <div id="crop-stage" style="position:relative;display:flex;align-items:center;justify-content:center;width:260px;height:260px;margin:0 auto 16px;border-radius:50%;overflow:hidden;background:#eee;border:2px solid var(--border);cursor:grab;touch-action:none;user-select:none;">
-        <img id="crop-img" src="" draggable="false" style="max-width:none;pointer-events:none;opacity:0;">
+      <div id="crop-stage" style="position:relative;width:260px;height:260px;margin:0 auto 16px;border-radius:50%;overflow:hidden;background:#eee;border:2px solid var(--border);cursor:grab;touch-action:none;user-select:none;">
+        <img id="crop-img" src="" draggable="false" style="pointer-events:none;opacity:0;">
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
         <span style="font-size:16px;">🔍</span>
-        <input type="range" id="crop-zoom" min="100" max="400" value="260" style="flex:1;" oninput="onCropZoomInput()">
+        <input type="range" id="crop-zoom" min="100" max="400" value="100" style="flex:1;" oninput="onCropZoomInput()">
         <span style="font-size:16px;">🔍</span>
       </div>
       <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:16px;">Drag the photo to reposition · use the slider to zoom</div>
@@ -1629,9 +1630,18 @@ function renderModal(app, members, urlMap) {
   if (comments.length === 0) body += '<div style="font-size:12px;color:var(--muted);padding:6px 0;">No comments yet.</div>';
   comments.forEach(function(c) {
     var ts = c.ts ? new Date(c.ts).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-    var typeClass = c.type==='whatsapp'?'wa':c.type==='call'?'call':'note';
-    var typeLabel = c.type==='whatsapp'?'💬 WhatsApp':c.type==='call'?'📞 Call':'📝 Note';
-    body += '<div class="comment-entry"><div class="comment-meta"><span class="comment-type '+typeClass+'">'+typeLabel+'</span>'+ts+(c.author?' · '+c.author:'')+'</div><div class="comment-text">'+(c.text||'').replace(/</g,'&lt;')+'</div></div>';
+    var typeClass = c.type==='whatsapp'?'wa':c.type==='call'?'call':c.type==='merge'?'merge':'note';
+    var typeLabel = c.type==='whatsapp'?'💬 WhatsApp':c.type==='call'?'📞 Call':c.type==='merge'?'🔗 Merge':'📝 Note';
+    // 'merge' comments (written by merge_applications()) carry a
+    // linkedAppId pointing at the case that was merged in — render that as
+    // a real link into the profile instead of plain escaped text, so
+    // "one record per person" is actually one click away, not just a
+    // name to search for.
+    var textHtml = (c.text||'').replace(/</g,'&lt;');
+    if (c.type === 'merge' && c.linkedAppId) {
+      textHtml += ' <a onclick="viewApp(\''+c.linkedAppId+'\')" style="font-weight:700;cursor:pointer;">View merged case →</a>';
+    }
+    body += '<div class="comment-entry"><div class="comment-meta"><span class="comment-type '+typeClass+'">'+typeLabel+'</span>'+ts+(c.author?' · '+c.author:'')+'</div><div class="comment-text">'+textHtml+'</div></div>';
   });
   body += '</div>';
   body += '<div class="comment-input-row"><select class="comment-type-select" id="comment-type"><option value="note">📝 Note</option><option value="whatsapp">💬 WhatsApp</option><option value="call">📞 Call</option></select>';
@@ -1949,7 +1959,7 @@ function toggleAccordion(key) {
 // it's the same mechanism, Z/X/Y read directly off the slider + drag state
 // are exactly the values that get stored and later displayed; no unit
 // conversion between "editor space" and "display space" is needed.
-var cropEditorState = null; // { appId, z, x, y, naturalW, naturalH, dragging, startX, startY, startObjX, startObjY }
+var cropEditorState = null; // { appId, zoom, x, y, naturalW, naturalH, slackX, slackY, dragging, startX, startY, startClientX, startClientY }
 
 function openCropEditor(appId) {
   var app = allApps.find(function(a){ return a.id === appId; });
@@ -1958,65 +1968,79 @@ function openCropEditor(appId) {
   if (!url) { alert('Photo not loaded yet — please wait a moment and try again.'); return; }
 
   var current = app.profile_crop || '';
-  var z = parseFloat((current.match(/width:\s*([\d.]+)%/) || [])[1]) || 260;
-  var x = parseFloat((current.match(/object-position:\s*([\d.]+)%/) || [])[1]);
-  var y = parseFloat((current.match(/object-position:\s*[\d.]+%\s+([\d.]+)%/) || [])[1]);
-  if (isNaN(x)) x = 22;
-  if (isNaN(y)) y = 48;
-  z = Math.max(100, Math.min(400, z));
+  var isNewFormat = current.indexOf('scale(') !== -1;
+  var x = 50, y = 50, zoom = 1;
+  if (isNewFormat) {
+    var xm = parseFloat((current.match(/object-position:\s*([\d.]+)%/) || [])[1]);
+    var ym = parseFloat((current.match(/object-position:\s*[\d.]+%\s+([\d.]+)%/) || [])[1]);
+    var zm = parseFloat((current.match(/scale\(([\d.]+)\)/) || [])[1]);
+    if (!isNaN(xm)) x = xm;
+    if (!isNaN(ym)) y = ym;
+    if (!isNaN(zm)) zoom = zm;
+  }
+  // Old-format or empty values: start fresh (centered, no extra zoom)
+  // rather than attempting a lossy conversion from the old mechanism.
+  zoom = Math.max(1, Math.min(4, zoom));
   x = Math.max(0, Math.min(100, x));
   y = Math.max(0, Math.min(100, y));
 
-  cropEditorState = { appId: appId, z: z, x: x, y: y, naturalW: 0, naturalH: 0, dragging: false };
+  cropEditorState = { appId: appId, zoom: zoom, x: x, y: y, naturalW: 0, naturalH: 0, slackX: 0, slackY: 0, dragging: false };
 
   var errEl = document.getElementById('crop-editor-err');
   errEl.style.display = 'none';
   errEl.textContent = '';
 
   var img = document.getElementById('crop-img');
+  img.style.width = '100%';
+  img.style.height = '100%';
+  img.style.objectFit = 'cover';
   img.style.opacity = '0';
   img.onload = function() {
     cropEditorState.naturalW = img.naturalWidth;
     cropEditorState.naturalH = img.naturalHeight;
+    computeCropSlack();
     img.style.opacity = '1';
     applyCropEditorState();
   };
   img.src = url;
 
-  document.getElementById('crop-zoom').value = String(Math.round(z));
+  document.getElementById('crop-zoom').value = String(Math.round(zoom * 100));
   applyCropEditorState();
   document.getElementById('crop-editor-modal').classList.add('visible');
+}
+
+function computeCropSlack() {
+  // How many px of the rendered (cover-fitted, UNZOOMED) image overflow the
+  // fixed-size stage on each axis — i.e. how much room object-position has
+  // to move anything. This is computed ONCE against the constant stage size
+  // only (never against the zoom level), so the pan range this produces is
+  // always reachable at zoom=1. Zoom is applied afterwards as a pure visual
+  // transform:scale(), and cropEditorPointerMove() multiplies this base
+  // slack by the current zoom to keep 1:1 on-screen drag tracking — but the
+  // underlying object-position range itself never depends on zoom, which is
+  // what guarantees full edge-to-edge pan reachability at any zoom level.
+  if (!cropEditorState || !cropEditorState.naturalW || !cropEditorState.naturalH) return;
+  var stage = document.getElementById('crop-stage');
+  var stageSize = stage.clientWidth || 260;
+  var scale = Math.max(stageSize / cropEditorState.naturalW, stageSize / cropEditorState.naturalH);
+  var renderedW = cropEditorState.naturalW * scale;
+  var renderedH = cropEditorState.naturalH * scale;
+  cropEditorState.slackX = Math.max(0, renderedW - stageSize);
+  cropEditorState.slackY = Math.max(0, renderedH - stageSize);
 }
 
 function applyCropEditorState() {
   if (!cropEditorState) return;
   var img = document.getElementById('crop-img');
-  img.style.width = cropEditorState.z + '%';
-  img.style.height = cropEditorState.z + '%';
-  img.style.objectFit = 'cover';
   img.style.objectPosition = cropEditorState.x + '% ' + cropEditorState.y + '%';
+  img.style.transform = 'scale(' + cropEditorState.zoom + ')';
+  img.style.transformOrigin = 'center';
 }
 
 function onCropZoomInput() {
   if (!cropEditorState) return;
-  cropEditorState.z = parseFloat(document.getElementById('crop-zoom').value) || 260;
+  cropEditorState.zoom = (parseFloat(document.getElementById('crop-zoom').value) || 100) / 100;
   applyCropEditorState();
-}
-
-function cropEditorSlack(axis) {
-  // How many px of the rendered (cover-fitted) image overflow the zoom
-  // box on this axis, i.e. how much room there is for object-position on
-  // that axis to actually move anything. Mirrors the object-fit:cover math
-  // the display code relies on: box = Z% of stage (square), image is
-  // scaled by max(box/naturalW, box/naturalH) to cover the box.
-  if (!cropEditorState || !cropEditorState.naturalW || !cropEditorState.naturalH) return 0;
-  var stage = document.getElementById('crop-stage');
-  var stageSize = stage.clientWidth || 260;
-  var box = stageSize * (cropEditorState.z / 100);
-  var scale = Math.max(box / cropEditorState.naturalW, box / cropEditorState.naturalH);
-  var renderedW = cropEditorState.naturalW * scale;
-  var renderedH = cropEditorState.naturalH * scale;
-  return axis === 'x' ? Math.max(0, renderedW - box) : Math.max(0, renderedH - box);
 }
 
 function cropEditorPointerDown(e) {
@@ -2037,8 +2061,12 @@ function cropEditorPointerMove(e) {
   var pt = e.touches ? e.touches[0] : e;
   var dx = pt.clientX - cropEditorState.startClientX;
   var dy = pt.clientY - cropEditorState.startClientY;
-  var slackX = cropEditorSlack('x');
-  var slackY = cropEditorSlack('y');
+  // The visible image is scale()'d by the current zoom, so a given amount
+  // of on-screen mouse movement corresponds to a larger shift through the
+  // underlying (unzoomed) object-position range the more the user has
+  // zoomed in — hence multiplying the base slack by zoom here.
+  var slackX = cropEditorState.slackX * cropEditorState.zoom;
+  var slackY = cropEditorState.slackY * cropEditorState.zoom;
   // Dragging the photo right should reveal more of its left side, i.e.
   // object-position X should decrease — so subtract, not add.
   cropEditorState.x = slackX > 0
@@ -2079,8 +2107,8 @@ function saveCropEditor() {
   var app = allApps.find(function(a){ return a.id === appId; });
   if (!app) { closeCropEditor(); return; }
 
-  var z = cropEditorState.z, x = cropEditorState.x, y = cropEditorState.y;
-  var cropStyle = 'width:' + z + '%;height:' + z + '%;object-position:' + x + '% ' + y + '%;';
+  var zoom = cropEditorState.zoom, x = cropEditorState.x, y = cropEditorState.y;
+  var cropStyle = 'width:100%;height:100%;object-fit:cover;object-position:' + x + '% ' + y + '%;transform:scale(' + zoom + ');transform-origin:center;';
   var errEl = document.getElementById('crop-editor-err');
   var saveBtn = document.getElementById('crop-save-btn');
 
