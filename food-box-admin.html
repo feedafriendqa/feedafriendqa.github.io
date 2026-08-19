@@ -58,7 +58,6 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 .stat-card.sc-archived{background:linear-gradient(135deg,#546e7a,#90a4ae);}
 .stat-card.sc-review{background:linear-gradient(135deg,#7b5ea7,#a07fd4);}
 .stat-card.sc-wbb{background:linear-gradient(135deg,#ad1457,#f48fb1);}
-.stat-card.sc-qid-review{background:linear-gradient(135deg,#b45f06,#f0b660);}
 .stat-card .num{font-size:28px;font-weight:900;color:white;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,0.15);}
 .stat-card .lbl{font-size:12px;color:rgba(255,255,255,0.88);font-weight:700;margin-top:4px;}
 
@@ -336,7 +335,6 @@ select.edit-field{cursor:pointer;}
       <div class="stat-card sc-archived" onclick="setFilterFromTile('archived')"><div class="num" id="stat-archived">–</div><div class="lbl">Archived</div></div>
       <div class="stat-card sc-review" onclick="setFilterFromTile('review')"><div class="num" id="stat-translation">–</div><div class="lbl">Needs review</div></div>
       <div class="stat-card sc-wbb" onclick="setFilterFromTile('wbb_review')"><div class="num" id="stat-wbb-review">–</div><div class="lbl">🍼 Pregnant — verify WBB</div></div>
-      <div class="stat-card sc-qid-review" onclick="setFilterFromTile('qid_reapply_review')"><div class="num" id="stat-qid-reapply-review">–</div><div class="lbl">🪪 Reapplications without QIDs</div></div>
     </div>
 
     <div id="daily-quote" style="background:var(--green);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;color:white;"></div>
@@ -534,6 +532,25 @@ select.edit-field{cursor:pointer;}
   </div>
 </div>
 
+<!-- REJECT REASON MODAL -->
+<div class="modal-overlay" id="reject-modal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <div style="font-weight:800;font-size:15px;">Reject application</div>
+      <button class="modal-close" onclick="closeRejectModal()">×</button>
+    </div>
+    <div class="modal-body" style="padding:20px;">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">This is shown to the friend on their status page, so they know why. Please keep it clear and respectful.</div>
+      <textarea id="reject-reason-input" rows="4" placeholder="e.g. Household income is above the eligibility threshold for this programme." style="width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-family:Nunito,sans-serif;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+      <div id="reject-reason-err" style="display:none;color:var(--red);font-size:12px;font-weight:700;margin-top:8px;"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn-comment" style="flex:1;background:white;color:var(--text);" onclick="closeRejectModal()">Cancel</button>
+        <button class="btn-comment" id="reject-confirm-btn" style="flex:1;background:var(--red);color:white;border:none;" onclick="confirmReject()">Reject application</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- PROFILE PHOTO CROP EDITOR -->
 <div class="modal-overlay" id="crop-editor-modal">
   <div class="modal" style="max-width:420px;">
@@ -690,8 +707,21 @@ var CASE_OWNERS = ['Alliyah', 'Sarah', 'Badana'];
 function autoAssign(app) {
   // Already assigned — don't overwrite
   if (app.assigned_to) return app.assigned_to;
-  // Arabic language → Sarah
-  if (app.submission_lang === 'ar') return 'Sarah';
+  // Route by the applicant's declared PREFERRED language (a required radio
+  // field on the form: "English"/"Arabic"/"Bengali"), not submission_lang
+  // (which only reflects which language version of the form UI they
+  // happened to use). Plenty of Arabic-speaking applicants fill in the
+  // English-language form — using submission_lang alone was silently
+  // routing ~140 Arabic-preferring households to Alliyah instead of Sarah.
+  var pref = app.preferred_lang || '';
+  if (pref === 'Arabic') return 'Sarah';
+  if (pref === 'Bengali') return 'Badana';
+  // Older records captured before preferred_lang existed — fall back to
+  // submission_lang as the next-best signal.
+  if (!pref) {
+    if (app.submission_lang === 'ar') return 'Sarah';
+    if (app.submission_lang === 'bn') return 'Badana';
+  }
   // Bangladeshi nationality → Badana
   if ((app.nationality||'').toLowerCase() === 'bangladeshi') return 'Badana';
   // Default → Alliyah
@@ -703,15 +733,6 @@ function resolveStatus(app) {
   return app.status || 'new';
 }
 
-// Finds other, still-active applications that look like the same person as
-// `app` — matched on an exact QID number or an exact WhatsApp number (last
-// 8 digits, same normalization used everywhere else on this page). Used to
-// warn on profile open, so two records for the same household (e.g. an old
-// approved case with no QID plus a fresh application that has one) get
-// spotted and merged instead of quietly sitting as two separate files.
-// Excludes records already linked as a duplicate of each other, and
-// anything already marked 'duplicate' or 'rejected' (nothing to merge
-// there).
 function findPossibleDuplicates(app) {
   if (!app || !app.id) return [];
   var qid = (app.qid_number || '').trim();
@@ -726,10 +747,6 @@ function findPossibleDuplicates(app) {
     return (qid && aQid && aQid === qid) || (wa && aWa && aWa === wa);
   });
 }
-
-// Same last-8-digits normalization used for WBB/reapply phone matching
-// elsewhere — kept as a tiny standalone helper since this file doesn't
-// already have one broken out on its own.
 function normalizePhoneLast8(s) {
   var digits = (s || '').replace(/\D/g, '');
   return digits.length >= 8 ? digits.slice(-8) : '';
@@ -1092,8 +1109,7 @@ function updateStats() {
   document.getElementById('stat-boxes-needed').textContent = boxesNeeded;
   document.getElementById('stat-archived').textContent = scoped.filter(function(a){return resolveStatus(a)==='archived';}).length;
   document.getElementById('stat-translation').textContent = scoped.filter(function(a){return a.translation_pending;}).length;
-  document.getElementById('stat-wbb-review').textContent = scoped.filter(function(a){return a.is_pregnant && !a.wbb_case_created && ['rejected','archived','duplicate'].indexOf(resolveStatus(a))===-1;}).length;
-  document.getElementById('stat-qid-reapply-review').textContent = scoped.filter(function(a){return a.qid_reapply_review;}).length;
+  document.getElementById('stat-wbb-review').textContent = scoped.filter(function(a){return a.is_pregnant && !a.wbb_case_created;}).length;
 }
 
 var LANG_TAGS = {ar:'🇶🇦 AR',bn:'🇧🇩 BN',hi:'🇮🇳 HI',ur:'🇵🇰 UR',tl:'🇵🇭 TL',en:'🇬🇧 EN'};
@@ -1195,47 +1211,30 @@ function getDailyQuote() {
   return QUOTES[day % QUOTES.length];
 }
 
-// Predicates for the three stat-tile "review queue" views. Pulled out into
-// one place so both setFilterFromTile (first click) and filterApps (every
-// re-render after that -- e.g. saving a change inside a profile modal)
-// apply the exact same rule and can't drift out of sync.
-var TILE_FILTERS = {
-  review: function(a) { return a.translation_pending === true; },
-  wbb_review: function(a) {
+function setFilterFromTile(status) {
+  if (status === 'review') {
+    currentFilter = 'all';
+    document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
+    var filtered = allApps.filter(function(a){
+      if (a.translation_pending !== true) return false;
+      if (myCasesOnly && (a.assigned_to || autoAssign(a)) !== myName) return false;
+      return true;
+    });
+    renderTable(filtered); return;
+  }
+  if (status === 'wbb_review') {
     // Self-maintaining: wbb_case_created flips to true the moment a case
     // handler actually creates the Welcome Baby case (see notify_welcome_baby),
     // so a handled pregnancy drops off this list on its own — no separate
     // "dismiss" action needed, and nothing here can grow stale.
-    // Also excludes cases that are rejected/archived/duplicate — a
-    // rejected applicant isn't getting a box, so there's nothing to
-    // verify with WBB regardless of the is_pregnant flag on file.
-    if (!a.is_pregnant || a.wbb_case_created) return false;
-    if (['rejected','archived','duplicate'].indexOf(resolveStatus(a)) !== -1) return false;
-    return true;
-  },
-  qid_reapply_review: function(a) {
-    // Reapplications from households (or a member within them) with no QID
-    // on file — do_reapply() sets qid_reapply_review=true instead of
-    // auto-confirming when the applicant reapplied via the no-QID path.
-    // Clear qid_reapply_review on the application once a team member has
-    // followed up and collected the QIDs to drop it off this list.
-    return !!a.qid_reapply_review;
-  }
-};
-
-// Which tile view (if any) is currently on screen. Kept separate from
-// currentFilter (which stays 'all' for these views) so filterApps() can
-// rebuild the same list after a save/close inside a profile modal instead
-// of falling back to the default "all" view.
-var currentTileFilter = null;
-
-function setFilterFromTile(status) {
-  if (TILE_FILTERS[status]) {
     currentFilter = 'all';
-    currentTileFilter = status;
     document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
-    filterApps();
-    return;
+    var filtered = allApps.filter(function(a){
+      if (!a.is_pregnant || a.wbb_case_created) return false;
+      if (myCasesOnly && (a.assigned_to || autoAssign(a)) !== myName) return false;
+      return true;
+    });
+    renderTable(filtered); return;
   }
   var btn = Array.from(document.querySelectorAll('.filter-btn')).find(function(b){ return b.dataset.status === status; });
   if (btn) setFilter(status, btn);
@@ -1243,7 +1242,6 @@ function setFilterFromTile(status) {
 
 function setFilter(status, btn) {
   currentFilter = status;
-  currentTileFilter = null;
   document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
   btn.classList.add('active');
   filterApps();
@@ -1258,19 +1256,6 @@ function toggleMyCases(btn) {
 
 function filterApps() {
   var q = document.getElementById('search-box').value.toLowerCase();
-  // A search overrides the tile view (matches the previous behavior, where
-  // typing in the search box while on a tile view searched across
-  // everything, not just the tile's cases) rather than searching within it.
-  if (!q && currentTileFilter && TILE_FILTERS[currentTileFilter]) {
-    var tileFn = TILE_FILTERS[currentTileFilter];
-    var tileFiltered = allApps.filter(function(a) {
-      if (!tileFn(a)) return false;
-      if (myCasesOnly && (a.assigned_to || autoAssign(a)) !== myName) return false;
-      return true;
-    });
-    renderTable(tileFiltered);
-    return;
-  }
   var filtered = allApps.filter(function(a) {
     var status = resolveStatus(a);
     if (!q) {
@@ -1331,6 +1316,20 @@ function viewApp(id) {
           if (currentAppId === id) renderModal(app, members, urlMap);
         });
       }).catch(function(){});
+
+      // Sponsorship details (super admin only feature, but harmless to fetch
+      // regardless — the section itself is gated on myRole in renderModal).
+      if (myRole === 'super_admin' && app.sponsorship_id) {
+        fetch(SUPABASE_URL + '/rest/v1/sponsorships?id=eq.' + app.sponsorship_id + '&select=*', {
+          headers: headers
+        }).then(function(r){ return r.json(); }).then(function(rows){
+          currentSponsorship = (Array.isArray(rows) && rows[0]) ? rows[0] : {};
+          if (currentAppId === id) renderModal(app, currentMembers, currentDocUrlMap);
+        }).catch(function(){
+          currentSponsorship = {};
+          if (currentAppId === id) renderModal(app, currentMembers, currentDocUrlMap);
+        });
+      }
     });
   }
 }
@@ -1423,11 +1422,6 @@ function renderModal(app, members, urlMap) {
     body += '<div class="duplicate-of-banner" style="margin:14px 20px 0;"><span>🔗 Marked as a duplicate of <strong>' + originalName + '</strong></span>' +
       (original ? '<a onclick="viewApp(\'' + original.id + '\')">View original →</a>' : '') + '</div>';
   } else {
-    // Proactive check, every time a profile is opened — matches on exact
-    // QID or exact WhatsApp number against every other non-duplicate,
-    // non-rejected record. This is what catches cases like an old approved
-    // application with no QID sitting alongside a brand-new one that has
-    // the same phone number, before they're found by accident weeks later.
     var possibleDups = findPossibleDuplicates(app);
     if (possibleDups.length > 0) {
       body += '<div class="possible-dup-banner" style="margin:14px 20px 0;">';
@@ -1466,6 +1460,47 @@ function renderModal(app, members, urlMap) {
   var di = function(lbl,html){ return '<div class="detail-item"><div class="lbl">'+lbl+'</div><div class="val">'+html+'</div></div>'; };
   var dif = function(lbl,id,v){ return '<div class="detail-item"><div class="lbl">'+lbl+'</div>'+sf(id,v)+'</div>'; };
 
+  // ── SPONSORSHIP (super admin only) ──
+  // food_box_applications.sponsorship_id is set the moment a public sponsor
+  // submits Payment.html (via the claim_families_for_sponsorship RPC), well
+  // before payment is actually verified. is_sponsored only flips true here,
+  // by hand, once a super admin has checked the bank/Fawran statement.
+  if (myRole === 'super_admin') {
+    var hasUnconfirmedSponsorship = !!app.sponsorship_id && !app.is_sponsored;
+    if (hasUnconfirmedSponsorship) openSections['sponsorship'] = true; // surface it without an extra click
+    var sponsorshipBadge = '';
+    if (app.is_sponsored) sponsorshipBadge = '<span class="accordion-count" style="background:var(--green);color:white;">✅ Sponsored</span>';
+    else if (app.sponsorship_id) sponsorshipBadge = '<span class="accordion-count" style="background:var(--orange);color:white;">⏳ Pending payment</span>';
+    body += accStart('sponsorship', '💳 Sponsorship', sponsorshipBadge);
+    if (!app.sponsorship_id && !app.is_sponsored) {
+      body += '<div style="font-size:12px;color:var(--muted);padding:6px 0;">Not currently matched to a sponsor.</div>';
+    } else if (currentSponsorship === null) {
+      body += '<div style="font-size:12px;color:var(--muted);padding:6px 0;">⏳ Loading sponsorship details…</div>';
+    } else {
+      var sp = currentSponsorship;
+      body += '<div class="detail-grid">';
+      body += di('Sponsor name', sp.sponsor_name || '–');
+      body += di('WhatsApp', sp.whatsapp || '–');
+      body += di('Email', sp.email || '–');
+      body += di('Boxes pledged', sp.box_count != null ? sp.box_count : '–');
+      body += di('Amount', sp.amount != null ? ('QAR ' + Number(sp.amount).toLocaleString()) : '–');
+      body += di('Payment method', sp.payment_method || '–');
+      body += di('Payment status', sp.payment_status ? sp.payment_status.replace(/_/g,' ') : '–');
+      body += di('Submitted', sp.created_at ? new Date(sp.created_at).toLocaleString('en-GB') : '–');
+      body += '</div>';
+      if (app.is_sponsored) {
+        body += '<div style="font-size:12px;color:var(--green-dark);font-weight:800;margin-top:10px;">✅ Confirmed sponsored on ' + (app.sponsored_at ? new Date(app.sponsored_at).toLocaleDateString('en-GB') : '–') + '</div>';
+        body += '<button class="btn-comment" style="margin-top:8px;background:white;color:var(--orange);border:1.5px solid var(--orange);" onclick="undoSponsorshipConfirmation(\''+app.id+'\')">↩ Undo confirmation</button>';
+      } else {
+        body += '<div style="display:flex;gap:8px;margin-top:12px;">';
+        body += '<button class="btn-comment" style="flex:1;background:var(--green);color:white;" onclick="confirmSponsorshipPayment(\''+app.id+'\')">✅ Confirm payment received</button>';
+        body += '<button class="btn-comment" style="flex:1;background:white;color:var(--red);border:1.5px solid var(--red);" onclick="releaseSponsorship(\''+app.id+'\')">✖ Release / reject</button>';
+        body += '</div>';
+      }
+    }
+    body += accEnd;
+  }
+
   // ── APPLICANT (editable) ──
   body += accStart('applicant', 'Applicant details');
   // ── TEMP: main-applicant QID scanner — remove this block once the spreadsheet migration is finished ──
@@ -1486,25 +1521,8 @@ function renderModal(app, members, urlMap) {
   body += '<div class="detail-item"><div class="lbl">Due date</div>'+sd('ef-due_date',app.due_date)+'</div>';
   body += dif('Diaper size','ef-diaper_size',app.diaper_size);
   body += dif('Formula needed','ef-formula',app.formula);
-  // Set by do_reapply() when this household (or a member) reapplied with no
-  // QID on file — clear it once a team member has followed up and
-  // collected QIDs for everyone in the household, to drop it off the
-  // "Reapplications without QIDs" review tile.
-  body += '<div class="detail-item"><div class="lbl">🪪 QID reapply review?</div><select class="edit-field" id="ef-qid_reapply_review"><option value="true"'+(app.qid_reapply_review?' selected':'')+'>Yes — still needs review</option><option value="false"'+(!app.qid_reapply_review?' selected':'')+'>No — resolved</option></select></div>';
   body += '</div>';
-  // Once QIDs have actually been collected for this household, this is the
-  // one action that both confirms their box (status -> 'confirmed', so it
-  // schedules for the next distribution the same way a normal reapply
-  // does) and clears them off the "Reapplications without QIDs" queue in a
-  // single step. It deliberately does NOT touch boxes_received or
-  // max_boxes — confirming a box only counts toward the allowance once it's
-  // actually delivered (see deliverBox()), so this can't reset or bump
-  // their allowance. Only shown while still flagged, since once resolved
-  // there's nothing left to confirm from here.
-  if (app.qid_reapply_review) {
-    body += '<button class="section-save-btn" style="margin-bottom:10px;" onclick="approveQidReapply(\''+app.id+'\')" id="approve-qid-reapply-btn">✅ Approve &amp; confirm box (QIDs collected)</button>';
-  }
-  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',full_name:\'ef-full_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\',diaper_size:\'ef-diaper_size\',formula:\'ef-formula\',qid_reapply_review:\'ef-qid_reapply_review|bool\'})">Save applicant</button>';
+  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',full_name:\'ef-full_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\',diaper_size:\'ef-diaper_size\',formula:\'ef-formula\'})">Save applicant</button>';
   body += accEnd;
   // ── ADDRESS (editable) ──
   body += accStart('address', 'Address');
@@ -1539,6 +1557,31 @@ function renderModal(app, members, urlMap) {
   body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{monthly_salary:\'ef-monthly_salary|num\',monthly_rent:\'ef-monthly_rent|num\',household_size:\'ef-household_size|num\',is_family:\'ef-is_family|bool\',boxes_received:\'ef-boxes_received|num\',max_boxes:\'ef-max_boxes|num\'})">Save financial</button>';
   body += accEnd;
 
+  // ── DELIVERY HISTORY (per-box month/year, so there's something concrete
+  // to point to when a family disputes their allowance — "boxes_received"
+  // alone is just a running total with no record of when each box was
+  // actually given). Entries can be back-filled for older deliveries
+  // that predate this feature, or logged automatically going forward —
+  // see deliverBox(), which appends an entry every time it's used. ──
+  var deliveryLog = Array.isArray(app.box_delivery_log) ? app.box_delivery_log.slice() : [];
+  deliveryLog.sort(function(a,b){ return (a.date||'') < (b.date||'') ? 1 : -1; });
+  body += accStart('delivery-log', 'Delivery history', deliveryLog.length ? '<span class="accordion-count">'+deliveryLog.length+'</span>' : '');
+  body += '<div id="delivery-log-list">';
+  if (deliveryLog.length === 0) {
+    body += '<div style="font-size:12px;color:var(--muted);padding:6px 0;">No delivery history on file yet.</div>';
+  } else {
+    deliveryLog.forEach(function(entry, i) {
+      body += '<div class="comment-entry"><div class="comment-meta">' + formatDeliveryLogDate(entry.date) + (entry.source === 'auto' ? ' · logged automatically' : ' · backfilled') +
+        ' <span style="cursor:pointer;color:var(--red);font-weight:800;float:right;" onclick="deleteDeliveryLogEntry(\''+app.id+'\','+i+')" title="Remove">×</span></div>' +
+        (entry.note ? '<div class="comment-text">' + String(entry.note).replace(/</g,'&lt;') + '</div>' : '') + '</div>';
+    });
+  }
+  body += '</div>';
+  body += '<div class="comment-input-row"><input type="month" id="delivery-log-month" class="edit-field" style="max-width:150px;">';
+  body += '<input type="text" id="delivery-log-note" class="edit-field" placeholder="Note (optional) — e.g. distribution round, area" style="flex:1;">';
+  body += '<button class="btn-comment" onclick="addDeliveryLogEntry(\''+app.id+'\')">Add</button></div>';
+  body += accEnd;
+
   // ── SUBMITTED DOCUMENTS (uploaded by the applicant during the application) ──
   body += accStart('documents', 'Submitted documents') + '<div class="detail-grid">';
   body += docLink('QID — front', app.qid_front_path, urlMap);
@@ -1553,10 +1596,9 @@ function renderModal(app, members, urlMap) {
     members.forEach(function(m, idx) {
       body += '<div class="member-card">';
       var ageStr = displayAge(m.dob);
-      body += '<div class="member-card-header">👤 '+(m.full_name_en||m.full_name||'Member '+(idx+1))+(m.translation_pending?' <span class="badge badge-translation" title="Arabic name — English translation needs review">🌐</span>':'')+' <span style="font-size:11px;font-weight:400;color:var(--muted);">· '+(m.role||'')+(ageStr?' · '+ageStr:'')+' · '+(m.gender||'')+'</span></div>';
+      body += '<div class="member-card-header">👤 '+(m.full_name||'Member '+(idx+1))+' <span style="font-size:11px;font-weight:400;color:var(--muted);">· '+(m.role||'')+(ageStr?' · '+ageStr:'')+' · '+(m.gender||'')+'</span></div>';
       body += '<div class="member-card-grid">';
       body += di('Full name',m.full_name||'–');
-      body += di('Full name (EN)', (m.full_name_en||'–') + (m.translation_pending?' <span class="badge badge-translation" style="margin-left:4px;">🌐 needs review</span>':''));
       body += di('QID number',m.qid_number||'–');
       body += di('Date of birth', m.dob ? (m.dob + (displayAge(m.dob) ? ' <span style="color:var(--muted);font-weight:600;">(' + displayAge(m.dob) + ')</span>' : '')) : '–');
       body += di('Role',m.role||'–');
@@ -1632,11 +1674,6 @@ function renderModal(app, members, urlMap) {
     var ts = c.ts ? new Date(c.ts).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
     var typeClass = c.type==='whatsapp'?'wa':c.type==='call'?'call':c.type==='merge'?'merge':'note';
     var typeLabel = c.type==='whatsapp'?'💬 WhatsApp':c.type==='call'?'📞 Call':c.type==='merge'?'🔗 Merge':'📝 Note';
-    // 'merge' comments (written by merge_applications()) carry a
-    // linkedAppId pointing at the case that was merged in — render that as
-    // a real link into the profile instead of plain escaped text, so
-    // "one record per person" is actually one click away, not just a
-    // name to search for.
     var textHtml = (c.text||'').replace(/</g,'&lt;');
     if (c.type === 'merge' && c.linkedAppId) {
       textHtml += ' <a onclick="viewApp(\''+c.linkedAppId+'\')" style="font-weight:700;cursor:pointer;">View merged case →</a>';
@@ -1666,15 +1703,32 @@ function renderModal(app, members, urlMap) {
     body += '<option value="'+opt+'"'+(opt===status?' selected':'')+'>'+lbl+'</option>';
   });
   body += '</select>';
-  body += '<button class="btn-comment" onclick="updateStatus(\''+app.id+'\', document.getElementById(\'status-dropdown\').value)">Update status</button>';
-  body += '</div></div>';
+  body += '<button class="btn-comment" onclick="handleStatusDropdownUpdate(\''+app.id+'\')">Update status</button>';
+  body += '</div>';
+  // Rejections need a reason on file (shown back to the friend on their
+  // status page), so surface whatever's currently saved here — and let an
+  // admin re-open the reject modal to change it, without having to flip
+  // the status away and back just to edit the wording.
+  if (status === 'rejected') {
+    body += '<div style="margin-top:10px;background:var(--red-light);border-radius:8px;padding:10px 12px;font-size:12px;">';
+    body += '<div style="font-weight:800;color:var(--red);margin-bottom:2px;">Rejection reason' + (app.rejection_reason ? '' : ' — none on file') + '</div>';
+    if (app.rejection_reason) body += '<div style="color:var(--text);margin-bottom:6px;">' + app.rejection_reason.replace(/</g,'&lt;') + '</div>';
+    body += '<button class="btn-comment" style="padding:4px 10px;font-size:11px;" onclick="openRejectModal(\''+app.id+'\')">' + (app.rejection_reason ? 'Edit reason' : 'Add reason') + '</button>';
+    body += '</div>';
+  }
+  if (app.qid_reapply_review) {
+    body += '<div style="margin-top:10px;">';
+    body += '<button class="btn-comment" style="background:var(--green,#2e7d32);color:white;border:none;" onclick="approveQidReapply(\''+app.id+'\')" id="approve-qid-reapply-btn">✅ Approve &amp; confirm box (QIDs collected)</button>';
+    body += '</div>';
+  }
+  body += '</div>';
   document.getElementById('modal-body').innerHTML = body;
 
   // ── ACTIONS per status ──
   var actions = '';
   if (status === 'new' || status === 'pending') {
     actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\''+app.id+'\',\'confirmed\')">✓ Approve and Confirm</button>';
-    actions += '<button class="modal-actions btn-reject-full" onclick="updateStatus(\''+app.id+'\',\'rejected\')">Reject</button>';
+    actions += '<button class="modal-actions btn-reject-full" onclick="openRejectModal(\''+app.id+'\')">Reject</button>';
     actions += '<button class="modal-actions btn-duplicate" onclick="openDuplicatePicker(\''+app.id+'\')">Duplicate / Merge</button>';
   } else if (status === 'approved') {
     actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\''+app.id+'\',\'confirmed\')">⚡ Confirm — sending another box</button>';
@@ -1700,54 +1754,6 @@ function updateMaxBoxesFromFamilyType(appId) {
   }
 }
 
-// Persists a photo taken through one of the QID/blue-plate SCAN panels
-// (blue plate, main applicant QID, add/edit household member QID) into
-// Submitted documents. Those scan panels only ever read text off the
-// photo to auto-fill form fields -- the photo itself used to be discarded
-// afterward and never actually saved anywhere, so it never showed up
-// under Submitted documents even though the scan had "worked". Reuses the
-// exact same admin_upload_document edge-function action the manual "Tap
-// to upload a document" button already uses, so no backend change is
-// needed here -- just actually calling it from the scan panels too.
-function saveScannedDocument(appId, file, label) {
-  if (!file || !appId || appId.toString().startsWith('demo')) return Promise.resolve();
-  return sb.auth.getSession().then(function(res) {
-    var session = res && res.data ? res.data.session : null;
-    var token = session ? session.access_token : ANON_KEY;
-    return compressImageFile(file).then(function(uploadFile) {
-      return fileToBase64(uploadFile).then(function(b64) {
-        return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({
-            type: 'admin_upload_document',
-            application_id: appId,
-            label: label,
-            file_name: uploadFile.name,
-            media_type: uploadFile.type || 'application/octet-stream',
-            file_base64: b64
-          })
-        });
-      });
-    });
-  }).then(function(r) { return r.json(); }).then(function(res) {
-    if (!res.ok) { console.error('Could not save scanned document (' + label + '):', res.error); return; }
-    var app = allApps.find(function(a) { return a.id === appId; });
-    if (app) app.admin_documents = res.documents;
-    // Deliberately NOT re-rendering the modal here (e.g. via viewApp()):
-    // this runs concurrently with the OCR field-fill in the scan panels
-    // above, which writes straight into the open form's inputs (ef-zone,
-    // ef-qid_number, etc.) without saving them yet. A re-render at an
-    // unpredictable moment would wipe out those still-unsaved fields out
-    // from under the person editing them. The cached admin_documents array
-    // is updated regardless, so Submitted documents reflects the new file
-    // the next time this profile is opened (or re-rendered by any other
-    // save in the meantime).
-  }).catch(function(e) {
-    console.error('Could not save scanned document (' + label + '):', e.message);
-  });
-}
-
 // Mirrors scanBluePlate() from food-box-application.html — same
 // clever-responder action (type: 'scan_plate'), same response shape
 // ({ data: { zone, street, building, unit, area } }). The admin tool's
@@ -1761,11 +1767,6 @@ function scanBluePlateAdmin(appId, input) {
   var statusEl = document.getElementById('plate-scan-status-' + appId);
   if (zoneEl) zoneEl.classList.add('has-file');
   if (statusEl) statusEl.classList.add('visible');
-
-  // Save the photo itself into Submitted documents -- independent of
-  // whether the OCR read below succeeds, since the photo is still worth
-  // keeping on file either way.
-  saveScannedDocument(appId, file, 'Blue address plate (scanned)');
 
   fileToBase64(file).then(function(b64) {
     return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
@@ -2146,6 +2147,112 @@ document.getElementById('crop-editor-modal').addEventListener('click', function(
 document.getElementById('modal').addEventListener('click', function(e){ if (e.target===this) closeModal(); });
 document.getElementById('duplicate-picker').addEventListener('click', function(e){ if (e.target===this) closeDuplicatePicker(); });
 
+// The generic status dropdown can select any STATUS_OPTIONS value,
+// including 'rejected' — route that one case through the reject modal
+// (so a reason is always captured) instead of flipping the status with
+// no explanation, the same as the dedicated Reject button does.
+function handleStatusDropdownUpdate(id) {
+  var status = document.getElementById('status-dropdown').value;
+  if (status === 'rejected') {
+    openRejectModal(id);
+    return;
+  }
+  updateStatus(id, status);
+}
+
+var rejectModalAppId = null;
+
+function openRejectModal(id) {
+  rejectModalAppId = id;
+  var app = allApps.find(function(a){ return a.id === id; });
+  document.getElementById('reject-reason-input').value = (app && app.rejection_reason) || '';
+  var errEl = document.getElementById('reject-reason-err');
+  errEl.style.display = 'none';
+  errEl.textContent = '';
+  document.getElementById('reject-modal').classList.add('visible');
+}
+
+function closeRejectModal() {
+  document.getElementById('reject-modal').classList.remove('visible');
+  rejectModalAppId = null;
+}
+
+function confirmReject() {
+  var id = rejectModalAppId;
+  if (!id) return;
+  var reason = document.getElementById('reject-reason-input').value.trim();
+  var errEl = document.getElementById('reject-reason-err');
+  if (!reason) {
+    errEl.textContent = 'Please give a reason — this is shown to the friend so they know why.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (id.startsWith('demo')) {
+    var demoApp = allApps.find(function(a){ return a.id === id; });
+    if (demoApp) { demoApp.status = 'rejected'; demoApp.rejection_reason = reason; }
+    closeRejectModal();
+    updateStats(); filterApps(); closeModal();
+    return;
+  }
+  var btn = document.getElementById('reject-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ status: 'rejected', rejection_reason: reason })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on food_box_applications.');
+    var idx = allApps.findIndex(function(a){return a.id===id;});
+    var app = idx !== -1 ? allApps[idx] : null;
+    if (app) { app.status = 'rejected'; app.rejection_reason = reason; }
+    closeRejectModal();
+    updateStats(); filterApps(); closeModal();
+  }).catch(function(e) {
+    errEl.textContent = 'Could not save: ' + e.message;
+    errEl.style.display = 'block';
+  }).finally(function() {
+    btn.disabled = false;
+    btn.textContent = 'Reject application';
+  });
+}
+document.getElementById('reject-modal').addEventListener('click', function(e){ if (e.target===this) closeRejectModal(); });
+
+// Resolves a "Reapplications without QIDs" case once a team member has
+// actually collected the household's QIDs (by whatever means — manual
+// upload, WhatsApp, in person). Calls the same do_reapply() RPC the public
+// apply.html page uses for a normal reapply confirmation (p_no_qid=false),
+// so the household gets the exact same outcome as anyone who reapplied with
+// a QID on file already: status -> 'confirmed' and first_box_month set for
+// the next distribution. It does NOT touch boxes_received or max_boxes —
+// those only change when the box is actually delivered (see deliverBox()) —
+// so approving here never resets a family's existing allowance.
+function approveQidReapply(id) {
+  if (id.startsWith('demo')) { alert('This is demo data — connect to Supabase to save changes.'); return; }
+  var app = allApps.find(function(a){ return a.id === id; });
+  if (!app) return;
+  var btn = document.getElementById('approve-qid-reapply-btn');
+  if (btn) { btn.textContent = 'Confirming…'; btn.disabled = true; }
+  sb.rpc('do_reapply', { p_application_id: id, p_no_qid: false }).then(function(result) {
+    if (result.error || !result.data || !result.data.ok) {
+      var msg = (result.error && result.error.message) || (result.data && result.data.error) || 'Unknown error';
+      throw new Error(msg);
+    }
+    app.status = 'confirmed';
+    app.qid_reapply_review = false;
+    app.first_box_month = result.data.confirmed_for || app.first_box_month;
+    updateStats(); filterApps(); closeModal();
+  }).catch(function(e) {
+    if (btn) { btn.textContent = '✅ Approve & confirm box (QIDs collected)'; btn.disabled = false; }
+    alert('Could not confirm: ' + e.message);
+  });
+}
+
 function updateStatus(id, status) {
   if (id.startsWith('demo')) { alert('This is demo data — connect to Supabase to save changes.'); return; }
   apiHeadersAsync().then(function(headers) {
@@ -2177,11 +2284,14 @@ function deliverBox(id) {
   if (id.startsWith('demo')) { alert('This is demo data — connect to Supabase to save changes.'); return; }
   var app = allApps.find(function(a){ return a.id === id; });
   var nextCount = (app && app.boxes_received != null ? app.boxes_received : 0) + 1;
+  var nowIso = new Date().toISOString();
+  var existingLog = (app && Array.isArray(app.box_delivery_log)) ? app.box_delivery_log : [];
+  var nextLog = existingLog.concat([{ date: nowIso.slice(0,10), note: null, source: 'auto', logged_at: nowIso }]);
   apiHeadersAsync().then(function(headers) {
     return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
       method: 'PATCH',
       headers: Object.assign({'Prefer':'return=representation'}, headers),
-      body: JSON.stringify({ status: 'approved', boxes_received: nextCount, last_delivered_at: new Date().toISOString() })
+      body: JSON.stringify({ status: 'approved', boxes_received: nextCount, last_delivered_at: nowIso, box_delivery_log: nextLog })
     });
   }).then(function(r) {
     if (!r.ok) throw new Error('Save failed (' + r.status + ')');
@@ -2194,41 +2304,78 @@ function deliverBox(id) {
       updated.status = 'approved';
       updated.boxes_received = nextCount;
       updated.last_delivered_at = rows[0].last_delivered_at;
+      updated.box_delivery_log = rows[0].box_delivery_log;
     }
     updateStats(); filterApps(); closeModal();
   }).catch(function(e){ alert('Update failed: ' + e.message); });
 }
 
-// Resolves a "Reapplications without QIDs" case once a team member has
-// actually collected the household's QIDs (by whatever means — manual
-// upload, WhatsApp, in person). Calls the same do_reapply() RPC the public
-// apply.html page uses for a normal reapply confirmation (p_no_qid=false),
-// so the household gets the exact same outcome as anyone who reapplied with
-// a QID on file already: status -> 'confirmed' and first_box_month set for
-// the next distribution. It does NOT touch boxes_received or max_boxes —
-// those only change when the box is actually delivered (see deliverBox()) —
-// so this can never reset or bump the household's allowance.
-function approveQidReapply(id) {
-  if (id.startsWith('demo')) { alert('This is demo data — connect to Supabase to save changes.'); return; }
+// ── DELIVERY HISTORY (backfill + auto-log) ──────────────────────────────
+function formatDeliveryLogDate(d) {
+  if (!d) return '—';
+  // Accepts either "YYYY-MM" (from the <input type="month"> backfill field)
+  // or a full "YYYY-MM-DD" (from deliverBox's auto-log) and renders both
+  // as a friendly "Month YYYY" label — precision below a month isn't the
+  // point here, it's "which month/year did this box go out."
+  var parts = String(d).split('-');
+  var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
+  if (!y || !m) return d;
+  var dt = new Date(y, m - 1, 1);
+  return dt.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+}
+
+function addDeliveryLogEntry(id) {
+  var monthEl = document.getElementById('delivery-log-month');
+  var noteEl = document.getElementById('delivery-log-note');
+  var monthVal = monthEl.value; // "YYYY-MM" or ""
+  var note = noteEl.value.trim();
+  if (!monthVal) { alert('Please pick a month and year for this delivery.'); return; }
+
   var app = allApps.find(function(a){ return a.id === id; });
   if (!app) return;
-  var btn = document.getElementById('approve-qid-reapply-btn');
-  if (btn) { btn.textContent = 'Confirming…'; btn.disabled = true; }
-  sb.rpc('do_reapply', { p_application_id: id, p_no_qid: false }).then(function(result) {
-    // do_reapply() itself already sets qid_reapply_review=false on success
-    // (see its non-p_no_qid branch) — no separate update needed here.
-    if (result.error || !result.data || !result.data.ok) {
-      var msg = (result.error && result.error.message) || (result.data && result.data.error) || 'Unknown error';
-      throw new Error(msg);
-    }
-    app.status = 'confirmed';
-    app.qid_reapply_review = false;
-    app.first_box_month = result.data.confirmed_for || app.first_box_month;
-    updateStats(); filterApps(); closeModal();
-  }).catch(function(e) {
-    if (btn) { btn.textContent = '✅ Approve & confirm box (QIDs collected)'; btn.disabled = false; }
-    alert('Could not confirm: ' + e.message);
+  var existingLog = Array.isArray(app.box_delivery_log) ? app.box_delivery_log : [];
+  var nextLog = existingLog.concat([{ date: monthVal, note: note || null, source: 'manual', logged_at: new Date().toISOString() }]);
+  saveDeliveryLog(id, nextLog, function() {
+    monthEl.value = '';
+    noteEl.value = '';
   });
+}
+
+function deleteDeliveryLogEntry(id, index) {
+  var app = allApps.find(function(a){ return a.id === id; });
+  if (!app) return;
+  var existingLog = Array.isArray(app.box_delivery_log) ? app.box_delivery_log : [];
+  if (!confirm('Remove this delivery history entry?')) return;
+  var nextLog = existingLog.slice();
+  nextLog.splice(index, 1);
+  saveDeliveryLog(id, nextLog);
+}
+
+function saveDeliveryLog(id, nextLog, onSuccess) {
+  if (id.startsWith('demo')) {
+    var demoApp = allApps.find(function(a){ return a.id === id; });
+    if (demoApp) demoApp.box_delivery_log = nextLog;
+    if (onSuccess) onSuccess();
+    renderModal(demoApp, currentMembers, currentDocUrlMap);
+    return;
+  }
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ box_delivery_log: nextLog })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on food_box_applications.');
+    var idx = allApps.findIndex(function(a){return a.id===id;});
+    var app = idx !== -1 ? allApps[idx] : null;
+    if (app) app.box_delivery_log = rows[0].box_delivery_log;
+    if (onSuccess) onSuccess();
+    if (app) renderModal(app, currentMembers, currentDocUrlMap);
+  }).catch(function(e){ alert('Could not save delivery history: ' + e.message); });
 }
 
 // ── VIEW SWITCHER (Cases / Sponsorships) ──
@@ -3421,12 +3568,10 @@ function handleMainQidFile(appId, which, input) {
     document.getElementById(s + '-front-zone').classList.add('has-file');
     document.getElementById(s + '-front-zone').textContent = '✓ ' + file.name;
     scanMainQid(appId); // scan as soon as the front is available — back is optional extra context
-    saveScannedDocument(appId, file, 'QID front — applicant (scanned)');
   } else if (which === 'back') {
     mainQidState[appId].backFile = file;
     document.getElementById(s + '-back-zone').classList.add('has-file');
     document.getElementById(s + '-back-zone').textContent = '✓ ' + file.name;
-    saveScannedDocument(appId, file, 'QID back — applicant (scanned)');
   }
 }
 
@@ -3509,7 +3654,6 @@ function toggleEditMemberPanel(appId, memberId) {
 
   h += '<div class="add-member-field-grid">';
   h += '<div><label>Full name *</label><input id="' + s + '-name" value="'+(member.full_name||'').toString().replace(/"/g,'&quot;')+'"></div>';
-  h += '<div><label>Full name (EN)'+(member.translation_pending?' <span class="badge badge-translation" style="margin-left:4px;">🌐 needs review</span>':'')+'</label><input id="' + s + '-name-en" value="'+(member.full_name_en||'').toString().replace(/"/g,'&quot;')+'" placeholder="English spelling"></div>';
   h += '<div><label>QID number</label><input id="' + s + '-qidnum" value="'+(member.qid_number||'').toString().replace(/"/g,'&quot;')+'"></div>';
   h += '<div><label>Date of birth</label><input type="date" id="' + s + '-dob" value="'+(member.dob||'')+'" onchange="updateEditMemberAgeFields(\''+memberId+'\')"></div>';
   h += '<div><label>QID expiry</label><input type="date" id="' + s + '-expiry" value="'+(member.qid_expiry||'')+'"></div>';
@@ -3548,22 +3692,15 @@ function handleEditMemberFile(memberId, which, input) {
   var file = input.files[0];
   var s = 'edit-member-' + memberId;
   if (!editMemberState[memberId]) editMemberState[memberId] = {};
-  // This panel only ever renders inside the currently open profile modal,
-  // so currentAppId is always that member's application here -- the panel
-  // markup itself doesn't carry the application id through to this handler.
-  var member = (currentMembers || []).find(function(m) { return m.id === memberId; });
-  var memberLabel = (member && (member.full_name_en || member.full_name)) || 'household member';
   if (which === 'front') {
     editMemberState[memberId].frontFile = file;
     document.getElementById(s + '-front-zone').classList.add('has-file');
     document.getElementById(s + '-front-zone').textContent = '✓ ' + file.name;
     scanEditMemberQID(memberId);
-    saveScannedDocument(currentAppId, file, 'QID front — ' + memberLabel + ' (scanned)');
   } else if (which === 'back') {
     editMemberState[memberId].backFile = file;
     document.getElementById(s + '-back-zone').classList.add('has-file');
     document.getElementById(s + '-back-zone').textContent = '✓ ' + file.name;
-    saveScannedDocument(currentAppId, file, 'QID back — ' + memberLabel + ' (scanned)');
   }
 }
 
@@ -3706,8 +3843,6 @@ function saveEditedMember(appId, memberId) {
 
   var payload = {
     full_name: name,
-    full_name_en: document.getElementById(s + '-name-en').value.trim() || null,
-    translation_pending: false, // saving this panel counts as the staff member having reviewed/approved the name
     qid_number: document.getElementById(s + '-qidnum').value.trim() || null,
     dob: document.getElementById(s + '-dob').value || null,
     qid_expiry: document.getElementById(s + '-expiry').value || null,
@@ -3937,26 +4072,19 @@ function handleAddMemberFile(appId, which, input) {
   var file = input.files[0];
   var s = 'add-member-' + appId;
   if (!addMemberState[appId]) addMemberState[appId] = {};
-  // New-member name field is usually still empty at this point (that's
-  // often the whole reason for scanning), so the label just says "new
-  // household member" rather than trying to read a name that isn't
-  // filled in yet.
   if (which === 'front') {
     addMemberState[appId].frontFile = file;
     document.getElementById(s + '-front-zone').classList.add('has-file');
     document.getElementById(s + '-front-zone').textContent = '✓ ' + file.name;
     scanAddMemberQID(appId); // scan as soon as the front is available — back is optional extra context
-    saveScannedDocument(appId, file, 'QID front — new household member (scanned)');
   } else if (which === 'back') {
     addMemberState[appId].backFile = file;
     document.getElementById(s + '-back-zone').classList.add('has-file');
     document.getElementById(s + '-back-zone').textContent = '✓ ' + file.name;
-    saveScannedDocument(appId, file, 'QID back — new household member (scanned)');
   } else if (which === 'birth-cert') {
     addMemberState[appId].birthCertFile = file;
     document.getElementById(s + '-bc-upload-zone').classList.add('has-file');
     document.getElementById(s + '-bc-upload-zone').textContent = '✓ ' + file.name;
-    saveScannedDocument(appId, file, 'Birth certificate — new household member (scanned)');
   }
 }
 
@@ -4174,14 +4302,6 @@ function filterDuplicateResults() {
   }).join('');
 }
 
-// Merges the case currently open (duplicatePickerForId) into whichever
-// application was picked from the search list. Runs server-side via the
-// merge_applications() RPC (SECURITY DEFINER, same pattern as do_reapply)
-// so the QID-uniqueness juggling and multi-table update (application
-// fields + household members) happen atomically instead of as several
-// separate REST calls from here. The target keeps its own status, box
-// history, and allowance untouched — only fields it was missing get filled
-// in from the case being merged away.
 function confirmDuplicate(originalId) {
   var dupId = duplicatePickerForId;
   if (!dupId) return;
@@ -4193,15 +4313,15 @@ function confirmDuplicate(originalId) {
     updateStats(); filterApps(); closeModal();
     return;
   }
+  // Merging is more than flagging a duplicate: it pulls the source's QID,
+  // documents, notes, tags, and household members onto the target record so
+  // there's one complete file, then marks the source a duplicate pointing at
+  // it. See the merge_applications() Postgres function for the full logic.
   sb.rpc('merge_applications', { p_source_id: dupId, p_target_id: originalId }).then(function(result) {
     if (result.error || !result.data || !result.data.ok) {
       var msg = (result.error && result.error.message) || (result.data && result.data.error) || 'Unknown error';
       throw new Error(msg);
     }
-    // Reload from the server rather than patching allApps by hand — the
-    // merge touches a dozen-plus fields plus household members, and a
-    // fresh fetch guarantees the table/modal reflect exactly what's in
-    // the database now.
     loadApps();
     closeModal();
   }).catch(function(e){ alert('Merge failed: ' + e.message); });
