@@ -1536,7 +1536,13 @@ function renderModal(app, members, urlMap) {
   body += renderMainQidScanPanel(app.id);
   body += '<div class="detail-grid">';
   body += dif('Full name (EN)','ef-full_name_en',app.full_name_en);
-  body += dif('Original name','ef-full_name',app.full_name);
+  // "Original name" is the name as it appears on the QID document itself
+  // and is deliberately NOT editable here — it should only ever change by
+  // re-scanning/re-uploading the QID, never by someone free-typing over
+  // it. Preferred name is the separate, freely-editable field for however
+  // the person actually goes by / wants to be addressed.
+  body += di('Original name (from QID — not editable)', '<span id="original-name-display" style="font-weight:700;">' + (app.full_name ? app.full_name.toString().replace(/</g,'&lt;') : '–') + '</span>');
+  body += dif('Preferred name','ef-preferred_name',app.preferred_name);
   body += dif('QID number','ef-qid_number',app.qid_number);
   body += '<div class="detail-item"><div class="lbl">QID expiry</div>'+sd('ef-qid_expiry',app.qid_expiry)+'</div>';
   body += '<div class="detail-item"><div class="lbl">Gender</div><select class="edit-field" id="ef-gender"><option value="male"'+(app.gender==='male'?' selected':'')+'>Male</option><option value="female"'+(app.gender==='female'?' selected':'')+'>Female</option></select></div>';
@@ -1551,7 +1557,7 @@ function renderModal(app, members, urlMap) {
   body += dif('Diaper size','ef-diaper_size',app.diaper_size);
   body += dif('Formula needed','ef-formula',app.formula);
   body += '</div>';
-  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',full_name:\'ef-full_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\',diaper_size:\'ef-diaper_size\',formula:\'ef-formula\'})">Save applicant</button>';
+  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',preferred_name:\'ef-preferred_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\',diaper_size:\'ef-diaper_size\',formula:\'ef-formula\'})">Save applicant</button>';
   body += accEnd;
   // ── ADDRESS (editable) ──
   body += accStart('address', 'Address');
@@ -3812,12 +3818,28 @@ function scanMainQid(appId) {
     });
   }).then(function(r) { return r.json(); }).then(function(raw) {
     if (raw.error) throw new Error(raw.error);
-    // Scanned QID data overwrites whatever is currently in the field —
-    // imported/legacy names are often wrong or transliterated differently,
-    // so the QID is treated as the source of truth here.
+    // Scanned QID data overwrites whatever is currently on file — imported/
+    // legacy names are often wrong or transliterated differently, so the
+    // QID is treated as the source of truth here. Unlike the other scanned
+    // fields, the name has no editable input to populate anymore (it's
+    // locked against free-typing — see "Original name" above), so this
+    // saves it directly and updates the read-only display in place.
     if (raw.name) {
-      var nameEl = document.getElementById('ef-full_name');
-      if (nameEl) nameEl.value = raw.name;
+      apiHeadersAsync().then(function(headers) {
+        return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + appId, {
+          method: 'PATCH',
+          headers: Object.assign({'Prefer':'return=minimal'}, headers),
+          body: JSON.stringify({ full_name: raw.name })
+        });
+      }).then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        var appRow = allApps.find(function(a){ return a.id === appId; });
+        if (appRow) appRow.full_name = raw.name;
+        var nameDisplay = document.getElementById('original-name-display');
+        if (nameDisplay) nameDisplay.textContent = raw.name;
+      }).catch(function(e) {
+        console.error('Failed to save scanned name (non-fatal, other scanned fields still saved via Save applicant):', e.message);
+      });
     }
     if (raw.qid_number) document.getElementById('ef-qid_number').value = raw.qid_number;
     var expiry = qidDateToISO(raw.expiry);
