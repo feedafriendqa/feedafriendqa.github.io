@@ -3573,6 +3573,38 @@ function handleMainQidFile(appId, which, input) {
     document.getElementById(s + '-back-zone').classList.add('has-file');
     document.getElementById(s + '-back-zone').textContent = '✓ ' + file.name;
   }
+  // The scan above only reads text off the photo into the edit fields — it
+  // never saved the photo itself, so "QID — front/back" on the profile kept
+  // showing "Not provided" even after someone had clearly uploaded a file,
+  // and there was no photo for the crop editor to use either. Upload the
+  // actual file to storage right away, independent of whether/when the
+  // "Save applicant" button gets clicked.
+  uploadMainQidFile(appId, which, file);
+}
+
+function uploadMainQidFile(appId, which, file) {
+  var s = 'main-qid-' + appId;
+  var zone = document.getElementById(s + '-' + which + '-zone');
+  var docKey = which === 'front' ? 'qid_front' : 'qid_back';
+  fileToBase64(file).then(function(b64) {
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ANON_KEY },
+      body: JSON.stringify({ type: 'upload_document', application_id: appId, doc_key: docKey, file_base64: b64, media_type: file.type || 'image/jpeg' })
+    });
+  }).then(function(r) { return r.json(); }).then(function(res) {
+    if (!res.ok) throw new Error(res.error || 'Upload failed');
+    var app = allApps.find(function(a){ return a.id === appId; });
+    if (app) app[docKey + '_path'] = res.path;
+    if (zone) zone.textContent = '✓ Saved — ' + file.name;
+    return fetchDocumentUrls([res.path]).then(function(urlMap) {
+      Object.assign(currentDocUrlMap, urlMap);
+      if (app && currentAppId === appId) renderModal(app, currentMembers, currentDocUrlMap);
+    });
+  }).catch(function(e) {
+    if (zone) zone.textContent = '❌ Upload failed — tap to retry';
+    alert('Could not save the QID photo: ' + e.message);
+  });
 }
 
 // Same scan-qid function and response shape as scanAddMemberQID, but fills
@@ -3702,6 +3734,39 @@ function handleEditMemberFile(memberId, which, input) {
     document.getElementById(s + '-back-zone').classList.add('has-file');
     document.getElementById(s + '-back-zone').textContent = '✓ ' + file.name;
   }
+  // As with the main applicant's rescan panel, scanning only ever read text
+  // off the photo — the photo itself was never uploaded, so an existing
+  // member's QID docs kept showing "Not provided" no matter how many times
+  // someone rescanned them. Upload the real file right away.
+  uploadEditMemberQidFile(memberId, which, file);
+}
+
+function uploadEditMemberQidFile(memberId, which, file) {
+  var appId = currentAppId;
+  if (!appId) return;
+  var s = 'edit-member-' + memberId;
+  var zone = document.getElementById(s + '-' + which + '-zone');
+  var docKey = which === 'front' ? 'qid_front' : 'qid_back';
+  fileToBase64(file).then(function(b64) {
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ANON_KEY },
+      body: JSON.stringify({ type: 'upload_document', application_id: appId, member_id: memberId, doc_key: docKey, file_base64: b64, media_type: file.type || 'image/jpeg' })
+    });
+  }).then(function(r) { return r.json(); }).then(function(res) {
+    if (!res.ok) throw new Error(res.error || 'Upload failed');
+    var member = (currentMembers || []).find(function(m){ return m.id === memberId; });
+    if (member) member[docKey + '_path'] = res.path;
+    if (zone) zone.textContent = '✓ Saved — ' + file.name;
+    return fetchDocumentUrls([res.path]).then(function(urlMap) {
+      Object.assign(currentDocUrlMap, urlMap);
+      var app = allApps.find(function(a){ return a.id === appId; });
+      if (app && currentAppId === appId) renderModal(app, currentMembers, currentDocUrlMap);
+    });
+  }).catch(function(e) {
+    if (zone) zone.textContent = '❌ Upload failed — tap to retry';
+    alert('Could not save the QID photo: ' + e.message);
+  });
 }
 
 // Same scan-qid call as the new-member and main-applicant scanners, but the
