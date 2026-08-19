@@ -1831,6 +1831,14 @@ function collectMembers() {
       qid_number: get('m' + i + '-idnum'),
       dob: get('m' + i + '-dob') || null,
       qid_expiry: get('m' + i + '-expiry') || null,
+      // The phone field is shown and required (for adults 18+) right on
+      // this card, and validateApplication() enforces it before allowing
+      // submit — but this function, which actually builds what gets sent
+      // to the server, never read it at all. So an adult household member
+      // could type a phone number, pass validation, submit successfully,
+      // and still end up with no phone number on file — collectMembers()
+      // silently dropped it before it ever left the browser.
+      whatsapp: toWesternDigits(get('m' + i + '-phone')) || null,
       gender: getRadio('m' + i + '-gender'),
       role: getRadio('m' + i + '-role'),
       doc_type: getRadio('m' + i + '-doctype') || 'qid',
