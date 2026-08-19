@@ -121,6 +121,7 @@ select.edit-field{cursor:pointer;}
 .tag-check-label:has(input:checked){border-color:var(--green);background:var(--green-light);}
 .tag-check-label input{width:16px;height:16px;cursor:pointer;}
 .badge-duplicate{background:#f3e5f5;color:#6a1b9a;border:1px solid #ce93d8;}
+.badge-blocked{background:#263238;color:#fff;border:1px solid #263238;}
 .badge-archived{background:#eceff1;color:#546e7a;border:1px solid #b0bec5;}
 .badge-confirmed{background:#e0f7fa;color:#007a6e;border:1px solid #80d5ce;}
 .assigned-pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:800;background:#f0f4f0;color:var(--green);border:1px solid var(--border);}
@@ -215,6 +216,7 @@ select.edit-field{cursor:pointer;}
 .possible-dup-banner .pdb-row + .pdb-row{border-top:1px solid #f0d8a8;}
 .possible-dup-banner a{color:#a05a00;font-weight:700;cursor:pointer;margin-left:10px;}
 .btn-archive{background:#5a7060;color:white;}
+.btn-block{background:#263238;color:white;}
 
 /* LOGIN */
 .login-page{min-height:100vh;background:var(--green-dark);display:flex;align-items:center;justify-content:center;padding:20px;}
@@ -348,6 +350,7 @@ select.edit-field{cursor:pointer;}
       <button class="filter-btn" data-status="approved" onclick="setFilter('approved',this)">Approved</button>
       <button class="filter-btn" data-status="confirmed" onclick="setFilter('confirmed',this)">Confirmed</button>
       <button class="filter-btn" data-status="rejected" onclick="setFilter('rejected',this)">Rejected</button>
+      <button class="filter-btn" data-status="blocked" onclick="setFilter('blocked',this)">Blocked</button>
       <button class="filter-btn" data-status="archived" onclick="setFilter('archived',this)">Archived</button>
       <button class="filter-btn" id="my-cases-toggle" style="display:none;" onclick="toggleMyCases(this)">My cases only</button>
     </div>
@@ -551,6 +554,26 @@ select.edit-field{cursor:pointer;}
   </div>
 </div>
 
+<!-- BLOCK REASON MODAL -->
+<div class="modal-overlay" id="block-modal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <div style="font-weight:800;font-size:15px;">Block this person</div>
+      <button class="modal-close" onclick="closeBlockModal()">×</button>
+    </div>
+    <div class="modal-body" style="padding:20px;">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Blocking is internal-only — the friend never sees this reason. It matches on QID and WhatsApp, and stops this person applying to <strong>any</strong> Feed a Friend service (food box, Welcome Baby, Little Learners, Share &amp; Care, shoe giveaway), not just this one.</div>
+      <textarea id="block-reason-input" rows="4" placeholder="e.g. Submitted 3 separate accounts with slightly different phone numbers to get multiple food boxes." style="width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-family:Nunito,sans-serif;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+      <div id="block-reason-err" style="display:none;color:var(--red);font-size:12px;font-weight:700;margin-top:8px;"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn-comment" style="flex:1;background:white;color:var(--text);" onclick="closeBlockModal()">Cancel</button>
+        <button class="btn-comment" id="block-confirm-btn" style="flex:1;background:#263238;color:white;border:none;" onclick="confirmBlock()">Block everywhere</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- PROFILE PHOTO CROP EDITOR -->
 <div class="modal-overlay" id="crop-editor-modal">
   <div class="modal" style="max-width:420px;">
@@ -741,7 +764,7 @@ function findPossibleDuplicates(app) {
   return allApps.filter(function(a) {
     if (a.id === app.id) return false;
     if (a.id === app.duplicate_of || app.id === a.duplicate_of) return false;
-    if (['duplicate', 'rejected'].indexOf(resolveStatus(a)) !== -1) return false;
+    if (['duplicate', 'rejected', 'blocked'].indexOf(resolveStatus(a)) !== -1) return false;
     var aQid = (a.qid_number || '').trim();
     var aWa = normalizePhoneLast8(a.whatsapp);
     return (qid && aQid && aQid === qid) || (wa && aWa && aWa === wa);
@@ -1113,7 +1136,7 @@ function updateStats() {
 }
 
 var LANG_TAGS = {ar:'🇶🇦 AR',bn:'🇧🇩 BN',hi:'🇮🇳 HI',ur:'🇵🇰 UR',tl:'🇵🇭 TL',en:'🇬🇧 EN'};
-var STATUS_OPTIONS = ['new','pending','approved','confirmed','rejected','duplicate','archived'];
+var STATUS_OPTIONS = ['new','pending','approved','confirmed','rejected','duplicate','blocked','archived'];
 
 // Same zone-to-area lookup used on the public application form
 // (food-box-application.html), kept identical so a zone scanned here
@@ -1721,6 +1744,13 @@ function renderModal(app, members, urlMap) {
     body += '<button class="btn-comment" style="background:var(--green,#2e7d32);color:white;border:none;" onclick="approveQidReapply(\''+app.id+'\')" id="approve-qid-reapply-btn">✅ Approve &amp; confirm box (QIDs collected)</button>';
     body += '</div>';
   }
+  if (status === 'blocked') {
+    body += '<div style="margin-top:10px;background:#eceff1;border-radius:8px;padding:10px 12px;font-size:12px;">';
+    body += '<div style="font-weight:800;color:#263238;margin-bottom:2px;">🚫 Blocked from all services</div>';
+    if (app.admin_notes) body += '<div style="color:var(--text);margin-bottom:6px;white-space:pre-wrap;">' + app.admin_notes.replace(/</g,'&lt;') + '</div>';
+    body += '<div style="color:var(--muted);">This QID/WhatsApp is also rejected automatically on the public application forms for every programme.</div>';
+    body += '</div>';
+  }
   body += '</div>';
   document.getElementById('modal-body').innerHTML = body;
 
@@ -1730,12 +1760,18 @@ function renderModal(app, members, urlMap) {
     actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\''+app.id+'\',\'confirmed\')">✓ Approve and Confirm</button>';
     actions += '<button class="modal-actions btn-reject-full" onclick="openRejectModal(\''+app.id+'\')">Reject</button>';
     actions += '<button class="modal-actions btn-duplicate" onclick="openDuplicatePicker(\''+app.id+'\')">Duplicate / Merge</button>';
+    actions += '<button class="modal-actions btn-block" onclick="openBlockModal(\''+app.id+'\')">🚫 Block</button>';
   } else if (status === 'approved') {
     actions += '<button class="modal-actions btn-active-full" onclick="updateStatus(\''+app.id+'\',\'confirmed\')">⚡ Confirm — sending another box</button>';
     actions += '<button class="modal-actions btn-archive" onclick="updateStatus(\''+app.id+'\',\'archived\')">Archive</button>';
+    actions += '<button class="modal-actions btn-duplicate" onclick="openDuplicatePicker(\''+app.id+'\')">Duplicate / Merge</button>';
+    actions += '<button class="modal-actions btn-block" onclick="openBlockModal(\''+app.id+'\')">🚫 Block</button>';
   } else if (status === 'confirmed') {
     actions += '<button class="modal-actions btn-approve-full" onclick="deliverBox(\''+app.id+'\')">📦 Box delivered</button>';
     actions += '<button class="modal-actions btn-archive" onclick="updateStatus(\''+app.id+'\',\'archived\')">Archive</button>';
+    actions += '<button class="modal-actions btn-block" onclick="openBlockModal(\''+app.id+'\')">🚫 Block</button>';
+  } else if (status === 'blocked') {
+    actions += '<button class="modal-actions btn-active-full" onclick="unblockApplication(\''+app.id+'\')">Unblock</button>';
   }
   document.getElementById('modal-actions').innerHTML = actions;
   document.getElementById('modal').classList.add('visible');
@@ -2157,7 +2193,31 @@ function handleStatusDropdownUpdate(id) {
     openRejectModal(id);
     return;
   }
+  if (status === 'blocked') {
+    openBlockModal(id);
+    return;
+  }
+  var app = allApps.find(function(a){ return a.id === id; });
+  if (app && app.status === 'blocked') {
+    unblockThenSet(id, status);
+    return;
+  }
   updateStatus(id, status);
+}
+
+// Same as unblockApplication() but sets a specific target status instead of
+// always resetting to 'new' — used when an admin picks a different status
+// from the dropdown while a case is currently blocked.
+function unblockThenSet(id, targetStatus) {
+  if (id.startsWith('demo')) { updateStatus(id, targetStatus); return; }
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/person_blocklist?source_table=eq.food_box_applications&source_id=eq.' + id, {
+      method: 'DELETE',
+      headers: headers
+    });
+  }).then(function() {
+    updateStatus(id, targetStatus);
+  }).catch(function(e){ alert('Could not clear blocklist entry: ' + e.message); });
 }
 
 var rejectModalAppId = null;
@@ -2222,6 +2282,121 @@ function confirmReject() {
   });
 }
 document.getElementById('reject-modal').addEventListener('click', function(e){ if (e.target===this) closeRejectModal(); });
+
+// ── BLOCK / UNBLOCK ──
+// Blocking writes to person_blocklist (matched on QID + last-8-digits of
+// WhatsApp, same normalization as findPossibleDuplicates/duplicate picker)
+// so the public application forms for every FAF service can check
+// is_person_blocked() before accepting a new submission. This app's own
+// status just flips to 'blocked' like any other status.
+var blockModalAppId = null;
+
+function openBlockModal(id) {
+  blockModalAppId = id;
+  document.getElementById('block-reason-input').value = '';
+  var errEl = document.getElementById('block-reason-err');
+  errEl.style.display = 'none';
+  errEl.textContent = '';
+  document.getElementById('block-modal').classList.add('visible');
+}
+
+function closeBlockModal() {
+  document.getElementById('block-modal').classList.remove('visible');
+  blockModalAppId = null;
+}
+document.getElementById('block-modal').addEventListener('click', function(e){ if (e.target===this) closeBlockModal(); });
+
+function confirmBlock() {
+  var id = blockModalAppId;
+  if (!id) return;
+  var reason = document.getElementById('block-reason-input').value.trim();
+  var errEl = document.getElementById('block-reason-err');
+  if (!reason) {
+    errEl.textContent = 'Please give a reason — this stays internal but helps whoever reviews it later.';
+    errEl.style.display = 'block';
+    return;
+  }
+  var app = allApps.find(function(a){ return a.id === id; });
+  if (id.startsWith('demo')) {
+    if (app) app.status = 'blocked';
+    closeBlockModal();
+    updateStats(); filterApps(); closeModal();
+    return;
+  }
+  var btn = document.getElementById('block-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Blocking…';
+  var wa8 = normalizePhoneLast8(app && app.whatsapp);
+  var qid = (app && app.qid_number || '').trim() || null;
+  apiHeadersAsync().then(function(headers) {
+    return Promise.all([
+      fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+        method: 'PATCH',
+        headers: Object.assign({'Prefer':'return=representation'}, headers),
+        body: JSON.stringify({ status: 'blocked' })
+      }),
+      fetch(SUPABASE_URL + '/rest/v1/person_blocklist', {
+        method: 'POST',
+        headers: Object.assign({'Prefer':'return=representation'}, headers),
+        body: JSON.stringify({
+          qid_number: qid,
+          whatsapp_last8: wa8 || null,
+          full_name: app ? (app.full_name_en || app.full_name) : null,
+          reason: reason,
+          blocked_by: myName || null,
+          source_service: 'food_box',
+          source_table: 'food_box_applications',
+          source_id: id
+        })
+      })
+    ]);
+  }).then(function(results) {
+    var appRes = results[0], blockRes = results[1];
+    if (!appRes.ok) throw new Error('Status update failed (' + appRes.status + ')');
+    if (!blockRes.ok) throw new Error('Blocklist entry failed (' + blockRes.status + ') — status was updated but they can still apply elsewhere, please retry');
+    if (app) app.status = 'blocked';
+    closeBlockModal();
+    updateStats(); filterApps(); closeModal();
+  }).catch(function(e) {
+    errEl.textContent = 'Could not block: ' + e.message;
+    errEl.style.display = 'block';
+  }).finally(function() {
+    btn.disabled = false;
+    btn.textContent = 'Block everywhere';
+  });
+}
+
+// Unblocking only removes the blocklist rows this specific case created —
+// it deliberately does not touch entries another admin added separately
+// for the same person (e.g. blocked from Share & Care directly), so
+// clearing one programme's block never silently clears another's.
+function unblockApplication(id) {
+  if (id.startsWith('demo')) {
+    var demoApp = allApps.find(function(a){ return a.id === id; });
+    if (demoApp) demoApp.status = 'new';
+    updateStats(); filterApps(); closeModal();
+    return;
+  }
+  if (!confirm('Unblock this person? They will be able to apply to any FAF service again.')) return;
+  apiHeadersAsync().then(function(headers) {
+    return Promise.all([
+      fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+        method: 'PATCH',
+        headers: Object.assign({'Prefer':'return=representation'}, headers),
+        body: JSON.stringify({ status: 'new' })
+      }),
+      fetch(SUPABASE_URL + '/rest/v1/person_blocklist?source_table=eq.food_box_applications&source_id=eq.' + id, {
+        method: 'DELETE',
+        headers: headers
+      })
+    ]);
+  }).then(function(results) {
+    if (!results[0].ok) throw new Error('Status update failed (' + results[0].status + ')');
+    var idx = allApps.findIndex(function(a){return a.id===id;});
+    if (idx !== -1) allApps[idx].status = 'new';
+    updateStats(); filterApps(); closeModal();
+  }).catch(function(e){ alert('Could not unblock: ' + e.message); });
+}
 
 // Resolves a "Reapplications without QIDs" case once a team member has
 // actually collected the household's QIDs (by whatever means — manual
