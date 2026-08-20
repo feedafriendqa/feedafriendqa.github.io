@@ -123,6 +123,8 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
 .st-pack_sent{background:#E8F5E9;color:#1B5E20;}
 .st-assessment_day{background:#FDEAEA;color:#8B2020;}
 .st-completed{background:#ECEFF1;color:#455A64;}
+.st-archived{background:#FDEAEA;color:#8B2020;}
+.st-graduated{background:var(--lime-soft);color:var(--forest);}
 .assigned-to{font-size:10.5px;font-weight:700;color:var(--muted);background:var(--cream);padding:2px 8px;border-radius:50px;white-space:nowrap;flex-shrink:0;}
 .dup-flag{font-size:10px;font-weight:700;background:#FEF3D6;color:#7A5000;padding:2px 7px;border-radius:50px;border:1.5px solid var(--gold);}
 .prog-pill{font-size:10px;font-weight:700;padding:3px 9px;border-radius:50px;white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:3px;}
@@ -396,27 +398,44 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
   <div id="fams-list"><div class="loading">Loading…</div></div>
 </div>
 
-<!-- ASSESSMENT DAYS -->
+<!-- EVENTS (assessment days, workshops, socials) -->
 <div class="pg" id="pg-assess-days">
   <div style="height:12px;"></div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-    <div class="gp-sect" style="margin:0;"><div class="gp-badge">📅</div><div class="sec-title" style="margin-bottom:0;">Assessment Days</div></div>
+    <div class="gp-sect" style="margin:0;"><div class="gp-badge">📅</div><div class="sec-title" style="margin-bottom:0;">Events</div></div>
     <button class="btn-teal btn-sm" onclick="toggleNewDayForm()">+ New</button>
   </div>
 
   <div id="new-day-form" class="card" style="display:none;margin:14px 0 16px;">
-    <div class="card-title">🌱 New Assessment Day</div>
+    <div class="card-title">🌱 New event</div>
     <div class="af">
+      <div><label>Event Type</label>
+        <select id="nd-type">
+          <option value="assessment_day">Assessment Day</option>
+          <option value="workshop">Workshop</option>
+          <option value="social">Social / Other</option>
+        </select>
+      </div>
       <div><label>Age Band</label>
         <select id="nd-band" onchange="onAgeBandChange()">
           <option value="">Select…</option>
         </select>
       </div>
+      <div><label>Eligibility</label>
+        <select id="nd-elig-type" onchange="onEligTypeChange()">
+          <option value="age_band">Age band + call completed (assessment default)</option>
+          <option value="year_group_pack">Received a specific year group pack</option>
+          <option value="manual">Manual selection (no filter)</option>
+        </select>
+      </div>
+      <div id="nd-elig-yg-wrap" style="display:none;"><label>Year group</label>
+        <select id="nd-elig-yg"><option value="">Select…</option></select>
+      </div>
       <div><label>Title</label><input id="nd-title" placeholder="e.g. Ages 6–7 Assessment Day"></div>
       <div><label>Date</label><input id="nd-date" type="date"></div>
       <div><label>Time</label><input id="nd-time" placeholder="e.g. 9:00 AM – 12:00 PM"></div>
       <div><label>Location</label><input id="nd-location" placeholder="e.g. Little Learners Centre, West Bay"></div>
-      <button class="btn-teal" style="width:100%;" onclick="createAssessmentDay()">Create Assessment Day</button>
+      <button class="btn-teal" style="width:100%;" onclick="createAssessmentDay()">Create Event</button>
     </div>
   </div>
 
@@ -512,6 +531,7 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
       <button class="tab" onclick="switchTab('children',this)">Children</button>
       <button class="tab" onclick="switchTab('documents',this)">Documents</button>
       <button class="tab" onclick="switchTab('assess',this)">Introductory Call</button>
+      <button class="tab" onclick="switchTab('events',this)">Events</button>
       <button class="tab" onclick="switchTab('pack',this)">Learning Pack</button>
       <button class="tab" onclick="switchTab('checklist',this)">Checklist</button>
       <button class="tab" onclick="switchTab('activity',this)">Activity Log</button>
@@ -520,6 +540,7 @@ header{background:var(--forest);border-bottom:3px solid var(--teal);padding:0 16
     <div class="tpanel" id="tp-children"></div>
     <div class="tpanel" id="tp-documents"></div>
     <div class="tpanel" id="tp-assess"></div>
+    <div class="tpanel" id="tp-events"></div>
     <div class="tpanel" id="tp-pack"></div>
     <div class="tpanel" id="tp-checklist"></div>
     <div class="tpanel" id="tp-activity"></div>
@@ -540,7 +561,7 @@ const ZONES = {"1":"Al Jasrah","2":"Al Bidda","3":"Fereej Mohamed Bin Jasim / Mu
 let allFamilies = [], allChildren = [], allAdmins = [], allActivityLogs = [], allReferrals = [];
 let foodBoxFriendIds = new Set(), welcomeBabyFriendIds = new Set();
 let currentFamily = null, currentChildren = [], currentUser = null, currentUserRole = null, currentUserEmail = '';
-let allAssessmentDays = [], allAssessmentAttendees = [], currentAssessDay = null;
+let allEvents = [], allEventAttendees = [], currentAssessDay = null;
 let allAssessors = [];
 const AGE_BANDS = [
   {key:'3-4', label:'Ages 3–4 (FS1–FS2)', min:3, max:4},
@@ -643,8 +664,8 @@ async function loadData() {
     db.from('ll_admins').select('*'),
     db.from('ll_activity_logs').select('*').order('created_at',{ascending:false}),
     db.from('ll_referrals').select('*').eq('status','new').order('created_at',{ascending:false}),
-    db.from('ll_assessment_days').select('*').order('event_date',{ascending:true}),
-    db.from('ll_assessment_attendees').select('*'),
+    db.from('ll_events').select('*').order('event_date',{ascending:true}),
+    db.from('ll_event_attendees').select('*'),
     db.from('food_box_applications').select('friend_id').not('friend_id','is',null),
     db.from('families').select('friend_id').not('friend_id','is',null),
     db.from('ll_assessors').select('*').order('name'),
@@ -654,8 +675,8 @@ async function loadData() {
   allAdmins = admins||[];
   allActivityLogs = logs||[];
   allReferrals = referrals||[];
-  allAssessmentDays = adays||[];
-  allAssessmentAttendees = attendees||[];
+  allEvents = adays||[];
+  allEventAttendees = attendees||[];
   allAssessors = assessors||[];
   foodBoxFriendIds = new Set((fbApps||[]).map(r=>r.friend_id));
   welcomeBabyFriendIds = new Set((wbFams||[]).map(r=>r.friend_id));
@@ -814,45 +835,69 @@ function toggleNewDayForm() {
   el.style.display = el.style.display==='none' ? 'block' : 'none';
 }
 
+function onEligTypeChange() {
+  const type = document.getElementById('nd-elig-type').value;
+  document.getElementById('nd-elig-yg-wrap').style.display = type==='year_group_pack' ? 'block' : 'none';
+  const ygSel = document.getElementById('nd-elig-yg');
+  if(type==='year_group_pack' && ygSel.options.length<=1) {
+    ygSel.innerHTML = yearGroupOptions('');
+  }
+}
+
 async function createAssessmentDay() {
+  const event_type = document.getElementById('nd-type').value || 'assessment_day';
   const age_band = document.getElementById('nd-band').value;
   const title = document.getElementById('nd-title').value.trim();
   const event_date = document.getElementById('nd-date').value;
   const event_time = document.getElementById('nd-time').value.trim();
   const location = document.getElementById('nd-location').value.trim();
-  if(!age_band || !title || !event_date) { showToast('Please fill in age band, title and date'); return; }
+  const eligType = document.getElementById('nd-elig-type').value;
+  if(!title || !event_date) { showToast('Please fill in title and date'); return; }
+  if(event_type==='assessment_day' && !age_band) { showToast('Please select an age band'); return; }
+  let eligibility_criteria = {type:'age_band'};
+  if(eligType==='year_group_pack') {
+    const yg = document.getElementById('nd-elig-yg').value;
+    if(!yg) { showToast('Please select a year group for eligibility'); return; }
+    eligibility_criteria = {type:'year_group_pack', year_group: yg};
+  } else if(eligType==='manual') {
+    eligibility_criteria = {type:'manual'};
+  }
   const {data:{user}} = await db.auth.getUser();
   const admin = allAdmins.find(a=>a.email===user?.email);
-  const {data, error} = await db.from('ll_assessment_days').insert({
-    title, age_band, event_date, event_time, location, status:'upcoming', created_by: admin?.name||user?.email||''
+  const {data, error} = await db.from('ll_events').insert({
+    title, age_band, event_date, event_time, location, event_type, eligibility_criteria, status:'upcoming', created_by: admin?.name||user?.email||''
   }).select().single();
   if(error) { showToast('Error: '+error.message); return; }
-  allAssessmentDays.unshift(data);
+  allEvents.unshift(data);
   toggleNewDayForm();
+  document.getElementById('nd-type').value='assessment_day';
+  document.getElementById('nd-elig-type').value='age_band';
+  onEligTypeChange();
   document.getElementById('nd-band').value='';
   document.getElementById('nd-title').value='';
   document.getElementById('nd-date').value='';
   document.getElementById('nd-time').value='';
   document.getElementById('nd-location').value='';
   renderAssessDaysList();
-  showToast('✅ Assessment day created');
+  showToast('✅ Event created');
 }
 
 function renderAssessDaysList() {
   const el = document.getElementById('assess-days-list');
   if(!el) return;
-  if(!allAssessmentDays.length) {
-    el.innerHTML = '<div class="empty"><div class="eicon">📅</div><p>No assessment days yet</p></div>';
+  if(!allEvents.length) {
+    el.innerHTML = '<div class="empty"><div class="eicon">📅</div><p>No events yet</p></div>';
     return;
   }
-  el.innerHTML = allAssessmentDays.map(d => {
-    const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===d.id);
+  const EVENT_TYPE_LABELS = {assessment_day:'🏫 Assessment Day', workshop:'🎨 Workshop', social:'🎉 Social'};
+  el.innerHTML = allEvents.map(d => {
+    const attendees = allEventAttendees.filter(a=>a.event_id===d.id);
     const confirmed = attendees.filter(a=>a.invite_status==='confirmed').length;
     const attended = attendees.filter(a=>a.day_status==='attended').length;
     const band = AGE_BANDS.find(b=>b.key===d.age_band);
     return `<div class="fam-card" style="cursor:pointer;" onclick="openAssessDay('${d.id}')">
       <div class="fam-info">
-        <div class="fam-name">${d.title} <span style="font-size:11px;color:var(--muted);">(${band?band.label:d.age_band})</span></div>
+        <div class="fam-name">${d.title} <span style="font-size:11px;color:var(--muted);">${EVENT_TYPE_LABELS[d.event_type]||d.event_type||''}${band?' · '+band.label:''}</span></div>
         <div class="fam-meta">
           <span>📆 ${d.event_date ? new Date(d.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'No date set'}</span>
           ${d.event_time?`<span>🕐 ${d.event_time}</span>`:''}
@@ -878,7 +923,7 @@ function switchAdTab(t, btn) {
 }
 
 function openAssessDay(dayId) {
-  currentAssessDay = allAssessmentDays.find(d=>d.id===dayId);
+  currentAssessDay = allEvents.find(d=>d.id===dayId);
   if(!currentAssessDay) return;
   document.getElementById('ad-title').textContent = currentAssessDay.title;
   const band = AGE_BANDS.find(b=>b.key===currentAssessDay.age_band);
@@ -899,20 +944,39 @@ function openAssessDay(dayId) {
 
 function renderEligibleForDay() {
   const el = document.getElementById('adp-eligible');
-  const band = AGE_BANDS.find(b=>b.key===currentAssessDay.age_band);
-  if(!band) { el.innerHTML = ''; return; }
-  const alreadyIn = new Set(allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id).map(a=>a.child_id));
-  const eligible = allChildren.filter(c => {
-    const age = childAgeYears(c);
-    if(age===null || age<band.min || age>band.max) return false;
-    if(alreadyIn.has(c.id)) return false;
-    const fam = allFamilies.find(f=>f.id===c.family_id);
-    if(!fam) return false;
-    const callDone = ['waiting_for_assessment','pre_assessed','pre_assessment_passed','pre_assessment_failed','year_group_pending','year_group_confirmed'].includes(fam.pipeline_status);
-    return callDone;
-  });
+  const alreadyIn = new Set(allEventAttendees.filter(a=>a.event_id===currentAssessDay.id).map(a=>a.child_id));
+  const criteria = currentAssessDay.eligibility_criteria || {type:'age_band'};
+
+  let eligible = [];
+  let emptyMsg = 'No eligible children left to add.';
+
+  if(criteria.type==='year_group_pack') {
+    eligible = allChildren.filter(c => {
+      if(alreadyIn.has(c.id)) return false;
+      if((c.learner_status||'active')!=='active') return false;
+      return c.final_year_group===criteria.year_group && c.pack_status==='given';
+    });
+    emptyMsg = `No eligible children left — they either didn't receive a ${criteria.year_group} pack, aren't active learners, or are already on this list.`;
+  } else if(criteria.type==='manual') {
+    eligible = allChildren.filter(c => !alreadyIn.has(c.id) && (c.learner_status||'active')==='active');
+    emptyMsg = 'No children left to add — everyone active is already on this list.';
+  } else {
+    const band = AGE_BANDS.find(b=>b.key===currentAssessDay.age_band);
+    if(!band) { el.innerHTML = ''; return; }
+    eligible = allChildren.filter(c => {
+      const age = childAgeYears(c);
+      if(age===null || age<band.min || age>band.max) return false;
+      if(alreadyIn.has(c.id)) return false;
+      const fam = allFamilies.find(f=>f.id===c.family_id);
+      if(!fam) return false;
+      const callDone = ['waiting_for_assessment','pre_assessed','pre_assessment_passed','pre_assessment_failed','year_group_pending','year_group_confirmed'].includes(fam.pipeline_status);
+      return callDone;
+    });
+    emptyMsg = 'No eligible children left to add — they either haven\'t completed their Introductory Call yet, are outside this age band, or are already on this list.';
+  }
+
   if(!eligible.length) {
-    el.innerHTML = '<div class="empty"><div class="eicon">✅</div><p>No eligible children left to add — they either haven\'t completed their Introductory Call yet, are outside this age band, or are already on this list.</p></div>';
+    el.innerHTML = `<div class="empty"><div class="eicon">✅</div><p>${emptyMsg}</p></div>`;
     return;
   }
   el.innerHTML = `
@@ -957,11 +1021,11 @@ async function addSelectedToDay() {
   if(!ids.length) { showToast('Select at least one child'); return; }
   const rows = ids.map(childId => {
     const child = allChildren.find(c=>c.id===childId);
-    return { assessment_day_id: currentAssessDay.id, family_id: child.family_id, child_id: childId, invite_status:'invited' };
+    return { event_id: currentAssessDay.id, family_id: child.family_id, child_id: childId, invite_status:'invited' };
   });
-  const {data, error} = await db.from('ll_assessment_attendees').insert(rows).select();
+  const {data, error} = await db.from('ll_event_attendees').insert(rows).select();
   if(error) { showToast('Error: '+error.message); return; }
-  allAssessmentAttendees.push(...(data||[]));
+  allEventAttendees.push(...(data||[]));
   renderEligibleForDay();
   renderAttendeesForDay();
   renderPreAssessmentList();
@@ -972,7 +1036,7 @@ async function addSelectedToDay() {
 
 function renderAttendeesForDay() {
   const el = document.getElementById('adp-attendees');
-  const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id);
+  const attendees = allEventAttendees.filter(a=>a.event_id===currentAssessDay.id);
   if(!attendees.length) {
     el.innerHTML = '<div class="empty"><div class="eicon">👥</div><p>No children added yet — use the Eligible Children tab.</p></div>';
     return;
@@ -1091,7 +1155,7 @@ function editFinalRow(attendeeId) { finalExpanded.add(attendeeId); renderFinalAs
 function renderPreAssessmentList() {
   const el = document.getElementById('adp-pre');
   if(!el) return;
-  const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id);
+  const attendees = allEventAttendees.filter(a=>a.event_id===currentAssessDay.id);
   if(!attendees.length) { el.innerHTML = '<div class="empty"><div class="eicon">📝</div><p>No children added yet — use the Eligible Children tab.</p></div>'; return; }
 
   const todo = attendees.filter(a=>!(a.pre_assessment_status==='Complete' && !preExpanded.has(a.id)));
@@ -1158,7 +1222,7 @@ function renderPreAssessmentList() {
 function renderFinalAssessmentList() {
   const el = document.getElementById('adp-final');
   if(!el) return;
-  const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id);
+  const attendees = allEventAttendees.filter(a=>a.event_id===currentAssessDay.id);
   if(!attendees.length) { el.innerHTML = '<div class="empty"><div class="eicon">🎓</div><p>No children added yet — use the Eligible Children tab.</p></div>'; return; }
 
   const todo = attendees.filter(a=>!(a.final_assessment_status==='Complete' && !finalExpanded.has(a.id)));
@@ -1225,9 +1289,9 @@ function renderFinalAssessmentList() {
 }
 
 async function markAttendance(attendeeId, val) {
-  const {error} = await db.from('ll_assessment_attendees').update({day_status: val||null, attended_marked_at: new Date().toISOString()}).eq('id',attendeeId);
+  const {error} = await db.from('ll_event_attendees').update({day_status: val||null, attended_marked_at: new Date().toISOString()}).eq('id',attendeeId);
   if(error) { showToast('Error: '+error.message); return; }
-  const a = allAssessmentAttendees.find(x=>x.id===attendeeId);
+  const a = allEventAttendees.find(x=>x.id===attendeeId);
   if(a) a.day_status = val||null;
   renderAttendeesForDay();
   renderAssessDaysList();
@@ -1235,14 +1299,14 @@ async function markAttendance(attendeeId, val) {
 }
 
 async function savePreAssessment(attendeeId) {
-  const a = allAssessmentAttendees.find(x=>x.id===attendeeId);
+  const a = allEventAttendees.find(x=>x.id===attendeeId);
   if(!a) return;
   const assessor_id = document.getElementById('pas-assessor-'+attendeeId).value || null;
   const pre_assessment_status = document.getElementById('pas-status-'+attendeeId).value;
   const outcome_year_group = document.getElementById('pas-yg-'+attendeeId).value;
   const pre_assessment_notes = document.getElementById('pas-notes-'+attendeeId).value.trim();
 
-  const {error} = await db.from('ll_assessment_attendees')
+  const {error} = await db.from('ll_event_attendees')
     .update({assessor_id, pre_assessment_status, outcome_year_group, pre_assessment_notes})
     .eq('id', attendeeId);
   if(error) { showToast('Error: '+error.message); return; }
@@ -1255,14 +1319,14 @@ async function savePreAssessment(attendeeId) {
 }
 
 async function saveFinalAssessment(attendeeId) {
-  const a = allAssessmentAttendees.find(x=>x.id===attendeeId);
+  const a = allEventAttendees.find(x=>x.id===attendeeId);
   if(!a) return;
   const final_assessment_status = document.getElementById('fas-status-'+attendeeId).value;
   const material_level = document.getElementById('fas-level-'+attendeeId).value;
   const parent_feedback_status = document.getElementById('fas-feedback-'+attendeeId).value;
   const outcome_notes = document.getElementById('fas-notes-'+attendeeId).value.trim();
 
-  const {error} = await db.from('ll_assessment_attendees')
+  const {error} = await db.from('ll_event_attendees')
     .update({final_assessment_status, material_level, parent_feedback_status, outcome_notes})
     .eq('id', attendeeId);
   if(error) { showToast('Error: '+error.message); return; }
@@ -1304,7 +1368,7 @@ async function saveFinalAssessment(attendeeId) {
 function renderPackDistribution() {
   const el = document.getElementById('adp-packs');
   if(!el) return;
-  const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id && a.material_level);
+  const attendees = allEventAttendees.filter(a=>a.event_id===currentAssessDay.id && a.material_level);
   if(!attendees.length) {
     el.innerHTML = '<div class="empty"><div class="eicon">📦</div><p>No pack decisions recorded yet — packs appear here once Final Assessment is saved for each child.</p></div>';
     return;
@@ -1332,7 +1396,7 @@ function renderPackDistribution() {
 }
 
 function exportPackDistribution() {
-  const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id && a.material_level);
+  const attendees = allEventAttendees.filter(a=>a.event_id===currentAssessDay.id && a.material_level);
   if(!attendees.length) { showToast('No pack decisions to export yet'); return; }
   const rows = [['Pack / Year Group','Child Name']];
   const groups = {};
@@ -1356,7 +1420,7 @@ function exportPackDistribution() {
 }
 
 async function sendAssessmentInvite(attendeeId) {
-  const a = allAssessmentAttendees.find(x=>x.id===attendeeId);
+  const a = allEventAttendees.find(x=>x.id===attendeeId);
   const child = allChildren.find(c=>c.id===a.child_id);
   const fam = allFamilies.find(f=>f.id===a.family_id);
   const guardianEmail = fam?.father_email || fam?.mother_email;
@@ -1375,7 +1439,7 @@ async function sendAssessmentInvite(attendeeId) {
 }
 
 async function sendAllInvites() {
-  const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id);
+  const attendees = allEventAttendees.filter(a=>a.event_id===currentAssessDay.id);
   let sent = 0, skipped = 0;
   for(const a of attendees) {
     const fam = allFamilies.find(f=>f.id===a.family_id);
@@ -1403,7 +1467,7 @@ function copyUniversalRsvpLink() {
 }
 
 function copyWhatsAppList() {
-  const attendees = allAssessmentAttendees.filter(a=>a.assessment_day_id===currentAssessDay.id);
+  const attendees = allEventAttendees.filter(a=>a.event_id===currentAssessDay.id);
   const lines = attendees.map(a => {
     const fam = allFamilies.find(f=>f.id===a.family_id);
     return `${fam?.father_name||fam?.mother_name||'Parent'}: ${fam?.father_phone||fam?.mother_phone||'—'}`;
@@ -2325,6 +2389,7 @@ async function openProfile(id, tab) {
   renderChildren(currentChildren,f);
   await renderDocs(f);
   renderAssessment(f,currentChildren);
+  renderEventsTab(f,currentChildren);
   renderPackTab(f,currentChildren);
   renderChecklist(f);
   renderActivityLog(f.id);
@@ -2748,6 +2813,79 @@ async function viewDoc(path) {
 
 // ── ASSESSMENT ──
 let assessSelectedChildId = '';
+
+const EVENT_TYPE_LABELS_SHORT = {assessment_day:'🏫 Assessment', workshop:'🎨 Workshop', social:'🎉 Social'};
+const LEARNER_STATUS_LABELS = {active:'Active', archived:'Archived', graduated:'Graduated', withdrawn:'Withdrawn'};
+
+function toggleArchiveForm(childId) {
+  const el = document.getElementById('archive-'+childId);
+  if(el) el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+async function setLearnerStatus(childId, status) {
+  if(status==='archived') { toggleArchiveForm(childId); return; }
+  const {error} = await db.from('ll_children').update({learner_status: status, archived_reason: null}).eq('id', childId);
+  if(error) { showToast('Error: '+error.message); return; }
+  showToast('✅ Learner status updated');
+  openProfile(currentFamily.id, 'events');
+}
+
+async function confirmArchiveLearner(childId) {
+  const reason = document.getElementById('archive-reason-'+childId).value.trim();
+  if(!reason) { showToast('Please give a reason for archiving'); return; }
+  const {error} = await db.from('ll_children').update({learner_status:'archived', archived_reason: reason}).eq('id', childId);
+  if(error) { showToast('Error: '+error.message); return; }
+  showToast('✅ Learner archived');
+  openProfile(currentFamily.id, 'events');
+}
+
+function renderEventsTab(f, children) {
+  const el = document.getElementById('tp-events');
+  if(!el) return;
+  if(!children.length) {
+    el.innerHTML = '<div class="empty"><div class="eicon">📅</div><p>No children on this case yet</p></div>';
+    return;
+  }
+  el.innerHTML = children.map(c => {
+    const rows = allEventAttendees.filter(a=>a.child_id===c.id).map(a => {
+      const ev = allEvents.find(e=>e.id===a.event_id);
+      if(!ev) return '';
+      const isAssess = (ev.event_type||'assessment_day')==='assessment_day';
+      return `<div class="fam-card" style="margin-bottom:8px;">
+        <div class="fam-info">
+          <div class="fam-name">${ev.title} <span style="font-size:11px;color:var(--muted);">${EVENT_TYPE_LABELS_SHORT[ev.event_type]||''}</span></div>
+          <div class="fam-meta">
+            <span>📆 ${ev.event_date ? new Date(ev.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'No date'}</span>
+            <span>🎟 ${a.invite_status||'invited'}</span>
+            ${a.attendance?`<span>✅ ${a.attendance}</span>`:''}
+            ${isAssess && a.final_assessment_status ? `<span>📋 ${a.final_assessment_status}</span>` : ''}
+            ${isAssess && a.outcome_year_group ? `<span>🎓 ${a.outcome_year_group}</span>` : ''}
+          </div>
+          ${a.outcome_notes?`<div class="fam-meta" style="margin-top:4px;color:var(--muted);">📝 ${a.outcome_notes}</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+    const status = c.learner_status || 'active';
+    return `<div class="card" style="margin-bottom:16px;">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>${c.full_name||'Child'}</span>
+        <span class="status-tag st-${status==='active'?'year_group_confirmed':status}">${LEARNER_STATUS_LABELS[status]||status}</span>
+      </div>
+      ${status==='archived' && c.archived_reason ? `<div class="warn" style="margin-bottom:10px;">🗄 ${c.archived_reason}</div>` : ''}
+      <div style="display:flex;gap:6px;margin-bottom:12px;">
+        <button class="pipe-tab ${status==='active'?'on':''}" onclick="setLearnerStatus('${c.id}','active')">Active</button>
+        <button class="pipe-tab ${status==='archived'?'on':''}" onclick="setLearnerStatus('${c.id}','archived')">Archived</button>
+        <button class="pipe-tab ${status==='graduated'?'on':''}" onclick="setLearnerStatus('${c.id}','graduated')">Graduated</button>
+      </div>
+      <div id="archive-${c.id}" style="display:none;margin-bottom:12px;">
+        <label>Reason for archiving</label>
+        <input id="archive-reason-${c.id}" placeholder="e.g. Language barrier (Urdu)" value="${c.archived_reason||''}" style="width:100%;margin-bottom:6px;">
+        <button class="btn-teal btn-sm" onclick="confirmArchiveLearner('${c.id}')">Save</button>
+      </div>
+      ${rows || '<div class="empty" style="padding:16px 0;"><p style="font-size:13px;">No events yet for this child</p></div>'}
+    </div>`;
+  }).join('');
+}
 
 function renderAssessment(f, children) {
   const iar = f.income_after_rent||0;
