@@ -43,6 +43,8 @@ body.lang-ar .cta-btn{flex-direction:row-reverse}
 body.lang-ar .stat + .stat{border-right:none;border-left:1px solid var(--line)}
 body.lang-ar .give-row{flex-direction:row-reverse}
 body.lang-ar .freq-toggle{flex-direction:row-reverse}
+body.lang-ar .custom-row{flex-direction:row-reverse}
+body.lang-ar .custom-row input{text-align:right}
 body.lang-ar .hero-h1,body.lang-ar .how-t,body.lang-ar .section-h,body.lang-ar .headline{font-family:"Cairo",sans-serif}
 button,input{font:inherit}
 
@@ -127,10 +129,9 @@ button,input{font:inherit}
 }
 .headline em{color:var(--lime);font-style:normal}
 .hero-sub{
-  font-size:14.5px;
+  font-size:13.5px;
   line-height:1.6;
   color:var(--muted);
-  max-width:40ch;
   opacity:0;transform:translateY(14px);
   animation:fadeUp .8s ease .4s forwards;
 }
@@ -203,6 +204,28 @@ button,input{font:inherit}
 .box-btn .price{display:block;font-size:9.5px;color:var(--muted-2);margin-top:2px}
 .box-btn.on{border-color:var(--lime);background:rgba(169,223,73,.14);box-shadow:0 0 0 1px rgba(169,223,73,.4) inset}
 .box-btn.on .num{color:var(--lime)}
+
+.custom-row{
+  display:flex;align-items:center;gap:10px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:rgba(0,0,0,.16);
+  padding:12px 15px;
+  margin-bottom:14px;
+  transition:border-color .2s ease,background .2s ease;
+}
+.custom-row:focus-within{border-color:rgba(169,223,73,.55);background:rgba(169,223,73,.06)}
+.custom-row .custom-ic{font-size:13px;color:var(--muted-2);flex-shrink:0}
+.custom-row input{
+  flex:1;min-width:0;
+  border:none;background:transparent;color:var(--ink);
+  font-size:13.5px;font-weight:600;
+  outline:none;
+}
+.custom-row input::placeholder{color:var(--muted-2);font-weight:600}
+.custom-row input::-webkit-outer-spin-button,.custom-row input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.custom-row input[type=number]{-moz-appearance:textfield}
+.custom-suffix{font-size:11px;color:var(--muted-2);font-weight:700;flex-shrink:0}
 
 .give-row{
   display:flex;align-items:center;justify-content:space-between;
@@ -296,6 +319,39 @@ button,input{font:inherit}
   .headline{font-size:clamp(28px,9.6vw,36px)}
   .box-btn .num{font-size:16px}
 }
+
+/* ================= EDITORIAL PROOF SECTIONS (full-bleed, same dark cinematic palette as the rest of the page) ================= */
+.editorial{position:relative;z-index:2;background:var(--ink-black);color:var(--ink)}
+.ed-wrap{max-width:1120px;margin:0 auto;padding:56px 22px}
+.ed-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:28px}
+.ed-h2{font-family:"League Spartan",sans-serif;font-size:clamp(24px,5vw,34px);font-weight:700;letter-spacing:-.02em;color:#fff}
+.ed-link{font-family:"Manrope",sans-serif;font-size:13px;font-weight:700;color:var(--lime);text-decoration:none;white-space:nowrap}
+.ed-link:hover{text-decoration:underline}
+.ed-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media(min-width:640px){.ed-grid{gap:18px}}
+.ed-card{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--glass-2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+@media(min-width:640px){.ed-card{border-radius:14px}}
+.photo-ph{position:relative;aspect-ratio:4/3;background-color:rgba(255,255,255,.03);background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.04) 0 2px,transparent 2px 15px)}
+.photo-ph .cap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:5px;padding:3px 5px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:7px;color:var(--muted);white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis}
+@media(min-width:640px){.photo-ph .cap{border-radius:6px;padding:5px 10px;font-size:10.5px;max-width:none}}
+.ed-card-body{padding:9px 8px}
+@media(min-width:640px){.ed-card-body{padding:18px}}
+.ed-step{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:7.5px;font-weight:700;letter-spacing:.04em;color:var(--lime);margin-bottom:4px}
+@media(min-width:640px){.ed-step{font-size:10.5px;letter-spacing:.06em;margin-bottom:8px}}
+.ed-t{font-family:"League Spartan",sans-serif;font-size:13.5px;line-height:1.15;font-weight:700;color:#fff;margin-bottom:4px}
+@media(min-width:640px){.ed-t{font-size:19px;margin-bottom:8px}}
+.ed-d{font-size:9px;line-height:1.4;color:var(--muted);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+@media(min-width:640px){.ed-d{font-size:12.5px;line-height:1.6;-webkit-line-clamp:initial}}
+
+.proof-split{position:relative;z-index:2;background:var(--forest);color:var(--ink);display:grid;grid-template-columns:1fr}
+@media(min-width:760px){.proof-split{grid-template-columns:1fr 1fr}}
+.proof-left{padding:56px 22px;max-width:520px}
+.proof-eyebrow{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;font-weight:700;letter-spacing:.14em;color:var(--lime);margin-bottom:16px}
+.proof-h2{font-family:"League Spartan",sans-serif;font-size:clamp(24px,5vw,32px);font-weight:700;letter-spacing:-.02em;line-height:1.15;color:#fff;margin-bottom:16px}
+.proof-p{font-size:13.5px;line-height:1.7;color:var(--muted);margin-bottom:26px;max-width:44ch}
+.proof-btn{display:inline-block;background:var(--lime);color:var(--forest-deep,#0b2f20);font-family:"League Spartan",sans-serif;font-size:13.5px;font-weight:700;padding:13px 22px;border-radius:30px;border:none;cursor:pointer;box-shadow:0 14px 32px rgba(169,223,73,.25)}
+.proof-right{position:relative;min-height:260px;background-color:rgba(255,255,255,.03);background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 2px,transparent 2px 15px)}
+.proof-right .cap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:6px;padding:6px 12px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;color:var(--muted);text-align:center;line-height:1.6;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -323,7 +379,7 @@ button,input{font:inherit}
   <div class="hero-copy">
     <div class="eyebrow" data-en="Monthly Food Box Program" data-ar="برنامج الصندوق الغذائي الشهري">Monthly Food Box Program</div>
     <h1 class="headline" data-en="Feed a <em>friend</em> this month." data-ar="غذِّ <em>صديقاً</em> هذا الشهر.">Feed a <em>friend</em> this month.</h1>
-    <p class="hero-sub" data-en="QAR 100 sponsors one box for a family in Qatar. Choose how many, give once or every month." data-ar="١٠٠ ريال تكفّل بصندوق واحد لعائلة في قطر. اختر العدد، وامنح مرة واحدة أو كل شهر.">QAR 100 sponsors one box for a family in Qatar. Choose how many, give once or every month.</p>
+    <p class="hero-sub" data-en="QAR 100 is the cost of one food box for 3–4 friends in need in Qatar." data-ar="١٠٠ ريال هي تكلفة صندوق غذائي واحد لـ ٣-٤ أصدقاء محتاجين في قطر.">QAR 100 is the cost of one food box for 3–4 friends in need in Qatar.</p>
     <a class="deliver-link" href="foodbox-deliver.html" data-en="Prefer to give your time instead? <span>Become a volunteer driver →</span>" data-ar="تفضّل أن تعطي وقتك بدلاً من ذلك؟ <span>كن سائقاً متطوعاً ←</span>">Prefer to give your time instead? <span>Become a volunteer driver →</span></a>
   </div>
 
@@ -345,6 +401,14 @@ button,input{font:inherit}
       <button class="box-btn" data-n="5" onclick="setBoxes(5)"><span class="num">5</span><span class="price">500</span></button>
       <button class="box-btn" data-n="10" onclick="setBoxes(10)"><span class="num">10</span><span class="price">1,000</span></button>
     </div>
+    <div class="custom-row" id="customRow">
+      <span class="custom-ic">✎</span>
+      <input type="number" id="customInput" min="1" step="1" inputmode="numeric"
+        data-en-ph="Other amount…" data-ar-ph="مبلغ آخر…"
+        placeholder="Other amount…"
+        oninput="setCustomBoxes(this.value)">
+      <span class="custom-suffix" id="customSuffix" data-en="boxes" data-ar="صندوق">boxes</span>
+    </div>
 
     <div class="give-row">
       <span class="feeds" id="feedsText">Feeds about 10 people</span>
@@ -354,20 +418,20 @@ button,input{font:inherit}
     <button class="cta-btn" onclick="startSponsorFlow()">
       <span id="giveBtnText">Give QAR 300 monthly →</span>
     </button>
-    <div class="cta-hint" id="giveHint" data-en="Apple Pay · Visa · Mada — cancel anytime" data-ar="آبل باي · فيزا · مدى — يمكنك الإلغاء في أي وقت">Apple Pay · Visa · Mada — cancel anytime</div>
+    <div class="cta-hint" id="giveHint" data-en="In partnership with Together for Good Events W.L.L CR 229085, who help provide the boxes" data-ar="بالشراكة مع Together for Good Events W.L.L CR 229085، الذين يساعدون في توفير الصناديق">In partnership with Together for Good Events W.L.L CR 229085, who help provide the boxes</div>
   </div>
 
   <div class="stats">
-    <div class="stat"><div class="n" id="stat-boxes">191</div><div class="l" data-en="Boxes<br>needed" data-ar="صناديق<br>مطلوبة">Boxes<br>needed</div></div>
+    <div class="stat"><div class="n" id="stat-boxes">8</div><div class="l" data-en="Boxes<br>needed" data-ar="صناديق<br>مطلوبة">Boxes<br>needed</div></div>
     <div class="stat"><div class="n">QAR 100</div><div class="l" data-en="Per box<br>monthly" data-ar="للصندوق<br>شهرياً">Per box<br>monthly</div></div>
-    <div class="stat"><div class="n" id="stat-friends">764</div><div class="l" data-en="Friends<br>need food" data-ar="أصدقاء<br>يحتاجون طعام">Friends<br>need food</div></div>
+    <div class="stat"><div class="n" id="stat-friends">22</div><div class="l" data-en="Friends<br>need food" data-ar="أصدقاء<br>يحتاجون طعام">Friends<br>need food</div></div>
   </div>
 
   <div class="dist-date">
     <span class="ic">📅</span>
     <div>
       <div class="label" data-en="Next distribution day" data-ar="يوم التوزيع القادم">Next distribution day</div>
-      <div class="date" id="dist-date-text" data-en="Friday, 26 June 2026" data-ar="الجمعة، ٢٦ يونيو ٢٠٢٦">Friday, 26 June 2026</div>
+      <div class="date" id="dist-date-text" data-en="To be announced" data-ar="سيُعلن قريباً">To be announced</div>
     </div>
   </div>
 
@@ -376,7 +440,7 @@ button,input{font:inherit}
     <div class="section-sub" data-en="Three steps, about a minute" data-ar="ثلاث خطوات، حوالي دقيقة واحدة">Three steps, about a minute</div>
     <div class="how-step">
       <div class="how-n">1</div>
-      <div><div class="how-t" data-en="Pick your boxes" data-ar="اختر صناديقك">Pick your boxes</div><div class="how-s" data-en="1, 3, 5 or 10 boxes — monthly or a one-time gift" data-ar="١ أو ٣ أو ٥ أو ١٠ صناديق — شهرياً أو كهدية لمرة واحدة">1, 3, 5 or 10 boxes — monthly or a one-time gift</div></div>
+      <div><div class="how-t" data-en="Pick your boxes" data-ar="اختر صناديقك">Pick your boxes</div><div class="how-s" data-en="1, 3, 5 or 10 boxes — monthly or a one-time gift, plus how you'd like it delivered" data-ar="١ أو ٣ أو ٥ أو ١٠ صناديق — شهرياً أو كهدية لمرة واحدة، وكيف تريد توصيلها">1, 3, 5 or 10 boxes — monthly or a one-time gift, plus how you'd like it delivered</div></div>
     </div>
     <div class="how-step">
       <div class="how-n">2</div>
@@ -384,7 +448,7 @@ button,input{font:inherit}
     </div>
     <div class="how-step">
       <div class="how-n">3</div>
-      <div><div class="how-t" data-en="Instant confirmation" data-ar="تأكيد فوري">Instant confirmation</div><div class="how-s" data-en="Apple Pay, card or Mada — your sponsorship is confirmed the moment payment goes through, no waiting" data-ar="آبل باي أو البطاقة أو مدى — يتم تأكيد تكفّلك فور إتمام الدفع، دون انتظار">Apple Pay, card or Mada — your sponsorship is confirmed the moment payment goes through, no waiting</div></div>
+      <div><div class="how-t" data-en="Pay via Fawran or bank transfer" data-ar="ادفع عبر فوران أو حوالة بنكية">Pay via Fawran or bank transfer</div><div class="how-s" data-en="Pay for your boxes for your distribution event directly to Together for Good Events, with Fawran or bank transfer" data-ar="ادفع ثمن صناديقك لحدث التوزيع الخاص بك مباشرة إلى Together for Good Events، عبر فوران أو حوالة بنكية">Pay for your boxes for your distribution event directly to Together for Good Events, with Fawran or bank transfer</div></div>
     </div>
   </div>
 
@@ -400,10 +464,59 @@ button,input{font:inherit}
     <button class="cta-btn" onclick="startSponsorFlow()">
       <span id="giveBtnText2">Give QAR 300 monthly →</span>
     </button>
-    <div class="cta-hint" data-en="No account needed — takes about a minute" data-ar="لا حاجة لحساب — يستغرق حوالي دقيقة واحدة">No account needed — takes about a minute</div>
+    <div class="cta-hint" data-en="You'll create a free account to confirm your payment — takes about a minute" data-ar="ستنشئ حساباً مجانياً لتأكيد دفعتك — يستغرق حوالي دقيقة واحدة">You'll create a free account to confirm your payment — takes about a minute</div>
   </div>
 
 </div>
+
+<!-- ════ WHAT QAR 100 BUYS (editorial, full-bleed) ════ -->
+<section class="editorial">
+  <div class="ed-wrap">
+    <div class="ed-head">
+      <h2 class="ed-h2" data-en="Packed with the essentials" data-ar="مُعبأ بالأساسيات">Packed with the essentials</h2>
+      <a class="ed-link" href="Faf-FoodBox-Account.html" data-en="See a real delivery →" data-ar="شاهد توصيلاً حقيقياً ←">See a real delivery →</a>
+    </div>
+    <div class="ed-grid">
+      <div class="ed-card">
+        <div class="photo-ph"><span class="cap" data-en="photo: box contents flat-lay" data-ar="صورة: محتويات الصندوق">photo: box contents flat-lay</span></div>
+        <div class="ed-card-body">
+          <div class="ed-step">STEP 01</div>
+          <div class="ed-t" data-en="Rice, oil, lentils, dates" data-ar="أرز، زيت، عدس، تمر">Rice, oil, lentils, dates</div>
+          <div class="ed-d" data-en="QAR 100 provides one box of basic groceries for a group of 3–4 friends in need for a month." data-ar="١٠٠ ريال قطري يوفر صندوقاً واحداً من المواد الغذائية الأساسية لمجموعة من ٣ إلى ٤ أصدقاء محتاجين لمدة شهر.">QAR 100 provides one box of basic groceries for a group of 3–4 friends in need for a month.</div>
+        </div>
+      </div>
+      <div class="ed-card">
+        <div class="photo-ph"><span class="cap" data-en="photo: packing line" data-ar="صورة: خط التعبئة">photo: packing line</span></div>
+        <div class="ed-card-body">
+          <div class="ed-step">STEP 02</div>
+          <div class="ed-t" data-en="Packed the day before distribution" data-ar="تُعبأ قبل يوم من التوزيع">Packed the day before distribution</div>
+          <div class="ed-d" data-en="Boxes are packed the day before each distribution, not days in advance, so everything stays as fresh as possible." data-ar="تُعبأ الصناديق قبل يوم واحد من كل توزيع، وليس قبل أيام، لتبقى المحتويات طازجة قدر الإمكان.">Boxes are packed the day before each distribution, not days in advance, so everything stays as fresh as possible.</div>
+        </div>
+      </div>
+      <div class="ed-card">
+        <div class="photo-ph"><span class="cap" data-en="photo: handover + signature" data-ar="صورة: التسليم + التوقيع">photo: handover + signature</span></div>
+        <div class="ed-card-body">
+          <div class="ed-step">STEP 03</div>
+          <div class="ed-t" data-en="Handed over, signed for" data-ar="تُسلّم بتوقيع">Handed over, signed for</div>
+          <div class="ed-d" data-en="Distribution takes place once a month. Collection is at Al Waab, or a volunteer hands it over directly — no estimates." data-ar="يتم التوزيع مرة واحدة شهرياً. الاستلام من الوعب، أو يُسلّمه أحد المتطوعين مباشرة — دون تقديرات.">Distribution takes place once a month. Collection is at Al Waab, or a volunteer hands it over directly — no estimates.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ PROOF, NOT PROMISE (dark split, full-bleed) ════ -->
+<section class="proof-split">
+  <div class="proof-left">
+    <div class="proof-eyebrow" data-en="THE PROOF, NOT THE PROMISE" data-ar="الإثبات، لا الوعد">THE PROOF, NOT THE PROMISE</div>
+    <h2 class="proof-h2" data-en="Every box you purchase is real — sponsored, packed and collected, on record." data-ar="كل صندوق تشتريه حقيقي — مُكفَّل ومُعبأ ومُستلم، وموثّق.">Every box you purchase is real — sponsored, packed and collected, on record.</h2>
+    <p class="proof-p" data-en="Your account fills up as sponsorships land — how many boxes, when, and their status. Nothing rounded, nothing estimated." data-ar="يمتلئ حسابك مع كل تكفّل — عدد الصناديق، متى، وحالتها. لا تقريب ولا تقدير.">Your account fills up as sponsorships land — how many boxes, when, and their status. Nothing rounded, nothing estimated.</p>
+    <button class="proof-btn" onclick="document.querySelector('.give-card').scrollIntoView({behavior:'smooth',block:'center'})" data-en="Sponsor your first box" data-ar="تكفّل بصندوقك الأول">Sponsor your first box</button>
+  </div>
+  <div class="proof-right">
+    <span class="cap" data-en="your account:<br>sponsorship history + running totals" data-ar="حسابك:<br>سجل التكفّلات + الإجماليات">your account:<br>sponsorship history + running totals</span>
+  </div>
+</section>
 
 <script>
 // ── Language toggle: EN/AR with RTL support, persisted across the funnel ──
@@ -426,7 +539,7 @@ var EASTERN_ARABIC_DIGITS = ["٠","١","٢","٣","٤","٥","٦","٧","٨","٩"];
 function toEasternArabicDigits(n){
   return String(n).replace(/[0-9]/g, function(d){ return EASTERN_ARABIC_DIGITS[+d]; });
 }
-var giveState = { boxes: 3, freq: "monthly" };
+var giveState = { boxes: 3, freq: "monthly", custom: false };
 
 function setFreq(f){
   giveState.freq = f;
@@ -436,9 +549,25 @@ function setFreq(f){
 }
 function setBoxes(n){
   giveState.boxes = n;
+  giveState.custom = false;
   document.querySelectorAll(".box-btn").forEach(function(btn){
     btn.classList.toggle("on", Number(btn.getAttribute("data-n")) === n);
   });
+  var input = document.getElementById("customInput");
+  input.value = "";
+  input.blur();
+  renderGiveCard();
+}
+function setCustomBoxes(val){
+  var n = parseInt(val, 10);
+  if(!n || n < 1){
+    // don't render an invalid state while the person is still typing —
+    // just wait for a valid positive number before updating price/feeds
+    return;
+  }
+  giveState.boxes = n;
+  giveState.custom = true;
+  document.querySelectorAll(".box-btn").forEach(function(btn){ btn.classList.remove("on"); });
   renderGiveCard();
 }
 function renderGiveCard(){
@@ -447,6 +576,10 @@ function renderGiveCard(){
   var freq = giveState.freq;
   var price = boxes * 100;
   var feeds = Math.max(3, Math.round(boxes * 3.4));
+
+  var customInput = document.getElementById("customInput");
+  customInput.placeholder = lang === "ar" ? "مبلغ آخر…" : "Other amount…";
+  document.getElementById("customSuffix").textContent = lang === "ar" ? "صندوق" : "boxes";
 
   var boxLabelEl = document.getElementById("boxLabel");
   boxLabelEl.innerHTML = freq === "monthly"
@@ -477,8 +610,8 @@ function renderGiveCard(){
   document.getElementById("giveBtnText2").textContent = giveLabel;
 
   var hint = lang === "ar"
-    ? (freq === "monthly" ? "آبل باي · فيزا · مدى — يمكنك الإلغاء في أي وقت" : "آبل باي · فيزا · مدى")
-    : (freq === "monthly" ? "Apple Pay · Visa · Mada — cancel anytime" : "Apple Pay · Visa · Mada");
+    ? "بالشراكة مع Together for Good Events W.L.L CR 229085، الذين يساعدون في توفير الصناديق"
+    : "In partnership with Together for Good Events W.L.L CR 229085, who help provide the boxes";
   document.getElementById("giveHint").textContent = hint;
 }
 
