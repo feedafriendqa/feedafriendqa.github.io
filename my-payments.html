@@ -72,6 +72,11 @@ header{
 .event-mid{flex:1;min-width:0;}
 .event-mid .t{font-size:17px;font-weight:700;color:var(--charcoal);}
 .event-mid .l{font-size:14px;color:var(--muted);margin-top:2px;}
+.event-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.deliv-tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--panel);color:var(--muted);text-decoration:none;}
+.deliv-tag.self-link{background:#EBF7F0;color:#1D7A47;border:1px solid #cdebd9;cursor:pointer;}
+.deliv-tag.self-link:hover{background:#dcf0e3;}
+.dist-tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--panel);color:var(--muted);}
 .event-time{text-align:right;white-space:nowrap;flex-shrink:0;}
 .event-time .amt{font-size:17px;font-weight:700;color:var(--charcoal);}
 .badge{display:inline-block;margin-top:4px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:4px 10px;border-radius:20px;white-space:nowrap;}
@@ -417,11 +422,29 @@ function renderList(rows){
       ? '<button class="upload-proof-btn" onclick="startProofUpload(\'' + r.id + '\')" data-en="Upload proof of payment" data-ar="رفع إثبات الدفع">Upload proof of payment</button>'
       : '';
 
+    // Delivery-method label. "self" = the sponsor picks up and delivers the
+    // box themselves (chosen on the Preferences page) — link them straight
+    // to the distributor dashboard so they can see their delivery group,
+    // box count, and location. "vol" = one of FaF's own drivers handles
+    // it, so there's nothing for the sponsor to act on, just a plain label.
+    var deliveryTag = "";
+    if(r.delivery_method === "self"){
+      var selfLabel = isAr ? "\uD83D\uDE9A توصيل ذاتي \u2014 عرض مجموعتك \u2190" : "\uD83D\uDE9A Self-delivery — see your group →";
+      deliveryTag = '<a class="deliv-tag self-link" href="https://connect.feedafriend.org/DriverDashboard.html" target="_blank" rel="noopener">' + selfLabel + '</a>';
+    } else if(r.delivery_method === "vol"){
+      deliveryTag = '<span class="deliv-tag">' + (isAr ? "\uD83E\uDD1D توصيل بواسطة متطوع" : "\uD83E\uDD1D Volunteer delivery") + '</span>';
+    }
+    var distTag = r.distribution_event
+      ? '<span class="dist-tag">\uD83D\uDCE6 ' + r.distribution_event + '</span>'
+      : "";
+    var tagsRow = (deliveryTag || distTag) ? ('<div class="event-tags">' + deliveryTag + distTag + '</div>') : "";
+
     return '<div class="event-row" id="spon-row-' + r.id + '">' +
       '<div class="event-thumb">\uD83D\uDCE6</div>' +
       '<div class="event-mid">' +
         '<div class="t">' + (r.ref_no || "") + '</div>' +
         '<div class="l">' + fmtDate(r.created_at) + ' \u00b7 ' + boxLabel + ' \u00b7 ' + famLabel + '</div>' +
+        tagsRow +
         uploadBtn +
       '</div>' +
       '<div class="event-time">' +
