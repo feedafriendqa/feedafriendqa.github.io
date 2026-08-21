@@ -543,20 +543,66 @@ function updateCounter(){
   }
 }
 
+// 0/1 subset-sum search: finds a combination of families whose boxesNeeded
+// add up to the smallest total >= target (an exact match if one exists),
+// instead of greedily stopping the first time a random shuffle order crosses
+// the target — which is how you'd end up with e.g. a 3-box family picked
+// over a 2-box family that would've landed on target exactly.
+function pickBestCombo(pool, target){
+  if(pool.length === 0) return [];
+  var maxNeeded = 0;
+  for(var i = 0; i < pool.length; i++){ if(pool[i].boxesNeeded > maxNeeded) maxNeeded = pool[i].boxesNeeded; }
+  // No combo's minimal overshoot can exceed (maxNeeded - 1) above target,
+  // as long as at least one family fits — cap the search a little above that
+  // so we always have room to find an exact or near-exact total.
+  var cap = target + maxNeeded;
+
+  var dp = new Array(cap + 1).fill(false);
+  var parent = new Array(cap + 1).fill(null); // {idx, prevSum}
+  dp[0] = true;
+  for(var idx = 0; idx < pool.length; idx++){
+    var need = pool[idx].boxesNeeded;
+    for(var s = cap; s >= need; s--){
+      if(dp[s - need] && !dp[s]){
+        dp[s] = true;
+        parent[s] = {idx: idx, prevSum: s - need};
+      }
+    }
+  }
+
+  var bestSum = -1;
+  for(var s2 = target; s2 <= cap; s2++){
+    if(dp[s2]){ bestSum = s2; break; }
+  }
+  if(bestSum === -1){
+    // Not enough total boxes in the visible pool to reach target at all —
+    // just take everything available rather than leave the sponsor short.
+    return pool.slice();
+  }
+
+  var result = [];
+  var s3 = bestSum;
+  while(s3 > 0 && parent[s3]){
+    var p = parent[s3];
+    result.push(pool[p.idx]);
+    s3 = p.prevSum;
+  }
+  return result;
+}
+
 function surpriseMe(){
   if(poolState !== "ready" || FRIENDS.length === 0) return;
-  // Clear current selection, then greedily fill toward targetBoxes
+  // Clear current selection, then pick the tightest-fitting combination
+  // toward targetBoxes (exact match when the pool allows one).
   selectedIds = [];
   document.querySelectorAll(".fam-card").forEach(function(c){ c.classList.remove("sel"); });
 
   var pool = visibleFamilies.slice().sort(function(){ return Math.random() - 0.5; });
-  var remaining = targetBoxes;
-  for(var i = 0; i < pool.length && remaining > 0; i++){
-    var f = pool[i];
+  var picks = pickBestCombo(pool, targetBoxes);
+  picks.forEach(function(f){
     selectedIds.push(f.id);
     document.getElementById("fam-" + f.id).classList.add("sel");
-    remaining -= f.boxesNeeded;
-  }
+  });
   window.lastMatchWasSurprise = true;
   updateCounter();
   checkReady();
