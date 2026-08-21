@@ -239,12 +239,36 @@ html[dir="rtl"] .event-time{text-align:left;}
       </div>
 
       <div id="pledge-active" style="display:none;background:var(--panel);border-radius:16px;padding:22px;margin-bottom:14px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
           <div>
             <div style="font-family:'League Spartan';font-weight:900;font-size:20px;color:var(--green);" id="pledge-summary-boxes"></div>
             <div style="font-size:13px;color:var(--muted);" id="pledge-summary-method"></div>
+            <div style="font-size:12px;color:#a0186a;font-weight:700;margin-top:4px;display:none" id="pledge-paused-badge" data-en="⏸ Paused — won't be included in new rounds" data-ar="⏸ متوقف مؤقتاً — لن يُدرج في الجولات الجديدة">⏸ Paused — won't be included in new rounds</div>
           </div>
-          <button style="border:1.5px solid #c0392b;background:#fff;color:#c0392b;font-size:12px;font-weight:800;padding:8px 14px;border-radius:8px;cursor:pointer;" onclick="cancelPledgeClick()" data-en="Cancel my pledge" data-ar="إلغاء تعهدي">Cancel my pledge</button>
+          <button class="auth-btn" style="margin:0;width:auto;padding:10px 18px;font-size:13px;" onclick="togglePledgeEdit()" id="pledge-edit-toggle-btn" data-en="Edit my pledge" data-ar="تعديل تعهدي">Edit my pledge</button>
+        </div>
+
+        <div id="pledge-edit-panel" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--line);">
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+            <div>
+              <label class="lbl" data-en="Boxes per month" data-ar="عدد الصناديق شهرياً">Boxes per month</label>
+              <input class="inp" type="number" min="1" id="pledge-edit-box-count" style="width:100px;">
+            </div>
+            <div>
+              <label class="lbl" data-en="Delivery" data-ar="التوصيل">Delivery</label>
+              <select class="inp" id="pledge-edit-delivery-method" style="width:180px;">
+                <option value="vol" data-en="Volunteer delivers" data-ar="سائق متطوع">Volunteer delivers</option>
+                <option value="self" data-en="I deliver myself" data-ar="سأوصّل بنفسي">I deliver myself</option>
+              </select>
+            </div>
+            <button class="auth-btn" style="margin:0;width:auto;padding:12px 20px;" onclick="saveEditPledge()" data-en="Save changes" data-ar="حفظ التغييرات">Save changes</button>
+          </div>
+          <div class="auth-err" id="pledge-edit-err"></div>
+          <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+            <button style="border:1.5px solid #d99a1f;background:#fff;color:#a0186a;font-size:12px;font-weight:800;padding:8px 14px;border-radius:8px;cursor:pointer;" onclick="pausePledgeClick()" id="pledge-pause-btn" data-en="⏸ Pause for now" data-ar="⏸ إيقاف مؤقت">⏸ Pause for now</button>
+            <button style="border:1.5px solid #1D7A47;background:#fff;color:#1D7A47;font-size:12px;font-weight:800;padding:8px 14px;border-radius:8px;cursor:pointer;display:none" onclick="resumePledgeClick()" id="pledge-resume-btn" data-en="▶ Resume pledge" data-ar="▶ استئناف التعهد">▶ Resume pledge</button>
+            <button style="border:1.5px solid #c0392b;background:#fff;color:#c0392b;font-size:12px;font-weight:800;padding:8px 14px;border-radius:8px;cursor:pointer;" onclick="cancelPledgeClick()" data-en="Cancel my pledge entirely" data-ar="إلغاء تعهدي نهائياً">Cancel my pledge entirely</button>
+          </div>
         </div>
       </div>
 
@@ -617,7 +641,7 @@ async function loadPledgeData(userId){
   document.getElementById("pledge-none").style.display = "none";
   document.getElementById("pledge-active").style.display = "none";
 
-  var pledgeRes = await sbClient.from("sponsor_pledges").select("*").eq("sponsor_id", userId).eq("status", "active").maybeSingle();
+  var pledgeRes = await sbClient.from("sponsor_pledges").select("*").eq("sponsor_id", userId).in("status", ["active", "paused"]).maybeSingle();
   var pledge = pledgeRes && pledgeRes.data ? pledgeRes.data : null;
   window.currentPledge = pledge;
 
@@ -630,11 +654,18 @@ async function loadPledgeData(userId){
   }
 
   document.getElementById("pledge-active").style.display = "";
+  document.getElementById("pledge-edit-panel").style.display = "none";
+  var isPaused = pledge.status === "paused";
   var boxLabel = pledge.box_count + (isAr ? " صندوق شهرياً" : (pledge.box_count === 1 ? " box / month" : " boxes / month"));
   document.getElementById("pledge-summary-boxes").textContent = boxLabel;
   document.getElementById("pledge-summary-method").textContent = pledge.delivery_method === "self"
     ? (isAr ? "سأوصّل بنفسي" : "You deliver yourself")
     : (isAr ? "يوصّلها متطوع" : "A volunteer delivers");
+  document.getElementById("pledge-paused-badge").style.display = isPaused ? "block" : "none";
+  document.getElementById("pledge-pause-btn").style.display = isPaused ? "none" : "";
+  document.getElementById("pledge-resume-btn").style.display = isPaused ? "" : "none";
+  document.getElementById("pledge-edit-box-count").value = pledge.box_count;
+  document.getElementById("pledge-edit-delivery-method").value = pledge.delivery_method || "vol";
 
   // Show any still-editable draft allocations for open rounds tied to
   // this pledge — the sponsor can adjust box count or cancel just this
@@ -714,10 +745,97 @@ async function createPledgeClick(){
   }
 }
 
+function togglePledgeEdit(){
+  var panel = document.getElementById("pledge-edit-panel");
+  panel.style.display = panel.style.display === "none" ? "block" : "none";
+}
+
+async function saveEditPledge(){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  var errEl = document.getElementById("pledge-edit-err");
+  errEl.style.display = "none";
+  if(!window.currentPledge) return;
+  var boxCount = parseInt(document.getElementById("pledge-edit-box-count").value, 10);
+  var deliveryMethod = document.getElementById("pledge-edit-delivery-method").value;
+  if(!boxCount || boxCount < 1){
+    errEl.textContent = isAr ? "الرجاء إدخال عدد صحيح من الصناديق" : "Please enter a valid number of boxes";
+    errEl.style.display = "block";
+    return;
+  }
+  try{
+    var res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ type: "update_pledge", pledge_id: window.currentPledge.id, box_count: boxCount, delivery_method: deliveryMethod })
+    });
+    var json = await res.json();
+    if(!res.ok || json.error){
+      errEl.textContent = json.error || (isAr ? "حدث خطأ ما" : "Something went wrong");
+      errEl.style.display = "block";
+      return;
+    }
+    loadPledgeData(window.currentAuthUser.id);
+  } catch(e){
+    errEl.textContent = e.message;
+    errEl.style.display = "block";
+  }
+}
+
+// "Pause" leaves the pledge on file at its current box count/delivery
+// method but excludes it from future rounds until resumed — for a
+// sponsor going away for a bit rather than stopping altogether.
+async function pausePledgeClick(){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  var errEl = document.getElementById("pledge-edit-err");
+  errEl.style.display = "none";
+  if(!window.currentPledge) return;
+  try{
+    var res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ type: "pause_pledge", pledge_id: window.currentPledge.id })
+    });
+    var json = await res.json();
+    if(!res.ok || json.error){
+      errEl.textContent = json.error || (isAr ? "حدث خطأ ما" : "Something went wrong");
+      errEl.style.display = "block";
+      return;
+    }
+    loadPledgeData(window.currentAuthUser.id);
+  } catch(e){
+    errEl.textContent = e.message;
+    errEl.style.display = "block";
+  }
+}
+
+async function resumePledgeClick(){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  var errEl = document.getElementById("pledge-edit-err");
+  errEl.style.display = "none";
+  if(!window.currentPledge) return;
+  try{
+    var res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ type: "resume_pledge", pledge_id: window.currentPledge.id })
+    });
+    var json = await res.json();
+    if(!res.ok || json.error){
+      errEl.textContent = json.error || (isAr ? "حدث خطأ ما" : "Something went wrong");
+      errEl.style.display = "block";
+      return;
+    }
+    loadPledgeData(window.currentAuthUser.id);
+  } catch(e){
+    errEl.textContent = e.message;
+    errEl.style.display = "block";
+  }
+}
+
 async function cancelPledgeClick(){
   var isAr = document.documentElement.getAttribute("lang") === "ar";
   if(!window.currentPledge) return;
-  if(!confirm(isAr ? "هل أنت متأكد من إلغاء تعهدك الشهري؟" : "Are you sure you want to cancel your monthly pledge?")) return;
+  if(!confirm(isAr ? "هل أنت متأكد من إلغاء تعهدك الشهري نهائياً؟ يمكنك بدلاً من ذلك إيقافه مؤقتاً." : "Cancel your monthly pledge entirely? You can pause it instead if you just need a break.")) return;
   try{
     var res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
