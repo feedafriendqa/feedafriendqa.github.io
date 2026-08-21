@@ -488,9 +488,30 @@ async function submitSponsorship(){
   var wantAlerts = true;
 
   var sponsorshipId = sessionStorage.getItem("faf_sponsorship_id");
-  var currentUserId = window.currentAuthUser ? window.currentAuthUser.id : null;
-  var currentAccessToken = window.currentAuthSession ? window.currentAuthSession.access_token : null;
   var refNo = sessionStorage.getItem("faf_ref_no") || "SP-PENDING";
+
+  // Get the CURRENT, live session rather than trusting window.currentAuthUser
+  // / window.currentAuthSession — those were captured once, at sign-in time,
+  // and never updated. supabase-js refreshes the access token in the
+  // background as time passes, but this page kept using the original
+  // snapshot, so a sponsor who spent more than a few minutes on this page
+  // (entirely normal — reading family cards, filling in the form) could
+  // have their submission silently rejected with a stale token while every
+  // saved detail on the row underneath them (name, email, payment method)
+  // never landed, all while still seeing the success screen. Asking for
+  // the session fresh, right here, avoids that.
+  var sessionRes = await window.sbClient.auth.getSession();
+  var liveSession = sessionRes && sessionRes.data ? sessionRes.data.session : null;
+  if(!liveSession){
+    btn.disabled = false;
+    hint.textContent = isArSubmit
+      ? "انتهت صلاحية جلستك — يرجى تسجيل الدخول مرة أخرى لإتمام تكفّلك"
+      : "Your session has expired — please sign in again to complete your sponsorship";
+    setTimeout(function(){ window.location.reload(); }, 2500);
+    return;
+  }
+  var currentUserId = liveSession.user.id;
+  var currentAccessToken = liveSession.access_token;
 
   try{
     if(window.sbClient && sponsorshipId){
