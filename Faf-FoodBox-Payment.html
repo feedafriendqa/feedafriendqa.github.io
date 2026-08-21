@@ -86,6 +86,15 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .success-t{font-family:"Ca
 .pledge-note{display:flex;gap:10px;align-items:flex-start;background:#fafaf7;border:1.5px solid #e8e8e0;border-radius:14px;padding:12px 14px;margin:0 20px 16px;font-size:12px;color:#777;font-weight:600;line-height:1.5}
 .pledge-note .ic{font-size:16px;flex-shrink:0;margin-top:1px}
 
+.hold-timer{display:flex;align-items:center;justify-content:center;gap:7px;margin:0 20px 14px;padding:8px 12px;border-radius:30px;background:#EBF7F0;border:1.5px solid #cdebd9;font-size:11.5px;font-weight:700;color:#3f6b51}
+.hold-timer.low{background:#FFF3E0;border-color:#F5C330;color:#8a6300}
+.hold-timer .n{font-family:"League Spartan",sans-serif;font-weight:900}
+
+.timeout-banner{display:none;margin:16px 20px;background:#FFF8E6;border:1.5px solid #F5C330;border-radius:16px;padding:18px 16px;text-align:center}
+.timeout-banner .t{font-family:"League Spartan",sans-serif;font-size:15px;font-weight:900;color:#8a6300;margin-bottom:6px}
+.timeout-banner .d{font-size:12.5px;color:#8a6300;font-weight:600;line-height:1.5;margin-bottom:14px}
+.timeout-banner button{padding:11px 22px;border-radius:30px;border:none;background:#1D7A47;color:#fff;font-family:"League Spartan",sans-serif;font-size:13px;font-weight:900;cursor:pointer}
+
 .success-stats{display:flex;gap:14px;justify-content:center;margin:22px 0 6px}
 .success-stat{background:#EBF7F0;border:1.5px solid #cdebd9;border-radius:16px;padding:16px 20px;min-width:110px}
 .success-stat-num{font-family:"League Spartan",sans-serif;font-size:32px;font-weight:900;color:#1D7A47;line-height:1}
@@ -219,6 +228,18 @@ body.lang-ar .pass-perks li::before{left:auto;right:0}
 
   <div id="payment-content" style="display:none">
 
+  <div class="hold-timer" id="hold-timer" style="display:none">
+    <span>⏳</span>
+    <span data-en="Your families are held for" data-ar="عائلاتك محجوزة لمدة">Your families are held for</span>
+    <span class="n" id="hold-timer-n">10:00</span>
+  </div>
+
+  <div class="timeout-banner" id="timeout-banner">
+    <div class="t" data-en="Your selection timed out" data-ar="انتهت مهلة اختيارك">Your selection timed out</div>
+    <div class="d" data-en="Families are held for 10 minutes so two sponsors can't both pay for the same one — yours has now been released. No harm done, just pick again." data-ar="نحجز العائلات لمدة ١٠ دقائق حتى لا يدفع متكفّلان لنفس العائلة — تم الآن تحرير حجزك. لا ضرر، فقط اختر مرة أخرى.">Families are held for 10 minutes so two sponsors can't both pay for the same one — yours has now been released. No harm done, just pick again.</div>
+    <button onclick="window.location.href='Faf-FoodBox-ChooseFamily.html'" data-en="Choose families again →" data-ar="اختر العائلات مرة أخرى ←">Choose families again →</button>
+  </div>
+
   <div class="summary" id="summary"></div>
 
   <div class="pledge-note" id="pledge-note" style="display:none">
@@ -226,7 +247,7 @@ body.lang-ar .pass-perks li::before{left:auto;right:0}
     <div data-en="This is a standing monthly commitment, not an automatic charge — you'll transfer manually each month via bank transfer or Fawran. Situations change, so you can cancel or amend your pledge anytime." data-ar="هذا تعهّد شهري قائم، وليس خصماً تلقائياً — ستقوم بالتحويل يدوياً كل شهر عبر الحوالة البنكية أو فوران. الظروف تتغيّر، لذا يمكنك إلغاء تعهّدك أو تعديله في أي وقت.">This is a standing monthly commitment, not an automatic charge — you'll transfer manually each month via bank transfer or Fawran. Situations change, so you can cancel or amend your pledge anytime.</div>
   </div>
 
-  <div class="section">
+  <div class="section" id="contact-section">
     <div class="section-h" data-en="Your contact details" data-ar="بيانات الاتصال">Your contact details</div>
     <div class="section-sub" data-en="So we can confirm by email once payment is received" data-ar="لنتمكن من التأكيد بالبريد الإلكتروني عند استلام الدفع">So we can confirm by email once payment is received</div>
     <div class="field">
@@ -243,7 +264,7 @@ body.lang-ar .pass-perks li::before{left:auto;right:0}
     </div>
   </div>
 
-  <div class="section">
+  <div class="section" id="payment-method-section">
     <div class="section-h" data-en="Choose payment method" data-ar="اختر طريقة الدفع">Choose payment method</div>
     <div class="section-sub" data-en="Both are manual — we'll confirm once received" data-ar="كلاهما يدويّ — سنؤكد عند الاستلام">Both are manual — we'll confirm once received</div>
 
@@ -492,6 +513,17 @@ async function submitSponsorship(){
         .select()
         .single();
       if(error){
+        // PGRST116 means the UPDATE matched zero rows — the sponsorship
+        // row itself no longer exists (the 10-minute hold lapsed and it
+        // was cleaned up). Nothing below this can succeed either, so go
+        // straight to the timeout banner rather than grinding through
+        // the family-claim step and email trigger to reach the same
+        // conclusion.
+        if(error.code === "PGRST116"){
+          console.warn("Sponsorship row is gone — hold expired:", error.message);
+          showTimeoutBanner();
+          return;
+        }
         // Don't block the success screen on this — the sponsor may have
         // already transferred money, and an error page at that point would
         // be worse than a quiet DB gap. But this must never be silent: a
@@ -504,22 +536,25 @@ async function submitSponsorship(){
         refNo = data.ref_no;
       }
 
-      // Convert the 5-minute hold set in ChooseFamily.html into a durable
-      // claim now that the sponsor has actually submitted. If a family
-      // became unavailable in the meantime (rare — someone else's reserve
-      // outlasted ours), send the sponsor back to re-pick rather than let
-      // them transfer money for a family that's no longer theirs.
+      // Convert the 10-minute hold set in ChooseFamily.html into a durable
+      // claim now that the sponsor has actually submitted. If the hold
+      // expired — either a specific family was picked up by someone else,
+      // or (rarer) the whole sponsorship row itself is gone because the
+      // hold lapsed before submission — show the timeout banner and stop,
+      // rather than either silently failing or showing a false success
+      // screen for a sponsorship that was never actually saved.
       var matchedIds = prefs.friends || (prefs.friend ? [prefs.friend] : []);
       if(matchedIds.length > 0){
         var claimRes = await window.sbClient.rpc("claim_families_for_sponsorship", { p_sponsorship_id: sponsorshipId });
-        if(claimRes.error) throw claimRes.error;
+        if(claimRes.error){
+          console.error("claim_families_for_sponsorship failed — treating as an expired hold:", claimRes.error);
+          showTimeoutBanner();
+          return;
+        }
         var claimedIds = (claimRes.data || []).map(function(r){ return r.claimed_id; });
         var unclaimed = matchedIds.filter(function(id){ return claimedIds.indexOf(id) === -1; });
         if(unclaimed.length > 0){
-          hint.textContent = isArSubmit
-            ? "عذراً، إحدى العائلات المختارة لم تعد متاحة. سيتم إعادتك للاختيار مرة أخرى…"
-            : "Sorry — one of your selected families is no longer available. Sending you back to re-pick…";
-          setTimeout(function(){ window.location.href = "Faf-FoodBox-ChooseFamily.html"; }, 2500);
+          showTimeoutBanner();
           return;
         }
       }
@@ -628,6 +663,7 @@ async function submitSponsorship(){
   sessionStorage.removeItem("faf_sponsorship_id");
   sessionStorage.removeItem("faf_ref_no");
   sessionStorage.removeItem("faf_prefs");
+  sessionStorage.removeItem("faf_hold_expires_at");
 }
 
 // ── Language toggle: EN/AR with RTL support, persisted across the funnel ──
@@ -708,6 +744,53 @@ function revealPaymentContent(user, profile){
   }
   document.getElementById("signed-in-as").textContent = (isAr ? "مسجّل الدخول باسم: " : "Signed in as: ") + user.email;
   checkReady();
+  startHoldTimer();
+}
+
+// ── 10-minute family hold countdown ──
+// ChooseFamily.html reserves the sponsor's picked families for 10 minutes
+// (see reserve_families()) so two sponsors mid-funnel can't both end up
+// with the same family, and stashes the expiry in sessionStorage. Show a
+// visible countdown here rather than letting that hold silently lapse
+// mid-checkout with no warning.
+var holdTimerInterval = null;
+function startHoldTimer(){
+  var expiresAtRaw = sessionStorage.getItem("faf_hold_expires_at");
+  if(!expiresAtRaw) return; // no hold on record (e.g. re-visited page) — nothing to count down
+  var expiresAt = parseInt(expiresAtRaw, 10);
+  if(!expiresAt || isNaN(expiresAt)) return;
+
+  var badge = document.getElementById("hold-timer");
+  var badgeN = document.getElementById("hold-timer-n");
+  badge.style.display = "flex";
+
+  function tick(){
+    var remainingMs = expiresAt - Date.now();
+    if(remainingMs <= 0){
+      clearInterval(holdTimerInterval);
+      showTimeoutBanner();
+      return;
+    }
+    var totalSec = Math.ceil(remainingMs / 1000);
+    var m = Math.floor(totalSec / 60);
+    var s = totalSec % 60;
+    badgeN.textContent = m + ":" + (s < 10 ? "0" : "") + s;
+    badge.classList.toggle("low", remainingMs < 60000);
+  }
+  tick();
+  holdTimerInterval = setInterval(tick, 1000);
+}
+
+function showTimeoutBanner(){
+  if(holdTimerInterval) clearInterval(holdTimerInterval);
+  ["hold-timer", "summary", "pledge-note", "contact-section", "payment-method-section", "account-section"].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.style.display = "none";
+  });
+  var ctaBar = document.querySelector(".cta-bar");
+  if(ctaBar) ctaBar.style.display = "none";
+  document.getElementById("timeout-banner").style.display = "block";
+  sessionStorage.removeItem("faf_hold_expires_at");
 }
 
 async function checkAuthAndReveal(){

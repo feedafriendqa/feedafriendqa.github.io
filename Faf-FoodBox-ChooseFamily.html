@@ -644,7 +644,7 @@ async function confirmChoice(){
 
   var sponsorshipId = sessionStorage.getItem("faf_sponsorship_id");
 
-  // Reserve for 5 minutes before committing — prevents two sponsors who are
+  // Reserve for 10 minutes before committing — prevents two sponsors who are
   // mid-funnel at the same time from both ending up with the same family.
   // See reserve_families() in the migration.
   if(window.sbClient && sponsorshipId){
@@ -684,6 +684,10 @@ async function confirmChoice(){
 
   var data = Object.assign({}, prefs, { friends: selectedIds });
   sessionStorage.setItem("faf_prefs", JSON.stringify(data));
+  // 10-minute hold starts now (see reserve_families() above) — stash the
+  // expiry so the Payment page can show the sponsor a countdown instead
+  // of letting the hold silently lapse mid-checkout.
+  sessionStorage.setItem("faf_hold_expires_at", String(Date.now() + 10 * 60 * 1000));
   hint.textContent = isAr ? "جاري حفظ مطابقتك…" : "Saving your match…";
 
   var matchMethod = (window.lastMatchWasSurprise === true) ? "surprise_me" : "chosen";
