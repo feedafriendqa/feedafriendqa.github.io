@@ -6,6 +6,7 @@
 <title>Confirm and Pay — Sponsor a Box</title>
 <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Manrope",sans-serif;background:#fff;color:#111;min-height:100vh}
@@ -79,6 +80,16 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .success-t{font-family:"Ca
 .procurement-note .ic{font-size:16px;flex-shrink:0;margin-top:1px}
 
 .tx-type-warning{background:#FFF8E6;border:1.5px solid #F5C330;border-radius:12px;padding:12px 14px;margin:14px 0;font-size:12px;color:#8a6300;font-weight:700;line-height:1.6}
+.tx-type-warning-in-box{background:rgba(245,195,48,.15);border:1.5px solid rgba(245,195,48,.4);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11.5px;color:#FFF8E6;font-weight:700;line-height:1.55}
+.tx-type-warning-in-box strong{color:#F5C330}
+
+.pledge-note{display:flex;gap:10px;align-items:flex-start;background:#fafaf7;border:1.5px solid #e8e8e0;border-radius:14px;padding:12px 14px;margin:0 20px 16px;font-size:12px;color:#777;font-weight:600;line-height:1.5}
+.pledge-note .ic{font-size:16px;flex-shrink:0;margin-top:1px}
+
+.success-stats{display:flex;gap:14px;justify-content:center;margin:22px 0 6px}
+.success-stat{background:#EBF7F0;border:1.5px solid #cdebd9;border-radius:16px;padding:16px 20px;min-width:110px}
+.success-stat-num{font-family:"League Spartan",sans-serif;font-size:32px;font-weight:900;color:#1D7A47;line-height:1}
+.success-stat-lbl{font-size:11px;color:#5a8a6e;font-weight:700;margin-top:6px;line-height:1.4}
 
 .pay-tabs{display:flex;gap:8px;margin-bottom:14px}
 .pay-tab{flex:1;padding:11px;border-radius:12px;border:2px solid #e8e8e0;background:#fafaf7;font-family:"League Spartan",sans-serif;font-size:13px;font-weight:800;color:#888;cursor:pointer;text-align:center;transition:all .15s}
@@ -210,6 +221,11 @@ body.lang-ar .pass-perks li::before{left:auto;right:0}
 
   <div class="summary" id="summary"></div>
 
+  <div class="pledge-note" id="pledge-note" style="display:none">
+    <span class="ic">💚</span>
+    <div data-en="This is a standing monthly commitment, not an automatic charge — you'll transfer manually each month via bank transfer or Fawran. Situations change, so you can cancel or amend your pledge anytime." data-ar="هذا تعهّد شهري قائم، وليس خصماً تلقائياً — ستقوم بالتحويل يدوياً كل شهر عبر الحوالة البنكية أو فوران. الظروف تتغيّر، لذا يمكنك إلغاء تعهّدك أو تعديله في أي وقت.">This is a standing monthly commitment, not an automatic charge — you'll transfer manually each month via bank transfer or Fawran. Situations change, so you can cancel or amend your pledge anytime.</div>
+  </div>
+
   <div class="section">
     <div class="section-h" data-en="Your contact details" data-ar="بيانات الاتصال">Your contact details</div>
     <div class="section-sub" data-en="So we can confirm by email once payment is received" data-ar="لنتمكن من التأكيد بالبريد الإلكتروني عند استلام الدفع">So we can confirm by email once payment is received</div>
@@ -281,18 +297,17 @@ body.lang-ar .pass-perks li::before{left:auto;right:0}
         <span class="pay-total-lbl" data-en="Amount to transfer" data-ar="المبلغ المطلوب تحويله">Amount to transfer</span>
         <span class="pay-total-num" id="amt-fawran">QAR 100</span>
       </div>
-    </div>
-
-    <div class="tx-type-warning" data-en="⚠️ <strong>Important — when prompted for transaction type, select:</strong><br>&quot;Payment for goods/services&quot; or &quot;commercial transaction&quot;" data-ar="⚠️ <strong>مهم — عند الطلب بنوع المعاملة، اختر:</strong><br>«دفع مقابل سلع/خدمات» أو «معاملة تجارية»">
-      ⚠️ <strong>Important — when prompted for transaction type, select:</strong><br>
-      "Payment for goods/services" or "commercial transaction"
+      <div class="tx-type-warning-in-box" data-en="⚠️ <strong>Important — when prompted for transaction type, select:</strong><br>&quot;Payment for goods/services&quot; or &quot;commercial transaction&quot;" data-ar="⚠️ <strong>مهم — عند الطلب بنوع المعاملة، اختر:</strong><br>«دفع مقابل سلع/خدمات» أو «معاملة تجارية»">
+        ⚠️ <strong>Important — when prompted for transaction type, select:</strong><br>
+        "Payment for goods/services" or "commercial transaction"
+      </div>
     </div>
 
     <div class="pay-note" id="pay-note" data-en="Bank transfers may take a few hours to reflect. We'll email you to confirm receipt — reply to that email with a screenshot of your transfer to help us match it faster." data-ar="قد تستغرق الحوالات البنكية بضع ساعات لتظهر. سنراسلك بالبريد لتأكيد الاستلام — رد على ذلك البريد بلقطة شاشة لحوالتك لمساعدتنا على مطابقتها بسرعة أكبر.">Bank transfers may take a few hours to reflect. We'll email you to confirm receipt — reply to that email with a screenshot of your transfer to help us match it faster.</div>
 
     <label class="confirm-check">
       <input type="checkbox" id="confirm-transferred">
-      <span class="confirm-check-label" data-en="I've made the transfer using the details above, or I'll do so within 24 hours." data-ar="قمت بالتحويل باستخدام البيانات أعلاه، أو سأقوم بذلك خلال ٢٤ ساعة.">I've made the transfer using the details above, or I'll do so within 24 hours.</span>
+      <span class="confirm-check-label" data-en="I've made the transfer using the details above, or I'll do so within 48 hours." data-ar="قمت بالتحويل باستخدام البيانات أعلاه، أو سأقوم بذلك خلال ٤٨ ساعة.">I've made the transfer using the details above, or I'll do so within 48 hours.</span>
     </label>
   </div>
 
@@ -313,8 +328,20 @@ body.lang-ar .pass-perks li::before{left:auto;right:0}
   <div class="success-ic">🎉</div>
   <div class="success-t" data-en="You're a sponsor!" data-ar="أنت الآن متكفّل!">You're a sponsor!</div>
   <div class="success-ref" id="success-ref">Ref: SP-2026-0001</div>
-  <div class="success-d" id="success-d" data-en="Thank you for feeding a friend this month. We'll confirm your match and payment by email shortly." data-ar="شكراً لك على تغذية صديق هذا الشهر. سنؤكد مطابقتك ودفعك بالبريد الإلكتروني قريباً.">Thank you for feeding a friend this month. We'll confirm your match and payment by email shortly.</div>
-  <button class="success-btn" id="success-account-btn" onclick="window.location.href='Faf-FoodBox-Account.html'" style="margin-bottom:10px" data-en="View my sponsorships →" data-ar="عرض تكفّلاتي ←">View my sponsorships →</button>
+  <div class="success-d" id="success-d" data-en="On behalf of our friends in need, thank you for your support. We'll confirm your match and payment by email shortly." data-ar="نيابةً عن أصدقائنا المحتاجين، شكراً لك على دعمك. سنؤكد مطابقتك ودفعك بالبريد الإلكتروني قريباً.">On behalf of our friends in need, thank you for your support. We'll confirm your match and payment by email shortly.</div>
+
+  <div class="success-stats" id="success-stats" style="display:none">
+    <div class="success-stat">
+      <div class="success-stat-num" id="stat-my-boxes">—</div>
+      <div class="success-stat-lbl" data-en="Boxes you've sponsored" data-ar="الصناديق التي تكفّلت بها">Boxes you've sponsored</div>
+    </div>
+    <div class="success-stat">
+      <div class="success-stat-num" id="stat-my-friends">—</div>
+      <div class="success-stat-lbl" data-en="Friends you've helped" data-ar="الأصدقاء الذين ساعدتهم">Friends you've helped</div>
+    </div>
+  </div>
+
+  <button class="success-btn" id="success-account-btn" onclick="window.location.href='my-payments.html'" style="margin-bottom:10px" data-en="View my sponsorships →" data-ar="عرض تكفّلاتي ←">View my sponsorships →</button>
   <button class="success-btn success-btn-sec" onclick="window.location.href='foodbox.html'" data-en="Back to home" data-ar="العودة للرئيسية">Back to home</button>
 </div>
 
@@ -349,6 +376,9 @@ function renderSummary(){
   var amtLabel = "QAR " + AMOUNT;
   document.getElementById("amt-bank").textContent = amtLabel;
   document.getElementById("amt-fawran").textContent = amtLabel;
+
+  var pledgeNoteEl = document.getElementById("pledge-note");
+  pledgeNoteEl.style.display = prefs.subscription === "monthly" ? "flex" : "none";
 }
 
 function setPayMethod(m){
@@ -498,31 +528,51 @@ async function submitSponsorship(){
       // This call now requires the sponsor's own auth token — the function
       // verifies it server-side and stamps sponsor_id/email from the
       // verified session, as a backstop to the client-side update above.
-      try{
-        await fetch("https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder", {
+      var emailPayload = JSON.stringify({
+        type: "submit_sponsorship",
+        sponsorship_id: sponsorshipId,
+        sponsor_name: name,
+        whatsapp: wa || null,
+        ref_no: refNo,
+        matched_family_ids: prefs.friends || (prefs.friend ? [prefs.friend] : []),
+        box_count: prefs.boxCount || 1,
+        subscription_type: prefs.subscription,
+        payment_method: payMethod,
+        amount: AMOUNT,
+        pref_save_details: saveDetails,
+        pref_delivery_alerts: wantAlerts,
+        pref_wants_account: wantAccount
+      });
+      // Previously this call's outcome was never checked — a 401 (e.g. a
+      // stale/missing access token) or a 500 looked identical to success,
+      // so a failed confirmation email was invisible both to the sponsor
+      // and to us. Now: check the actual response, retry once on failure,
+      // and log loudly (with the ref_no) so a real failure is traceable
+      // even though we still don't block the success screen on it — the
+      // sponsor's payment/match itself doesn't depend on this email.
+      var sendConfirmationEmail = async function(){
+        var res = await fetch("https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer " + currentAccessToken
           },
-          body: JSON.stringify({
-            type: "submit_sponsorship",
-            sponsorship_id: sponsorshipId,
-            sponsor_name: name,
-            whatsapp: wa || null,
-            ref_no: refNo,
-            matched_family_ids: prefs.friends || (prefs.friend ? [prefs.friend] : []),
-            box_count: prefs.boxCount || 1,
-            subscription_type: prefs.subscription,
-            payment_method: payMethod,
-            amount: AMOUNT,
-            pref_save_details: saveDetails,
-            pref_delivery_alerts: wantAlerts,
-            pref_wants_account: wantAccount
-          })
+          body: emailPayload
         });
+        if(!res.ok){
+          var errBody = await res.text().catch(function(){ return "(no body)"; });
+          throw new Error("clever-responder returned " + res.status + ": " + errBody);
+        }
+      };
+      try{
+        await sendConfirmationEmail();
       } catch(emailErr){
-        console.warn("Could not trigger confirmation email", emailErr);
+        console.error("Confirmation email failed for " + refNo + " — retrying once:", emailErr);
+        try{
+          await sendConfirmationEmail();
+        } catch(retryErr){
+          console.error("Confirmation email retry also failed for " + refNo + " — sponsor and admin were NOT emailed for this sponsorship:", retryErr);
+        }
       }
     }
   } catch(e){
@@ -543,6 +593,37 @@ async function submitSponsorship(){
 
   document.getElementById("main-shell").style.display = "none";
   document.getElementById("success-wrap").classList.add("show");
+
+  if(window.confetti){
+    confetti({ particleCount: 140, spread: 80, origin: { y: 0.35 }, colors: ["#1D7A47", "#F5C330", "#a9df49", "#EBF7F0"] });
+    setTimeout(function(){
+      confetti({ particleCount: 60, spread: 100, origin: { y: 0.5 } });
+    }, 300);
+  }
+
+  // Show this sponsor's own cumulative totals (not charity-wide) — every
+  // sponsorship row they've ever submitted, boxes summed and distinct
+  // families they've been matched to counted once each even if they
+  // sponsor the same family again across separate rounds.
+  if(window.sbClient && currentUserId){
+    window.sbClient
+      .from("sponsorships")
+      .select("box_count, matched_family_ids")
+      .eq("sponsor_id", currentUserId)
+      .then(function(res){
+        if(res.error || !res.data) return;
+        var totalBoxes = res.data.reduce(function(sum, r){ return sum + (r.box_count || 0); }, 0);
+        var familySet = {};
+        res.data.forEach(function(r){
+          (r.matched_family_ids || []).forEach(function(id){ familySet[id] = true; });
+        });
+        var totalFriends = Object.keys(familySet).length;
+        document.getElementById("stat-my-boxes").textContent = totalBoxes.toLocaleString();
+        document.getElementById("stat-my-friends").textContent = totalFriends.toLocaleString();
+        document.getElementById("success-stats").style.display = "flex";
+      })
+      .catch(function(e){ console.warn("Could not load sponsor totals for success screen", e); });
+  }
 
   sessionStorage.removeItem("faf_sponsorship_id");
   sessionStorage.removeItem("faf_ref_no");
