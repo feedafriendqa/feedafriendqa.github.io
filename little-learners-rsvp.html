@@ -88,7 +88,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
       <h1 id="gate-title">Assessment Day</h1>
       <p id="gate-sub"></p>
     </div>
-    <div class="card">
+    <div class="card" id="qid-gate-card">
       <div class="note">🪪 Enter your child's QID number to find your invite and RSVP.</div>
       <div class="fg">
         <label>Child's QID Number</label>
@@ -96,6 +96,17 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
       </div>
       <div id="gate-err" class="err-msg"></div>
       <button class="btn-gold" id="gate-btn" onclick="submitQidGate()">Find My Invite →</button>
+    </div>
+    <div class="card" id="name-gate-card" style="display:none;">
+      <div class="note">👋 Select your child's name to find your invite and RSVP.</div>
+      <div class="fg">
+        <label>Child's Name</label>
+        <select id="gate-name-select">
+          <option value="">Select…</option>
+        </select>
+      </div>
+      <div id="gate-name-err" class="err-msg"></div>
+      <button class="btn-gold" id="gate-name-btn" onclick="submitNameGate()">Find My Invite →</button>
     </div>
   </div>
 
@@ -301,7 +312,8 @@ async function init() {
 }
 
 async function loadDayGate(id) {
-  // Generic, shareable link — anyone can open it, QID number gates access to a specific invite
+  // Generic, shareable link — anyone can open it. Assessment days gate by QID number;
+  // other events (where several children may still lack a QID on file) gate by picking a name instead.
   try {
     const { data, error } = await db.rpc('get_assessment_day_public', { p_day_id: id });
     if(error || !data || !data.length) { showInvalid(); return; }
@@ -316,8 +328,59 @@ async function loadDayGate(id) {
     document.getElementById('loading-pg').style.display='none';
     document.getElementById('picker-pg').style.display='none';
     document.getElementById('qid-gate-pg').style.display='block';
+
+    if(day.event_type==='assessment_day') {
+      document.getElementById('qid-gate-card').style.display='block';
+      document.getElementById('name-gate-card').style.display='none';
+    } else {
+      document.getElementById('qid-gate-card').style.display='none';
+      document.getElementById('name-gate-card').style.display='block';
+      const { data: invitees, error: invErr } = await db.rpc('list_event_invitees', { p_day_id: id });
+      const sel = document.getElementById('gate-name-select');
+      sel.innerHTML = '<option value="">Select…</option>';
+      if(!invErr && invitees) {
+        invitees.forEach(inv => { sel.innerHTML += `<option value="${inv.child_id}">${inv.child_name}</option>`; });
+      }
+    }
   } catch(e) {
     showInvalid();
+  }
+}
+
+async function submitNameGate() {
+  const childId = document.getElementById('gate-name-select').value;
+  const err = document.getElementById('gate-name-err');
+  err.style.display = 'none';
+  if(!childId) { err.textContent = '⚠️ Please select your child\'s name.'; err.style.display='block'; return; }
+  const btn = document.getElementById('gate-name-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="border-color:rgba(255,255,255,.4);border-top-color:white;"></div> Searching…';
+  try {
+    const { data, error } = await db.rpc('select_event_invitee', { p_day_id: dayId, p_child_id: childId });
+    if(error || !data || !data.length) {
+      err.textContent = "⚠️ We couldn't find that invite. Please contact us directly.";
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Find My Invite →';
+      return;
+    }
+    const invite = data[0];
+    token = invite.access_token;
+    applyInvite(invite);
+    document.getElementById('qid-gate-pg').style.display='none';
+    if(invite.invite_status === 'confirmed') {
+      document.getElementById('success-pg').style.display='block';
+    } else if(!invite.has_qid) {
+      document.getElementById('qid-child').textContent = `For ${currentChildName}`;
+      document.getElementById('qid-pg').style.display='block';
+    } else {
+      document.getElementById('rsvp-pg').style.display='block';
+    }
+  } catch(e) {
+    err.textContent = 'Something went wrong: ' + (e.message || 'please try again.');
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Find My Invite →';
   }
 }
 
@@ -472,7 +535,7 @@ async function loadInviteByToken() {
     }
 
     document.getElementById('loading-pg').style.display='none';
-    if(!invite.has_qid && invite.event_type==='assessment_day') {
+    if(!invite.has_qid) {
       document.getElementById('qid-child').textContent = `For ${currentChildName}`;
       document.getElementById('qid-pg').style.display='block';
     } else {
