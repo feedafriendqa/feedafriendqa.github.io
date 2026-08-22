@@ -197,7 +197,7 @@ body{font-family:"Manrope",sans-serif;background:#ffffff;color:var(--ink);min-he
 <!-- ── RESET SENT ── -->
 <div class="v" id="v-reset">
   <div class="card" style="text-align:center;padding:32px 24px">
-    <div style="font-size:44px;margin-bottom:16px">📬</div>
+    <div style="margin-bottom:16px"><svg viewBox="0 0 24 24" width="44" height="44" xmlns="http://www.w3.org/2000/svg"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z" fill="#146c43"/></svg></div>
     <div style="font-family:League Spartan,sans-serif;font-size:18px;font-weight:900;color:var(--ink);margin-bottom:8px">Check your email</div>
     <div style="font-size:13px;color:var(--muted);font-weight:600;line-height:1.6;margin-bottom:20px">We sent a reset link — click it, set a new password, then sign back in.</div>
     <button onclick="showV('v-login')" style="font-family:League Spartan,sans-serif;font-size:12px;font-weight:800;color:var(--forest);background:none;border:none;cursor:pointer">← Back to sign in</button>
@@ -211,7 +211,7 @@ body{font-family:"Manrope",sans-serif;background:#ffffff;color:var(--ink);min-he
     <div class="banner-s">We're verifying your licence and details — usually within 24 hours. We'll email you once approved.</div>
   </div>
   <div class="card" style="text-align:center;padding:32px 24px">
-    <div style="font-size:44px;margin-bottom:14px">🚗</div>
+    <div style="margin-bottom:14px"><svg viewBox="0 0 24 24" width="44" height="44" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16C5.67 16 5 15.33 5 14.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" fill="#146c43"/></svg></div>
     <div style="font-family:League Spartan,sans-serif;font-size:16px;font-weight:900;color:var(--ink);margin-bottom:6px">Thanks for signing up</div>
     <div style="font-size:13px;color:var(--muted);font-weight:600;line-height:1.6">Once approved, you'll manage your distribution trips right here.</div>
   </div>
@@ -224,7 +224,7 @@ body{font-family:"Manrope",sans-serif;background:#ffffff;color:var(--ink);min-he
   <div id="pnl-active" style="display:none">
     <div class="sec-lbl">Your current trip</div>
     <div id="active-card"></div>
-    <button class="act-btn" onclick="showFamilies()">📋 View my deliveries →</button>
+    <button class="act-btn" onclick="showFamilies()">View my deliveries →</button>
     <button class="out-btn" onclick="anotherTrip()">+ Sign up for another trip</button>
     <div style="height:16px"></div>
   </div>
@@ -244,7 +244,7 @@ body{font-family:"Manrope",sans-serif;background:#ffffff;color:var(--ink);min-he
       <button class="back-btn" onclick="showDashMain()">← Back</button>
       <div class="back-title">Areas for this trip</div>
     </div>
-    <p style="font-size:13px;color:var(--muted);font-weight:600;line-height:1.6;padding:0 20px 14px">Pick up to 6 areas you can cover this round — add or remove any, not just your saved ones. We'll match friends and boxes to fit your vehicle.</p>
+    <p style="font-size:13px;color:var(--muted);font-weight:600;line-height:1.6;padding:0 20px 14px">Pick up to 6 areas you can cover this round — add or remove any, not just your saved ones. We'll match families and boxes to fit your vehicle.</p>
     <div class="card" style="margin:0 16px">
       <input type="text" id="area-search" placeholder="Search areas…" oninput="filterTripAreaGrid(this.value)" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #e5e2d9;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:10px">
       <div class="area-grid" id="trip-agrid"></div>
@@ -267,7 +267,7 @@ body{font-family:"Manrope",sans-serif;background:#ffffff;color:var(--ink);min-he
       </label>
     </div>
     <div class="cta-bar" style="position:static;background:none">
-      <button class="cta" id="areas-continue-btn" onclick="continueToAlloc()">Find my friends →</button>
+      <button class="cta" id="areas-continue-btn" onclick="continueToAlloc()">Find my families →</button>
     </div>
   </div>
 
@@ -279,14 +279,14 @@ body{font-family:"Manrope",sans-serif;background:#ffffff;color:var(--ink);min-he
     </div>
     <p style="font-size:13px;color:var(--muted);font-weight:600;line-height:1.6;padding:0 20px 14px">Based on your vehicle and chosen areas. Tap a card to leave it out for now, ✕ to swap it for someone else, or shuffle everything.</p>
     <div class="alloc-dark">
-      <div class="al-lbl">Friends to deliver</div>
+      <div class="al-lbl">Families to deliver</div>
       <div class="al-big" id="alloc-n">…</div>
       <div class="al-sub" id="alloc-areas">Searching your areas…</div>
     </div>
     <div id="hold-timer" style="display:none;text-align:center;font-size:12px;font-weight:700;color:var(--forest);padding:10px 20px 0">Reserved for you — confirm within <span id="hold-mins">10:00</span></div>
     <div id="alloc-list"></div>
     <div id="reshuffle-row" style="padding:10px 16px 0;display:none">
-      <button class="tb-out" style="width:100%" id="reshuffle-btn" onclick="reshuffleUnselected()">🔄 Reshuffle the rest</button>
+      <button class="tb-out" style="width:100%" id="reshuffle-btn" onclick="reshuffleUnselected()">↺ Reshuffle the rest</button>
     </div>
     <div class="two-btn">
       <button class="tb-out" onclick="loadAlloc()">↺ Shuffle all</button>
@@ -301,9 +301,9 @@ body{font-family:"Manrope",sans-serif;background:#ffffff;color:var(--ink);min-he
       <div class="banner-s">Ready to help? Sign up for your next distribution trip below.</div>
     </div>
     <div class="no-trip">
-      <div class="nt-ic">📦</div>
+      <div class="nt-ic"><svg viewBox="0 0 24 24" width="48" height="48" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-2 .9-2 2v3.01c0 .72.39 1.34.97 1.69V20c0 1.1 1.1 2 2.03 2h14c.93 0 2-.9 2-2V8.7c.58-.35.97-.97.97-1.69V4c0-1.1-.9-2-2-2zm-1 18H5V9h14v11zM15 12H9v2h6v-2zm5-6H4V4h16v2z" fill="#146c43"/></svg></div>
       <div class="nt-t" id="cap-remind"></div>
-      <div class="nt-d">We'll match you with friends in your preferred areas.</div>
+      <div class="nt-d">We'll match you with families in your preferred areas.</div>
       <button onclick="anotherTrip()" class="cta" style="display:block;max-width:280px;margin:0 auto">Sign up for a trip →</button>
     </div>
   </div>
@@ -451,7 +451,7 @@ function renderActiveTrip(t){
   document.getElementById("active-card").innerHTML=
     '<div class="trip-card"><div class="trip-head"><span class="trip-ref">TRIP-'+t.id.slice(0,6).toUpperCase()+'</span><span class="badge badge-ok">✓ Confirmed</span></div>'+
     '<div class="tr"><span class="tr-l">Date</span><span class="tr-v">'+date+'</span></div>'+
-    '<div class="tr"><span class="tr-l">Deliveries</span><span class="tr-v">'+t.boxes_count+' friends</span></div>'+
+    '<div class="tr"><span class="tr-l">Deliveries</span><span class="tr-v">'+t.boxes_count+' families</span></div>'+
     '<div class="tr"><span class="tr-l">Vehicle</span><span class="tr-v">'+DP.car_make+' '+DP.car_model+'</span></div></div>';
 }
 
@@ -459,7 +459,7 @@ function renderPastTrip(t){
   var date=t.trip_date?new Date(t.trip_date).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"—";
   return '<div class="trip-card" style="margin:0 16px 10px"><div class="trip-head"><span class="trip-ref">TRIP-'+t.id.slice(0,6).toUpperCase()+'</span><span class="badge badge-done">✓ Done</span></div>'+
     '<div class="tr"><span class="tr-l">Date</span><span class="tr-v">'+date+'</span></div>'+
-    '<div class="tr"><span class="tr-l">Deliveries</span><span class="tr-v">'+t.boxes_count+' friends</span></div></div>';
+    '<div class="tr"><span class="tr-l">Deliveries</span><span class="tr-v">'+t.boxes_count+' families</span></div></div>';
 }
 
 async function showFamilies(){
@@ -496,14 +496,14 @@ function renderFamCard(row,num){
   var addr=addrParts.length?addrParts.join(", "):(app.area||"—");
   var name=app.full_name_en||app.full_name||"—";
   var wa=(app.whatsapp||"").replace(/[^0-9+]/g,"");
-  var waHtml=wa?'<a href="https://wa.me/'+wa+'" target="_blank">Open WhatsApp 💬</a>':"—";
+  var waHtml=wa?'<a href="https://wa.me/'+wa+'" target="_blank">Open WhatsApp</a>':"—";
   var phoneTxt=app.whatsapp||"—";
   var language=app.submission_lang==="ar"?"Arabic":(app.submission_lang?"English":"—");
   var done=row.status==="delivered";
   var tags="";
-  if(app.diaper_size&&app.diaper_size!=="Not needed")tags+='<span class="tag tag-diaper">👶 '+app.diaper_size+'</span>';
-  if(app.formula&&app.formula!=="Not needed")tags+='<span class="tag tag-formula">🍼 '+app.formula+'</span>';
-  if(app.household_size){var bx=Math.ceil(app.household_size/4);tags+='<span class="tag tag-boxes">📦 '+bx+' box'+(bx===1?"":"es")+'</span>';}
+  if(app.diaper_size&&app.diaper_size!=="Not needed")tags+='<span class="tag tag-diaper">'+app.diaper_size+'</span>';
+  if(app.formula&&app.formula!=="Not needed")tags+='<span class="tag tag-formula">'+app.formula+'</span>';
+  if(app.household_size){var bx=Math.ceil(app.household_size/4);tags+='<span class="tag tag-boxes">'+bx+' box'+(bx===1?"":"es")+'</span>';}
   if(app.household_size)tags+='<span class="tag tag-hh">'+app.household_size+' people</span>';
   var notesVal=app.driver_notes?app.driver_notes.replace(/</g,"&lt;"):"";
   return '<div class="fam-card" id="fc-'+row.id+'">'
@@ -758,15 +758,15 @@ function renderAlloc(){
   var fallbackNote=ALLOC_META&&ALLOC_META.used_fallback_areas?" — none of your chosen areas had matches, so we widened the search":"";
   document.getElementById("alloc-areas").textContent=fams.length
     ?"Areas: "+areas.slice(0,5).join(", ")+(areas.length>5?" +"+(areas.length-5)+" more":"")+capTxt+fallbackNote
-    :"No friends available right now — every confirmed friend already has a driver, or there's nothing left to deliver.";
+    :"No families available right now — every confirmed family already has a driver, or there's nothing left to deliver.";
   document.getElementById("alloc-list").innerHTML=fams.length===0
-    ?'<div style="text-align:center;padding:20px 24px;font-size:13px;color:var(--muted);font-weight:600">No friends available right now. Check back soon!</div>'
+    ?'<div style="text-align:center;padding:20px 24px;font-size:13px;color:var(--muted);font-weight:600">No families available right now. Check back soon!</div>'
     :fams.map(function(f){
         var bx=f.boxes_needed||1;
         var off=!!DESELECTED[f.id];
-        var tags=[bx+" box"+(bx===1?"":"es"),f.diaper_size&&f.diaper_size!=="Not needed"?"👶 Nappies":"",f.formula&&f.formula!=="Not needed"?"🍼 Formula":"",f.is_sticky?"🔁 Your friend last time":"",f.family_group_size>1?"🔗 "+f.family_group_size+" deliveries, same household":"",f.outside_selected_areas?"📍 Outside your chosen areas":""].filter(Boolean).join(" · ");
+        var tags=[bx+" box"+(bx===1?"":"es"),f.diaper_size&&f.diaper_size!=="Not needed"?"Nappies":"",f.formula&&f.formula!=="Not needed"?"Formula":"",f.is_sticky?"Matched with you last time":"",f.family_group_size>1?f.family_group_size+" deliveries, same household":"",f.outside_selected_areas?"Outside your chosen areas":""].filter(Boolean).join(" · ");
         return '<div class="alloc-fam'+(off?" af-off":"")+'" id="af-'+f.id+'" onclick="toggleDeselect(\''+f.id+'\')"><button class="af-x" onclick="event.stopPropagation();removeAllocFam(\''+f.id+'\')" title="Remove and match again">✕</button>'
-          +'<div class="af-area">📍 '+(f.area||"Unknown")+'</div>'
+          +'<div class="af-area"><svg viewBox="0 0 24 24" width="12" height="12" style="vertical-align:-1px;margin-right:3px" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="#146c43"/></svg>'+(f.area||"Unknown")+'</div>'
           +'<div class="af-sub">'+(f.household_size?"Household of "+f.household_size+" · ":"")+tags+'</div>'
           +(off?'<div class="af-off-lbl">Not confirming this time — tap to bring back</div>':'')
           +'</div>';
@@ -776,7 +776,7 @@ function renderAlloc(){
   confirmBtn.textContent=selectedCount===fams.length?"Confirm these →":"Confirm selected ("+selectedCount+") →";
   var deselCount=Object.keys(DESELECTED).filter(function(id){return KEPT[id];}).length;
   document.getElementById("reshuffle-row").style.display=deselCount>0?"block":"none";
-  if(deselCount>0)document.getElementById("reshuffle-btn").textContent="🔄 Reshuffle the rest ("+deselCount+")";
+  if(deselCount>0)document.getElementById("reshuffle-btn").textContent="↺ Reshuffle the rest ("+deselCount+")";
 }
 
 // Tap a card to leave it out of THIS confirmation without removing it
@@ -826,7 +826,7 @@ async function rematchRemoved(){
 
 async function confirmAlloc(){
   var fams=Object.values(KEPT).filter(function(f){return !DESELECTED[f.id];});
-  if(!fams.length){alert("No friends to confirm.");return;}
+  if(!fams.length){alert("No families to confirm.");return;}
   var btn=document.getElementById("confirm-btn");
   btn.disabled=true;btn.textContent="Confirming…";
   try{
