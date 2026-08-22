@@ -177,6 +177,22 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
           <input type="text" id="guardian-other-name" placeholder="Full name">
         </div>
 
+        <div class="fg" id="phone-confirm-wrap" style="display:none;">
+          <label>Is <span id="phone-confirm-number"></span> still the best number to reach you?</label>
+          <div class="choice-row">
+            <div class="choice" id="phone-yes" onclick="selectChoice('phoneCorrect','Yes',this)">✅ Yes, that's correct</div>
+            <div class="choice" id="phone-no" onclick="selectChoice('phoneCorrect','No',this)">✏️ No, update it</div>
+          </div>
+        </div>
+        <div class="fg" id="phone-new-wrap" style="display:none;">
+          <label>Your correct contact number</label>
+          <input type="text" id="guardian-phone-new" placeholder="e.g. 5012 3456" inputmode="tel">
+        </div>
+        <div class="fg" id="phone-fresh-wrap" style="display:none;">
+          <label>Your contact number</label>
+          <input type="text" id="guardian-phone-fresh" placeholder="e.g. 5012 3456" inputmode="tel">
+        </div>
+
         <div class="fg">
           <label>Email <span style="text-transform:none;font-weight:600;">(optional — helps us keep your profile up to date)</span></label>
           <input type="text" id="guardian-email" placeholder="you@example.com">
@@ -258,14 +274,15 @@ const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
 let db;
 let token = null;
-let choices = { attendance: null, photo: null, chicken: null, allergy: null, waiver: null };
+let choices = { attendance: null, photo: null, chicken: null, allergy: null, waiver: null, phoneCorrect: null };
 let currentInvite = null;
 let qidFiles = {};
 let currentChildName = 'your child';
 
 function selectChoice(group, val, el) {
   choices[group] = val;
-  document.querySelectorAll(`#${group==='attendance'?'att':group}-yes, #${group==='attendance'?'att':group}-no`).forEach(x=>x.classList.remove('sel'));
+  const idPrefix = group==='attendance' ? 'att' : group==='phoneCorrect' ? 'phone' : group;
+  document.querySelectorAll(`#${idPrefix}-yes, #${idPrefix}-no`).forEach(x=>x.classList.remove('sel'));
   el.classList.add('sel');
   if(group==='attendance') {
     document.getElementById('guardian-fields').style.display = (val==='attended') ? 'block' : 'none';
@@ -283,6 +300,9 @@ function selectChoice(group, val, el) {
   }
   if(group==='allergy') {
     document.getElementById('allergy-detail-wrap').style.display = (val==='Yes') ? 'block' : 'none';
+  }
+  if(group==='phoneCorrect') {
+    document.getElementById('phone-new-wrap').style.display = (val==='No') ? 'block' : 'none';
   }
 }
 
@@ -505,7 +525,26 @@ function applyInvite(invite) {
 }
 
 function onGuardianSelectChange(sel) {
-  document.getElementById('guardian-other-wrap').style.display = sel.value.startsWith('Other|') ? 'block' : 'none';
+  const isOther = sel.value.startsWith('Other|');
+  document.getElementById('guardian-other-wrap').style.display = isOther ? 'block' : 'none';
+
+  const relation = sel.value.split('|')[0];
+  const phoneOnFile = relation==='Father' ? currentInvite?.father_phone : relation==='Mother' ? currentInvite?.mother_phone : '';
+  const confirmWrap = document.getElementById('phone-confirm-wrap');
+  const freshWrap = document.getElementById('phone-fresh-wrap');
+  const newWrap = document.getElementById('phone-new-wrap');
+  newWrap.style.display = 'none';
+  choices.phoneCorrect = null;
+  document.querySelectorAll('#phone-yes, #phone-no').forEach(x=>x.classList.remove('sel'));
+
+  if(phoneOnFile) {
+    document.getElementById('phone-confirm-number').textContent = phoneOnFile;
+    confirmWrap.style.display = 'block';
+    freshWrap.style.display = 'none';
+  } else {
+    confirmWrap.style.display = 'none';
+    freshWrap.style.display = 'block';
+  }
 }
 
 let childPhotoFile = null;
@@ -628,12 +667,24 @@ function goToRsvpForm() {
   document.getElementById('rsvp-pg').style.display = 'block';
 }
 
+async function sendConfirmationEmail(type, toEmail, toName, data) {
+  try {
+    await fetch(SUPA_URL + '/functions/v1/ll-send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPA_KEY },
+      body: JSON.stringify({ type, to_email: toEmail, to_name: toName, data })
+    });
+  } catch(e) {
+    console.error('Confirmation email failed:', e);
+  }
+}
+
 async function submitRsvp() {
   const err = document.getElementById('err');
   if(!choices.attendance) { err.textContent = '⚠️ Please let us know if you\'ll be attending.'; err.style.display='block'; return; }
 
   const isAssessDay = currentInvite?.event_type==='assessment_day';
-  let guardianName = '', guardianRelation = '', preferredName = '', aspiration = '', declineReason = '', allergyDetail = '', guardianEmail = '';
+  let guardianName = '', guardianRelation = '', preferredName = '', aspiration = '', declineReason = '', allergyDetail = '', guardianEmail = '', guardianPhone = '';
   if(choices.attendance==='attended') {
     const selVal = document.getElementById('guardian-select').value;
     if(!selVal) { err.textContent = '⚠️ Please select who will be attending.'; err.style.display='block'; return; }
@@ -645,6 +696,19 @@ async function submitRsvp() {
       err.style.display='block';
       return;
     }
+
+    const phoneOnFile = document.getElementById('phone-confirm-wrap').style.display !== 'none';
+    if(phoneOnFile) {
+      if(!choices.phoneCorrect) { err.textContent = '⚠️ Please confirm whether your number on file is still correct.'; err.style.display='block'; return; }
+      if(choices.phoneCorrect==='No') {
+        guardianPhone = document.getElementById('guardian-phone-new').value.trim();
+        if(!guardianPhone) { err.textContent = '⚠️ Please provide your correct contact number.'; err.style.display='block'; return; }
+      }
+    } else {
+      guardianPhone = document.getElementById('guardian-phone-fresh').value.trim();
+      if(!guardianPhone) { err.textContent = '⚠️ Please provide a contact number.'; err.style.display='block'; return; }
+    }
+
     guardianEmail = document.getElementById('guardian-email').value.trim();
 
     preferredName = document.getElementById('preferred-name').value.trim();
@@ -719,8 +783,31 @@ async function submitRsvp() {
       p_allergy_detail: allergyDetail || null,
       p_guardian_email: guardianEmail || null,
       p_waiver_agreed: isAssessDay ? null : (choices.waiver==='Yes'),
+      p_guardian_phone: guardianPhone || null,
     });
     if(error || !data) throw new Error(error?.message || 'Could not submit RSVP');
+
+    // Fire-and-forget confirmation emails — never block the success screen on these
+    const emailData = {
+      title: currentInvite?.title || eventLabel(currentInvite?.event_type),
+      child_name: currentChildName,
+      attendance: choices.attendance,
+      event_date: currentInvite?.event_date ? new Date(currentInvite.event_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '',
+      event_time: currentInvite?.event_time || '',
+      location: currentInvite?.location || '',
+      decline_reason: declineReason || '',
+      guardian_name: guardianName || '',
+      guardian_relation: guardianRelation || '',
+      guardian_email: guardianEmail || '',
+      guardian_phone: guardianPhone || '',
+      has_allergies: choices.allergy || '',
+      allergy_detail: allergyDetail || '',
+    };
+    if(guardianEmail) {
+      sendConfirmationEmail('event_rsvp_confirmation_parent', guardianEmail, guardianName || 'Parent', emailData);
+    }
+    sendConfirmationEmail('event_rsvp_notification_admin', '', '', emailData);
+
     document.getElementById('rsvp-pg').style.display='none';
     document.getElementById('success-pg').style.display='block';
   } catch(e) {

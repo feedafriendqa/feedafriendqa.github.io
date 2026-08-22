@@ -1126,17 +1126,51 @@ function renderAttendeesForDay() {
     el.innerHTML = '<div class="empty"><div class="eicon">👥</div><p>No children added yet — use the Eligible Children tab.</p></div>';
     return;
   }
-  const waiting = attendees.filter(a=>a.day_status!=='attended');
-  const arrived = attendees.filter(a=>a.day_status==='attended');
 
-  function cardHTML(a, isArrived) {
+  const awaiting = attendees.filter(a=>a.invite_status!=='confirmed');
+  const confirmedYes = attendees.filter(a=>a.invite_status==='confirmed' && a.attendance==='attended');
+  const confirmedNo = attendees.filter(a=>a.invite_status==='confirmed' && a.attendance==='declined');
+  const waiting = confirmedYes.filter(a=>a.day_status!=='attended');
+  const arrived = confirmedYes.filter(a=>a.day_status==='attended');
+
+  function rsvpMeta(a, fam) {
+    const bits = [];
+    if(a.attending_guardian_name) bits.push(`👪 ${a.attending_guardian_name}${a.attending_guardian_relation?` (${a.attending_guardian_relation})`:''}`);
+    if(a.has_allergies==='Yes') bits.push(`<span style="color:var(--coral);font-weight:700;">⚠️ ${a.allergy_detail||'Allergy (unspecified)'}</span>`);
+    if(a.photo_consent) bits.push(`📷 Consent: ${a.photo_consent}`);
+    return bits.map(b=>`<div style="font-size:12px;margin-top:2px;">${b}</div>`).join('');
+  }
+
+  function checkinCardHTML(a, isArrived) {
     const child = allChildren.find(c=>c.id===a.child_id);
+    const fam = allFamilies.find(f=>f.id===a.family_id);
     const name = child?.full_name||'Child';
     return `<div onclick="markAttendance('${a.id}','${isArrived?'':'attended'}')"
         style="background:white;border-radius:12px;box-shadow:var(--shadow);padding:10px;margin-bottom:8px;text-align:center;cursor:pointer;${isArrived?'border:2px solid var(--lime);':''}">
       <div style="display:flex;justify-content:center;margin-bottom:6px;">${avatarHTML(child,'att-photo-',a.id,52)}</div>
       <div style="font-weight:800;font-size:13px;">${name}</div>
       <div style="margin-top:3px;font-size:13px;">${senAllergyConsentIcons(child,a)}</div>
+      ${rsvpMeta(a,fam)}
+    </div>`;
+  }
+
+  function awaitingCardHTML(a) {
+    const child = allChildren.find(c=>c.id===a.child_id);
+    return `<div class="fam-card">
+      <div class="fam-info">
+        <div class="fam-name">${child?.full_name||'Child'} <span style="font-size:11px;color:var(--muted);">(${a.invite_status})</span></div>
+        <div class="fam-meta"><span>⏳ Hasn't responded yet</span></div>
+      </div>
+    </div>`;
+  }
+
+  function declinedCardHTML(a) {
+    const child = allChildren.find(c=>c.id===a.child_id);
+    return `<div class="fam-card">
+      <div class="fam-info">
+        <div class="fam-name">${child?.full_name||'Child'}</div>
+        <div class="fam-meta"><span style="color:var(--coral);font-weight:700;">❌ ${a.decline_reason||'No reason given'}</span></div>
+      </div>
     </div>`;
   }
 
@@ -1147,17 +1181,25 @@ function renderAttendeesForDay() {
       <button class="btn-teal btn-sm" onclick="sendAllInvites()">📧 Send Invite to All</button>
       <button class="btn-teal btn-sm" onclick="copyWhatsAppList()">📋 Copy WhatsApp List</button>
     </div>
+
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;">⏳ Awaiting Response (${awaiting.length})</div>
+    ${awaiting.map(awaitingCardHTML).join('') || '<div class="empty" style="padding:10px 0;font-size:12.5px;">Everyone has responded</div>'}
+
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:18px 0 8px;">✅ Confirmed — Attending (${confirmedYes.length})</div>
     <div style="display:flex;gap:10px;">
       <div style="flex:1;">
         <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;text-align:center;">⏳ Waiting (${waiting.length})</div>
-        ${waiting.map(a=>cardHTML(a,false)).join('') || '<div class="empty" style="padding:10px 0;font-size:12.5px;">All arrived 🎉</div>'}
+        ${waiting.map(a=>checkinCardHTML(a,false)).join('') || '<div class="empty" style="padding:10px 0;font-size:12.5px;">None</div>'}
       </div>
       <div style="flex:1;">
         <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;text-align:center;">✅ Arrived (${arrived.length})</div>
-        ${arrived.map(a=>cardHTML(a,true)).join('') || '<div class="empty" style="padding:10px 0;font-size:12.5px;">None yet</div>'}
+        ${arrived.map(a=>checkinCardHTML(a,true)).join('') || '<div class="empty" style="padding:10px 0;font-size:12.5px;">None yet</div>'}
       </div>
-    </div>`;
-  loadPhotosFor(attendees, 'att-photo-');
+    </div>
+
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:18px 0 8px;">❌ Confirmed — Can't Attend (${confirmedNo.length})</div>
+    ${confirmedNo.map(declinedCardHTML).join('') || '<div class="empty" style="padding:10px 0;font-size:12.5px;">None</div>'}`;
+  loadPhotosFor(confirmedYes, 'att-photo-');
 }
 
 async function approveSponsorPhoto(childId) {
