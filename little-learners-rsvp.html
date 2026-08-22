@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<title>Little Learners — Assessment Day RSVP</title>
+<title>Little Learners — Event RSVP</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--forest:#0A3D1F;--forest-mid:#145C30;--lime:#5CB85C;--lime-soft:#EAF5EA;--gold:#3AAFA4;--coral:#E05252;--muted:#5A7A65;--border:#C8DFC8;--cream:#F4F9F4;--shadow:0 4px 20px rgba(10,61,31,.09);--r:14px;--rs:10px;}
@@ -71,14 +71,14 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
 
   <div id="no-days-pg" class="card" style="display:none;text-align:center;">
     <div style="font-size:48px;margin-bottom:10px;">📅</div>
-    <h2 style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;">No assessment days open right now</h2>
+    <h2 style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;">No events open right now</h2>
     <p style="font-size:13.5px;color:var(--muted);margin-top:8px;">Please check back later or contact us directly.</p>
   </div>
 
   <div id="picker-pg" style="display:none;">
     <div class="hero">
       <h1>Little Learners</h1>
-      <p>Select the assessment day you were invited to:</p>
+      <p>Select the event you were invited to:</p>
     </div>
     <div id="picker-list"></div>
   </div>
@@ -105,7 +105,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
       <p id="qid-child"></p>
     </div>
     <div class="card">
-      <div class="note">📷 Please photograph your child's QID (or birth certificate if they don't have one yet) so we can confirm we have the right child on file before the assessment day.</div>
+      <div class="note">📷 Please photograph your child's QID (or birth certificate if they don't have one yet) so we can confirm we have the right child on file before the event.</div>
       <div class="upload-pair">
         <div>
           <div class="upload-side-title">Front</div>
@@ -145,7 +145,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
       </div>
 
       <div id="decline-fields" style="display:none;">
-        <div class="warn-note">⚠️ Please note: not attending an assessment day may mean your child loses their place on the Little Learners programme.</div>
+        <div class="warn-note" id="decline-warn-note">⚠️ Please note: not attending an assessment day may mean your child loses their place on the Little Learners programme.</div>
         <div class="fg">
           <label>Please let us know why you can't make it</label>
           <textarea id="decline-reason-input" rows="3" style="padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);resize:vertical;" placeholder="e.g. schedule conflict, illness, transport…"></textarea>
@@ -167,6 +167,11 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
         </div>
 
         <div class="fg">
+          <label>Email <span style="text-transform:none;font-weight:600;">(optional — helps us keep your profile up to date)</span></label>
+          <input type="text" id="guardian-email" placeholder="you@example.com">
+        </div>
+
+        <div class="fg">
           <label>Preferred name for <span class="gf-child-name">the child</span></label>
           <input type="text" id="preferred-name" placeholder="What does your child like to be called?">
         </div>
@@ -178,7 +183,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
           <div id="child-photo-preview" style="display:none;margin-top:8px;"><img id="child-photo-preview-img" style="width:90px;height:90px;object-fit:cover;border-radius:12px;border:2px solid var(--lime);"></div>
         </div>
 
-        <div class="fg">
+        <div class="fg" id="aspiration-field">
           <label>What would <span class="gf-child-name">the child</span> like to be when they're older, and why?</label>
           <textarea id="aspiration-input" rows="3" style="padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);resize:vertical;" placeholder="In their own words, if possible!"></textarea>
         </div>
@@ -192,7 +197,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
           </div>
         </div>
 
-        <div class="fg">
+        <div class="fg" id="chicken-field">
           <label>Can your child eat chicken?</label>
           <div class="choice-row">
             <div class="choice" id="chicken-yes" onclick="selectChoice('chicken','Yes',this)">🍗 Yes</div>
@@ -211,6 +216,15 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
           <label>What is the allergy?</label>
           <input type="text" id="allergy-detail-input" placeholder="e.g. peanuts, eggs, dairy…">
         </div>
+
+        <div class="fg" id="waiver-field" style="display:none;">
+          <label>Participation waiver</label>
+          <div class="note" style="margin-bottom:8px;">I confirm my child is fit to take part in this event's activities, and I release Feed a Friend and Together for Good from liability for any injury or loss during the event, except where caused by their negligence. I understand I'm responsible for informing organisers of any relevant medical conditions in advance.</div>
+          <div class="choice-row">
+            <div class="choice" id="waiver-yes" onclick="selectChoice('waiver','Yes',this)">✅ I agree</div>
+            <div class="choice" id="waiver-no" onclick="selectChoice('waiver','No',this)">🚫 I don't agree</div>
+          </div>
+        </div>
       </div>
 
       <div id="err" class="err-msg"></div>
@@ -222,7 +236,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
     <div class="success-pg">
       <div class="sicon">🎉</div>
       <h2>Thank You!</h2>
-      <p>Your response has been recorded. We look forward to seeing you at the assessment day.</p>
+      <p id="success-msg">Your response has been recorded. We look forward to seeing you at the assessment day.</p>
     </div>
   </div>
 </div>
@@ -233,7 +247,7 @@ const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
 let db;
 let token = null;
-let choices = { attendance: null, photo: null, chicken: null, allergy: null };
+let choices = { attendance: null, photo: null, chicken: null, allergy: null, waiver: null };
 let currentInvite = null;
 let qidFiles = {};
 let currentChildName = 'your child';
@@ -293,7 +307,7 @@ async function loadDayGate(id) {
     if(error || !data || !data.length) { showInvalid(); return; }
     const day = data[0];
     dayId = id;
-    document.getElementById('gate-title').textContent = day.title || 'Assessment Day';
+    document.getElementById('gate-title').textContent = day.title || eventLabel(day.event_type);
     document.getElementById('gate-sub').textContent = [
       day.event_date ? new Date(day.event_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '',
       day.event_time || '',
@@ -307,6 +321,10 @@ async function loadDayGate(id) {
   }
 }
 
+function eventLabel(type) {
+  return type==='workshop' ? 'Workshop' : type==='social' ? 'Event' : 'Assessment Day';
+}
+
 async function loadDayPicker() {
   try {
     const { data, error } = await db.rpc('list_upcoming_assessment_days');
@@ -318,7 +336,7 @@ async function loadDayPicker() {
     const el = document.getElementById('picker-list');
     el.innerHTML = data.map(d => `
       <div class="day-pick" onclick="loadDayGate('${d.id}')">
-        <h3>${d.title || 'Assessment Day'}</h3>
+        <h3>${d.title || eventLabel(d.event_type)}</h3>
         <p>${[
           d.event_date ? new Date(d.event_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '',
           d.event_time || '',
@@ -374,12 +392,31 @@ async function submitQidGate() {
 function applyInvite(invite) {
   currentInvite = invite;
   currentChildName = invite.child_name || 'your child';
-  document.getElementById('rp-title').textContent = invite.title || 'Assessment Day';
+  const label = invite.title || eventLabel(invite.event_type);
+  document.getElementById('rp-title').textContent = label;
   document.getElementById('rp-child').textContent = `For ${currentChildName}`;
   document.getElementById('rp-date').textContent = invite.event_date ? new Date(invite.event_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : 'Date to be confirmed';
   document.getElementById('rp-time').textContent = invite.event_time || 'Time to be confirmed';
   document.getElementById('rp-location').textContent = invite.location || 'Location to be confirmed';
   document.querySelectorAll('.gf-child-name').forEach(el => el.textContent = currentChildName);
+
+  const isAssessDay = invite.event_type==='assessment_day';
+  document.getElementById('aspiration-field').style.display = isAssessDay ? 'block' : 'none';
+  document.getElementById('chicken-field').style.display = isAssessDay ? 'block' : 'none';
+  document.getElementById('waiver-field').style.display = isAssessDay ? 'none' : 'block';
+
+  const declineWarn = document.getElementById('decline-warn-note');
+  if(declineWarn) {
+    if(isAssessDay) {
+      declineWarn.textContent = '⚠️ Please note: not attending an assessment day may mean your child loses their place on the Little Learners programme.';
+      declineWarn.style.display = 'block';
+    } else {
+      declineWarn.textContent = "Thanks for letting us know — we hope to see you at a future event!";
+      declineWarn.style.display = 'block';
+    }
+  }
+  const successMsg = document.getElementById('success-msg');
+  if(successMsg) successMsg.textContent = `Your response has been recorded. We look forward to seeing you at the ${eventLabel(invite.event_type).toLowerCase()}.`;
 
   // Build the guardian dropdown from the parents already on file
   const sel = document.getElementById('guardian-select');
@@ -435,7 +472,7 @@ async function loadInviteByToken() {
     }
 
     document.getElementById('loading-pg').style.display='none';
-    if(!invite.has_qid) {
+    if(!invite.has_qid && invite.event_type==='assessment_day') {
       document.getElementById('qid-child').textContent = `For ${currentChildName}`;
       document.getElementById('qid-pg').style.display='block';
     } else {
@@ -532,7 +569,8 @@ async function submitRsvp() {
   const err = document.getElementById('err');
   if(!choices.attendance) { err.textContent = '⚠️ Please let us know if you\'ll be attending.'; err.style.display='block'; return; }
 
-  let guardianName = '', guardianRelation = '', preferredName = '', aspiration = '', declineReason = '', allergyDetail = '';
+  const isAssessDay = currentInvite?.event_type==='assessment_day';
+  let guardianName = '', guardianRelation = '', preferredName = '', aspiration = '', declineReason = '', allergyDetail = '', guardianEmail = '';
   if(choices.attendance==='attended') {
     const selVal = document.getElementById('guardian-select').value;
     if(!selVal) { err.textContent = '⚠️ Please select who will be attending.'; err.style.display='block'; return; }
@@ -544,6 +582,7 @@ async function submitRsvp() {
       err.style.display='block';
       return;
     }
+    guardianEmail = document.getElementById('guardian-email').value.trim();
 
     preferredName = document.getElementById('preferred-name').value.trim();
     if(!preferredName) { err.textContent = '⚠️ Please tell us your child\'s preferred name.'; err.style.display='block'; return; }
@@ -554,7 +593,7 @@ async function submitRsvp() {
       return;
     }
 
-    if(!choices.photo || !choices.chicken || !choices.allergy) {
+    if(!choices.photo || !choices.allergy || (isAssessDay && !choices.chicken)) {
       err.textContent = '⚠️ Please answer the consent, dietary, and allergy questions.';
       err.style.display='block';
       return;
@@ -567,11 +606,19 @@ async function submitRsvp() {
         return;
       }
     }
-    aspiration = document.getElementById('aspiration-input').value.trim();
-    if(!aspiration) {
-      err.textContent = '⚠️ Please answer what your child would like to be when they\'re older.';
-      err.style.display='block';
-      return;
+    if(isAssessDay) {
+      aspiration = document.getElementById('aspiration-input').value.trim();
+      if(!aspiration) {
+        err.textContent = '⚠️ Please answer what your child would like to be when they\'re older.';
+        err.style.display='block';
+        return;
+      }
+    } else {
+      if(choices.waiver!=='Yes') {
+        err.textContent = '⚠️ Please agree to the participation waiver to continue.';
+        err.style.display='block';
+        return;
+      }
     }
   } else if(choices.attendance==='declined') {
     declineReason = document.getElementById('decline-reason-input').value.trim();
@@ -594,7 +641,7 @@ async function submitRsvp() {
       if(upErr) throw new Error('Could not upload photo: ' + upErr.message);
     }
 
-    const { data, error } = await db.rpc('submit_assessment_rsvp', {
+    const { data, error } = await db.rpc('submit_event_rsvp', {
       p_token: token,
       p_attendance: choices.attendance,
       p_photo_consent: choices.photo,
@@ -607,6 +654,8 @@ async function submitRsvp() {
       p_decline_reason: declineReason || null,
       p_has_allergies: choices.allergy || null,
       p_allergy_detail: allergyDetail || null,
+      p_guardian_email: guardianEmail || null,
+      p_waiver_agreed: isAssessDay ? null : (choices.waiver==='Yes'),
     });
     if(error || !data) throw new Error(error?.message || 'Could not submit RSVP');
     document.getElementById('rsvp-pg').style.display='none';
