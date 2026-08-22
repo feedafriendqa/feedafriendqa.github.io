@@ -3778,7 +3778,18 @@ function uploadMainQidFile(appId, which, file) {
     if (zone) zone.textContent = '✓ Saved — ' + file.name;
     return fetchDocumentUrls([res.path]).then(function(urlMap) {
       Object.assign(currentDocUrlMap, urlMap);
-      if (app && currentAppId === appId) renderModal(app, currentMembers, currentDocUrlMap);
+      // Re-rendering the modal here regenerates the whole detail panel from
+      // `app` — including the ef-* fields scanMainQid is about to fill in.
+      // The front-photo upload and the scan (scanMainQid, triggered by the
+      // same file picker onchange) run concurrently; if this upload's
+      // response comes back first, re-rendering wipes out whatever the
+      // still-in-flight scan writes into those fields moments later — the
+      // exact "scan flashes success but the details never stick" bug. Skip
+      // the re-render for the front photo (a scan is always in flight for
+      // it); the back photo never triggers a scan, so it's still safe to
+      // refresh immediately. The doc's "View" link just catches up next
+      // time the modal naturally re-renders (Save, close/reopen, etc).
+      if (app && currentAppId === appId && which !== 'front') renderModal(app, currentMembers, currentDocUrlMap);
     });
   }).catch(function(e) {
     if (zone) zone.textContent = '❌ Upload failed — tap to retry';
@@ -3971,7 +3982,14 @@ function uploadEditMemberQidFile(memberId, which, file) {
     return fetchDocumentUrls([res.path]).then(function(urlMap) {
       Object.assign(currentDocUrlMap, urlMap);
       var app = allApps.find(function(a){ return a.id === appId; });
-      if (app && currentAppId === appId) renderModal(app, currentMembers, currentDocUrlMap);
+      // See the matching note in uploadMainQidFile: the front-photo upload
+      // and scanEditMemberQID (triggered by the same onchange) race each
+      // other, and re-rendering the modal here regenerates the edit-member
+      // panel back to its empty starting HTML — wiping out whatever the
+      // scan writes into it a moment later. Skip the re-render for the
+      // front photo; the back photo never triggers a scan, so it's still
+      // safe to refresh immediately.
+      if (app && currentAppId === appId && which !== 'front') renderModal(app, currentMembers, currentDocUrlMap);
     });
   }).catch(function(e) {
     if (zone) zone.textContent = '❌ Upload failed — tap to retry';
