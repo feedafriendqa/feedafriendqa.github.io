@@ -44,9 +44,9 @@ body{font-family:"Manrope",sans-serif;background:#ffffff;color:var(--ink);min-he
 .err{font-size:12px;color:#c0392b;font-weight:700;margin-top:10px}
 .divider{height:1px;background:var(--line);margin:14px 0}
 .forgot{display:block;text-align:center;font-size:12px;font-weight:700;color:var(--forest);margin-top:12px;background:none;border:none;width:100%;cursor:pointer;font-family:"Manrope",sans-serif}
-.reg-link{text-align:center;margin-top:16px}
-.reg-link p{font-size:12px;color:var(--muted-2);font-weight:600;margin-bottom:6px}
-.reg-link a{font-family:"League Spartan",sans-serif;font-size:13px;font-weight:800;color:var(--forest);text-decoration:none}
+.reg-link{text-align:center;margin-top:4px}
+.reg-link p{font-size:12px;color:var(--muted-2);font-weight:500;margin-bottom:12px}
+.reg-btn{display:block;width:100%;box-sizing:border-box;padding:15px;border-radius:50px;background:var(--forest);color:#fff;font-family:"League Spartan",sans-serif;font-size:14px;font-weight:800;text-decoration:none;letter-spacing:.02em;box-shadow:0 10px 24px rgba(20,108,67,.22)}
 
 /* CTA */
 .cta-bar{padding:14px 20px 24px;position:sticky;bottom:0;background:#ffffff}
@@ -121,10 +121,10 @@ body{font-family:"Manrope",sans-serif;background:#ffffff;color:var(--ink);min-he
 .alloc-dark{background:var(--forest-deep);border-radius:18px;margin:0 16px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.14)}
 .al-lbl{font-size:10px;color:rgba(255,255,255,.4);font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
 .al-big{font-family:"League Spartan",sans-serif;font-size:52px;font-weight:900;color:var(--amber);line-height:1;letter-spacing:-2px}
-.al-sub{font-size:12px;color:rgba(255,255,255,.45);font-weight:600;margin-top:6px;line-height:1.5}
+.al-sub{font-size:12px;color:rgba(255,255,255,.45);font-weight:500;margin-top:6px;line-height:1.5}
 .alloc-fam{background:#fff;border-radius:14px;margin:8px 16px 0;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.04);position:relative}
 .af-area{font-family:"League Spartan",sans-serif;font-size:12px;font-weight:900;color:var(--forest);margin-bottom:3px}
-.af-sub{font-size:11px;color:var(--muted-2);font-weight:600}
+.af-sub{font-size:11px;color:var(--muted-2);font-weight:500}
 .af-x{position:absolute;top:10px;right:12px;width:22px;height:22px;border-radius:50%;border:none;background:var(--line);color:var(--muted-2);font-size:14px;font-weight:900;cursor:pointer;line-height:22px;text-align:center;padding:0}
 .af-x:hover{background:#FBE7E7;color:#c0392b}
 .alloc-fam{cursor:pointer}
@@ -139,7 +139,7 @@ body{font-family:"Manrope",sans-serif;background:#ffffff;color:var(--ink);min-he
 .area-grid{display:flex;flex-wrap:wrap;gap:8px}
 .chip{padding:9px 15px;border-radius:30px;border:1.5px solid var(--line-2);font-family:"League Spartan",sans-serif;font-size:12px;font-weight:800;cursor:pointer;background:#fff;color:var(--muted);transition:all .12s;user-select:none;-webkit-tap-highlight-color:transparent}
 .chip.on{background:var(--forest);color:#fff;border-color:var(--forest)}
-.area-stat{font-size:12px;font-weight:700;margin-top:14px}
+.area-stat{font-size:12px;font-weight:500;margin-top:14px}
 .area-stat.ok{color:var(--forest)}.area-stat.warn{color:#c0392b}
 .tag-boxes{background:#F0F4FD;color:#2255aa}
 
@@ -182,16 +182,16 @@ body{font-family:"Manrope",sans-serif;background:#ffffff;color:var(--ink);min-he
     <div class="field"><label class="lbl">Password</label>
       <input class="inp" id="l-pw" type="password" placeholder="Your password" oninput="clearE()" onkeydown="if(event.key==='Enter')signIn()"></div>
     <div class="err" id="l-err"></div>
+    <button class="cta" id="l-btn" onclick="signIn()" style="margin-top:14px">Sign in →</button>
     <button class="forgot" onclick="forgotPw()">Forgot password?</button>
   </div>
   <div style="height:10px"></div>
   <div class="card">
     <div class="reg-link">
       <p>Not registered as a distributor yet?</p>
-      <a href="Faf-FoodBox-DriverReg.html">Register as a distributor →</a>
+      <a class="reg-btn" href="Faf-FoodBox-DriverReg.html">Register as a distributor →</a>
     </div>
   </div>
-  <div class="cta-bar"><button class="cta" id="l-btn" onclick="signIn()">Sign in →</button></div>
 </div>
 
 <!-- ── RESET SENT ── -->
@@ -244,13 +244,13 @@ body{font-family:"Manrope",sans-serif;background:#ffffff;color:var(--ink);min-he
       <button class="back-btn" onclick="showDashMain()">← Back</button>
       <div class="back-title">Areas for this trip</div>
     </div>
-    <p style="font-size:13px;color:var(--muted);font-weight:600;line-height:1.6;padding:0 20px 14px">Pick up to 6 areas you can cover this round — add or remove any, not just your saved ones. We'll match families and boxes to fit your vehicle.</p>
+    <p style="font-size:13px;color:var(--muted);font-weight:500;line-height:1.6;padding:0 20px 14px">Pick up to 6 areas you can cover this round — add or remove any, not just your saved ones. We'll match families and boxes to fit your vehicle.</p>
     <div class="card" style="margin:0 16px">
       <input type="text" id="area-search" placeholder="Search areas…" oninput="filterTripAreaGrid(this.value)" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid #e5e2d9;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:10px">
       <div class="area-grid" id="trip-agrid"></div>
       <div id="area-show-more" style="display:none;text-align:center;padding-top:8px"><button class="tb-out" style="font-size:12px;padding:8px 16px" onclick="EXPAND_AREAS=true;buildTripAreaGrid();">Show all <span id="area-total-n"></span> areas</button></div>
       <div class="area-stat" id="trip-astat"></div>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--muted);font-weight:700">
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--muted);font-weight:500">
         <input type="checkbox" id="areas-save" style="width:16px;height:16px"> Save these as my areas for next time
       </label>
     </div>
@@ -262,7 +262,7 @@ body{font-family:"Manrope",sans-serif;background:#ffffff;color:var(--ink);min-he
         <button class="tb-out" style="flex:0 0 auto;width:42px;padding:10px 0" onclick="adjCap(1)">+</button>
       </div>
       <div style="font-size:11px;color:var(--muted-2);text-align:center;margin-top:6px">boxes — adjust if your actual capacity is different</div>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--muted);font-weight:700">
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--muted);font-weight:500">
         <input type="checkbox" id="cap-save" checked style="width:16px;height:16px"> Save this as my new capacity
       </label>
     </div>
@@ -277,7 +277,7 @@ body{font-family:"Manrope",sans-serif;background:#ffffff;color:var(--ink);min-he
       <button class="back-btn" onclick="backToAreas()">← Back</button>
       <div class="back-title">Your allocation</div>
     </div>
-    <p style="font-size:13px;color:var(--muted);font-weight:600;line-height:1.6;padding:0 20px 14px">Based on your vehicle and chosen areas. Tap a card to leave it out for now, ✕ to swap it for someone else, or shuffle everything.</p>
+    <p style="font-size:13px;color:var(--muted);font-weight:500;line-height:1.6;padding:0 20px 14px">Based on your vehicle and chosen areas. Tap a card to leave it out for now, ✕ to swap it for someone else, or shuffle everything.</p>
     <div class="alloc-dark">
       <div class="al-lbl">Families to deliver</div>
       <div class="al-big" id="alloc-n">…</div>
@@ -760,7 +760,7 @@ function renderAlloc(){
     ?"Areas: "+areas.slice(0,5).join(", ")+(areas.length>5?" +"+(areas.length-5)+" more":"")+capTxt+fallbackNote
     :"No families available right now — every confirmed family already has a driver, or there's nothing left to deliver.";
   document.getElementById("alloc-list").innerHTML=fams.length===0
-    ?'<div style="text-align:center;padding:20px 24px;font-size:13px;color:var(--muted);font-weight:600">No families available right now. Check back soon!</div>'
+    ?'<div style="text-align:center;padding:20px 24px;font-size:13px;color:var(--muted);font-weight:500">No families available right now. Check back soon!</div>'
     :fams.map(function(f){
         var bx=f.boxes_needed||1;
         var off=!!DESELECTED[f.id];
