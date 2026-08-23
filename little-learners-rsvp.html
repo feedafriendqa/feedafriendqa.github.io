@@ -268,7 +268,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
 <script>
 const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
@@ -793,16 +793,18 @@ async function submitRsvp() {
     if(childPhotoFile) {
       btn.innerHTML = '<div class="spinner" style="border-color:rgba(255,255,255,.4);border-top-color:white;"></div> Preparing photo…';
       const compressed = await compressImage(childPhotoFile);
-      photoPath = `${currentInvite.family_id}/rsvp_photo_${currentInvite.child_id}_${Date.now()}.jpg`;
       btn.innerHTML = '<div class="spinner" style="border-color:rgba(255,255,255,.4);border-top-color:white;"></div> Submitting…';
       let upErr = null;
-      for(let attempt = 0; attempt < 2; attempt++) {
-        const result = await db.storage.from('ll-documents').upload(photoPath, compressed, { upsert: true, contentType: 'image/jpeg' });
+      // Fresh, never-before-used path on every attempt — never overwrite an existing object,
+      // which avoids storage's delete-protection trigger firing on a retry.
+      for(let attempt = 0; attempt < 2 && upErr === null; attempt++) {
+        if(attempt > 0) await new Promise(r => setTimeout(r, 700));
+        const attemptPath = `${currentInvite.family_id}/rsvp_photo_${currentInvite.child_id}_${Date.now()}_${Math.random().toString(36).slice(2,8)}.jpg`;
+        const result = await db.storage.from('ll-documents').upload(attemptPath, compressed, { upsert: false, contentType: 'image/jpeg' });
+        if(!result.error) { photoPath = attemptPath; upErr = null; break; }
         upErr = result.error;
-        if(!upErr) break;
-        await new Promise(r => setTimeout(r, 700));
       }
-      if(upErr) throw new Error('Could not upload the photo — please check your connection and try again.');
+      if(upErr || !photoPath) throw new Error('Could not upload the photo (' + (upErr?.message || upErr?.error || 'unknown error') + '). Please try again.');
     }
 
     const { data, error } = await db.rpc('submit_event_rsvp', {
