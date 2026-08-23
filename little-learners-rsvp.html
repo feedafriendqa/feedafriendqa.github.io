@@ -562,6 +562,33 @@ function previewChildPhoto(input) {
   reader.readAsDataURL(file);
 }
 
+// Mobile camera photos are often 5-15MB (HEIC/large JPEG) — resize/compress before upload
+// so it's fast and reliable on mobile data, and never runs into any upload size limits.
+function compressImage(file, maxDim = 1280, quality = 0.82) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if(width > maxDim || height > maxDim) {
+        if(width > height) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+        else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => {
+        resolve(blob || file);
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = () => resolve(file);
+    img.src = url;
+  });
+}
+
 async function loadInviteByToken() {
   try {
     const { data, error } = await db.rpc('get_assessment_invite', { p_token: token });
@@ -764,10 +791,18 @@ async function submitRsvp() {
   try {
     let photoPath = null;
     if(childPhotoFile) {
-      const ext = (childPhotoFile.name.split('.').pop() || 'jpg').toLowerCase();
-      photoPath = `${currentInvite.family_id}/rsvp_photo_${currentInvite.child_id}_${Date.now()}.${ext}`;
-      const { error: upErr } = await db.storage.from('ll-documents').upload(photoPath, childPhotoFile, { upsert: true });
-      if(upErr) throw new Error('Could not upload photo: ' + upErr.message);
+      btn.innerHTML = '<div class="spinner" style="border-color:rgba(255,255,255,.4);border-top-color:white;"></div> Preparing photo…';
+      const compressed = await compressImage(childPhotoFile);
+      photoPath = `${currentInvite.family_id}/rsvp_photo_${currentInvite.child_id}_${Date.now()}.jpg`;
+      btn.innerHTML = '<div class="spinner" style="border-color:rgba(255,255,255,.4);border-top-color:white;"></div> Submitting…';
+      let upErr = null;
+      for(let attempt = 0; attempt < 2; attempt++) {
+        const result = await db.storage.from('ll-documents').upload(photoPath, compressed, { upsert: true, contentType: 'image/jpeg' });
+        upErr = result.error;
+        if(!upErr) break;
+        await new Promise(r => setTimeout(r, 700));
+      }
+      if(upErr) throw new Error('Could not upload the photo — please check your connection and try again.');
     }
 
     const { data, error } = await db.rpc('submit_event_rsvp', {
