@@ -968,9 +968,22 @@ function loadApps() {
   document.getElementById('apps-table').style.display = 'none';
   document.getElementById('table-empty').style.display = 'none';
 
+  // Scope non-super-admins to the language(s) their account covers. This
+  // checks BOTH submission_lang and preferred_lang (not just submission_lang)
+  // because imported/legacy records default submission_lang to 'en' — there's
+  // no actual multi-language form being submitted for a bulk import — while
+  // preferred_lang correctly holds the applicant's real language from the
+  // source spreadsheet. Checking submission_lang alone silently hid every
+  // imported case from a language-scoped admin unless someone remembered to
+  // backfill submission_lang by hand (see backfill_submission_lang_from_preferred_lang
+  // migration, run 2026-08-24 for the ~455 records affected at the time).
   var langFilter = '';
   if (myRole !== 'super_admin' && myLanguages && myLanguages.length > 0) {
-    langFilter = '&submission_lang=in.(' + myLanguages.join(',') + ')';
+    var PREFERRED_LANG_LABELS = { ar: 'Arabic', bn: 'Bengali', ur: 'Urdu', hi: 'Hindi', tl: 'Filipino', en: 'English' };
+    var prefLabels = myLanguages.map(function(l){ return PREFERRED_LANG_LABELS[l]; }).filter(Boolean);
+    var orParts = ['submission_lang.in.(' + myLanguages.join(',') + ')'];
+    if (prefLabels.length > 0) orParts.push('preferred_lang.in.(' + prefLabels.join(',') + ')');
+    langFilter = '&or=(' + orParts.join(',') + ')';
   }
 
   apiHeadersAsync().then(function(headers) {
@@ -986,7 +999,7 @@ function loadApps() {
       if (a.qid_number) a.qid_number = toWesternDigits(a.qid_number);
     });
     if (myRole !== 'super_admin' && myLanguages && myLanguages.indexOf('bn') !== -1) {
-      apps = apps.filter(function(a) { return a.submission_lang === 'bn' || a.nationality === 'Bangladeshi'; });
+      apps = apps.filter(function(a) { return a.submission_lang === 'bn' || a.preferred_lang === 'Bengali' || a.nationality === 'Bangladeshi'; });
     }
     if (apps.length === 0) {
       apps = getDummyApps();
