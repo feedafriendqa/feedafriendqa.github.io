@@ -2440,7 +2440,7 @@ function renderFams() {
   const assigned = document.getElementById('filter-assigned')?.value||'';
   const dupsAll = detectDups();
 
-  let list = visibleFamilies().filter(f=>{
+  let list = visibleFamilies().map(f=>{
     const fkidsAll = allChildren.filter(c=>c.family_id===f.id);
     const childNames = fkidsAll.map(c=>(c.full_name||'')+' '+(c.qid||'')).join(' ');
     const text = ((f.father_name||'')+(f.mother_name||'')+(f.urn||'')+(f.father_phone||'')+(f.mother_phone||'')+' '+childNames).toLowerCase();
@@ -2450,11 +2450,13 @@ function renderFams() {
     const matchDup = !showDupOnly||dupsAll.has(f.id);
     // Year group filter — check children
     let matchYG = !yg;
+    let ygChild = null;
     if(yg) {
-      matchYG = fkidsAll.some(c=>(c.final_year_group||c.year_group_override||suggestYG(c).yg)===yg);
+      ygChild = fkidsAll.find(c=>(c.final_year_group||c.year_group_override||suggestYG(c).yg)===yg);
+      matchYG = !!ygChild;
     }
-    return matchQ&&matchPipe&&matchAssigned&&matchYG&&matchDup;
-  });
+    return {f, matchQ, matchPipe, matchAssigned, matchYG, matchDup, ygChild};
+  }).filter(x=>x.matchQ&&x.matchPipe&&x.matchAssigned&&x.matchYG&&x.matchDup);
 
   const banner = document.getElementById('dup-filter-banner');
   if(banner) {
@@ -2467,7 +2469,7 @@ function renderFams() {
   }
 
   document.getElementById('fams-list').innerHTML = list.length
-    ? list.map(f=>famCardHTML(f,dupsAll.has(f.id))).join('')
+    ? list.map(x=>famCardHTML(x.f,dupsAll.has(x.f.id),x.ygChild)).join('')
     : '<div class="empty"><div class="eicon">🔍</div><p>No families found</p></div>';
 }
 
@@ -2479,15 +2481,29 @@ function programPillsHTML(f) {
   return pills.join('');
 }
 
-function famCardHTML(f,isDup) {
+function childAssessedDateStr(c) {
+  const rows = allEventAttendees.filter(a=>a.child_id===c.id && a.attendance==='Present');
+  if(!rows.length) return null;
+  const dates = rows.map(a=>{
+    const ev = allEvents.find(e=>e.id===a.event_id);
+    return ev?.event_date;
+  }).filter(Boolean).sort();
+  if(!dates.length) return null;
+  return new Date(dates[dates.length-1]).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+}
+
+function famCardHTML(f,isDup,ygChild) {
   const kids = allChildren.filter(c=>c.family_id===f.id);
   const status = f.pipeline_status||'new';
   const label = STATUS_LABELS[status]||'New';
+  const assessedDate = ygChild ? childAssessedDateStr(ygChild) : null;
   return `<div class="fam-card ${status}" onclick="openProfile('${f.id}')">
     <div class="urn-badge">${f.urn||'—'}</div>
     <div class="fam-info">
       <div class="fam-name">${f.father_name||'—'}${f.mother_name?' & '+f.mother_name:''} Family</div>
       <div class="fam-meta">
+        ${ygChild ? `<span style="font-weight:800;color:var(--forest);">👶 ${ygChild.full_name||'Child'}</span><span>🎂 ${childAgeYears(ygChild)}y</span>` : ''}
+        ${ygChild ? `<span>📅 Assessed: ${assessedDate||'—'}</span>` : ''}
         <span>📞 ${f.father_phone||f.mother_phone||'—'}</span>
         ${f.area?`<span>📍 ${f.area}</span>`:''}
         <span>👧 ${kids.length}</span>
