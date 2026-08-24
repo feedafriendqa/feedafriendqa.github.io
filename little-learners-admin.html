@@ -427,8 +427,8 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
           <option value="manual">Manual selection (no filter)</option>
         </select>
       </div>
-      <div id="nd-elig-yg-wrap" style="display:none;"><label>Year group</label>
-        <select id="nd-elig-yg"><option value="">Select…</option></select>
+      <div id="nd-elig-yg-wrap" style="display:none;"><label>Year group(s) — ctrl/cmd-click for multiple</label>
+        <select id="nd-elig-yg" multiple size="4"></select>
       </div>
       <div><label>Title</label><input id="nd-title" placeholder="e.g. Ages 6–7 Assessment Day"></div>
       <div><label>Date</label><input id="nd-date" type="date"></div>
@@ -872,8 +872,8 @@ function onEligTypeChange() {
   const type = document.getElementById('nd-elig-type').value;
   document.getElementById('nd-elig-yg-wrap').style.display = type==='year_group_pack' ? 'block' : 'none';
   const ygSel = document.getElementById('nd-elig-yg');
-  if(type==='year_group_pack' && ygSel.options.length<=1) {
-    ygSel.innerHTML = yearGroupOptions('');
+  if(type==='year_group_pack' && ygSel.options.length===0) {
+    ygSel.innerHTML = YEAR_GROUP_VALUES.map(v=>`<option value="${v}">${v}</option>`).join('');
   }
 }
 
@@ -889,8 +889,8 @@ async function createAssessmentDay() {
   if(event_type==='assessment_day' && !age_band) { showToast('Please select an age band'); return; }
   let eligibility_criteria = {type:'age_band'};
   if(eligType==='year_group_pack') {
-    const yg = document.getElementById('nd-elig-yg').value;
-    if(!yg) { showToast('Please select a year group for eligibility'); return; }
+    const yg = Array.from(document.getElementById('nd-elig-yg').selectedOptions).map(o=>o.value);
+    if(!yg.length) { showToast('Please select at least one year group for eligibility'); return; }
     eligibility_criteria = {type:'year_group_pack', year_group: yg};
   } else if(eligType==='manual') {
     eligibility_criteria = {type:'manual'};
@@ -1036,12 +1036,13 @@ function renderEligibleForDay() {
   let emptyMsg = 'No eligible children left to add.';
 
   if(criteria.type==='year_group_pack') {
+    const yearGroups = Array.isArray(criteria.year_group) ? criteria.year_group : [criteria.year_group];
     eligible = allChildren.filter(c => {
       if(alreadyIn.has(c.id)) return false;
       if((c.learner_status||'active')!=='active') return false;
-      return c.final_year_group===criteria.year_group && c.pack_status==='given';
+      return yearGroups.includes(c.final_year_group) && c.pack_status==='given';
     });
-    emptyMsg = `No eligible children left — they either didn't receive a ${criteria.year_group} pack, aren't active learners, or are already on this list.`;
+    emptyMsg = `No eligible children left — they either didn't receive a pack for ${yearGroups.join(' or ')}, aren't active learners, or are already on this list.`;
   } else if(criteria.type==='manual') {
     eligible = allChildren.filter(c => !alreadyIn.has(c.id) && (c.learner_status||'active')==='active');
     emptyMsg = 'No children left to add — everyone active is already on this list.';
