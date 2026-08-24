@@ -122,9 +122,19 @@ body.login-mode .shell{display:flex;align-items:center;justify-content:center;pa
 .fam-notes-inp:focus{border-color:var(--forest);background:#fff;box-shadow:0 0 0 3px rgba(29,122,71,.08)}
 .fam-notes-inp::placeholder{color:var(--muted-2)}
 .fam-notes-inp:disabled{background:var(--line);color:var(--muted);border-color:var(--line)}
+.fam-photo-inp{width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-size:11.5px;font-family:"Manrope",sans-serif;color:var(--muted);background:#fbfcfa}
+.fam-photo-inp:disabled{background:var(--line);color:var(--muted);border-color:var(--line)}
+.fam-photo-preview{margin-top:8px}
+.fam-photo-preview img{max-width:120px;max-height:120px;border-radius:10px;display:block;box-shadow:0 1px 4px rgba(0,0,0,.12)}
 .del-btn{width:100%;margin-top:14px;padding:13px;border-radius:30px;border:none;font-family:"Manrope",sans-serif;font-size:13px;font-weight:700;cursor:pointer;background:var(--amber);color:var(--forest-deep)}
 .del-btn.done{background:var(--line);color:var(--muted-2);cursor:default}
 .del-btn:disabled{opacity:.6;cursor:default}
+
+/* LIFETIME STATS (No-trip dashboard) */
+.stats-row{display:flex;gap:12px;margin:0 16px 10px}
+.stat-tile{flex:1;background:#fff;border-radius:16px;padding:16px 12px;text-align:center;box-shadow:0 2px 6px rgba(10,46,30,.08),0 10px 24px rgba(10,46,30,.1)}
+.stat-big{font-family:"League Spartan",sans-serif;font-size:32px;font-weight:900;color:var(--forest);line-height:1;letter-spacing:-1px}
+.stat-lbl{font-size:10px;color:var(--muted-2);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-top:6px}
 
 /* ALLOC CARD */
 .alloc-card{background:#fff;border-radius:18px;margin:0 16px;padding:22px 22px 20px;text-align:center;box-shadow:0 2px 6px rgba(10,46,30,.08),0 12px 30px rgba(10,46,30,.14)}
@@ -262,6 +272,10 @@ body.login-mode .shell{display:flex;align-items:center;justify-content:center;pa
       <div class="banner-t">✓ You're an approved distributor</div>
       <div class="banner-s">Ready to help? Sign up for your next distribution trip below.</div>
     </div>
+    <div class="stats-row" id="driver-stats-row" style="display:none">
+      <div class="stat-tile"><div class="stat-big" id="stat-deliveries">0</div><div class="stat-lbl">Deliveries to date</div></div>
+      <div class="stat-tile"><div class="stat-big" id="stat-people">0</div><div class="stat-lbl">People fed</div></div>
+    </div>
     <div class="no-trip">
       <div class="box-row" id="cap-box-row"></div>
       <div class="nt-t" id="cap-remind"></div>
@@ -349,7 +363,7 @@ var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5c
 // entirely instead of waiting on a fix upstream.
 function noOpLock(name,acquireTimeout,fn){return fn();}
 var sb=window.supabase?window.supabase.createClient(SB,KEY,{auth:{lock:noOpLock}}):null;
-var CU=null,DP=null,AT=null,ALLOC=null,ALLOC_META=null,SELAREAS=[],KEPT={},REMOVED=[],TRIPCAP=null,ALL_AREAS=[],AVAILABILITY={},DESELECTED={},HOLD_TIMER=null,EXPAND_AREAS=false,CURRENT_FAMS=[],DELIVERED_COUNT=0;
+var CU=null,DP=null,AT=null,ALLOC=null,ALLOC_META=null,SELAREAS=[],KEPT={},REMOVED=[],TRIPCAP=null,ALL_AREAS=[],AVAILABILITY={},DESELECTED={},HOLD_TIMER=null,EXPAND_AREAS=false,CURRENT_FAMS=[],DELIVERED_COUNT=0,PHOTO_DATA={};
 
 var STUCK_TIMER=null;
 function showV(id){
@@ -451,6 +465,7 @@ async function loadDriver(){
     document.getElementById("cap-remind").textContent="Your "+DP.car_make+" "+DP.car_model+" fits "+DP.boxes_capacity+" boxes.";
     buildCapBoxRow(DP.boxes_capacity);
     await loadTrips();
+    loadDriverStats();
     showV("v-dash");
   }catch(e){
     var lbl=document.getElementById("loading-lbl");
@@ -470,6 +485,25 @@ async function loadTrips(){
   if(past.length){
     document.getElementById("pnl-past").style.display="block";
     document.getElementById("past-list").innerHTML=past.map(renderPastTrip).join("");
+  }
+}
+
+// Lifetime totals shown on the "No active trip" screen — how many deliveries
+// this driver has made and how many people those reached, across every trip
+// they've ever completed (not just the currently-loaded past trips list).
+async function loadDriverStats(){
+  var row=document.getElementById("driver-stats-row");
+  if(!row||!CU)return;
+  try{
+    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_stats",driver_email:CU.email})});
+    var j=await r.json();
+    if(!r.ok||j.error)throw new Error(j.error||"Could not load stats");
+    document.getElementById("stat-deliveries").textContent=j.total_deliveries||0;
+    document.getElementById("stat-people").textContent=j.total_people||0;
+    row.style.display="flex";
+  }catch(e){
+    console.error("loadDriverStats failed (non-fatal):",e);
+    row.style.display="none";
   }
 }
 
@@ -673,8 +707,32 @@ function renderFamCard(row,num){
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.94 9h-3.02a15.9 15.9 0 0 0-1.2-5.3A8.03 8.03 0 0 1 19.94 11zM12 4c.83 1.15 1.8 3.1 2.1 7H9.9c.3-3.9 1.27-5.85 2.1-7zM8.28 5.7A15.9 15.9 0 0 0 7.08 11H4.06a8.03 8.03 0 0 1 4.22-5.3zM4.06 13h3.02c.16 1.9.6 3.7 1.2 5.3A8.03 8.03 0 0 1 4.06 13zM12 20c-.83-1.15-1.8-3.1-2.1-7h4.2c-.3 3.9-1.27 5.85-2.1 7zm3.72-1.7c.6-1.6 1.04-3.4 1.2-5.3h3.02a8.03 8.03 0 0 1-4.22 5.3z" fill="#146c43"/></svg></span><div><div class="fam-lbl">Language</div><div class="fam-val">'+language+'</div></div></div>'
     +(tags?'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M7 4H5L4 6H2v2h2l3.6 7.59-1.35 2.44A2 2 0 0 0 8 21h11v-2H8l1.1-2h7.45a2 2 0 0 0 1.79-1.11L21.9 8H6.21l-.94-2H7V4zM9 19a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm9 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" fill="#146c43"/></svg></span><div><div class="fam-lbl">Needs</div><div style="margin-top:4px">'+tags+'</div></div></div>':"")
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#146c43"/></svg></span><div style="flex:1"><div class="fam-lbl">Note for the office (optional)</div><textarea class="fam-notes-inp" id="notes-'+row.id+'" placeholder="e.g. left with neighbour, gate code 1234…" '+(done?"disabled":"")+'>'+notesVal+'</textarea></div></div>'
+    +'<div class="fam-row"><span class="fam-ic">📷</span><div style="flex:1"><div class="fam-lbl">Photo for the donor (optional)</div><input type="file" accept="image/*" capture="environment" class="fam-photo-inp" id="photo-'+row.id+'" onchange="previewPhoto(\''+row.id+'\')" '+(done?"disabled":"")+'><div class="fam-photo-preview" id="photo-preview-'+row.id+'"></div></div></div>'
     +'<button class="del-btn'+(done?" done":"")+'" id="db-'+row.id+'" data-app="'+(row.application_id||"")+'" onclick="markDel(\''+row.id+'\')" '+(done?"disabled":"")+'>'+(done?"✓ Marked as delivered":"Mark as delivered")+'</button>'
     +'</div>';
+}
+
+// Reads the photo the driver picked/took for this delivery into a base64
+// string (kept in memory in PHOTO_DATA, not uploaded until Mark as delivered
+// is pressed) and shows a small thumbnail so they know it attached.
+function previewPhoto(id){
+  var input=document.getElementById("photo-"+id);
+  var preview=document.getElementById("photo-preview-"+id);
+  if(!input||!input.files||!input.files[0]){delete PHOTO_DATA[id];if(preview)preview.innerHTML="";return;}
+  var file=input.files[0];
+  var reader=new FileReader();
+  reader.onload=function(){
+    var dataUrl=reader.result;
+    var base64=dataUrl.split(",")[1];
+    PHOTO_DATA[id]={base64:base64,mediaType:file.type||"image/jpeg"};
+    if(preview)preview.innerHTML='<img src="'+dataUrl+'" alt="Delivery photo preview">';
+  };
+  reader.onerror=function(){
+    delete PHOTO_DATA[id];
+    if(preview)preview.innerHTML="";
+    alert("Couldn't read that photo — please try picking it again.");
+  };
+  reader.readAsDataURL(file);
 }
 
 async function markDel(id){
@@ -682,19 +740,26 @@ async function markDel(id){
   if(!btn||btn.disabled)return;
   var notesEl=document.getElementById("notes-"+id);
   var notesVal=notesEl?notesEl.value.trim():"";
+  var photoEl=document.getElementById("photo-"+id);
+  var photo=PHOTO_DATA[id]||null;
   var origLabel=btn.textContent;
-  btn.disabled=true;btn.textContent="Saving…";
+  btn.disabled=true;btn.textContent=photo?"Uploading photo…":"Saving…";
   if(notesEl)notesEl.disabled=true;
+  if(photoEl)photoEl.disabled=true;
   try{
-    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"confirm_family_delivery",application_id:btn.dataset.app,trip_assignment_id:id,driver_email:CU.email,notes:notesVal})});
+    var payload={type:"confirm_family_delivery",application_id:btn.dataset.app,trip_assignment_id:id,driver_email:CU.email,notes:notesVal};
+    if(photo){payload.photo_base64=photo.base64;payload.photo_media_type=photo.mediaType;}
+    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
     var j=await r.json();
     if(!r.ok||j.error)throw new Error(j.error||"Please try again.");
   }catch(e){
     btn.disabled=false;btn.textContent=origLabel;
     if(notesEl)notesEl.disabled=false;
+    if(photoEl)photoEl.disabled=false;
     alert("Could not mark as delivered — "+(e.message||"please try again."));
     return;
   }
+  delete PHOTO_DATA[id];
   removeFamCard(id);
 }
 
@@ -738,7 +803,8 @@ async function completeTrip(){
   await sb.from("distribution_trips").update({status:"completed"}).eq("id",AT.id);
   AT=null;document.getElementById("pnl-fams").style.display="none";
   await loadTrips();
-  setTimeout(function(){if(confirm("Amazing work! Want to sign up for another trip?"))anotherTrip();},300);
+  showDashMain();
+  loadDriverStats();
 }
 
 function anotherTrip(){
