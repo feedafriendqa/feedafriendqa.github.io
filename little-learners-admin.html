@@ -2496,17 +2496,20 @@ function famCardHTML(f,isDup,ygChild) {
   const kids = allChildren.filter(c=>c.family_id===f.id);
   const status = f.pipeline_status||'new';
   const label = STATUS_LABELS[status]||'New';
-  const assessedDate = ygChild ? childAssessedDateStr(ygChild) : null;
+  const headlineChild = ygChild || kids[0] || null;
+  const assessedDate = headlineChild ? childAssessedDateStr(headlineChild) : null;
+  const extraKids = kids.length > 1 ? ` <span style="font-weight:600;color:var(--muted);">+${kids.length-1} more</span>` : '';
   return `<div class="fam-card ${status}" onclick="openProfile('${f.id}')">
     <div class="urn-badge">${f.urn||'—'}</div>
     <div class="fam-info">
-      <div class="fam-name">${f.father_name||'—'}${f.mother_name?' & '+f.mother_name:''} Family</div>
+      <div class="fam-name">${headlineChild ? (headlineChild.full_name||'Child') : ((f.father_name||'—')+(f.mother_name?' & '+f.mother_name:''))+' Family'}${headlineChild ? extraKids : ''}</div>
       <div class="fam-meta">
-        ${ygChild ? `<span style="font-weight:800;color:var(--forest);">👶 ${ygChild.full_name||'Child'}</span><span>🎂 ${childAgeYears(ygChild)}y</span>` : ''}
-        ${ygChild ? `<span>📅 Assessed: ${assessedDate||'—'}</span>` : ''}
+        ${headlineChild ? `<span>🎂 ${childAgeYears(headlineChild)}y</span>` : ''}
+        ${headlineChild ? `<span>📅 Assessed: ${assessedDate||'—'}</span>` : ''}
+        <span>👪 ${f.father_name||f.mother_name||'—'}</span>
         <span>📞 ${f.father_phone||f.mother_phone||'—'}</span>
         ${f.area?`<span>📍 ${f.area}</span>`:''}
-        <span>👧 ${kids.length}</span>
+        ${!headlineChild?`<span>👧 ${kids.length}</span>`:''}
         ${programPillsHTML(f)}
         ${f.source==='Referral'?'<span style="color:var(--teal);font-weight:700;">📋 From Referral</span>':''}
         ${f.assigned_to_name?`<span>👤 ${f.assigned_to_name}</span>`:'<span style="color:var(--coral);font-weight:700;">Unassigned</span>'}
