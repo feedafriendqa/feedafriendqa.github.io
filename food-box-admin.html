@@ -1176,7 +1176,7 @@ function renderTable(apps) {
     if (tags.indexOf('ll') !== -1) tagHtml += '<span class="tag-pill tag-ll">📚 LL</span>';
     var isLongTerm = tags.indexOf('long_term') !== -1 || !!app.is_long_term;
     var boxesDisplay = '–';
-    if (['approved','confirmed'].indexOf(status) !== -1 && app.boxes_received != null) {
+    if (['approved','confirmed','archived'].indexOf(status) !== -1 && app.boxes_received != null) {
       boxesDisplay = app.boxes_received + (isLongTerm ? ' / ∞' : (app.max_boxes ? ' / ' + app.max_boxes : ''));
     }
     var name = app.full_name_en || app.full_name || '–';
@@ -1474,7 +1474,7 @@ function renderModal(app, members, urlMap) {
   // ── shared editable-field helpers (used by Applicant, Address, Financial) ──
   var sf = function(id,v){ return '<input class="edit-field" id="'+id+'" value="'+(v||'').toString().replace(/"/g,'&quot;')+'">'; };
   var sd = function(id,v){ return '<input class="edit-field" type="date" id="'+id+'" value="'+(v||'')+'">'; };
-  var sn = function(id,v){ return '<input class="edit-field" type="number" id="'+id+'" value="'+(v!=null&&v!==''?v:'')+'">'; };
+  var sn = function(id,v,extra){ return '<input class="edit-field" type="number" id="'+id+'" value="'+(v!=null&&v!==''?v:'')+'" '+(extra||'')+'>'; };
   var di = function(lbl,html){ return '<div class="detail-item"><div class="lbl">'+lbl+'</div><div class="val">'+html+'</div></div>'; };
   var dif = function(lbl,id,v){ return '<div class="detail-item"><div class="lbl">'+lbl+'</div>'+sf(id,v)+'</div>'; };
 
@@ -1572,8 +1572,8 @@ function renderModal(app, members, urlMap) {
   body += accStart('financial', 'Financial') + '<div class="detail-grid">';
   body += '<div class="detail-item"><div class="lbl">Household monthly salary (QAR)</div>'+sn('ef-monthly_salary',app.monthly_salary)+'</div>';
   body += '<div class="detail-item"><div class="lbl">Monthly rent (QAR)</div>'+sn('ef-monthly_rent',app.monthly_rent)+'</div>';
-  body += '<div class="detail-item"><div class="lbl">Household size</div>'+sn('ef-household_size',app.household_size)+'</div>';
-  body += '<div class="detail-item"><div class="lbl">Household type</div><select class="edit-field" id="ef-is_family" onchange="updateMaxBoxesFromFamilyType(\''+app.id+'\')"><option value="true"'+(app.is_family!==false?' selected':'')+'>Family (up to 6 boxes)</option><option value="false"'+(app.is_family===false?' selected':'')+'>Bachelor (up to 3 boxes)</option></select></div>';
+  body += '<div class="detail-item"><div class="lbl">Household size</div>'+sn('ef-household_size',app.household_size,'onchange="updateMaxBoxesFromFamilyType(\''+app.id+'\')"')+'</div>';
+  body += '<div class="detail-item"><div class="lbl">Household type</div><select class="edit-field" id="ef-is_family" onchange="updateMaxBoxesFromFamilyType(\''+app.id+'\')"><option value="true"'+(app.is_family!==false?' selected':'')+'>Family (up to 6 boxes if 3+ people)</option><option value="false"'+(app.is_family===false?' selected':'')+'>Bachelor (up to 3 boxes)</option></select></div>';
   body += di('Disposable income','<span style="font-weight:900;'+dispColor+'">QAR '+Math.round(disp).toLocaleString()+'</span>');
   body += '<div class="detail-item"><div class="lbl">Boxes received</div>'+sn('ef-boxes_received',app.boxes_received)+'</div>';
   body += '<div class="detail-item"><div class="lbl">Max boxes'+(isLongTerm?' <span style="font-size:10px;color:var(--orange);">♾ Long Term</span>':' <span style="font-size:10px;color:var(--muted);">(auto-set by household type, editable)</span>')+'</div>'+sn('ef-max_boxes',app.max_boxes)+'</div>';
@@ -1779,16 +1779,23 @@ function renderModal(app, members, urlMap) {
   document.getElementById('modal').classList.add('visible');
 }
 
-// Families get up to 6 boxes, bachelors up to 3 — this only updates the
-// Max boxes field if it currently matches one of those two standard
-// values (or is empty), so it won't silently overwrite a number an
-// admin has deliberately customized for a specific case.
+// Bachelors get up to 3 boxes. Families get up to 6 — but only once the
+// household has 3+ people; a "family" of 1-2 (e.g. a couple with no kids
+// on file yet) gets the same allowance as a bachelor, 3. This only updates
+// the Max boxes field if it currently matches one of those two standard
+// values (or is empty), so it won't silently overwrite a number an admin
+// has deliberately customized for a specific case. Runs on both the
+// household-type dropdown and the household-size field, since either one
+// changing can flip which allowance applies.
 function updateMaxBoxesFromFamilyType(appId) {
   var isFamily = document.getElementById('ef-is_family').value === 'true';
+  var householdSizeField = document.getElementById('ef-household_size');
+  var householdSize = householdSizeField ? parseInt(householdSizeField.value, 10) : NaN;
   var maxBoxesField = document.getElementById('ef-max_boxes');
   var current = maxBoxesField.value;
   if (current === '' || current === '6' || current === '3') {
-    maxBoxesField.value = isFamily ? '6' : '3';
+    var target = (isFamily && !isNaN(householdSize) && householdSize >= 3) ? '6' : '3';
+    maxBoxesField.value = target;
   }
 }
 
