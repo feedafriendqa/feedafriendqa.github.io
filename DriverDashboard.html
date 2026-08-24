@@ -532,40 +532,126 @@ async function showFamilies(){
 function renderRouteSelector(){
   var sel=document.getElementById("route-start-sel");
   if(!sel)return;
-  sel.innerHTML='<option value="">Choose a starting point…</option>'+CURRENT_FAMS.map(function(f){
-    var a=f.food_box_applications||{};
-    var name=a.full_name_en||a.full_name||"—";
-    return '<option value="'+f.id+'">'+name+(a.area?" · "+a.area:"")+'</option>';
-  }).join("");
+  sel.innerHTML='<option value="">Choose a starting point…</option>'
+    +'<option value="__faf_point">FAF Distribution Point: Al Ghalia Gardens</option>'
+    +'<option value="__my_location">My location now</option>'
+    +CURRENT_FAMS.map(function(f){
+      var a=f.food_box_applications||{};
+      var name=a.full_name_en||a.full_name||"—";
+      return '<option value="'+f.id+'">'+name+(a.area?" · "+a.area:"")+'</option>';
+    }).join("");
   var rb=document.getElementById("route-banner"); if(rb)rb.style.display="none";
+}
+function sortByArea(list,area){
+  var copy=list.slice();
+  var target=(area||"").toLowerCase();
+  copy.sort(function(a,b){
+    var aSame=((a.food_box_applications||{}).area||"").toLowerCase()===target?0:1;
+    var bSame=((b.food_box_applications||{}).area||"").toLowerCase()===target?0:1;
+    return aSame-bSame;
+  });
+  return copy;
+}
+function showRouteBanner(text){
+  var rb=document.getElementById("route-banner");
+  if(rb){rb.textContent=text;rb.style.display="block";}
+}
+function applyRouteOrder(areaGuess,label){
+  if(areaGuess)CURRENT_FAMS=sortByArea(CURRENT_FAMS,areaGuess);
+  document.getElementById("fams-list").innerHTML=CURRENT_FAMS.map(function(row,i){return renderFamCard(row,i+1);}).join("");
+  showRouteBanner("Route set — starting from "+label+"."
+    +(areaGuess?" Nearby stops in "+areaGuess+" come next.":" Couldn't match this to a specific neighbourhood, so the order stayed the same.")
+    +" (This groups by neighbourhood — it isn't live GPS routing yet.)");
+}
+// Real GPS coordinates for the FAF Distribution Point (Al Ghalia Gardens),
+// resolved from the Google Maps link Alliyah shared (25.2592198, 51.4719974).
+// If the distribution point ever moves, update these two numbers.
+var FAF_POINT_LAT=25.2592198, FAF_POINT_LON=51.4719974;
+
+// Shared by both "FAF Distribution Point" and "My location now": given a
+// lat/lon, ask OpenStreetMap's free Nominatim reverse-geocoder (no API key)
+// for the neighbourhood name, then cluster deliveries in that neighbourhood
+// first. Best-effort only — see the header comment on renderRouteSelector().
+function planFromCoords(lat,lon,label){
+  fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat="+lat+"&lon="+lon+"&zoom=16&addressdetails=1")
+    .then(function(r){return r.json();})
+    .then(function(j){
+      var a=(j&&j.address)||{};
+      var areaGuess=a.suburb||a.neighbourhood||a.city_district||a.town||a.village||"";
+      applyRouteOrder(areaGuess,label+(areaGuess?" (near "+areaGuess+")":""));
+    })
+    .catch(function(){
+      applyRouteOrder(null,label);
+    });
 }
 function planRoute(){
   var sel=document.getElementById("route-start-sel");
   var startId=sel&&sel.value;
   if(!startId){alert("Pick a starting point first.");return;}
+
+  // Fixed FAF distribution point — we have real coordinates for this one
+  // (from the Google Maps link Alliyah shared), so it gets the same
+  // neighbourhood-clustering treatment as "My location now" below.
+  if(startId==="__faf_point"){
+    showRouteBanner("Looking up the distribution point's neighbourhood…");
+    planFromCoords(FAF_POINT_LAT,FAF_POINT_LON,"the FAF Distribution Point (Al Ghalia Gardens)");
+    return;
+  }
+
+  // Driver's current location — ask the browser for GPS coordinates, then
+  // use a free reverse-geocoding lookup (OpenStreetMap Nominatim, no API key)
+  // to guess the neighbourhood name, and cluster deliveries in that
+  // neighbourhood first. Best-effort only, same as the rest of this planner.
+  if(startId==="__my_location"){
+    if(!navigator.geolocation){
+      alert("Your browser doesn't support location — pick a delivery to start from instead.");
+      return;
+    }
+    showRouteBanner("Finding your location…");
+    navigator.geolocation.getCurrentPosition(function(pos){
+      planFromCoords(pos.coords.latitude,pos.coords.longitude,"your current location");
+    },function(){
+      alert("Couldn't get your location — check your browser's location permission, or pick a delivery to start from instead.");
+      var rb=document.getElementById("route-banner"); if(rb)rb.style.display="none";
+    },{timeout:8000});
+    return;
+  }
+
   var start=CURRENT_FAMS.find(function(f){return f.id===startId;});
   if(!start)return;
   var startArea=(start.food_box_applications||{}).area||"";
-  var rest=CURRENT_FAMS.filter(function(f){return f.id!==startId;});
-  rest.sort(function(a,b){
-    var aSame=((a.food_box_applications||{}).area||"")===startArea?0:1;
-    var bSame=((b.food_box_applications||{}).area||"")===startArea?0:1;
-    return aSame-bSame;
-  });
+  var rest=sortByArea(CURRENT_FAMS.filter(function(f){return f.id!==startId;}),startArea);
   CURRENT_FAMS=[start].concat(rest);
   document.getElementById("fams-list").innerHTML=CURRENT_FAMS.map(function(row,i){return renderFamCard(row,i+1);}).join("");
   var name=(start.food_box_applications||{}).full_name_en||"your pick";
-  var rb=document.getElementById("route-banner");
-  if(rb){
-    rb.textContent="Route set — starting from "+name+". Nearby stops in "+(startArea||"the same area")+" come next. (This groups by neighbourhood — it isn't live GPS routing yet.)";
-    rb.style.display="block";
-  }
+  showRouteBanner("Route set — starting from "+name+". Nearby stops in "+(startArea||"the same area")+" come next. (This groups by neighbourhood — it isn't live GPS routing yet.)");
+}
+
+// Builds a "best effort" Google Maps link from the Zone/Street/Building
+// address fields we store. This is a text search, not an exact pin — Qatar
+// doesn't put lat/lng on these applications, so Google is guessing from the
+// same zone/street/building/area text a driver would type in themselves.
+// TODO(maps upgrade): if/when QNAS (qnas.qa) approves API access, swap this
+// for a call to their /get_location/{zone}/{street}/{building} endpoint,
+// which returns exact coordinates — then build the link as
+// "https://www.google.com/maps/search/?api=1&query=<lat>,<lng>" instead.
+function buildMapsUrl(app){
+  var parts=[];
+  if(app.zone)parts.push("Zone "+app.zone);
+  if(app.street)parts.push("Street "+app.street);
+  if(app.building)parts.push("Building "+app.building);
+  if(app.area)parts.push(app.area);
+  parts.push("Qatar");
+  if(!parts.length)return "";
+  return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(parts.join(", "));
 }
 
 function renderFamCard(row,num){
   var app=row.food_box_applications||{};
   var addrParts=[app.zone?"Zone "+app.zone:"",app.street?"St. "+app.street:"",app.building?"Bldg "+app.building:"",app.unit?"Unit "+app.unit:""].filter(Boolean);
   var addr=addrParts.length?addrParts.join(", ")+(app.area?" · "+app.area:""):(app.area||"—");
+  var mapsUrl=buildMapsUrl(app);
+  var mapsHtml=mapsUrl?' · <a href="'+mapsUrl+'" target="_blank">Open in Maps</a>':"";
   var name=app.full_name_en||app.full_name||"—";
   var wa=(app.whatsapp||"").replace(/[^0-9+]/g,"");
   var waHtml=wa?'<a href="https://wa.me/'+wa+'" target="_blank">Open WhatsApp</a>':"—";
@@ -582,7 +668,7 @@ function renderFamCard(row,num){
   return '<div class="fam-card" id="fc-'+row.id+'" data-boxes="'+boxCount+'">'
     +'<div class="fam-head"><div class="fam-circle">'+num+'</div><span class="fam-st '+(done?"done":"pending")+'">'+(done?"✓ Delivered":"Pending")+'</span></div>'
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4.42 0-8 2.24-8 5v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1c0-2.76-3.58-5-8-5z" fill="#146c43"/></svg></span><div><div class="fam-lbl">Name</div><div class="fam-val">'+name+(app.nationality?' <span style="color:var(--muted);font-weight:600">· '+app.nationality+'</span>':"")+'</div></div></div>'
-    +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="#146c43"/></svg></span><div><div class="fam-lbl">Address</div><div class="fam-val">'+addr+'</div></div></div>'
+    +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="#146c43"/></svg></span><div><div class="fam-lbl">Address</div><div class="fam-val">'+addr+mapsHtml+'</div></div></div>'
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z" fill="#146c43"/></svg></span><div><div class="fam-lbl">Contact</div><div class="fam-val">'+phoneTxt+(wa?' · ':"")+waHtml+'</div></div></div>'
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.94 9h-3.02a15.9 15.9 0 0 0-1.2-5.3A8.03 8.03 0 0 1 19.94 11zM12 4c.83 1.15 1.8 3.1 2.1 7H9.9c.3-3.9 1.27-5.85 2.1-7zM8.28 5.7A15.9 15.9 0 0 0 7.08 11H4.06a8.03 8.03 0 0 1 4.22-5.3zM4.06 13h3.02c.16 1.9.6 3.7 1.2 5.3A8.03 8.03 0 0 1 4.06 13zM12 20c-.83-1.15-1.8-3.1-2.1-7h4.2c-.3 3.9-1.27 5.85-2.1 7zm3.72-1.7c.6-1.6 1.04-3.4 1.2-5.3h3.02a8.03 8.03 0 0 1-4.22 5.3z" fill="#146c43"/></svg></span><div><div class="fam-lbl">Language</div><div class="fam-val">'+language+'</div></div></div>'
     +(tags?'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M7 4H5L4 6H2v2h2l3.6 7.59-1.35 2.44A2 2 0 0 0 8 21h11v-2H8l1.1-2h7.45a2 2 0 0 0 1.79-1.11L21.9 8H6.21l-.94-2H7V4zM9 19a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm9 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" fill="#146c43"/></svg></span><div><div class="fam-lbl">Needs</div><div style="margin-top:4px">'+tags+'</div></div></div>':"")
