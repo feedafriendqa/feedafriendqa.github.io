@@ -367,13 +367,6 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
     <p id="success-ref-qid" style="font-size:16px;font-weight:800;color:var(--green-dark)"></p>
     <p id="success-ref-wa" style="font-size:14px;color:#5a7050;margin-top:4px"></p>
   </div>
-  <div id="upload-progress-wrap" style="max-width:380px;width:100%;margin-top:16px;display:none;">
-    <p id="upload-progress-label" style="font-size:13px;color:#8a6300;font-weight:700;margin-bottom:8px">⏳ Saving your photos — please keep this page open…</p>
-    <div style="background:#e8e0c8;border-radius:6px;height:8px;overflow:hidden;">
-      <div id="upload-progress-bar" style="background:#F5C330;height:100%;width:0%;transition:width 0.3s ease;"></div>
-    </div>
-  </div>
-  <p id="upload-progress-done" style="font-size:13px;color:#1D7A47;font-weight:700;margin-top:16px;display:none">✓ Photos saved</p>
 </div>
 
 <!-- ══ ELIGIBILITY ══ -->
@@ -642,7 +635,6 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
     <button type="button" class="submit-btn" id="submit-btn" disabled onclick="submitApplication()">
       <span id="btn-submit">Submit application / تقديم الطلب</span>
     </button>
-    <p id="submit-keep-open-note" style="display:none;font-size:12px;color:#8a6300;font-weight:700;text-align:center;margin-top:8px;">⏳ Please keep this page open while we submit your application…</p>
   </div>
 </div>
 
@@ -1301,7 +1293,7 @@ function scanMemberQID(n) {
       var idEl = document.getElementById('m' + n + '-idnum');
       var expEl = document.getElementById('m' + n + '-expiry');
       var dobEl = document.getElementById('m' + n + '-dob');
-      if (nameEl && parsed.full_name) nameEl.value = parsed.full_name;
+      if (nameEl && parsed.full_name) { nameEl.value = parsed.full_name; lockQIDField(nameEl); }
       if (idEl && parsed.qid_number) idEl.value = parsed.qid_number;
       if (expEl && parsed.expiry_date) expEl.value = parsed.expiry_date;
       if (dobEl && parsed.dob) { dobEl.value = parsed.dob; handleMemberDOB(n); }
@@ -1533,7 +1525,7 @@ function buildMemberCard(n) {
   h += '<div class="qid-scraped-info"><p>📛 <strong id="m' + n + '-scraped-name">-</strong></p><p>🪪 <strong id="m' + n + '-scraped-qid">-</strong></p><p>📅 <strong id="m' + n + '-scraped-expiry">-</strong></p><p style="font-size:11px;color:var(--muted);margin-top:3px;">' + (ar ? 'راجع وصحح إذا لزم' : 'Verify and correct if needed') + '</p></div></div>';
   h += '</div>';
   h += '<div class="field-row">';
-  h += '<div class="field"><label>' + (ar ? 'الاسم الكامل' : 'Full name') + ' <span class="req">*</span></label><input type="text" id="m' + n + '-name" placeholder="' + (ar ? 'الاسم كما في الهوية' : 'Name as on ID') + '"></div>';
+  h += '<div class="field"><label>' + (ar ? 'الاسم الكامل' : 'Full name') + ' <span class="req">*</span></label><input type="text" id="m' + n + '-name" placeholder="' + (ar ? 'يُملأ تلقائياً من الهوية' : 'Auto-filled from QID') + '" readonly style="background:#f0f4f0;color:#9cbfa2;cursor:not-allowed;"></div>';
   h += '<div class="field"><label>' + (ar ? 'تاريخ الميلاد' : 'Date of birth') + ' <span class="req">*</span></label><input type="date" id="m' + n + '-dob" onchange="handleMemberDOB(' + n + ')"></div>';
   h += '</div>';
   h += '<div class="field-row">';
@@ -1646,6 +1638,12 @@ function handleMemberDOB(n) {
   // Little Learners alert for ages 3-14
   checkLittleLearners(n, ageYears);
   handleMemberGender(n);
+
+  // Date of birth cannot be changed once set — locks the field the same
+  // way name/QID number are locked, whether the value came from manual
+  // entry (the flow used to determine the doc-type before any scan) or
+  // from a later QID scan overwriting it programmatically.
+  lockQIDField(dobEl);
 }
 
 
@@ -1831,14 +1829,6 @@ function collectMembers() {
       qid_number: get('m' + i + '-idnum'),
       dob: get('m' + i + '-dob') || null,
       qid_expiry: get('m' + i + '-expiry') || null,
-      // The phone field is shown and required (for adults 18+) right on
-      // this card, and validateApplication() enforces it before allowing
-      // submit — but this function, which actually builds what gets sent
-      // to the server, never read it at all. So an adult household member
-      // could type a phone number, pass validation, submit successfully,
-      // and still end up with no phone number on file — collectMembers()
-      // silently dropped it before it ever left the browser.
-      whatsapp: toWesternDigits(get('m' + i + '-phone')) || null,
       gender: getRadio('m' + i + '-gender'),
       role: getRadio('m' + i + '-role'),
       doc_type: getRadio('m' + i + '-doctype') || 'qid',
@@ -1940,6 +1930,31 @@ function validateApplication(members, memberFormIndices) {
           if (!phoneEl || !phoneEl.value.trim()) errors.push({ label: memberLabel + (ar ? ' — رقم الهاتف' : ' — phone number'), target: flagFieldError(phoneEl) || card });
         }
       }
+      // Identity document is mandatory for every household member: a QID
+      // (number + front/back photos) for everyone, or a Qatar birth
+      // certificate for children under 1 who have that option selected.
+      var doctypeEl = card.querySelector('input[name="m' + idx + '-doctype"]:checked');
+      var doctype = doctypeEl ? doctypeEl.value : 'qid';
+      if (doctype === 'birth-cert') {
+        var bcInput = document.getElementById('m' + idx + '-birth-cert');
+        if (!bcInput || !bcInput.files || !bcInput.files[0]) {
+          var bcZone = document.getElementById('m' + idx + '-birth-cert-upload');
+          errors.push({ label: memberLabel + (ar ? ' — شهادة الميلاد' : ' — birth certificate'), target: bcZone || card });
+        }
+      } else {
+        var idnumEl = document.getElementById('m' + idx + '-idnum');
+        if (!idnumEl || !idnumEl.value.trim()) errors.push({ label: memberLabel + (ar ? ' — رقم الهوية' : ' — QID number'), target: flagFieldError(idnumEl) || card });
+        var frontInput = document.getElementById('m' + idx + '-qid-front');
+        if (!frontInput || !frontInput.files || !frontInput.files[0]) {
+          var frontZone = document.getElementById('m' + idx + '-qid-front-zone');
+          errors.push({ label: memberLabel + (ar ? ' — صورة الوجه الأمامي للهوية' : ' — front of QID photo'), target: frontZone || card });
+        }
+        var backInput = document.getElementById('m' + idx + '-qid-back');
+        if (!backInput || !backInput.files || !backInput.files[0]) {
+          var backZone = document.getElementById('m' + idx + '-qid-back-zone');
+          errors.push({ label: memberLabel + (ar ? ' — صورة الوجه الخلفي للهوية' : ' — back of QID photo'), target: backZone || card });
+        }
+      }
       if (!card.querySelector('input[name="m' + idx + '-gender"]:checked')) {
         var mGenderInput = card.querySelector('input[name="m' + idx + '-gender"]');
         errors.push({ label: memberLabel + (ar ? ' — الجنس' : ' — gender'), target: flagFieldError(mGenderInput) || card });
@@ -2002,8 +2017,6 @@ function submitApplication() {
 
   btn.textContent = currentLang === 'ar' ? '⏳ جاري الإرسال…' : '⏳ Submitting…';
   btn.disabled = true;
-  documentsStillUploading = true;
-  document.getElementById('submit-keep-open-note').style.display = 'block';
 
   var getVal = function(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
   var getRadio = function(name) { var el = document.querySelector('input[name="' + name + '"]:checked'); return el ? el.value : ''; };
@@ -2047,8 +2060,6 @@ function submitApplication() {
       uploadAllApplicationDocuments(data.id, data.member_ids || [], memberFormIndices);
     } else {
       var ar = currentLang === 'ar';
-      documentsStillUploading = false;
-      document.getElementById('submit-keep-open-note').style.display = 'none';
       showSubmitErrors([{
         label: (data.error || data.message) || (ar ? 'حدث خطأ في الخادم. يرجى المحاولة مرة أخرى أو التواصل معنا إذا استمرت المشكلة.' : 'A server error occurred. Please try again, or contact us if this keeps happening.'),
         target: null
@@ -2059,8 +2070,6 @@ function submitApplication() {
     }
   }).catch(function() {
     var ar = currentLang === 'ar';
-    documentsStillUploading = false;
-    document.getElementById('submit-keep-open-note').style.display = 'none';
     showSubmitErrors([{
       label: ar ? 'تعذّر الإرسال — تحقق من اتصالك بالإنترنت وحاول مرة أخرى.' : 'Submission failed — check your internet connection and try again.',
       target: null
@@ -2095,8 +2104,6 @@ function showSuccessScreen(qid, whatsapp) {
   document.getElementById('success-ref-label').textContent = ar ? 'استخدم هذا لمتابعة حالة طلبك لاحقاً' : 'Use this to check your status later';
   document.getElementById('success-ref-qid').textContent = (ar ? 'رقم الهوية: ' : 'QID: ') + (qid || '—');
   document.getElementById('success-ref-wa').textContent = (ar ? 'واتساب: ' : 'WhatsApp: ') + (whatsapp || '—');
-  document.getElementById('upload-progress-label').textContent = ar ? '⏳ جاري حفظ الصور — يرجى إبقاء هذه الصفحة مفتوحة…' : '⏳ Saving your photos — please keep this page open…';
-  document.getElementById('upload-progress-done').textContent = ar ? '✓ تم حفظ الصور' : '✓ Photos saved';
   screen.style.display = 'flex';
   window.scrollTo({ top: 0 });
 }
@@ -2145,67 +2152,24 @@ function uploadOneDocument(applicationId, memberId, docKey, file) {
   });
 }
 
-// Covers the WHOLE submission — from the moment Submit is clicked (the
-// initial POST that creates the application record) through the document
-// uploads that follow it — not just the upload phase. Someone closing the
-// tab during that first POST loses the application entirely, not just a
-// photo, so the warning needs to start at click, not at "success".
-var documentsStillUploading = false;
-window.addEventListener('beforeunload', function(e) {
-  if (documentsStillUploading) {
-    e.preventDefault();
-    e.returnValue = '';
-    return '';
-  }
-});
-
 function uploadAllApplicationDocuments(applicationId, memberIds, memberFormIndices) {
   var jobs = [];
   var fileOf = function(id) { var el = document.getElementById(id); return el && el.files ? el.files[0] : null; };
 
-  var wantedJobs = [];
-  wantedJobs.push({ memberId: null, docKey: 'qid_front', file: fileOf('qid-front') });
-  wantedJobs.push({ memberId: null, docKey: 'qid_back', file: fileOf('qid-back') });
-  wantedJobs.push({ memberId: null, docKey: 'blue_plate', file: fileOf('blue-plate-upload') });
-  wantedJobs.push({ memberId: null, docKey: 'salary_proof', file: fileOf('pz-salary') });
+  jobs.push(uploadOneDocument(applicationId, null, 'qid_front', fileOf('qid-front')));
+  jobs.push(uploadOneDocument(applicationId, null, 'qid_back', fileOf('qid-back')));
+  jobs.push(uploadOneDocument(applicationId, null, 'blue_plate', fileOf('blue-plate-upload')));
+  jobs.push(uploadOneDocument(applicationId, null, 'salary_proof', fileOf('pz-salary')));
 
   memberFormIndices.forEach(function(formIdx, pos) {
     var memberId = memberIds[pos];
     if (!memberId) return; // that member's row failed to save — nothing to attach documents to
-    wantedJobs.push({ memberId: memberId, docKey: 'qid_front', file: fileOf('m' + formIdx + '-qid-front') });
-    wantedJobs.push({ memberId: memberId, docKey: 'qid_back', file: fileOf('m' + formIdx + '-qid-back') });
-    wantedJobs.push({ memberId: memberId, docKey: 'birth_cert', file: fileOf('m' + formIdx + '-birth-cert') });
+    jobs.push(uploadOneDocument(applicationId, memberId, 'qid_front', fileOf('m' + formIdx + '-qid-front')));
+    jobs.push(uploadOneDocument(applicationId, memberId, 'qid_back', fileOf('m' + formIdx + '-qid-back')));
+    jobs.push(uploadOneDocument(applicationId, memberId, 'birth_cert', fileOf('m' + formIdx + '-birth-cert')));
   });
 
-  var realJobs = wantedJobs.filter(function(j) { return !!j.file; });
-  var wrap = document.getElementById('upload-progress-wrap');
-  var bar = document.getElementById('upload-progress-bar');
-  var doneMsg = document.getElementById('upload-progress-done');
-
-  if (realJobs.length === 0) {
-    documentsStillUploading = false;
-    document.getElementById('submit-keep-open-note').style.display = 'none';
-    return Promise.resolve();
-  }
-
-  document.getElementById('submit-keep-open-note').style.display = 'none';
-  documentsStillUploading = true;
-  wrap.style.display = 'block';
-  var completed = 0;
-  var updateBar = function() {
-    completed++;
-    bar.style.width = Math.round((completed / realJobs.length) * 100) + '%';
-  };
-
-  realJobs.forEach(function(j) {
-    jobs.push(uploadOneDocument(applicationId, j.memberId, j.docKey, j.file).then(updateBar).catch(updateBar));
-  });
-
-  return Promise.all(jobs).then(function() {
-    documentsStillUploading = false;
-    wrap.style.display = 'none';
-    doneMsg.style.display = 'block';
-  });
+  return Promise.all(jobs);
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
