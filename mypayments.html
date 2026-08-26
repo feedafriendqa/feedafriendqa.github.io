@@ -309,8 +309,8 @@ html[dir="rtl"] .event-time{text-align:left;}
       <input type="file" id="proof-file-input" accept="image/*" style="display:none" onchange="handleProofFileSelected(this)">
       <div class="photo-modal-ovl" id="photo-modal-ovl" onclick="if(event.target===this)closeDeliveryPhotos()">
         <div class="photo-modal-inner">
-          <img id="photo-modal-img" src="" alt="Delivery photo">
-          <div id="photo-modal-counter" style="color:#fff;font-size:13px;font-weight:700;display:none;"></div>
+          <img id="photo-modal-img" src="" data-en="Delivery photo" data-ar="صورة التسليم" alt="Delivery photo">
+          <div id="photo-modal-counter" dir="ltr" style="color:#fff;font-size:13px;font-weight:700;display:none;"></div>
           <button class="photo-modal-close" onclick="closeDeliveryPhotos()" data-en="Close" data-ar="إغلاق">Close</button>
         </div>
       </div>
@@ -473,7 +473,7 @@ function renderList(rows, photoMap){
     // if we flagged a discrepancy and need a fresh screenshot to re-check.
     var canUpload = r.payment_status === "pending_payment" || r.payment_status === "discrepancy";
     var uploadBtn = canUpload
-      ? '<button class="upload-proof-btn" onclick="startProofUpload(\'' + r.id + '\')" data-en="Upload proof of payment" data-ar="رفع إثبات الدفع">Upload proof of payment</button>'
+      ? '<button class="upload-proof-btn" onclick="startProofUpload(\'' + r.id + '\')">' + (isAr ? "رفع إثبات الدفع" : "Upload proof of payment") + '</button>'
       : '';
 
     // Delivery-method label. "self" = the sponsor picks up and delivers the
@@ -538,7 +538,9 @@ function openDeliveryPhotos(urls){
 }
 function renderDeliveryPhotoModal(){
   var isAr = document.documentElement.getAttribute("lang") === "ar";
-  document.getElementById("photo-modal-img").src = deliveryPhotoQueue[deliveryPhotoIdx];
+  var photoImgEl = document.getElementById("photo-modal-img");
+  photoImgEl.src = deliveryPhotoQueue[deliveryPhotoIdx];
+  photoImgEl.alt = isAr ? photoImgEl.getAttribute("data-ar") : photoImgEl.getAttribute("data-en");
   var counter = document.getElementById("photo-modal-counter");
   if(deliveryPhotoQueue.length > 1){
     counter.style.display = "";
