@@ -421,11 +421,19 @@ function backToEmail(){
   document.getElementById("si-password").value = "";
 }
 
+// Sponsor-facing status labels. The underlying payment_status values from
+// Supabase stay the same (pending_payment / proof_uploaded / payment_received
+// / discrepancy / rejected) — this is just the wording sponsors see, matching
+// the three-stage flow: Not Paid -> (screenshot uploaded) Payment Pending ->
+// (matched against the bank statement) Payment Received. "discrepancy" is
+// shown as Payment Pending too, since from the sponsor's side it's still
+// "we're sorting this out" — the upload button re-appears so they can send a
+// clearer screenshot if needed.
 var PAYMENT_LABELS = {
   payment_received: { en: "Payment received", ar: "تم استلام الدفع", cls: "badge-paid" },
-  proof_uploaded: { en: "Proof uploaded — matching", ar: "تم رفع الإثبات — قيد المطابقة", cls: "badge-uploaded" },
-  pending_payment: { en: "Outstanding", ar: "مستحق", cls: "badge-pending_payment" },
-  discrepancy: { en: "Needs review", ar: "يحتاج مراجعة", cls: "badge-discrepancy" },
+  proof_uploaded: { en: "Payment pending", ar: "الدفع قيد الانتظار", cls: "badge-uploaded" },
+  pending_payment: { en: "Not paid", ar: "غير مدفوع", cls: "badge-pending_payment" },
+  discrepancy: { en: "Payment pending", ar: "الدفع قيد الانتظار", cls: "badge-discrepancy" },
   rejected: { en: "Rejected", ar: "مرفوض", cls: "badge-rejected" }
 };
 
