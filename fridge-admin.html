@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Fridge Admin — Feed a Friend</title>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Poppins,sans-serif;background:#F7FAF8;color:#0A3D1F}
+.spartan{font-family:'League Spartan',sans-serif;font-weight:900}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#BBF7D0;border-radius:8px}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:9px 10px;font-size:13px}
+tbody tr:nth-child(odd){background:#F7FDF9}
+th{background:#0A3D1F;color:#fff;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0}
+.tbl-wrap{overflow-x:auto;border-radius:10px;border:1px solid #DCFCE7}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useMemo,useRef} = React;
+
+const sb = supabase.createClient(
+  "https://xbxagukdvgyaoqvbqoic.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"
+);
+const FRIEND_PORTAL_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/friend-portal";
+
+const DARK="#0A3D1F", GREEN="#15803D", LIGHT="#F0FDF4", ACCENT="#22C55E", BORDER="#BBF7D0", MUTED="#4B7C5A";
+
+function fmtDate(d){
+  if(!d) return "—";
+  try{ return new Date(d).toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
+  catch(e){ return "—"; }
+}
+function daysAgo(d){
+  if(!d) return null;
+  return Math.floor((Date.now()-new Date(d).getTime())/86400000);
+}
+
+function Spinner(){
+  return <div style={{padding:40,textAlign:"center",color:MUTED}}>Loading…</div>;
+}
+
+function StatTile({label,value,sub}){
+  return (
+    <div style={{background:"#fff",border:`1px solid ${BORDER}`,borderRadius:12,padding:"16px 18px",minWidth:140,flex:"1 1 140px"}}>
+      <div className="spartan" style={{fontSize:28,color:DARK,lineHeight:1}}>{value}</div>
+      <div style={{fontSize:12.5,color:MUTED,marginTop:6,fontWeight:600}}>{label}</div>
+      {sub && <div style={{fontSize:11,color:"#9CA3AF",marginTop:2}}>{sub}</div>}
+    </div>
+  );
+}
+
+function Pill({children,color}){
+  return <span style={{display:"inline-block",padding:"3px 10px",borderRadius:999,fontSize:11,fontWeight:700,background:(color||GREEN)+"22",color:color||GREEN}}>{children}</span>;
+}
+
+// ───────────────────────── LOGIN ─────────────────────────
+function LoginScreen({onLoggedIn}){
+  const [email,setEmail]=useState("");
+  const [password,setPassword]=useState("");
+  const [err,setErr]=useState("");
+  const [loading,setLoading]=useState(false);
+
+  async function login(){
+    setErr(""); setLoading(true);
+    const {data,error} = await sb.auth.signInWithPassword({email,password});
+    if(error){ setErr(error.message); setLoading(false); return; }
+    const {data:profile} = await sb.from("profiles").select("role,first_name").eq("id",data.session.user.id).maybeSingle();
+    if(!profile || !["admin","superadmin"].includes(profile.role)){
+      setErr("This account isn't an admin. Ask a superadmin to grant access.");
+      await sb.auth.signOut();
+      setLoading(false);
+      return;
+    }
+    setLoading(false);
+    onLoggedIn(data.session, profile);
+  }
+
+  return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:DARK}}>
+      <div style={{background:"#fff",borderRadius:16,padding:"36px 32px",width:360,maxWidth:"90vw"}}>
+        <div className="spartan" style={{fontSize:24,color:DARK,marginBottom:4}}>Fridge Admin</div>
+        <div style={{fontSize:13,color:MUTED,marginBottom:24}}>Sign in with your Feed a Friend admin account.</div>
+        <label style={{fontSize:12,fontWeight:700,color:DARK}}>Email</label>
+        <input value={email} onChange={e=>setEmail(e.target.value)} type="email"
+          style={{width:"100%",padding:"10px 12px",margin:"6px 0 14px",border:`1.5px solid ${BORDER}`,borderRadius:8,fontSize:14}}/>
+        <label style={{fontSize:12,fontWeight:700,color:DARK}}>Password</label>
+        <input value={password} onChange={e=>setPassword(e.target.value)} type="password"
+          onKeyDown={e=>e.key==="Enter"&&login()}
+          style={{width:"100%",padding:"10px 12px",margin:"6px 0 18px",border:`1.5px solid ${BORDER}`,borderRadius:8,fontSize:14}}/>
+        {err && <div style={{color:"#DC2626",fontSize:12.5,marginBottom:12}}>{err}</div>}
+        <button onClick={login} disabled={loading || !email || !password}
+          style={{width:"100%",padding:"12px",background:DARK,color:"#fff",border:"none",borderRadius:8,fontWeight:700,fontSize:14,opacity:loading?0.6:1}}>
+          {loading?"Signing in…":"Sign in"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── SHELL / NAV ─────────────────────────
+function Header({profile,onLogout,tab,setTab}){
+  const tabs=[["dashboard","Dashboard"],["fridges","Fridges"],["activity","Activity Log"],["wishlist","Wishlist Requests"]];
+  return (
+    <div style={{background:DARK,color:"#fff",padding:"14px 22px",position:"sticky",top:0,zIndex:20}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
+        <div className="spartan" style={{fontSize:19}}>🧊 Fridge Admin</div>
+        <div style={{fontSize:12.5,display:"flex",alignItems:"center",gap:14}}>
+          <span style={{opacity:0.85}}>Hi, {profile.first_name||"Admin"}</span>
+          <a onClick={onLogout} style={{cursor:"pointer",textDecoration:"underline",opacity:0.85}}>Sign out</a>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:6,marginTop:14,flexWrap:"wrap"}}>
+        {tabs.map(([k,label])=>(
+          <button key={k} onClick={()=>setTab(k)}
+            style={{padding:"8px 16px",borderRadius:8,border:"none",fontWeight:700,fontSize:13,
+              background:tab===k?"#fff":"rgba(255,255,255,0.12)", color:tab===k?DARK:"#fff"}}>
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── DASHBOARD TAB ─────────────────────────
+function DashboardTab(){
+  const [loading,setLoading]=useState(true);
+  const [fridges,setFridges]=useState([]);
+  const [activity,setActivity]=useState([]);
+  const [profilesById,setProfilesById]=useState({});
+  const [pendingWishlist,setPendingWishlist]=useState(0);
+
+  useEffect(()=>{ load(); },[]);
+
+  async function load(){
+    setLoading(true);
+    const [{data:fr},{data:act},{data:profs},{count:pend}] = await Promise.all([
+      sb.from("fridges").select("id,name_en,zone_name,status,last_refill_at"),
+      sb.from("fridge_activity").select("id,fridge_id,volunteer_id,guest_name,activity_type,created_at").order("created_at",{ascending:false}).limit(3000),
+      sb.from("profiles").select("id,first_name,surname,role"),
+      sb.from("friend_wishlist_items").select("id",{count:"exact",head:true}).eq("status","pending"),
+    ]);
+    setFridges(fr||[]);
+    setActivity(act||[]);
+    const pMap={}; (profs||[]).forEach(p=>pMap[p.id]=p);
+    setProfilesById(pMap);
+    setPendingWishlist(pend||0);
+    setLoading(false);
+  }
+
+  const stats = useMemo(()=>{
+    const totalFridges = fridges.length;
+    const activeFridges = fridges.filter(f=>f.status==="active").length;
+    const refills = activity.filter(a=>a.activity_type==="refill");
+    const weekAgo = Date.now()-7*86400000;
+    const refillsThisWeek = refills.filter(a=>new Date(a.created_at).getTime()>=weekAgo).length;
+    const cleanings = activity.filter(a=>a.activity_type==="cleaning").length;
+    const reports = activity.filter(a=>a.activity_type==="report_broken"||a.activity_type==="report_moved"||a.activity_type==="report_closed").length;
+    const needsAttention = fridges.filter(f=>f.status==="active" && (!f.last_refill_at || daysAgo(f.last_refill_at)>7))
+      .sort((a,b)=>(daysAgo(b.last_refill_at)||9999)-(daysAgo(a.last_refill_at)||9999));
+    return {totalFridges,activeFridges,refills:refills.length,refillsThisWeek,cleanings,reports,needsAttention};
+  },[fridges,activity]);
+
+  const leaderboard = useMemo(()=>{
+    const counts={};
+    activity.forEach(a=>{
+      if(a.activity_type!=="refill") return;
+      const key = a.volunteer_id || ("guest:"+(a.guest_name||"Anonymous"));
+      counts[key]=(counts[key]||0)+1;
+    });
+    return Object.entries(counts).map(([key,count])=>{
+      let name;
+      if(key.startsWith("guest:")) name = key.slice(6)+" (guest)";
+      else { const p=profilesById[key]; name = p ? [p.first_name,p.surname].filter(Boolean).join(" ") || "Fairy" : "Fairy"; }
+      return {name,count};
+    }).sort((a,b)=>b.count-a.count).slice(0,10);
+  },[activity,profilesById]);
+
+  const recentReports = useMemo(()=>{
+    return activity.filter(a=>["report_broken","report_moved","report_closed"].includes(a.activity_type)).slice(0,8);
+  },[activity]);
+
+  if(loading) return <Spinner/>;
+
+  return (
+    <div style={{padding:20,display:"flex",flexDirection:"column",gap:22}}>
+      <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+        <StatTile label="Total fridges" value={stats.totalFridges} sub={stats.activeFridges+" active"}/>
+        <StatTile label="Refills logged" value={stats.refills} sub={stats.refillsThisWeek+" this week"}/>
+        <StatTile label="Cleanings logged" value={stats.cleanings}/>
+        <StatTile label="Reports (broken/moved/closed)" value={stats.reports}/>
+        <StatTile label="Pending wishlist requests" value={stats.pendingWishlist!==undefined?stats.pendingWishlist:0}/>
+      </div>
+
+      <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
+        <div style={{flex:"1 1 340px",background:"#fff",border:`1px solid ${BORDER}`,borderRadius:12,padding:18}}>
+          <div className="spartan" style={{fontSize:15,marginBottom:12}}>🏆 Top Fairies (most refills)</div>
+          {leaderboard.length===0 && <div style={{fontSize:13,color:MUTED}}>No refills logged yet.</div>}
+          {leaderboard.map((f,i)=>(
+            <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:i<leaderboard.length-1?"1px solid #F0FDF4":"none"}}>
+              <span style={{fontSize:13.5}}>{i+1}. {f.name}</span>
+              <span style={{fontWeight:700,color:GREEN}}>{f.count}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{flex:"1 1 340px",background:"#fff",border:`1px solid ${BORDER}`,borderRadius:12,padding:18}}>
+          <div className="spartan" style={{fontSize:15,marginBottom:12}}>⚠️ Needs attention (no refill in 7+ days)</div>
+          {stats.needsAttention.length===0 && <div style={{fontSize:13,color:MUTED}}>All active fridges have been refilled recently 🎉</div>}
+          {stats.needsAttention.slice(0,10).map(f=>(
+            <div key={f.id} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid #F0FDF4"}}>
+              <span style={{fontSize:13.5}}>{f.name_en} <span style={{color:"#9CA3AF"}}>({f.zone_name})</span></span>
+              <span style={{fontSize:12,color:"#DC2626",fontWeight:700}}>{f.last_refill_at ? daysAgo(f.last_refill_at)+"d ago" : "never"}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{background:"#fff",border:`1px solid ${BORDER}`,borderRadius:12,padding:18}}>
+        <div className="spartan" style={{fontSize:15,marginBottom:12}}>🚩 Recent reports</div>
+        {recentReports.length===0 && <div style={{fontSize:13,color:MUTED}}>No reports.</div>}
+        {recentReports.map(a=>(
+          <div key={a.id} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid #F0FDF4",fontSize:13}}>
+            <span><Pill color={a.activity_type==="report_broken"?"#DC2626":"#D97706"}>{a.activity_type.replace("report_","")}</Pill> {a.notes ? " — "+a.notes.slice(0,60) : ""}</span>
+            <span style={{color:"#9CA3AF",fontSize:11.5}}>{fmtDate(a.created_at)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── ACTIVITY LOG TAB ─────────────────────────
+function ActivityLogTab(){
+  const [loading,setLoading]=useState(true);
+  const [rows,setRows]=useState([]);
+  const [fridgesById,setFridgesById]=useState({});
+  const [profilesById,setProfilesById]=useState({});
+  const [typeFilter,setTypeFilter]=useState("all");
+  const [search,setSearch]=useState("");
+  const [page,setPage]=useState(1);
+  const PAGE_SIZE=40;
+
+  useEffect(()=>{ load(); },[]);
+  async function load(){
+    setLoading(true);
+    const [{data:act},{data:fr},{data:profs}] = await Promise.all([
+      sb.from("fridge_activity").select("*").order("created_at",{ascending:false}).limit(3000),
+      sb.from("fridges").select("id,name_en,zone_name"),
+      sb.from("profiles").select("id,first_name,surname"),
+    ]);
+    setRows(act||[]);
+    const fMap={}; (fr||[]).forEach(f=>fMap[f.id]=f); setFridgesById(fMap);
+    const pMap={}; (profs||[]).forEach(p=>pMap[p.id]=p); setProfilesById(pMap);
+    setLoading(false);
+  }
+
+  const filtered = useMemo(()=>{
+    return rows.filter(r=>{
+      if(typeFilter!=="all" && r.activity_type!==typeFilter) return false;
+      if(search.trim()){
+        const fridge = fridgesById[r.fridge_id];
+        const who = r.volunteer_id ? profilesById[r.volunteer_id] : null;
+        const hay = [fridge?.name_en, fridge?.zone_name, who?.first_name, who?.surname, r.guest_name, r.notes].join(" ").toLowerCase();
+        if(!hay.includes(search.toLowerCase())) return false;
+      }
+      return true;
+    });
+  },[rows,typeFilter,search,fridgesById,profilesById]);
+
+  const pageRows = filtered.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length/PAGE_SIZE));
+
+  if(loading) return <Spinner/>;
+
+  return (
+    <div style={{padding:20}}>
+      <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+        <select value={typeFilter} onChange={e=>{setTypeFilter(e.target.value);setPage(1);}}
+          style={{padding:"8px 10px",borderRadius:8,border:`1.5px solid ${BORDER}`,fontSize:13}}>
+          <option value="all">All activity types</option>
+          <option value="refill">Refill</option>
+          <option value="cleaning">Cleaning</option>
+          <option value="report_broken">Report: broken</option>
+          <option value="report_moved">Report: moved</option>
+          <option value="report_closed">Report: closed</option>
+        </select>
+        <input placeholder="Search fridge, fairy, notes…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}
+          style={{padding:"8px 12px",borderRadius:8,border:`1.5px solid ${BORDER}`,fontSize:13,flex:"1 1 220px"}}/>
+        <span style={{fontSize:12,color:MUTED}}>{filtered.length} entries</span>
+      </div>
+
+      <div className="tbl-wrap">
+        <table>
+          <thead><tr><th>When</th><th>Fridge</th><th>Activity</th><th>By</th><th>Clean?</th><th>Working?</th><th>Notes</th><th>Photo</th></tr></thead>
+          <tbody>
+            {pageRows.map(r=>{
+              const fridge=fridgesById[r.fridge_id];
+              const who = r.volunteer_id ? profilesById[r.volunteer_id] : null;
+              return (
+                <tr key={r.id}>
+                  <td style={{whiteSpace:"nowrap"}}>{fmtDate(r.created_at)}</td>
+                  <td>{fridge ? `${fridge.name_en} (${fridge.zone_name})` : r.fridge_id}</td>
+                  <td><Pill color={r.activity_type==="refill"?GREEN:r.activity_type.startsWith("report")?"#DC2626":"#0EA5E9"}>{r.activity_type}</Pill></td>
+                  <td>{who ? [who.first_name,who.surname].filter(Boolean).join(" ") : (r.guest_name || "—")}</td>
+                  <td>{r.is_clean===null||r.is_clean===undefined?"—":(r.is_clean?"✅":"❌")}</td>
+                  <td>{r.is_working===null||r.is_working===undefined?"—":(r.is_working?"✅":"❌")}</td>
+                  <td style={{maxWidth:220}}>{r.notes||"—"}</td>
+                  <td>{r.photo_url ? <a href={r.photo_url} target="_blank" rel="noreferrer">view</a> : "—"}</td>
+                </tr>
+              );
+            })}
+            {pageRows.length===0 && <tr><td colSpan="8" style={{textAlign:"center",color:MUTED,padding:24}}>No activity found.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:14,alignItems:"center"}}>
+        <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page<=1}
+          style={{padding:"6px 14px",borderRadius:6,border:`1px solid ${BORDER}`,background:"#fff"}}>Prev</button>
+        <span style={{fontSize:12.5,color:MUTED}}>Page {page} of {totalPages}</span>
+        <button onClick={()=>setPage(p=>Math.min(totalPages,p+1))} disabled={page>=totalPages}
+          style={{padding:"6px 14px",borderRadius:6,border:`1px solid ${BORDER}`,background:"#fff"}}>Next</button>
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── FRIDGES TAB ─────────────────────────
+const EMPTY_FRIDGE = {
+  id:null, code:"", name_en:"", name_ar:"", zone_number:"", zone_name:"", zone_name_ar:"",
+  status:"active", type:"public", faf_owned:false, spotter:"", owner_name:"", owner_contact:"",
+  lat:"", lng:"", map_link:"", photo_url:"", notes:""
+};
+
+function FridgeForm({initial,onCancel,onSaved}){
+  const [f,setF]=useState(initial);
+  const [saving,setSaving]=useState(false);
+  const [err,setErr]=useState("");
+  const [photoFile,setPhotoFile]=useState(null);
+  const [photoPreview,setPhotoPreview]=useState(initial.photo_url||"");
+  const isNew = !initial.id;
+
+  function set(k,v){ setF(prev=>({...prev,[k]:v})); }
+
+  function pickPhoto(e){
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  }
+
+  async function save(){
+    setErr("");
+    if(!f.code.trim() || !f.name_en.trim() || !f.zone_number || !f.zone_name.trim()){
+      setErr("Code, English name, zone number and zone name are required.");
+      return;
+    }
+    setSaving(true);
+    try{
+      let photo_url = f.photo_url || null;
+      if(photoFile){
+        const path = `${Date.now()}_${photoFile.name}`.replace(/\s+/g,"_");
+        const {error:upErr} = await sb.storage.from("fridge-photos").upload(path, photoFile);
+        if(upErr) throw new Error("Photo upload failed: "+upErr.message);
+        const {data:pub} = sb.storage.from("fridge-photos").getPublicUrl(path);
+        photo_url = pub.publicUrl;
+      }
+      const payload = {
+        code: f.code.trim(), name_en: f.name_en.trim(), name_ar: f.name_ar.trim()||null,
+        zone_number: parseInt(f.zone_number,10), zone_name: f.zone_name.trim(), zone_name_ar: f.zone_name_ar.trim()||null,
+        status: f.status, type: f.type, faf_owned: !!f.faf_owned,
+        spotter: f.spotter.trim()||null, owner_name: f.owner_name.trim()||null, owner_contact: f.owner_contact.trim()||null,
+        lat: f.lat===""?null:parseFloat(f.lat), lng: f.lng===""?null:parseFloat(f.lng),
+        map_link: f.map_link.trim()||null, photo_url, notes: f.notes.trim()||null,
+      };
+      let error;
+      if(isNew){
+        ({error} = await sb.from("fridges").insert(payload));
+      } else {
+        ({error} = await sb.from("fridges").update(payload).eq("id", f.id));
+      }
+      if(error) throw new Error(error.message);
+      setSaving(false);
+      onSaved();
+    }catch(e){
+      setErr(e.message);
+      setSaving(false);
+    }
+  }
+
+  const label = {fontSize:11.5,fontWeight:700,color:DARK,display:"block",marginBottom:4};
+  const inp = {width:"100%",padding:"8px 10px",border:`1.5px solid ${BORDER}`,borderRadius:7,fontSize:13.5,marginBottom:12};
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(10,61,31,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:50,padding:16}}>
+      <div style={{background:"#fff",borderRadius:14,padding:24,width:560,maxWidth:"95vw",maxHeight:"90vh",overflowY:"auto"}}>
+        <div className="spartan" style={{fontSize:18,marginBottom:16}}>{isNew?"Add new fridge":"Edit fridge"}</div>
+
+        <div style={{display:"flex",gap:12}}>
+          <div style={{flex:1}}><label style={label}>Code *</label><input style={inp} value={f.code} onChange={e=>set("code",e.target.value)} placeholder="e.g. 54C"/></div>
+          <div style={{flex:1}}><label style={label}>Status</label>
+            <select style={inp} value={f.status} onChange={e=>set("status",e.target.value)}>
+              <option value="active">active</option><option value="inactive">inactive</option>
+            </select>
+          </div>
+          <div style={{flex:1}}><label style={label}>Type</label>
+            <select style={inp} value={f.type} onChange={e=>set("type",e.target.value)}>
+              <option value="public">public</option><option value="private">private</option>
+            </select>
+          </div>
+        </div>
+
+        <div style={{display:"flex",gap:12}}>
+          <div style={{flex:1}}><label style={label}>Name (English) *</label><input style={inp} value={f.name_en} onChange={e=>set("name_en",e.target.value)}/></div>
+          <div style={{flex:1}}><label style={label}>Name (Arabic)</label><input style={inp} dir="rtl" value={f.name_ar} onChange={e=>set("name_ar",e.target.value)}/></div>
+        </div>
+
+        <div style={{display:"flex",gap:12}}>
+          <div style={{flex:1}}><label style={label}>Zone number *</label><input style={inp} type="number" value={f.zone_number} onChange={e=>set("zone_number",e.target.value)}/></div>
+          <div style={{flex:1}}><label style={label}>Zone name *</label><input style={inp} value={f.zone_name} onChange={e=>set("zone_name",e.target.value)}/></div>
+          <div style={{flex:1}}><label style={label}>Zone name (Arabic)</label><input style={inp} dir="rtl" value={f.zone_name_ar} onChange={e=>set("zone_name_ar",e.target.value)}/></div>
+        </div>
+
+        <div style={{display:"flex",gap:12}}>
+          <div style={{flex:1}}><label style={label}>Latitude</label><input style={inp} value={f.lat} onChange={e=>set("lat",e.target.value)} placeholder="25.28"/></div>
+          <div style={{flex:1}}><label style={label}>Longitude</label><input style={inp} value={f.lng} onChange={e=>set("lng",e.target.value)} placeholder="51.53"/></div>
+        </div>
+        <label style={label}>Google Maps link</label>
+        <input style={inp} value={f.map_link} onChange={e=>set("map_link",e.target.value)} placeholder="https://maps.google.com/…"/>
+
+        <div style={{display:"flex",gap:12}}>
+          <div style={{flex:1}}><label style={label}>Spotted by</label><input style={inp} value={f.spotter} onChange={e=>set("spotter",e.target.value)}/></div>
+          <div style={{flex:1}}><label style={label}>
+            <input type="checkbox" checked={!!f.faf_owned} onChange={e=>set("faf_owned",e.target.checked)} style={{marginRight:6}}/>
+            FAF-owned fridge
+          </label></div>
+        </div>
+
+        <div style={{display:"flex",gap:12}}>
+          <div style={{flex:1}}><label style={label}>Owner name</label><input style={inp} value={f.owner_name} onChange={e=>set("owner_name",e.target.value)}/></div>
+          <div style={{flex:1}}><label style={label}>Owner contact</label><input style={inp} value={f.owner_contact} onChange={e=>set("owner_contact",e.target.value)}/></div>
+        </div>
+
+        <label style={label}>Notes</label>
+        <textarea style={{...inp,minHeight:60}} value={f.notes} onChange={e=>set("notes",e.target.value)}/>
+
+        <label style={label}>Photo</label>
+        <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:14}}>
+          {photoPreview && <img src={photoPreview} style={{width:64,height:64,objectFit:"cover",borderRadius:8,border:`1px solid ${BORDER}`}}/>}
+          <input type="file" accept="image/*" onChange={pickPhoto}/>
+        </div>
+
+        {err && <div style={{color:"#DC2626",fontSize:12.5,marginBottom:12}}>{err}</div>}
+
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+          <button onClick={onCancel} style={{padding:"9px 18px",borderRadius:8,border:`1.5px solid ${BORDER}`,background:"#fff",fontWeight:600}}>Cancel</button>
+          <button onClick={save} disabled={saving} style={{padding:"9px 18px",borderRadius:8,border:"none",background:DARK,color:"#fff",fontWeight:700,opacity:saving?0.6:1}}>
+            {saving?"Saving…":(isNew?"Add fridge":"Save changes")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FridgesTab(){
+  const [loading,setLoading]=useState(true);
+  const [fridges,setFridges]=useState([]);
+  const [search,setSearch]=useState("");
+  const [statusFilter,setStatusFilter]=useState("all");
+  const [editing,setEditing]=useState(null); // fridge object or EMPTY_FRIDGE or null
+
+  useEffect(()=>{ load(); },[]);
+  async function load(){
+    setLoading(true);
+    const {data} = await sb.from("fridges").select("*").order("zone_number");
+    setFridges(data||[]);
+    setLoading(false);
+  }
+
+  const filtered = useMemo(()=>{
+    return fridges.filter(f=>{
+      if(statusFilter!=="all" && f.status!==statusFilter) return false;
+      if(search.trim()){
+        const hay = [f.name_en,f.name_ar,f.zone_name,f.code,f.owner_name].join(" ").toLowerCase();
+        if(!hay.includes(search.toLowerCase())) return false;
+      }
+      return true;
+    });
+  },[fridges,search,statusFilter]);
+
+  if(loading) return <Spinner/>;
+
+  return (
+    <div style={{padding:20}}>
+      <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+        <input placeholder="Search name, code, zone, owner…" value={search} onChange={e=>setSearch(e.target.value)}
+          style={{padding:"8px 12px",borderRadius:8,border:`1.5px solid ${BORDER}`,fontSize:13,flex:"1 1 220px"}}/>
+        <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}
+          style={{padding:"8px 10px",borderRadius:8,border:`1.5px solid ${BORDER}`,fontSize:13}}>
+          <option value="all">All statuses</option><option value="active">active</option><option value="inactive">inactive</option>
+        </select>
+        <span style={{fontSize:12,color:MUTED}}>{filtered.length} fridges</span>
+        <button onClick={()=>setEditing({...EMPTY_FRIDGE})}
+          style={{marginLeft:"auto",padding:"9px 16px",borderRadius:8,border:"none",background:GREEN,color:"#fff",fontWeight:700,fontSize:13}}>
+          + Add new fridge
+        </button>
+      </div>
+
+      <div className="tbl-wrap">
+        <table>
+          <thead><tr><th>Photo</th><th>Code</th><th>Name</th><th>Zone</th><th>Status</th><th>Type</th><th>Last refill</th><th></th></tr></thead>
+          <tbody>
+            {filtered.map(f=>(
+              <tr key={f.id}>
+                <td>{f.photo_url ? <img src={f.photo_url} style={{width:36,height:36,objectFit:"cover",borderRadius:6}}/> : "—"}</td>
+                <td>{f.code}</td>
+                <td>{f.name_en}{f.faf_owned && <span title="FAF-owned"> 💚</span>}</td>
+                <td>{f.zone_name} <span style={{color:"#9CA3AF"}}>#{f.zone_number}</span></td>
+                <td><Pill color={f.status==="active"?GREEN:"#9CA3AF"}>{f.status}</Pill></td>
+                <td>{f.type}</td>
+                <td style={{whiteSpace:"nowrap"}}>{f.last_refill_at?fmtDate(f.last_refill_at):"—"}</td>
+                <td><button onClick={()=>setEditing(f)} style={{padding:"5px 12px",borderRadius:6,border:`1px solid ${BORDER}`,background:"#fff",fontSize:12,fontWeight:700,color:GREEN}}>Edit</button></td>
+              </tr>
+            ))}
+            {filtered.length===0 && <tr><td colSpan="8" style={{textAlign:"center",color:MUTED,padding:24}}>No fridges match.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {editing && (
+        <FridgeForm
+          initial={editing}
+          onCancel={()=>setEditing(null)}
+          onSaved={()=>{ setEditing(null); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ───────────────────────── WISHLIST REQUESTS TAB ─────────────────────────
+function WishlistTab({session}){
+  const [loading,setLoading]=useState(true);
+  const [items,setItems]=useState([]);
+  const [err,setErr]=useState("");
+  const [busyId,setBusyId]=useState(null);
+  const [statusFilter,setStatusFilter]=useState("pending");
+  const [rejectingId,setRejectingId]=useState(null);
+  const [rejectReason,setRejectReason]=useState("");
+
+  useEffect(()=>{ load(); },[]);
+
+  async function call(action, extra){
+    const res = await fetch(FRIEND_PORTAL_URL, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({action, access_token: session.access_token, ...extra})
+    });
+    const json = await res.json();
+    if(json.error) throw new Error(json.error);
+    return json;
+  }
+
+  async function load(){
+    setLoading(true); setErr("");
+    try{
+      const json = await call("admin_list_wishlist");
+      setItems(json.items||[]);
+    }catch(e){ setErr(e.message); }
+    setLoading(false);
+  }
+
+  async function approve(id){
+    setBusyId(id); setErr("");
+    try{ await call("admin_set_wishlist_status",{wishlist_item_id:id,status:"approved"}); await load(); }
+    catch(e){ setErr(e.message); }
+    setBusyId(null);
+  }
+  async function reject(id){
+    setBusyId(id); setErr("");
+    try{ await call("admin_set_wishlist_status",{wishlist_item_id:id,status:"rejected",rejection_reason:rejectReason}); setRejectingId(null); setRejectReason(""); await load(); }
+    catch(e){ setErr(e.message); }
+    setBusyId(null);
+  }
+
+  const filtered = items.filter(i=> statusFilter==="all" || i.status===statusFilter);
+
+  if(loading) return <Spinner/>;
+
+  return (
+    <div style={{padding:20}}>
+      <div style={{display:"flex",gap:10,marginBottom:14,alignItems:"center"}}>
+        <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}
+          style={{padding:"8px 10px",borderRadius:8,border:`1.5px solid ${BORDER}`,fontSize:13}}>
+          <option value="pending">Pending</option><option value="approved">Approved</option>
+          <option value="fulfilled">Fulfilled</option><option value="rejected">Rejected</option><option value="all">All</option>
+        </select>
+        <span style={{fontSize:12,color:MUTED}}>{filtered.length} items</span>
+      </div>
+
+      {err && <div style={{color:"#DC2626",fontSize:12.5,marginBottom:12}}>{err}</div>}
+
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {filtered.map(it=>{
+          const app = it.food_box_applications;
+          return (
+            <div key={it.id} style={{background:"#fff",border:`1px solid ${BORDER}`,borderRadius:10,padding:14,display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:14.5}}>{it.item}</div>
+                <div style={{fontSize:12,color:MUTED,marginTop:3}}>
+                  {(app?.full_name_en||app?.full_name||"Unknown friend")} · Zone {app?.zone||"—"} · requested {fmtDate(it.created_at)}
+                </div>
+                {it.status!=="pending" && <div style={{marginTop:6}}><Pill color={it.status==="rejected"?"#DC2626":it.status==="fulfilled"?"#0EA5E9":GREEN}>{it.status}</Pill></div>}
+                {it.delivery_at && <div style={{fontSize:11.5,color:"#9CA3AF",marginTop:4}}>Delivery: {fmtDate(it.delivery_at)}</div>}
+              </div>
+              {it.status==="pending" && (
+                rejectingId===it.id ? (
+                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                    <input placeholder="Reason (optional)" value={rejectReason} onChange={e=>setRejectReason(e.target.value)}
+                      style={{padding:"7px 10px",borderRadius:7,border:`1.5px solid ${BORDER}`,fontSize:12.5}}/>
+                    <button onClick={()=>reject(it.id)} disabled={busyId===it.id}
+                      style={{padding:"7px 14px",borderRadius:7,border:"none",background:"#DC2626",color:"#fff",fontWeight:700,fontSize:12.5}}>Confirm reject</button>
+                    <button onClick={()=>{setRejectingId(null);setRejectReason("");}} style={{padding:"7px 14px",borderRadius:7,border:`1px solid ${BORDER}`,background:"#fff",fontSize:12.5}}>Cancel</button>
+                  </div>
+                ) : (
+                  <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                    <button onClick={()=>approve(it.id)} disabled={busyId===it.id}
+                      style={{padding:"8px 16px",borderRadius:7,border:"none",background:GREEN,color:"#fff",fontWeight:700,fontSize:12.5}}>
+                      {busyId===it.id?"…":"Approve"}
+                    </button>
+                    <button onClick={()=>setRejectingId(it.id)} disabled={busyId===it.id}
+                      style={{padding:"8px 16px",borderRadius:7,border:`1.5px solid #DC2626`,background:"#fff",color:"#DC2626",fontWeight:700,fontSize:12.5}}>
+                      Reject
+                    </button>
+                  </div>
+                )
+              )}
+            </div>
+          );
+        })}
+        {filtered.length===0 && <div style={{textAlign:"center",color:MUTED,padding:30}}>No requests here.</div>}
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── APP ─────────────────────────
+function App(){
+  const [session,setSession]=useState(null);
+  const [profile,setProfile]=useState(null);
+  const [checking,setChecking]=useState(true);
+  const [tab,setTab]=useState("dashboard");
+
+  useEffect(()=>{
+    sb.auth.getSession().then(async ({data})=>{
+      if(data.session){
+        const {data:prof} = await sb.from("profiles").select("role,first_name").eq("id",data.session.user.id).maybeSingle();
+        if(prof && ["admin","superadmin"].includes(prof.role)){
+          setSession(data.session); setProfile(prof);
+        } else {
+          await sb.auth.signOut();
+        }
+      }
+      setChecking(false);
+    });
+  },[]);
+
+  async function logout(){
+    await sb.auth.signOut();
+    setSession(null); setProfile(null);
+  }
+
+  if(checking) return <Spinner/>;
+  if(!session) return <LoginScreen onLoggedIn={(s,p)=>{ setSession(s); setProfile(p); }}/>;
+
+  return (
+    <div>
+      <Header profile={profile} onLogout={logout} tab={tab} setTab={setTab}/>
+      {tab==="dashboard" && <DashboardTab/>}
+      {tab==="fridges" && <FridgesTab/>}
+      {tab==="activity" && <ActivityLogTab/>}
+      {tab==="wishlist" && <WishlistTab session={session}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
