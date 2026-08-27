@@ -108,9 +108,24 @@ function App(){
   const [locStatus,setLocStatus]=React.useState("idle");
   const [showAllZones,setShowAllZones]=React.useState(false);
   const [refillTotal,setRefillTotal]=React.useState(null);
-  const [lang,setLang]=React.useState("en");
+  const [lang,setLang]=React.useState(()=>{
+    try{
+      const q=new URLSearchParams(window.location.search).get("lang");
+      if(q==="ar"||q==="en") return q;
+      const saved=localStorage.getItem("fridgeLang");
+      if(saved==="ar"||saved==="en") return saved;
+    }catch(e){}
+    return "en";
+  });
   const t = TXT[lang];
   const isAr = lang === "ar";
+
+  const changeLang = (l)=>{
+    setLang(l);
+    try{ localStorage.setItem("fridgeLang",l); }catch(e){}
+  };
+
+  const withLang = (url)=> url + (url.includes("?") ? "&" : "?") + "lang=" + lang;
 
   React.useEffect(()=>{
     load();
@@ -176,16 +191,16 @@ function App(){
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <img src={LOGO} style={{height:32}}/>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <button onClick={()=>setLang(isAr?"en":"ar")} style={{border:`1.5px solid ${DK}`,color:DK,background:"#fff",borderRadius:16,padding:"5px 12px",fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:isAr?BF:BF}}>{isAr?"English":"عربي"}</button>
+          <button onClick={()=>changeLang(isAr?"en":"ar")} style={{border:`1.5px solid ${DK}`,color:DK,background:"#fff",borderRadius:16,padding:"5px 12px",fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:isAr?BF:BF}}>{isAr?"English":"عربي"}</button>
           {session ? (
-            <a href="fairy-dashboard.html" style={{display:"flex",alignItems:"center",gap:6,textDecoration:"none"}}>
+            <a href={withLang("fairy-dashboard.html")} style={{display:"flex",alignItems:"center",gap:6,textDecoration:"none"}}>
               <div style={{width:24,height:24,borderRadius:"50%",overflow:"hidden",background:"#DCFCE7",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                 {profile?.photo_url ? <img src={profile.photo_url} style={{width:"100%",height:"100%",objectFit:"cover"}}/> : <Sparkle size={11} color={DK}/>}
               </div>
               <span style={{fontSize:13,color:DK,fontWeight:700}}>{profile?.username || profile?.first_name || "Fairy"}</span>
             </a>
           ) : (
-            <a href="fairy-dashboard.html" style={{fontSize:13,color:DK,fontWeight:700,textDecoration:"none"}}>Sign in</a>
+            <a href={withLang("fairy-dashboard.html")} style={{fontSize:13,color:DK,fontWeight:700,textDecoration:"none"}}>{isAr?"تسجيل الدخول":"Sign in"}</a>
           )}
           <a href="https://www.feedafriend.org" style={{fontSize:14,color:DK,textDecoration:"none",fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke={DK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" stroke={DK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -227,7 +242,7 @@ function App(){
                     <div style={{fontSize:11.5,color:MT,marginTop:2}}>{isAr && f.zone_name_ar ? f.zone_name_ar : f.zone_name}{f._dist!=null?` · ${t.kmAway(f._dist)}`:""}</div>
                     <div style={{display:"flex",gap:8,marginTop:8}}>
                       {mapUrl && <a href={mapUrl} target="_blank" rel="noreferrer" style={{fontSize:11.5,fontWeight:700,color:DK,border:`1.3px solid ${DK}`,borderRadius:8,padding:"5px 10px",textDecoration:"none"}}>📍 {t.getDirections}</a>}
-                      <a href={`fridge-log.html?fridge=${f.code}`} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11.5,fontWeight:700,color:"#fff",background:DK,borderRadius:8,padding:"5px 10px",textDecoration:"none"}}>
+                      <a href={withLang(`fridge-log.html?fridge=${f.code}`)} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11.5,fontWeight:700,color:"#fff",background:DK,borderRadius:8,padding:"5px 10px",textDecoration:"none"}}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 10h16l-1.5 9a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7L4 10Z" stroke="#fff" strokeWidth="2"/></svg>
                         {t.refillBtn}
                       </a>
@@ -283,7 +298,7 @@ function App(){
         <div style={{display:"flex",gap:16,overflowX:"auto",paddingBottom:8,margin:"0 -24px",padding:"0 24px 8px"}}>
           {loading ? [1,2,3,4].map(i=><div key={i} style={{flexShrink:0,width:148,height:180,background:"#F3F3F3",borderRadius:16}}/>) :
             needy.map((f,i)=>(
-            <a key={f.id} href={`fridge-log.html?fridge=${f.code}`} style={{flexShrink:0,width:148,textDecoration:"none",display:"block"}}>
+            <a key={f.id} href={withLang(`fridge-log.html?fridge=${f.code}`)} style={{flexShrink:0,width:148,textDecoration:"none",display:"block"}}>
               <div style={{position:"relative",width:148,height:110,borderRadius:16,overflow:"hidden",background:"#F3F3F3"}}>
                 <span style={{position:"absolute",top:8,left:8,width:24,height:24,borderRadius:"50%",background:DK,color:"#fff",fontFamily:DF,fontWeight:900,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.25)",zIndex:2}}>{isAr?toArabicDigits(i+1):i+1}</span>
                 <img src={f.photo_url||PLACEHOLDER} onError={e=>e.target.src=PLACEHOLDER} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
@@ -313,7 +328,7 @@ function App(){
         </div>
       </div>
 
-      <a href="fridge-log.html" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,textAlign:"center",background:DK,color:"#fff",borderRadius:24,padding:"13px 16px",fontWeight:700,fontSize:14,fontFamily:BF,textDecoration:"none",marginTop:36}}>
+      <a href={withLang("fridge-log.html")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,textAlign:"center",background:DK,color:"#fff",borderRadius:24,padding:"13px 16px",fontWeight:700,fontSize:14,fontFamily:BF,textDecoration:"none",marginTop:36}}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 10h16l-1.5 9a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7L4 10Z" stroke="#fff" strokeWidth="2"/></svg>
         {t.logCta}
       </a>
