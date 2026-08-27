@@ -22,6 +22,11 @@ body.ar{direction:rtl;}
 .lang-bar{width:100%;max-width:480px;display:flex;justify-content:flex-end;gap:8px;padding:12px 16px 0;}
 .lang-btn{background:transparent;border:1.5px solid rgba(255,255,255,0.4);color:white;padding:5px 18px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;transition:all 0.2s;}
 .lang-btn.active{background:white;color:var(--green-dark);border-color:white;}
+.status-subtab-bar{display:flex;gap:8px;margin-bottom:18px;}
+.status-subtab-btn{flex:1;padding:11px 10px;border:2px solid var(--border);border-radius:var(--radius-sm);background:#fff;color:var(--muted);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:800;cursor:pointer;transition:all 0.15s;}
+.status-subtab-btn.active{background:var(--green);border-color:var(--green);color:#fff;}
+.fridge-search-input{width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'Nunito',sans-serif;outline:none;background:var(--off-white);font-weight:700;transition:border-color 0.2s;margin-bottom:10px;}
+.fridge-search-input:focus{border-color:var(--green);background:white;}
 
 /* HERO */
 .hero{text-align:center;padding:20px 20px 16px;color:white;width:100%;max-width:480px;}
@@ -256,6 +261,12 @@ body.ar{direction:rtl;}
     <div class="screen-title" id="status-greeting"></div>
     <div class="screen-sub" id="status-sub-text"></div>
 
+    <div class="status-subtab-bar" id="status-subtab-bar" style="display:none;">
+      <button class="status-subtab-btn active" id="subtab-foodbox-btn" onclick="switchStatusTab('foodbox')">🍱 <span id="subtab-foodbox-label">Food Box</span></button>
+      <button class="status-subtab-btn" id="subtab-fridges-btn" onclick="switchStatusTab('fridges')">🧊 <span id="subtab-fridges-label">Fridges</span></button>
+    </div>
+
+    <div id="tab-foodbox">
     <div class="status-card" id="upcoming-card" style="display:none;background:#FFF8E6">
       <div class="status-icon">🚚</div>
       <div class="status-body">
@@ -308,47 +319,6 @@ body.ar{direction:rtl;}
       <div class="allowance-track">
         <div class="allowance-fill" id="allowance-fill"></div>
       </div>
-    </div>
-
-    <!-- FAIRY ON THE WAY -->
-    <div class="status-card active" id="fairy-coming-card" style="display:none;">
-      <div class="status-icon">🧚</div>
-      <div class="status-body">
-        <h3 id="fairy-coming-title">A fairy is on the way</h3>
-        <p id="fairy-coming-msg"></p>
-      </div>
-    </div>
-
-    <!-- FRIDGE ALERTS -->
-    <div id="fridge-watch-section" style="display:none;">
-      <div class="section-divider">
-        <span class="icon">🔔</span>
-        <span class="label" id="lbl-fridge-watch-divider">Fridge alerts</span>
-      </div>
-      <p class="screen-sub" id="fridge-watch-sub" style="margin-bottom:12px;">Pick up to 3 fridges — we'll email you when one of them is refilled.</p>
-      <div id="fridge-watch-list" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;"></div>
-      <div class="err-msg" id="fridge-watch-err"></div>
-      <button class="btn btn-green" id="fridge-watch-save-btn" style="margin-top:12px;" onclick="saveFridgeWatches()">
-        <span id="fridge-watch-save-text">Save my fridges</span>
-      </button>
-    </div>
-
-    <!-- WISHLIST REQUESTS -->
-    <div id="wishlist-section" style="display:none;margin-top:22px;">
-      <div class="section-divider">
-        <span class="icon">🧺</span>
-        <span class="label" id="lbl-wishlist-divider">Request items</span>
-      </div>
-      <p class="screen-sub" id="wishlist-sub" style="margin-bottom:10px;">Ask for up to 5 items a week. Approved requests are picked up by our volunteers.</p>
-      <div id="wishlist-current-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
-      <div id="wishlist-add-rows" style="display:flex;flex-direction:column;gap:8px;"></div>
-      <div class="err-msg" id="wishlist-err"></div>
-      <button class="btn btn-back" id="wishlist-add-row-btn" type="button" style="margin-top:8px;" onclick="addWishlistRow()">
-        <span id="wishlist-add-row-text">+ Add another item</span>
-      </button>
-      <button class="btn btn-green" id="wishlist-submit-btn" style="margin-top:10px;" onclick="submitWishlistRows()">
-        <span id="wishlist-submit-text">Send request</span>
-      </button>
     </div>
 
     <div id="reapply-section" style="display:none;">
@@ -429,6 +399,60 @@ body.ar{direction:rtl;}
         <span id="reapply-btn-text">Request my food box →</span>
       </button>
     </div>
+    </div><!-- /tab-foodbox -->
+
+    <div id="tab-fridges" style="display:none;">
+    <!-- COMING SOON — fridge alerts + wishlist requests aren't open yet -->
+    <div class="status-card" id="fridges-coming-soon" style="display:none;background:#FFF8E6">
+      <div class="status-icon">🚧</div>
+      <div class="status-body">
+        <h3 id="fridges-coming-soon-title">Coming soon</h3>
+        <p id="fridges-coming-soon-msg">Fridge alerts and item requests aren't ready yet — we'll let you know the moment they're open!</p>
+      </div>
+    </div>
+
+    <!-- FAIRY ON THE WAY -->
+    <div class="status-card active" id="fairy-coming-card" style="display:none;">
+      <div class="status-icon">🧚</div>
+      <div class="status-body">
+        <h3 id="fairy-coming-title">A fairy is on the way</h3>
+        <p id="fairy-coming-msg"></p>
+      </div>
+    </div>
+
+    <!-- FRIDGE ALERTS -->
+    <div id="fridge-watch-section" style="display:none;">
+      <div class="section-divider">
+        <span class="icon">🔔</span>
+        <span class="label" id="lbl-fridge-watch-divider">Fridge alerts</span>
+      </div>
+      <p class="screen-sub" id="fridge-watch-sub" style="margin-bottom:12px;">Pick up to 3 fridges — we'll email you when one of them is refilled.</p>
+      <input type="text" class="fridge-search-input" id="fridge-search-input" placeholder="Search by name, zone, street, building…" oninput="renderFridgeWatchList()">
+      <div id="fridge-watch-list" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;"></div>
+      <div class="err-msg" id="fridge-watch-err"></div>
+      <button class="btn btn-green" id="fridge-watch-save-btn" style="margin-top:12px;" onclick="saveFridgeWatches()">
+        <span id="fridge-watch-save-text">Save my fridges</span>
+      </button>
+    </div>
+
+    <!-- WISHLIST REQUESTS -->
+    <div id="wishlist-section" style="display:none;margin-top:22px;">
+      <div class="section-divider">
+        <span class="icon">🧺</span>
+        <span class="label" id="lbl-wishlist-divider">Request items</span>
+      </div>
+      <p class="screen-sub" id="wishlist-sub" style="margin-bottom:10px;">Ask for up to 5 items a week. Approved requests are picked up by our volunteers.</p>
+      <div id="wishlist-current-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+      <div id="wishlist-add-rows" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div class="err-msg" id="wishlist-err"></div>
+      <button class="btn btn-back" id="wishlist-add-row-btn" type="button" style="margin-top:8px;" onclick="addWishlistRow()">
+        <span id="wishlist-add-row-text">+ Add another item</span>
+      </button>
+      <button class="btn btn-green" id="wishlist-submit-btn" style="margin-top:10px;" onclick="submitWishlistRows()">
+        <span id="wishlist-submit-text">Send request</span>
+      </button>
+    </div>
+    </div><!-- /tab-fridges -->
 
     <button class="btn btn-back" onclick="showScreen('screen-home')" style="margin-top:12px;" id="status-back-btn">← Back</button>
   </div>
@@ -487,6 +511,12 @@ const FRIEND_PORTAL_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1
 
 var currentLang = 'en';
 var currentApp = null;
+// Fridge alerts + wishlist requests are built but paused for now — flip to
+// true once the fridge program is ready to open to friends. While false,
+// the Fridges tab stays visible (so people know it's coming) but shows a
+// "coming soon" card instead of the live picker/request form, and no fridge
+// data is fetched.
+var FRIDGES_FEATURE_ENABLED = false;
 
 // ── TRANSLATIONS ──────────────────────────────────────────────────
 var T = {
@@ -1174,10 +1204,24 @@ function showStatusScreen(status, data, canReapply) {
 
   // Fridge alerts + wishlist requests are available to any real, resolved
   // application (not the "duplicate"/"blocked" error states, which aren't
-  // an actual household record we can safely attach these to).
-  var friendFeaturesOk = ['duplicate', 'blocked'].indexOf(status) === -1 && data.id;
+  // an actual household record we can safely attach these to) — but the
+  // feature itself is paused (FRIDGES_FEATURE_ENABLED) until it's ready,
+  // so the tab still shows up but with a "coming soon" card instead.
+  var validApp = ['duplicate', 'blocked'].indexOf(status) === -1 && data.id;
+  var friendFeaturesOk = FRIDGES_FEATURE_ENABLED && validApp;
   document.getElementById('fridge-watch-section').style.display = friendFeaturesOk ? 'block' : 'none';
   document.getElementById('wishlist-section').style.display = friendFeaturesOk ? 'block' : 'none';
+  document.getElementById('fridges-coming-soon').style.display = (validApp && !FRIDGES_FEATURE_ENABLED) ? 'flex' : 'none';
+  document.getElementById('fridges-coming-soon-title').textContent = ar ? 'قريباً' : 'Coming soon';
+  document.getElementById('fridges-coming-soon-msg').textContent = ar
+    ? 'تنبيهات الثلاجات وطلبات الأصناف غير متاحة بعد — سنعلمكم فور توفرها!'
+    : "Fridge alerts and item requests aren't ready yet — we'll let you know the moment they're open!";
+  document.getElementById('status-subtab-bar').style.display = validApp ? 'flex' : 'none';
+  document.getElementById('subtab-foodbox-label').textContent = ar ? 'صندوق الطعام' : 'Food Box';
+  document.getElementById('subtab-fridges-label').textContent = FRIDGES_FEATURE_ENABLED
+    ? (ar ? 'الثلاجات' : 'Fridges')
+    : (ar ? 'الثلاجات (قريباً)' : 'Fridges (Coming soon)');
+  switchStatusTab('foodbox');
   if (friendFeaturesOk) {
     initFriendFeatureLabels();
     loadFridgeWatchSection();
@@ -1185,6 +1229,17 @@ function showStatusScreen(status, data, canReapply) {
   }
 
   showScreen('screen-status');
+}
+
+// Splits the status screen into a "Food Box" tab (application status,
+// allowance, reapply) and a "Fridges" tab (fridge alerts + item requests) so
+// the two aren't jumbled together on one long scroll.
+function switchStatusTab(tab) {
+  var isFridges = tab === 'fridges';
+  document.getElementById('tab-foodbox').style.display = isFridges ? 'none' : 'block';
+  document.getElementById('tab-fridges').style.display = isFridges ? 'block' : 'none';
+  document.getElementById('subtab-foodbox-btn').classList.toggle('active', !isFridges);
+  document.getElementById('subtab-fridges-btn').classList.toggle('active', isFridges);
 }
 
 var locationChoice = null; // 'here' | 'moved' | null
@@ -1668,7 +1723,7 @@ async function loadFridgeWatchSection() {
   var ar = currentLang === 'ar';
   try {
     if (!allFridgesCache) {
-      var res = await sb.from('fridges').select('id,code,name_en,name_ar,zone_number,zone_name,zone_name_ar').order('zone_name');
+      var res = await sb.from('fridges').select('id,code,name_en,name_ar,zone_number,zone_name,zone_name_ar,street,building').order('zone_name');
       allFridgesCache = res.data || [];
     }
     var watchRes = await sb.from('friend_fridge_watches').select('fridge_id').eq('application_id', currentApp.id);
@@ -1680,10 +1735,31 @@ async function loadFridgeWatchSection() {
   }
 }
 
+// Builds the "blue plate" style address for a fridge — Qatar's official
+// Zone/Street/Building numbering (the blue address plate on the building) —
+// falling back to the zone name alone if street/building aren't on file.
+function fridgeBluePlate(f, ar) {
+  var parts = [];
+  parts.push((ar ? 'منطقة ' : 'Zone ') + f.zone_number);
+  if (f.street) parts.push((ar ? 'شارع ' : 'St ') + f.street);
+  if (f.building) parts.push((ar ? 'مبنى ' : 'Bldg ') + f.building);
+  return parts.join(' · ');
+}
+
+// Smart search: every whitespace-separated word the friend types must show
+// up somewhere in the fridge's name/zone/street/building — so typing
+// "onaiza" or "54" or "st 12" all narrow the list sensibly, in any order.
+function fridgeMatchesSearch(f, query) {
+  if (!query) return true;
+  var hay = [f.name_en, f.name_ar, f.zone_name, f.zone_name_ar, f.zone_number, f.street, f.building, f.code].join(' ').toLowerCase();
+  return query.toLowerCase().trim().split(/\s+/).every(function(tok) { return hay.indexOf(tok) !== -1; });
+}
+
 function renderFridgeWatchList() {
   var ar = currentLang === 'ar';
   var myZone = parseInt(String(currentApp.zone || '').replace(/\D/g, ''), 10);
-  var list = (allFridgesCache || []).slice().sort(function(a, b) {
+  var query = (document.getElementById('fridge-search-input') || {}).value || '';
+  var list = (allFridgesCache || []).filter(function(f) { return fridgeMatchesSearch(f, query); }).sort(function(a, b) {
     var aNear = a.zone_number === myZone ? 0 : 1;
     var bNear = b.zone_number === myZone ? 0 : 1;
     if (aNear !== bNear) return aNear - bNear;
@@ -1691,6 +1767,13 @@ function renderFridgeWatchList() {
   });
   var container = document.getElementById('fridge-watch-list');
   container.innerHTML = '';
+  if (list.length === 0) {
+    var empty = document.createElement('p');
+    empty.textContent = ar ? 'لا توجد ثلاجات مطابقة.' : 'No fridges match your search.';
+    empty.style.cssText = 'font-size:13px;color:var(--muted);padding:10px 0;';
+    container.appendChild(empty);
+    return;
+  }
   var lastGroup = null;
   list.forEach(function(f) {
     var group = f.zone_number === myZone ? (ar ? 'الأقرب إليك' : 'Nearest to you') : (ar ? 'كل الثلاجات' : 'All fridges');
@@ -1705,9 +1788,9 @@ function renderFridgeWatchList() {
     var row = document.createElement('label');
     row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid ' + (checked ? 'var(--green)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (checked ? 'var(--green-light)' : '#fff') + ';';
     var name = ar && f.name_ar ? f.name_ar : f.name_en;
-    var zone = ar && f.zone_name_ar ? f.zone_name_ar : f.zone_name;
+    var addr = fridgeBluePlate(f, ar);
     row.innerHTML = '<input type="checkbox" ' + (checked ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:var(--green);flex-shrink:0;">' +
-      '<span style="font-size:13px;font-weight:700;color:var(--text);flex:1;">' + name + ' <span style="color:var(--muted);font-weight:600;">· ' + zone + '</span></span>';
+      '<span style="font-size:13px;font-weight:700;color:var(--text);flex:1;">' + name + ' <span style="color:var(--muted);font-weight:600;">· ' + addr + '</span></span>';
     row.querySelector('input').addEventListener('change', function() { toggleFridgeWatch(f.id); });
     container.appendChild(row);
   });
