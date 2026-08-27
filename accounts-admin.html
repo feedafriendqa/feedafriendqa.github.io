@@ -158,8 +158,11 @@ tr:hover td{background:#fafcfa;}
         <div class="field"><label class="lbl">From</label><input class="inp" type="date" id="sum-from" value="2025-10-01"></div>
         <div class="field"><label class="lbl">To</label><input class="inp" type="date" id="sum-to"></div>
         <button class="btn ghost small" onclick="loadSummary()">Update</button>
+        <button class="btn ghost small" onclick="downloadPnL()">Download P&amp;L (CSV)</button>
       </div>
       <div class="summary-grid" id="summary-grid"><div class="empty-note">Loading…</div></div>
+      <div id="gaps-panel"></div>
+      <div id="project-breakdown"></div>
       <div class="note-inline" style="margin-top:14px;display:block">Bookkeeping support only, not tax advice — confirm categories with your accountant before filing.</div>
     </div>
 
@@ -185,6 +188,12 @@ tr:hover td{background:#fafcfa;}
             <option value="out">Money out</option>
           </select>
         </div>
+        <div class="field"><label class="lbl">Event</label>
+          <select class="inp" id="f-event" style="padding:9px 10px;font-size:13px" onchange="resetAndLoad()">
+            <option value="">All</option>
+            <option value="__no_event__">No event</option>
+          </select>
+        </div>
         <div class="field" style="flex:1;min-width:180px"><label class="lbl">Search description</label>
           <input class="inp" type="text" id="f-search" placeholder="name, reference…" style="padding:9px 10px;font-size:13px" oninput="debouncedSearch()">
         </div>
@@ -192,7 +201,7 @@ tr:hover td{background:#fafcfa;}
       <div class="txn-table-wrap">
         <table>
           <thead><tr>
-            <th>Date</th><th>Description</th><th>Amount</th><th>Status</th><th>Category / match</th><th>Receipt</th><th style="min-width:220px">Actions</th>
+            <th>Date</th><th>Description</th><th>Amount</th><th>Status</th><th>Event</th><th>Receipt</th><th style="min-width:220px">Actions</th>
           </tr></thead>
           <tbody id="txn-tbody"><tr><td colspan="7" class="empty-note">Loading…</td></tr></tbody>
         </table>
@@ -204,6 +213,24 @@ tr:hover td{background:#fafcfa;}
       </div>
     </div>
 
+  </div>
+
+  <div id="event-modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center" onclick="if(event.target===this) closeEventModal()">
+    <div style="background:var(--card-bg,#fff);border-radius:12px;padding:20px;width:min(420px,92vw);max-height:80vh;overflow:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3 style="margin:0;font-size:16px">Assign event</h3>
+        <button class="btn ghost small" onclick="closeEventModal()">✕</button>
+      </div>
+      <input class="inp" type="text" id="event-modal-search" placeholder="Search events…" style="width:100%;padding:9px 10px;font-size:13px;margin-bottom:8px" oninput="renderEventModalList()">
+      <div id="event-modal-list" style="max-height:220px;overflow:auto;border:1px solid var(--border,#eee);border-radius:8px;margin-bottom:12px"></div>
+      <div style="border-top:1px solid var(--border,#eee);padding-top:12px">
+        <div class="lbl" style="margin-bottom:6px">Or create a new event</div>
+        <input class="inp" type="text" id="event-modal-new-name" placeholder="Event name (e.g. Friday Feed 13/3)" style="width:100%;padding:9px 10px;font-size:13px;margin-bottom:6px">
+        <input class="inp" type="text" id="event-modal-new-project" placeholder="Project (e.g. Friday Feed)" style="width:100%;padding:9px 10px;font-size:13px;margin-bottom:6px">
+        <input class="inp" type="date" id="event-modal-new-date" style="width:100%;padding:9px 10px;font-size:13px;margin-bottom:8px">
+        <button class="btn small" onclick="createAndAssignEvent()">Create &amp; assign</button>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -271,8 +298,25 @@ async function revealMain(user){
   document.getElementById("auth-wrap").style.display = "none";
   document.getElementById("main-wrap").style.display = "block";
   renderFilterBar();
+  loadEventOptions();
   loadSummary();
   loadTransactions();
+}
+
+var EVENTS = []; // cached list of {id, name, project, event_date, count}
+
+async function loadEventOptions(){
+  var sel = document.getElementById("f-event");
+  try {
+    var res = await callFn(ADMIN_FN_URL, { type: "list_events" });
+    EVENTS = res.events || [];
+    var current = sel.value;
+    var extra = EVENTS.map(function(e){
+      return '<option value="' + e.id + '">' + escapeHtml((e.project ? e.project + " — " : "") + e.name) + (e.event_date ? " (" + e.event_date + ")" : "") + ' [' + e.count + ']</option>';
+    }).join("");
+    sel.innerHTML = '<option value="">All</option><option value="__no_event__">No event</option>' + extra;
+    sel.value = current;
+  } catch(e){ /* non-fatal */ }
 }
 
 // ── summary ──
@@ -296,9 +340,114 @@ async function loadSummary(){
     grid.innerHTML = tiles.map(function(t){
       return '<div class="summary-tile' + (t.warn?' warn':'') + '"><div class="n">' + t.n + '</div><div class="l">' + t.l + '</div></div>';
     }).join("");
+    renderEventBreakdown(res.by_event || {});
+    renderGaps(res.gaps);
+    lastSummaryRes = res;
   } catch(e){
     grid.innerHTML = '<div class="empty-note">' + e.message + '</div>';
   }
+}
+var lastSummaryRes = null;
+
+function renderGaps(gaps){
+  var el = document.getElementById("gaps-panel");
+  if(!gaps){ el.innerHTML = ""; return; }
+  var items = [
+    { n: gaps.no_event, label: "with no event", action: "jumpNoEvent()" },
+    { n: gaps.needs_review, label: "needs review", action: "setFilter('needs_review')" },
+    { n: gaps.unknown, label: "unknown", action: "setFilter('unknown')" },
+    { n: gaps.missing_receipt_expense, label: "expenses missing a receipt", action: "setFilter('missing_receipt')" }
+  ].filter(function(i){ return i.n > 0; });
+  if(!items.length){
+    el.innerHTML = '<div class="lbl" style="margin:14px 0 6px;color:var(--muted-2)">No gaps outstanding for this period.</div>';
+    return;
+  }
+  el.innerHTML = '<div class="lbl" style="margin:14px 0 6px;color:#b45309">Gaps to close</div>' +
+    items.map(function(i){
+      return '<div style="font-size:13px;padding:3px 0">' +
+        '<a href="javascript:void(0)" onclick="' + i.action + '" style="color:inherit;text-decoration:underline">' +
+        i.n + ' ' + i.label + '</a></div>';
+    }).join("");
+}
+function jumpNoEvent(){
+  document.getElementById("f-event").value = "__no_event__";
+  currentFilter = "all";
+  currentOffset = 0;
+  renderFilterBar();
+  loadTransactions();
+  document.getElementById("filter-bar").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+async function downloadPnL(){
+  try {
+    var from = document.getElementById("sum-from").value;
+    var to = document.getElementById("sum-to").value;
+    var res = await callFn(ADMIN_FN_URL, { type: "summary", from_date: from, to_date: to });
+    var rows = [];
+    rows.push(["Together for Good Events — P&L"]);
+    rows.push(["Period", from + " to " + to]);
+    rows.push([]);
+    rows.push(["Income (QAR)", res.income.toFixed(2)]);
+    rows.push(["Expense (QAR)", Math.abs(res.expense).toFixed(2)]);
+    rows.push(["Net (QAR)", res.net.toFixed(2)]);
+    rows.push(["Transactions", res.line_count]);
+    rows.push([]);
+    rows.push(["By category", "Count", "Total (QAR)"]);
+    Object.keys(res.by_category)
+      .sort(function(a,b){ return Math.abs(res.by_category[b].total) - Math.abs(res.by_category[a].total); })
+      .forEach(function(k){
+        var v = res.by_category[k];
+        var cat = CATEGORY_LABELS[k];
+        var label = cat ? cat.label : (k === "__uncategorized__" ? "Uncategorized" : k);
+        rows.push([label, v.count, v.total.toFixed(2)]);
+      });
+    rows.push([]);
+    rows.push(["By event", "Project", "Count", "Total (QAR)"]);
+    Object.keys(res.by_event)
+      .sort(function(a,b){ return Math.abs(res.by_event[b].total) - Math.abs(res.by_event[a].total); })
+      .forEach(function(k){
+        var v = res.by_event[k];
+        rows.push([v.label, v.project || "", v.count, v.total.toFixed(2)]);
+      });
+    rows.push([]);
+    rows.push(["Gaps to close before filing"]);
+    rows.push(["Transactions with no event", res.gaps.no_event]);
+    rows.push(["Needs review", res.gaps.needs_review]);
+    rows.push(["Unknown", res.gaps.unknown]);
+    rows.push(["Expenses missing a receipt", res.gaps.missing_receipt_expense]);
+
+    var csv = rows.map(function(r){
+      return r.map(function(c){
+        var s = c === null || c === undefined ? "" : String(c);
+        return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+      }).join(",");
+    }).join("\n");
+    var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "together-for-good-pnl_" + from + "_to_" + to + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e){ alert("Failed to build P&L export: " + e.message); }
+}
+
+function renderEventBreakdown(byEvent){
+  var el = document.getElementById("project-breakdown");
+  var rows = Object.keys(byEvent)
+    .map(function(k){ return { name: byEvent[k].label, project: byEvent[k].project, total: byEvent[k].total, count: byEvent[k].count }; })
+    .sort(function(a,b){ return Math.abs(b.total) - Math.abs(a.total); });
+  if(!rows.length){ el.innerHTML = ""; return; }
+  el.innerHTML = '<div class="lbl" style="margin:14px 0 6px">By event</div>' +
+    rows.map(function(r){
+      var amt = fmtAmt(r.total);
+      var label = (r.project ? escapeHtml(r.project) + " — " : "") + escapeHtml(r.name);
+      return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border,#eee)">' +
+        '<span>' + label + ' <span style="color:var(--muted-2)">(' + r.count + ')</span></span>' +
+        '<span class="' + amt.cls + '">' + amt.text + '</span></div>';
+    }).join("");
 }
 
 // ── filters ──
@@ -308,6 +457,8 @@ var FILTERS = [
   { key: "unknown", label: "Unknown" },
   { key: "matched", label: "Matched (sponsors)" },
   { key: "categorized", label: "Categorized" },
+  { key: "missing_receipt", label: "Missing receipt" },
+  { key: "no_event", label: "No event" },
   { key: "all", label: "All" }
 ];
 function renderFilterBar(){
@@ -335,8 +486,13 @@ function fmtAmt(a){
 async function loadTransactions(){
   var tbody = document.getElementById("txn-tbody");
   tbody.innerHTML = '<tr><td colspan="7" class="empty-note">Loading…</td></tr>';
+  var eventFilterVal = document.getElementById("f-event").value;
   var body = { type: "list_transactions", limit: PAGE_SIZE, offset: currentOffset, direction: document.getElementById("f-direction").value || undefined, search: document.getElementById("f-search").value || undefined };
-  if(currentFilter !== "all") body.status = currentFilter;
+  if(eventFilterVal === "__no_event__") body.no_event = true;
+  else if(eventFilterVal) body.event_id = eventFilterVal;
+  if(currentFilter === "missing_receipt") body.missing_receipt = true;
+  else if(currentFilter === "no_event") body.no_event = true;
+  else if(currentFilter !== "all") body.status = currentFilter;
   try {
     var res = await callFn(ADMIN_FN_URL, body);
     var rows = res.rows;
@@ -360,7 +516,13 @@ function renderRow(r){
   var badge = '<span class="badge badge-' + r.match_status + '">' + r.match_status.replace("_"," ") + '</span>';
 
   var matchCell = "";
-  if(r.sponsorships){
+  if(r.accounts_events){
+    var ev = r.accounts_events;
+    matchCell = '<div class="matched-to">' + escapeHtml(ev.name) +
+      '<br><span style="font-weight:400;color:var(--muted-2)">' + (ev.project ? escapeHtml(ev.project) : "") + (ev.event_date ? " · " + ev.event_date : "") + '</span></div>';
+  } else if(r.project){
+    matchCell = '<div class="matched-to">' + escapeHtml(r.project) + (r.event ? '<br><span style="font-weight:400;color:var(--muted-2)">' + escapeHtml(r.event) + '</span>' : '') + '</div>';
+  } else if(r.sponsorships){
     matchCell = '<div class="matched-to">Sponsor: <b>' + (r.sponsorships.sponsor_name||"") + '</b><br>' + (r.sponsorships.ref_no||"") + '</div>';
   } else if(r.category){
     var cat = CATEGORY_LABELS[r.category];
@@ -375,6 +537,7 @@ function renderRow(r){
     : '<label class="receipt-link" style="cursor:pointer">Upload<input type="file" style="display:none" onchange="handleReceiptUpload(this,\'' + r.id + '\')"></label>';
 
   var actions = '<div class="row-actions">';
+  actions += '<button class="btn ghost small" onclick="openEventModal(\'' + r.id + '\')">' + (r.accounts_events ? "Edit event" : "Assign event") + '</button>';
   if(isIncome){
     actions += '<button class="btn ghost small" onclick="openSponsorMatch(\'' + r.id + '\')">Match sponsor</button>';
   }
@@ -409,6 +572,57 @@ function escapeHtml(s){ return (s||"").replace(/[&<>"']/g, function(c){ return {
 async function categorize(lineId, category){
   try { await callFn(ADMIN_FN_URL, { type: "categorize_transaction", line_id: lineId, category: category }); loadTransactions(); loadSummary(); }
   catch(e){ alert("Failed: " + e.message); }
+}
+// ── event assignment modal ──
+var eventModalLineId = null;
+function openEventModal(lineId){
+  eventModalLineId = lineId;
+  document.getElementById("event-modal-search").value = "";
+  document.getElementById("event-modal-new-name").value = "";
+  document.getElementById("event-modal-new-project").value = "";
+  document.getElementById("event-modal-new-date").value = "";
+  renderEventModalList();
+  document.getElementById("event-modal-backdrop").style.display = "flex";
+  document.getElementById("event-modal-search").focus();
+}
+function closeEventModal(){
+  document.getElementById("event-modal-backdrop").style.display = "none";
+  eventModalLineId = null;
+}
+function renderEventModalList(){
+  var q = document.getElementById("event-modal-search").value.trim().toLowerCase();
+  var list = document.getElementById("event-modal-list");
+  var matches = EVENTS.filter(function(e){
+    if(!q) return true;
+    return (e.name||"").toLowerCase().indexOf(q) !== -1 || (e.project||"").toLowerCase().indexOf(q) !== -1;
+  }).slice(0, 50);
+  if(!matches.length){
+    list.innerHTML = '<div class="empty-note" style="padding:10px">No matching events yet — create one below.</div>';
+    return;
+  }
+  list.innerHTML = matches.map(function(e){
+    var label = (e.project ? escapeHtml(e.project) + " — " : "") + escapeHtml(e.name) + (e.event_date ? " (" + e.event_date + ")" : "");
+    return '<div style="padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border,#eee)" onclick="assignEvent(' + JSON.stringify(e.id) + ')" onmouseover="this.style.background=\'var(--hover-bg,#f3f3f3)\'" onmouseout="this.style.background=\'\'">' +
+      label + ' <span style="color:var(--muted-2);font-size:12px">(' + e.count + ')</span></div>';
+  }).join("");
+}
+async function assignEvent(eventId){
+  if(!eventModalLineId) return;
+  try {
+    await callFn(ADMIN_FN_URL, { type: "assign_event", line_id: eventModalLineId, event_id: eventId });
+    closeEventModal();
+    loadTransactions(); loadSummary(); loadEventOptions();
+  } catch(e){ alert("Failed: " + e.message); }
+}
+async function createAndAssignEvent(){
+  var name = document.getElementById("event-modal-new-name").value.trim();
+  var project = document.getElementById("event-modal-new-project").value.trim();
+  var eventDate = document.getElementById("event-modal-new-date").value;
+  if(!name){ alert("Enter an event name."); return; }
+  try {
+    var res = await callFn(ADMIN_FN_URL, { type: "create_event", name: name, project: project || null, event_date: eventDate || null });
+    await assignEvent(res.event.id);
+  } catch(e){ alert("Failed: " + e.message); }
 }
 async function flagUnknown(lineId){
   var notes = prompt("Optional note about why this is unknown:");
