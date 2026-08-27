@@ -58,6 +58,12 @@ const TXT = {
     update:"Update", saving:"Saving…", save:"Save", edit:"Edit", refills:"refills",
     fridges:"fridges", cleanedLbl:"cleaned", since: d => `Since ${d}`,
     loading:"Loading…",
+    claimThis:"I'll bring this", asapBtn:"ASAP (~30 min)", scheduleBtn:"Schedule a time",
+    pickTime:"Pick a date & time", confirmSchedule:"Confirm", cancelSchedule:"Cancel",
+    claimedByMe:"You're bringing this", claimedByOther:"Claimed by another fairy",
+    arrivingAsap: t => `Arriving between ${t}`, arrivingAt: t => `Arriving around ${t}`,
+    markDelivered:"Mark as delivered ✓", releaseIt:"I can't make it — release it",
+    delivered:"Delivered ✓", zoneLbl:"Zone",
   },
   ar: {
     home:"الرئيسية", becomeFairy:"انضم كجنية الثلاجة", helpKeep:"ساعد في إبقاء ثلاجات المجتمع في قطر ممتلئة.",
@@ -93,6 +99,12 @@ const TXT = {
     update:"تحديث", saving:"جارٍ الحفظ…", save:"حفظ", edit:"تعديل", refills:"تعبئات",
     fridges:"ثلاجات", cleanedLbl:"نُظفت", since: d => `منذ ${d}`,
     loading:"جارٍ التحميل…",
+    claimThis:"سأحضر هذا", asapBtn:"في أقرب وقت (~٣٠ دقيقة)", scheduleBtn:"حدد موعدًا",
+    pickTime:"اختر التاريخ والوقت", confirmSchedule:"تأكيد", cancelSchedule:"إلغاء",
+    claimedByMe:"أنت من سيحضر هذا", claimedByOther:"تم استلامه من جنية أخرى",
+    arrivingAsap: t => `الوصول بين ${t}`, arrivingAt: t => `الوصول حوالي ${t}`,
+    markDelivered:"تحديد كتم التسليم ✓", releaseIt:"لا أستطيع الحضور — إلغاء الاستلام",
+    delivered:"تم التسليم ✓", zoneLbl:"المنطقة",
   },
 };
 function toArabicDigits(str){
@@ -212,6 +224,10 @@ function App(){
   const [surpriseCount,setSurpriseCount]=React.useState(5);
   const [surpriseDuration,setSurpriseDuration]=React.useState("60");
   const [wishlist,setWishlist]=React.useState([]);
+  const [schedulingId,setSchedulingId]=React.useState(null);
+  const [scheduleTime,setScheduleTime]=React.useState("");
+  const [claimingId,setClaimingId]=React.useState(null);
+  const [claimError,setClaimError]=React.useState("");
   const [myStats,setMyStats]=React.useState({refills:0, cleanings:0});
   const [myActivity,setMyActivity]=React.useState([]);
   const [quote]=React.useState(pickQuote());
@@ -294,13 +310,57 @@ function App(){
     setMyActivity(activity||[]);
     const ids = new Set((local||[]).map(l=>l.fridge_id));
     setLocalIds(ids);
-    const myZones = new Set((fr||[]).filter(f=>ids.has(f.id)).map(f=>f.zone_number));
-    const {data:wl} = await sb.from("friend_wishlist_items").select("*, food_box_applications(zone,full_name_en,full_name,whatsapp)").eq("status","approved");
-    setWishlist((wl||[]).filter(w=>{
-      const z = parseInt(String(w.food_box_applications?.zone||"").replace(/\D/g,""),10);
-      return myZones.has(z);
-    }));
+    const {data:wl} = await sb.rpc("get_wishlist_for_fairy",{p_volunteer_id: uid});
+    setWishlist(wl||[]);
     setLoading(false);
+  }
+
+  const FRIEND_PORTAL_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/friend-portal";
+
+  async function claimWishlistItem(itemId, deliveryAt, asap){
+    setClaimingId(itemId);
+    setClaimError("");
+    try{
+      const res = await fetch(FRIEND_PORTAL_URL,{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({action:"claim_wishlist_item", wishlist_item_id:itemId, volunteer_id:session.user.id, delivery_at:deliveryAt, asap})
+      });
+      const data = await res.json();
+      if(data.error) throw new Error(data.error);
+      setSchedulingId(null);
+      load(session.user.id);
+    }catch(e){
+      setClaimError(e.message || (isAr?"حدث خطأ ما.":"Something went wrong."));
+    }
+    setClaimingId(null);
+  }
+
+  async function cancelClaim(itemId){
+    setClaimingId(itemId);
+    try{
+      const res = await fetch(FRIEND_PORTAL_URL,{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({action:"cancel_claim", wishlist_item_id:itemId, volunteer_id:session.user.id})
+      });
+      const data = await res.json();
+      if(data.error) throw new Error(data.error);
+      load(session.user.id);
+    }catch(e){ setClaimError(e.message || (isAr?"حدث خطأ ما.":"Something went wrong.")); }
+    setClaimingId(null);
+  }
+
+  async function markDelivered(itemId){
+    setClaimingId(itemId);
+    try{
+      const res = await fetch(FRIEND_PORTAL_URL,{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({action:"mark_delivered", wishlist_item_id:itemId, volunteer_id:session.user.id})
+      });
+      const data = await res.json();
+      if(data.error) throw new Error(data.error);
+      load(session.user.id);
+    }catch(e){ setClaimError(e.message || (isAr?"حدث خطأ ما.":"Something went wrong.")); }
+    setClaimingId(null);
   }
 
   async function toggleLocal(fridgeId){
@@ -531,12 +591,63 @@ function App(){
         <div style={{color:MT,fontSize:13,marginTop:10}}>{t.nothingYetWishlist}</div>
       ) : (
         <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:8}}>
-          {wishlist.map(w=>(
+          {wishlist.map(w=>{
+            const fmtTime = iso => new Date(iso).toLocaleString(isAr?"ar":undefined,{dateStyle:"medium",timeStyle:"short"});
+            return (
             <div key={w.id} style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:12,padding:12}}>
               <div style={{fontWeight:700,fontSize:14}}>{w.item}</div>
-              <div style={{color:MT,fontSize:12,marginTop:3}}>{isAr?"منطقة":"Zone"} {w.food_box_applications?.zone} · {w.food_box_applications?.whatsapp||(isAr?"لا يوجد رقم هاتف":"no phone on file")}</div>
+              <div style={{color:MT,fontSize:12,marginTop:3}}>{t.zoneLbl} {isAr?toArabicDigits(w.zone||""):w.zone} {w.area?`· ${w.area}`:""}</div>
+
+              {!w.claimed && (
+                schedulingId===w.id ? (
+                  <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:6}}>
+                    <label style={{fontSize:11.5,fontWeight:700,color:DK}}>{t.pickTime}</label>
+                    <input type="datetime-local" value={scheduleTime} onChange={e=>setScheduleTime(e.target.value)}
+                      style={{padding:"8px 10px",borderRadius:8,border:"1.5px solid #BBF7D0",fontSize:13}}/>
+                    <div style={{display:"flex",gap:8,marginTop:4}}>
+                      <button disabled={!scheduleTime||claimingId===w.id}
+                        onClick={()=>claimWishlistItem(w.id, new Date(scheduleTime).toISOString(), false)}
+                        style={{flex:1,padding:"8px 10px",borderRadius:8,border:"none",background:DK,color:"#fff",fontWeight:700,fontSize:12.5,cursor:"pointer",opacity:!scheduleTime?0.6:1}}>{t.confirmSchedule}</button>
+                      <button onClick={()=>{setSchedulingId(null);setScheduleTime("");}}
+                        style={{flex:1,padding:"8px 10px",borderRadius:8,border:"1.5px solid #BBF7D0",background:"#fff",color:DK,fontWeight:700,fontSize:12.5,cursor:"pointer"}}>{t.cancelSchedule}</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}}>
+                    <button disabled={claimingId===w.id}
+                      onClick={()=>claimWishlistItem(w.id, new Date(Date.now()+30*60000).toISOString(), true)}
+                      style={{padding:"8px 12px",borderRadius:8,border:"none",background:DK,color:"#fff",fontWeight:700,fontSize:12.5,cursor:"pointer"}}>{t.asapBtn}</button>
+                    <button disabled={claimingId===w.id} onClick={()=>setSchedulingId(w.id)}
+                      style={{padding:"8px 12px",borderRadius:8,border:`1.5px solid ${DK}`,background:"#fff",color:DK,fontWeight:700,fontSize:12.5,cursor:"pointer"}}>{t.scheduleBtn}</button>
+                  </div>
+                )
+              )}
+
+              {w.claimed && w.status!=="fulfilled" && w.claimed_by_me && (
+                <div style={{marginTop:10}}>
+                  <div style={{fontSize:12.5,fontWeight:700,color:DK}}>✓ {t.claimedByMe}</div>
+                  <div style={{fontSize:12,color:MT,marginTop:2}}>
+                    {w.delivery_at ? (new Date(w.delivery_at).getTime()-Date.now()<45*60000 ? t.arrivingAsap(fmtTime(w.delivery_at)) : t.arrivingAt(fmtTime(w.delivery_at))) : ""}
+                  </div>
+                  <div style={{display:"flex",gap:8,marginTop:8}}>
+                    <button disabled={claimingId===w.id} onClick={()=>markDelivered(w.id)}
+                      style={{padding:"8px 12px",borderRadius:8,border:"none",background:DK,color:"#fff",fontWeight:700,fontSize:12.5,cursor:"pointer"}}>{t.markDelivered}</button>
+                    <button disabled={claimingId===w.id} onClick={()=>cancelClaim(w.id)}
+                      style={{padding:"8px 12px",borderRadius:8,border:"1.5px solid #DC2626",background:"#fff",color:"#DC2626",fontWeight:700,fontSize:12,cursor:"pointer"}}>{t.releaseIt}</button>
+                  </div>
+                </div>
+              )}
+
+              {w.claimed && w.status!=="fulfilled" && !w.claimed_by_me && (
+                <div style={{fontSize:12.5,fontWeight:700,color:MT,marginTop:8}}>🧚 {t.claimedByOther}</div>
+              )}
+
+              {w.status==="fulfilled" && (
+                <div style={{fontSize:12.5,fontWeight:700,color:DK,marginTop:8}}>✓ {t.delivered}</div>
+              )}
             </div>
-          ))}
+          )})}
+          {claimError && <div style={{color:"#DC2626",fontSize:12.5}}>{claimError}</div>}
         </div>
       )}
 

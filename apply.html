@@ -310,6 +310,47 @@ body.ar{direction:rtl;}
       </div>
     </div>
 
+    <!-- FAIRY ON THE WAY -->
+    <div class="status-card active" id="fairy-coming-card" style="display:none;">
+      <div class="status-icon">🧚</div>
+      <div class="status-body">
+        <h3 id="fairy-coming-title">A fairy is on the way</h3>
+        <p id="fairy-coming-msg"></p>
+      </div>
+    </div>
+
+    <!-- FRIDGE ALERTS -->
+    <div id="fridge-watch-section" style="display:none;">
+      <div class="section-divider">
+        <span class="icon">🔔</span>
+        <span class="label" id="lbl-fridge-watch-divider">Fridge alerts</span>
+      </div>
+      <p class="screen-sub" id="fridge-watch-sub" style="margin-bottom:12px;">Pick up to 3 fridges — we'll email you when one of them is refilled.</p>
+      <div id="fridge-watch-list" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;"></div>
+      <div class="err-msg" id="fridge-watch-err"></div>
+      <button class="btn btn-green" id="fridge-watch-save-btn" style="margin-top:12px;" onclick="saveFridgeWatches()">
+        <span id="fridge-watch-save-text">Save my fridges</span>
+      </button>
+    </div>
+
+    <!-- WISHLIST REQUESTS -->
+    <div id="wishlist-section" style="display:none;margin-top:22px;">
+      <div class="section-divider">
+        <span class="icon">🧺</span>
+        <span class="label" id="lbl-wishlist-divider">Request items</span>
+      </div>
+      <p class="screen-sub" id="wishlist-sub" style="margin-bottom:10px;">Ask for up to 5 items a week. Approved requests are picked up by our volunteers.</p>
+      <div id="wishlist-current-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+      <div id="wishlist-add-rows" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div class="err-msg" id="wishlist-err"></div>
+      <button class="btn btn-back" id="wishlist-add-row-btn" type="button" style="margin-top:8px;" onclick="addWishlistRow()">
+        <span id="wishlist-add-row-text">+ Add another item</span>
+      </button>
+      <button class="btn btn-green" id="wishlist-submit-btn" style="margin-top:10px;" onclick="submitWishlistRows()">
+        <span id="wishlist-submit-text">Send request</span>
+      </button>
+    </div>
+
     <div id="reapply-section" style="display:none;">
       <div class="addr-box">
         <div class="addr-label" id="lbl-delivery-addr">Delivery address</div>
@@ -442,6 +483,7 @@ const sb = supabase.createClient(SB_URL, SB_KEY);
 const EDGE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder';
 const FEEDBACK_EDGE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/food-box-feedback';
 const SCAN_QID_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/scan-qid';
+const FRIEND_PORTAL_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/friend-portal';
 
 var currentLang = 'en';
 var currentApp = null;
@@ -1129,6 +1171,19 @@ function showStatusScreen(status, data, canReapply) {
   }
 
   document.getElementById('status-back-btn').textContent = ar ? '→ رجوع' : '← Back';
+
+  // Fridge alerts + wishlist requests are available to any real, resolved
+  // application (not the "duplicate"/"blocked" error states, which aren't
+  // an actual household record we can safely attach these to).
+  var friendFeaturesOk = ['duplicate', 'blocked'].indexOf(status) === -1 && data.id;
+  document.getElementById('fridge-watch-section').style.display = friendFeaturesOk ? 'block' : 'none';
+  document.getElementById('wishlist-section').style.display = friendFeaturesOk ? 'block' : 'none';
+  if (friendFeaturesOk) {
+    initFriendFeatureLabels();
+    loadFridgeWatchSection();
+    loadWishlistSection();
+  }
+
   showScreen('screen-status');
 }
 
@@ -1577,6 +1632,258 @@ if (_initialLang === 'ar') {
   setLang('ar');
 } else {
   refreshLegacyToggleText();
+}
+
+// ── FRIDGE ALERTS + WISHLIST REQUESTS ───────────────────────────────
+// Both features hang off currentApp.id (set by doVerify/doVerifyLegacy).
+// Reads (fridge list, my watched fridges, my wishlist) go straight to
+// Supabase with the anon key — all three are safe to read publicly.
+// Writes (choosing watched fridges, submitting requests) go through the
+// friend-portal edge function, which is the only thing allowed to write
+// to these tables (see RLS: "no direct write").
+
+var allFridgesCache = null;      // [{id,code,name_en,name_ar,zone_number,zone_name,zone_name_ar}]
+var myWatchIds = [];             // fridge ids currently selected (max 3), pending save
+var myWishlistItems = [];        // this week's wishlist rows for currentApp
+
+function initFriendFeatureLabels() {
+  var ar = currentLang === 'ar';
+  document.getElementById('lbl-fridge-watch-divider').textContent = ar ? 'تنبيهات الثلاجات' : 'Fridge alerts';
+  document.getElementById('fridge-watch-sub').textContent = ar
+    ? 'اختر حتى 3 ثلاجات — سنرسل لك بريدًا إلكترونيًا عند تعبئة إحداها.'
+    : "Pick up to 3 fridges — we'll email you when one of them is refilled.";
+  document.getElementById('fridge-watch-save-text').textContent = ar ? 'حفظ ثلاجاتي' : 'Save my fridges';
+  document.getElementById('lbl-wishlist-divider').textContent = ar ? 'طلب أصناف' : 'Request items';
+  document.getElementById('wishlist-sub').textContent = ar
+    ? 'اطلب حتى 5 أصناف أسبوعيًا. الطلبات المعتمدة يتم استلامها من قبل متطوعينا.'
+    : 'Ask for up to 5 items a week. Approved requests are picked up by our volunteers.';
+  document.getElementById('wishlist-add-row-text').textContent = ar ? '+ إضافة صنف آخر' : '+ Add another item';
+  document.getElementById('wishlist-submit-text').textContent = ar ? 'إرسال الطلب' : 'Send request';
+  document.getElementById('fairy-coming-title').textContent = ar ? 'جنية في الطريق إليك' : 'A fairy is on the way';
+}
+
+// ── Fridge alerts ────────────────────────────────────────────────────
+
+async function loadFridgeWatchSection() {
+  var ar = currentLang === 'ar';
+  try {
+    if (!allFridgesCache) {
+      var res = await sb.from('fridges').select('id,code,name_en,name_ar,zone_number,zone_name,zone_name_ar').order('zone_name');
+      allFridgesCache = res.data || [];
+    }
+    var watchRes = await sb.from('friend_fridge_watches').select('fridge_id').eq('application_id', currentApp.id);
+    myWatchIds = (watchRes.data || []).map(function(w) { return w.fridge_id; });
+    renderFridgeWatchList();
+  } catch (e) {
+    document.getElementById('fridge-watch-err').textContent = ar ? 'تعذر تحميل قائمة الثلاجات.' : 'Could not load the fridge list.';
+    document.getElementById('fridge-watch-err').classList.add('show');
+  }
+}
+
+function renderFridgeWatchList() {
+  var ar = currentLang === 'ar';
+  var myZone = parseInt(String(currentApp.zone || '').replace(/\D/g, ''), 10);
+  var list = (allFridgesCache || []).slice().sort(function(a, b) {
+    var aNear = a.zone_number === myZone ? 0 : 1;
+    var bNear = b.zone_number === myZone ? 0 : 1;
+    if (aNear !== bNear) return aNear - bNear;
+    return (a.zone_name || '').localeCompare(b.zone_name || '');
+  });
+  var container = document.getElementById('fridge-watch-list');
+  container.innerHTML = '';
+  var lastGroup = null;
+  list.forEach(function(f) {
+    var group = f.zone_number === myZone ? (ar ? 'الأقرب إليك' : 'Nearest to you') : (ar ? 'كل الثلاجات' : 'All fridges');
+    if (group !== lastGroup) {
+      var h = document.createElement('div');
+      h.textContent = group;
+      h.style.cssText = 'font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-top:8px;';
+      container.appendChild(h);
+      lastGroup = group;
+    }
+    var checked = myWatchIds.indexOf(f.id) !== -1;
+    var row = document.createElement('label');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid ' + (checked ? 'var(--green)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (checked ? 'var(--green-light)' : '#fff') + ';';
+    var name = ar && f.name_ar ? f.name_ar : f.name_en;
+    var zone = ar && f.zone_name_ar ? f.zone_name_ar : f.zone_name;
+    row.innerHTML = '<input type="checkbox" ' + (checked ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:var(--green);flex-shrink:0;">' +
+      '<span style="font-size:13px;font-weight:700;color:var(--text);flex:1;">' + name + ' <span style="color:var(--muted);font-weight:600;">· ' + zone + '</span></span>';
+    row.querySelector('input').addEventListener('change', function() { toggleFridgeWatch(f.id); });
+    container.appendChild(row);
+  });
+}
+
+function toggleFridgeWatch(fridgeId) {
+  var ar = currentLang === 'ar';
+  var errEl = document.getElementById('fridge-watch-err');
+  errEl.classList.remove('show');
+  var idx = myWatchIds.indexOf(fridgeId);
+  if (idx !== -1) {
+    myWatchIds.splice(idx, 1);
+  } else {
+    if (myWatchIds.length >= 3) {
+      errEl.textContent = ar ? 'يمكنك اختيار 3 ثلاجات كحد أقصى.' : 'You can pick up to 3 fridges.';
+      errEl.classList.add('show');
+      renderFridgeWatchList();
+      return;
+    }
+    myWatchIds.push(fridgeId);
+  }
+  renderFridgeWatchList();
+}
+
+async function saveFridgeWatches() {
+  var ar = currentLang === 'ar';
+  var btn = document.getElementById('fridge-watch-save-btn');
+  var errEl = document.getElementById('fridge-watch-err');
+  errEl.classList.remove('show');
+  btn.disabled = true;
+  document.getElementById('fridge-watch-save-text').textContent = ar ? 'جارٍ الحفظ...' : 'Saving...';
+  try {
+    var res = await fetch(FRIEND_PORTAL_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set_fridge_watches', application_id: currentApp.id, fridge_ids: myWatchIds })
+    });
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById('fridge-watch-save-text').textContent = ar ? '✓ تم الحفظ' : '✓ Saved';
+    setTimeout(function() { document.getElementById('fridge-watch-save-text').textContent = ar ? 'حفظ ثلاجاتي' : 'Save my fridges'; }, 2000);
+  } catch (e) {
+    errEl.textContent = ar ? 'تعذر الحفظ. حاول مرة أخرى.' : 'Could not save. Please try again.';
+    errEl.classList.add('show');
+    document.getElementById('fridge-watch-save-text').textContent = ar ? 'حفظ ثلاجاتي' : 'Save my fridges';
+  }
+  btn.disabled = false;
+}
+
+// ── Wishlist requests ────────────────────────────────────────────────
+
+var wishlistRowCount = 0;
+
+async function loadWishlistSection() {
+  var ar = currentLang === 'ar';
+  try {
+    var res = await fetch(FRIEND_PORTAL_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get_wishlist', application_id: currentApp.id })
+    });
+    var data = await res.json();
+    myWishlistItems = data.items || [];
+    renderWishlistCurrent();
+    renderFairyComingCard();
+    resetWishlistAddRows();
+  } catch (e) {
+    document.getElementById('wishlist-err').textContent = ar ? 'تعذر تحميل طلباتك.' : 'Could not load your requests.';
+    document.getElementById('wishlist-err').classList.add('show');
+  }
+}
+
+var WISHLIST_STATUS_LABEL = {
+  pending: { en: '⏳ Awaiting review', ar: '⏳ قيد المراجعة' },
+  approved: { en: '✅ Approved — waiting for a fairy', ar: '✅ تمت الموافقة — بانتظار جنية' },
+  fulfilled: { en: '📦 Delivered', ar: '📦 تم التسليم' },
+  rejected: { en: '✗ Not approved', ar: '✗ لم تتم الموافقة' },
+  expired: { en: 'Expired', ar: 'منتهي الصلاحية' }
+};
+
+function renderWishlistCurrent() {
+  var ar = currentLang === 'ar';
+  var container = document.getElementById('wishlist-current-list');
+  container.innerHTML = '';
+  myWishlistItems.forEach(function(item) {
+    var claimed = !!item.fulfilled_by_volunteer_id && item.status === 'approved';
+    var label = WISHLIST_STATUS_LABEL[item.status] || { en: item.status, ar: item.status };
+    var statusText = claimed ? (ar ? '🧚 جنية في الطريق' : '🧚 A fairy is on the way') : label[ar ? 'ar' : 'en'];
+    var row = document.createElement('div');
+    row.style.cssText = 'background:var(--off-white);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;';
+    row.innerHTML = '<div style="font-weight:800;font-size:13.5px;color:var(--text);">' + item.item + '</div>' +
+      '<div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-top:2px;">' + statusText + '</div>';
+    container.appendChild(row);
+  });
+}
+
+function renderFairyComingCard() {
+  var ar = currentLang === 'ar';
+  var card = document.getElementById('fairy-coming-card');
+  var claimedItem = myWishlistItems.find(function(w) { return w.status === 'approved' && w.fulfilled_by_volunteer_id && w.delivery_at; });
+  if (!claimedItem) { card.style.display = 'none'; return; }
+  card.style.display = 'flex';
+  var when = new Date(claimedItem.delivery_at);
+  var isAsap = (when.getTime() - Date.now()) < 45 * 60000;
+  var fmt = when.toLocaleString(ar ? 'ar-QA' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+  var msg;
+  if (ar) {
+    msg = isAsap
+      ? ('سيقوم أحد جنياتنا بإحضار "' + claimedItem.item + '" خلال الثلاثين دقيقة القادمة تقريبًا.')
+      : ('سيقوم أحد جنياتنا بإحضار "' + claimedItem.item + '" حوالي ' + fmt + '.');
+  } else {
+    msg = isAsap
+      ? ('One of our fairies is bringing "' + claimedItem.item + '" within about 30 minutes.')
+      : ('One of our fairies is bringing "' + claimedItem.item + '" around ' + fmt + '.');
+  }
+  document.getElementById('fairy-coming-msg').textContent = msg;
+}
+
+function resetWishlistAddRows() {
+  var container = document.getElementById('wishlist-add-rows');
+  container.innerHTML = '';
+  wishlistRowCount = 0;
+  var remaining = Math.max(0, 5 - myWishlistItems.length);
+  var addBtn = document.getElementById('wishlist-add-row-btn');
+  var submitBtn = document.getElementById('wishlist-submit-btn');
+  if (remaining === 0) {
+    addBtn.style.display = 'none';
+    submitBtn.style.display = 'none';
+  } else {
+    addBtn.style.display = 'block';
+    submitBtn.style.display = 'block';
+    addWishlistRow();
+  }
+}
+
+function addWishlistRow() {
+  var remaining = Math.max(0, 5 - myWishlistItems.length);
+  if (wishlistRowCount >= remaining) return;
+  wishlistRowCount++;
+  var ar = currentLang === 'ar';
+  var container = document.getElementById('wishlist-add-rows');
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'wishlist-row-input';
+  input.placeholder = ar ? 'مثال: حليب أطفال، أرز...' : 'e.g. baby formula, rice...';
+  input.style.cssText = 'width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:10px;font-size:14px;font-family:Nunito,sans-serif;';
+  container.appendChild(input);
+  if (wishlistRowCount >= remaining) document.getElementById('wishlist-add-row-btn').style.display = 'none';
+}
+
+async function submitWishlistRows() {
+  var ar = currentLang === 'ar';
+  var errEl = document.getElementById('wishlist-err');
+  errEl.classList.remove('show');
+  var inputs = document.querySelectorAll('.wishlist-row-input');
+  var items = Array.prototype.map.call(inputs, function(i) { return i.value.trim(); }).filter(Boolean);
+  if (items.length === 0) {
+    errEl.textContent = ar ? 'أدخل صنفًا واحدًا على الأقل.' : 'Enter at least one item.';
+    errEl.classList.add('show');
+    return;
+  }
+  var btn = document.getElementById('wishlist-submit-btn');
+  btn.disabled = true;
+  document.getElementById('wishlist-submit-text').textContent = ar ? 'جارٍ الإرسال...' : 'Sending...';
+  try {
+    var res = await fetch(FRIEND_PORTAL_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'submit_wishlist', application_id: currentApp.id, items: items })
+    });
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+    await loadWishlistSection();
+  } catch (e) {
+    errEl.textContent = e.message || (ar ? 'تعذر إرسال الطلب.' : 'Could not send your request.');
+    errEl.classList.add('show');
+  }
+  btn.disabled = false;
+  document.getElementById('wishlist-submit-text').textContent = ar ? 'إرسال الطلب' : 'Send request';
 }
 </script>
 </body>
