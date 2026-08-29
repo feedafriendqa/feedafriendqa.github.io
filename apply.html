@@ -440,8 +440,8 @@ body.ar{direction:rtl;}
     <!-- FRIDGE ALERTS -->
     <div id="fridge-watch-section" style="display:none;">
       <div class="section-divider">
-        <span class="icon">🔔</span>
-        <span class="label" id="lbl-fridge-watch-divider">Fridge alerts</span>
+        <span class="icon">📍</span>
+        <span class="label" id="lbl-fridge-watch-divider">My Closest Fridges</span>
       </div>
       <p class="screen-sub" id="fridge-watch-sub" style="margin-bottom:12px;">Pick up to 3 fridges — we'll email you when one of them is refilled.</p>
 
@@ -1737,7 +1737,7 @@ var myLocation = null;           // {lat,lng} once the friend shares their locat
 
 function initFriendFeatureLabels() {
   var ar = currentLang === 'ar';
-  document.getElementById('lbl-fridge-watch-divider').textContent = ar ? 'تنبيهات الثلاجات' : 'Fridge alerts';
+  document.getElementById('lbl-fridge-watch-divider').textContent = ar ? 'أقرب ثلاجاتي' : 'My Closest Fridges';
   document.getElementById('fridge-watch-sub').textContent = ar
     ? 'اختر حتى 3 ثلاجات — سنرسل لك بريدًا إلكترونيًا عند تعبئة إحداها.'
     : "Pick up to 3 fridges — we'll email you when one of them is refilled.";
@@ -1841,6 +1841,21 @@ function renderFridgeWatchList() {
   var pool = (allFridgesCache || []).filter(function(f) { return fridgeMatchesSearch(f, query); });
 
   var usingLocation = !!myLocation;
+  var container = document.getElementById('fridge-watch-list');
+  container.innerHTML = '';
+
+  // Don't dump all 101 fridges on the friend by default — only show
+  // results once they've used location or typed something to search for.
+  if (!usingLocation && !query.trim()) {
+    var prompt = document.createElement('p');
+    prompt.textContent = ar
+      ? 'استخدم موقعك أو ابحث بالاسم أو المنطقة لإيجاد ثلاجاتك.'
+      : 'Use your location or search by name, zone, street or building to find your fridges.';
+    prompt.style.cssText = 'font-size:13px;color:var(--muted);padding:10px 0;';
+    container.appendChild(prompt);
+    return;
+  }
+
   var list;
   if (usingLocation) {
     pool.forEach(function(f) {
@@ -1856,8 +1871,6 @@ function renderFridgeWatchList() {
     });
   }
 
-  var container = document.getElementById('fridge-watch-list');
-  container.innerHTML = '';
   if (list.length === 0) {
     var empty = document.createElement('p');
     empty.textContent = ar ? 'لا توجد ثلاجات مطابقة.' : 'No fridges match your search.';
@@ -1871,7 +1884,7 @@ function renderFridgeWatchList() {
     if (usingLocation) {
       group = idx < 3 ? (ar ? '📍 الأقرب إلى موقعك' : '📍 Nearest to your location') : (ar ? 'كل الثلاجات' : 'All fridges');
     } else {
-      group = f.zone_number === myZone ? (ar ? 'الأقرب إليك (حسب المنطقة)' : 'Nearest to you (by zone)') : (ar ? 'كل الثلاجات' : 'All fridges');
+      group = (ar ? 'نتائج البحث' : 'Search results');
     }
     if (group !== lastGroup) {
       var h = document.createElement('div');
