@@ -23,10 +23,17 @@ body.ar{direction:rtl;}
 .lang-btn{background:transparent;border:1.5px solid rgba(255,255,255,0.4);color:white;padding:5px 18px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;transition:all 0.2s;}
 .lang-btn.active{background:white;color:var(--green-dark);border-color:white;}
 .status-subtab-bar{display:flex;gap:8px;margin-bottom:18px;}
-.status-subtab-btn{flex:1;padding:11px 10px;border:2px solid var(--border);border-radius:var(--radius-sm);background:#fff;color:var(--muted);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:800;cursor:pointer;transition:all 0.15s;}
+.status-subtab-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 10px;border:2px solid var(--border);border-radius:var(--radius-sm);background:#fff;color:var(--muted);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:800;cursor:pointer;transition:all 0.15s;}
 .status-subtab-btn.active{background:var(--green);border-color:var(--green);color:#fff;}
+.subtab-icon-badge{width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
 .fridge-search-input{width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'Nunito',sans-serif;outline:none;background:var(--off-white);font-weight:700;transition:border-color 0.2s;margin-bottom:10px;}
 .fridge-search-input:focus{border-color:var(--green);background:white;}
+.wishlist-suggest-dropdown{display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1.5px solid var(--border);border-radius:10px;margin-top:4px;max-height:180px;overflow-y:auto;z-index:20;box-shadow:0 4px 14px rgba(0,0,0,0.1);}
+.wishlist-suggest-row{padding:9px 14px;font-size:13.5px;cursor:pointer;}
+.wishlist-suggest-row:hover{background:var(--off-white);}
+.wishlist-suggest-hint{font-size:11.5px;color:var(--muted);margin-top:4px;display:none;}
+.wishlist-suggest-link{color:var(--green);font-weight:800;text-decoration:underline;cursor:pointer;}
+.fridge-watch-summary-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--green-light);}
 
 /* HERO */
 .hero{text-align:center;padding:20px 20px 16px;color:white;width:100%;max-width:480px;}
@@ -262,8 +269,18 @@ body.ar{direction:rtl;}
     <div class="screen-sub" id="status-sub-text"></div>
 
     <div class="status-subtab-bar" id="status-subtab-bar" style="display:none;">
-      <button class="status-subtab-btn active" id="subtab-foodbox-btn" onclick="switchStatusTab('foodbox')">🍱 <span id="subtab-foodbox-label">Food Box</span></button>
-      <button class="status-subtab-btn" id="subtab-fridges-btn" onclick="switchStatusTab('fridges')">🧊 <span id="subtab-fridges-label">Fridges</span></button>
+      <button class="status-subtab-btn active" id="subtab-foodbox-btn" onclick="switchStatusTab('foodbox')">
+        <span class="subtab-icon-badge" style="background:#F97316;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 8L12 3L3 8M21 8L12 13M21 8V16L12 21M12 13L3 8M12 13V21M3 8V16L12 21" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span id="subtab-foodbox-label">Food Box</span>
+      </button>
+      <button class="status-subtab-btn" id="subtab-fridges-btn" onclick="switchStatusTab('fridges')">
+        <span class="subtab-icon-badge" style="background:#2563EB;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="2" width="14" height="20" rx="2" stroke="white" stroke-width="2.2"/><line x1="5" y1="9.5" x2="19" y2="9.5" stroke="white" stroke-width="2.2"/><line x1="8" y1="5" x2="8" y2="6.8" stroke="white" stroke-width="2.2" stroke-linecap="round"/><line x1="8" y1="12.5" x2="8" y2="14.3" stroke="white" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </span>
+        <span id="subtab-fridges-label">Community Fridges</span>
+      </button>
     </div>
 
     <div id="tab-foodbox">
@@ -427,12 +444,28 @@ body.ar{direction:rtl;}
         <span class="label" id="lbl-fridge-watch-divider">Fridge alerts</span>
       </div>
       <p class="screen-sub" id="fridge-watch-sub" style="margin-bottom:12px;">Pick up to 3 fridges — we'll email you when one of them is refilled.</p>
-      <input type="text" class="fridge-search-input" id="fridge-search-input" placeholder="Search by name, zone, street, building…" oninput="renderFridgeWatchList()">
-      <div id="fridge-watch-list" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;"></div>
-      <div class="err-msg" id="fridge-watch-err"></div>
-      <button class="btn btn-green" id="fridge-watch-save-btn" style="margin-top:12px;" onclick="saveFridgeWatches()">
-        <span id="fridge-watch-save-text">Save my fridges</span>
-      </button>
+
+      <!-- SAVED SUMMARY — shown once fridges are saved, replaces the picker -->
+      <div id="fridge-watch-summary" style="display:none;">
+        <div id="fridge-watch-summary-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+        <button class="btn btn-back" id="fridge-watch-edit-btn" type="button" onclick="editFridgeWatches()">
+          <span id="fridge-watch-edit-text">Change my fridges</span>
+        </button>
+      </div>
+
+      <!-- PICKER — shown while choosing -->
+      <div id="fridge-watch-picker">
+        <button type="button" class="btn btn-back" id="fridge-locate-btn" style="margin-bottom:10px;" onclick="locateNearestFridges()">
+          <span id="fridge-locate-text">📍 Use my location to find my closest fridges</span>
+        </button>
+        <div class="err-msg" id="fridge-locate-err"></div>
+        <input type="text" class="fridge-search-input" id="fridge-search-input" placeholder="Search by name, zone, street, building…" oninput="renderFridgeWatchList()">
+        <div id="fridge-watch-list" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;"></div>
+        <div class="err-msg" id="fridge-watch-err"></div>
+        <button class="btn btn-green" id="fridge-watch-save-btn" style="margin-top:12px;" onclick="saveFridgeWatches()">
+          <span id="fridge-watch-save-text">Save my fridges</span>
+        </button>
+      </div>
     </div>
 
     <!-- WISHLIST REQUESTS -->
@@ -441,7 +474,7 @@ body.ar{direction:rtl;}
         <span class="icon">🧺</span>
         <span class="label" id="lbl-wishlist-divider">Request items</span>
       </div>
-      <p class="screen-sub" id="wishlist-sub" style="margin-bottom:10px;">Ask for up to 5 items a week. Approved requests are picked up by our volunteers.</p>
+      <p class="screen-sub" id="wishlist-sub" style="margin-bottom:10px;">Ask for up to 3 items a week. Approved requests are picked up by our volunteers.</p>
       <div id="wishlist-current-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
       <div id="wishlist-add-rows" style="display:flex;flex-direction:column;gap:8px;"></div>
       <div class="err-msg" id="wishlist-err"></div>
@@ -1219,8 +1252,8 @@ function showStatusScreen(status, data, canReapply) {
   document.getElementById('status-subtab-bar').style.display = validApp ? 'flex' : 'none';
   document.getElementById('subtab-foodbox-label').textContent = ar ? 'صندوق الطعام' : 'Food Box';
   document.getElementById('subtab-fridges-label').textContent = FRIDGES_FEATURE_ENABLED
-    ? (ar ? 'الثلاجات' : 'Fridges')
-    : (ar ? 'الثلاجات (قريباً)' : 'Fridges (Coming soon)');
+    ? (ar ? 'ثلاجات المجتمع' : 'Community Fridges')
+    : (ar ? 'ثلاجات المجتمع (قريباً)' : 'Community Fridges (Coming soon)');
   switchStatusTab('foodbox');
   if (friendFeaturesOk) {
     initFriendFeatureLabels();
@@ -1697,9 +1730,10 @@ if (_initialLang === 'ar') {
 // friend-portal edge function, which is the only thing allowed to write
 // to these tables (see RLS: "no direct write").
 
-var allFridgesCache = null;      // [{id,code,name_en,name_ar,zone_number,zone_name,zone_name_ar}]
+var allFridgesCache = null;      // [{id,code,name_en,name_ar,zone_number,zone_name,zone_name_ar,lat,lng}]
 var myWatchIds = [];             // fridge ids currently selected (max 3), pending save
 var myWishlistItems = [];        // this week's wishlist rows for currentApp
+var myLocation = null;           // {lat,lng} once the friend shares their location, else null
 
 function initFriendFeatureLabels() {
   var ar = currentLang === 'ar';
@@ -1708,10 +1742,12 @@ function initFriendFeatureLabels() {
     ? 'اختر حتى 3 ثلاجات — سنرسل لك بريدًا إلكترونيًا عند تعبئة إحداها.'
     : "Pick up to 3 fridges — we'll email you when one of them is refilled.";
   document.getElementById('fridge-watch-save-text').textContent = ar ? 'حفظ ثلاجاتي' : 'Save my fridges';
+  document.getElementById('fridge-watch-edit-text').textContent = ar ? 'تغيير ثلاجاتي' : 'Change my fridges';
+  document.getElementById('fridge-locate-text').textContent = ar ? '📍 استخدم موقعي لإيجاد أقرب الثلاجات' : '📍 Use my location to find my closest fridges';
   document.getElementById('lbl-wishlist-divider').textContent = ar ? 'طلب أصناف' : 'Request items';
   document.getElementById('wishlist-sub').textContent = ar
-    ? 'اطلب حتى 5 أصناف أسبوعيًا. الطلبات المعتمدة يتم استلامها من قبل متطوعينا.'
-    : 'Ask for up to 5 items a week. Approved requests are picked up by our volunteers.';
+    ? ('اطلب حتى ' + WISHLIST_WEEKLY_CAP + ' أصناف أسبوعيًا. الطلبات المعتمدة يتم استلامها من قبل متطوعينا.')
+    : ('Ask for up to ' + WISHLIST_WEEKLY_CAP + ' items a week. Approved requests are picked up by our volunteers.');
   document.getElementById('wishlist-add-row-text').textContent = ar ? '+ إضافة صنف آخر' : '+ Add another item';
   document.getElementById('wishlist-submit-text').textContent = ar ? 'إرسال الطلب' : 'Send request';
   document.getElementById('fairy-coming-title').textContent = ar ? 'جنية في الطريق إليك' : 'A fairy is on the way';
@@ -1723,16 +1759,59 @@ async function loadFridgeWatchSection() {
   var ar = currentLang === 'ar';
   try {
     if (!allFridgesCache) {
-      var res = await sb.from('fridges').select('id,code,name_en,name_ar,zone_number,zone_name,zone_name_ar,street,building').order('zone_name');
+      var res = await sb.from('fridges').select('id,code,name_en,name_ar,zone_number,zone_name,zone_name_ar,street,building,lat,lng').order('zone_name');
       allFridgesCache = res.data || [];
     }
     var watchRes = await sb.from('friend_fridge_watches').select('fridge_id').eq('application_id', currentApp.id);
     myWatchIds = (watchRes.data || []).map(function(w) { return w.fridge_id; });
-    renderFridgeWatchList();
+    updateFridgeWatchView();
   } catch (e) {
     document.getElementById('fridge-watch-err').textContent = ar ? 'تعذر تحميل قائمة الثلاجات.' : 'Could not load the fridge list.';
     document.getElementById('fridge-watch-err').classList.add('show');
   }
+}
+
+// Great-circle distance in km between two lat/lng points (Haversine).
+function haversineKm(lat1, lng1, lat2, lng2) {
+  var R = 6371;
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLng = (lng2 - lng1) * Math.PI / 180;
+  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Asks the browser for the friend's location (with their permission) and
+// re-sorts the fridge list by actual distance instead of just zone — a much
+// more precise "closest to you" than the blue-plate zone/street/building
+// alone can give, since fridges don't have street/building data on file yet.
+function locateNearestFridges() {
+  var ar = currentLang === 'ar';
+  var errEl = document.getElementById('fridge-locate-err');
+  var textEl = document.getElementById('fridge-locate-text');
+  var btn = document.getElementById('fridge-locate-btn');
+  errEl.classList.remove('show');
+  if (!navigator.geolocation) {
+    errEl.textContent = ar ? 'متصفحك لا يدعم تحديد الموقع.' : "Your browser doesn't support location.";
+    errEl.classList.add('show');
+    return;
+  }
+  var original = textEl.textContent;
+  textEl.textContent = ar ? 'جارٍ تحديد موقعك...' : 'Finding your location...';
+  btn.disabled = true;
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    myLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    textEl.textContent = ar ? '📍 تم — عرض الأقرب إليك' : '📍 Done — showing what\'s nearest to you';
+    btn.disabled = false;
+    renderFridgeWatchList();
+  }, function() {
+    btn.disabled = false;
+    textEl.textContent = original;
+    errEl.textContent = ar
+      ? 'تعذر الوصول إلى موقعك. يمكنك البحث يدويًا بدلاً من ذلك.'
+      : "Could not get your location — you can search for your fridge manually instead.";
+    errEl.classList.add('show');
+  }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
 // Builds the "blue plate" style address for a fridge — Qatar's official
@@ -1759,12 +1838,24 @@ function renderFridgeWatchList() {
   var ar = currentLang === 'ar';
   var myZone = parseInt(String(currentApp.zone || '').replace(/\D/g, ''), 10);
   var query = (document.getElementById('fridge-search-input') || {}).value || '';
-  var list = (allFridgesCache || []).filter(function(f) { return fridgeMatchesSearch(f, query); }).sort(function(a, b) {
-    var aNear = a.zone_number === myZone ? 0 : 1;
-    var bNear = b.zone_number === myZone ? 0 : 1;
-    if (aNear !== bNear) return aNear - bNear;
-    return (a.zone_name || '').localeCompare(b.zone_name || '');
-  });
+  var pool = (allFridgesCache || []).filter(function(f) { return fridgeMatchesSearch(f, query); });
+
+  var usingLocation = !!myLocation;
+  var list;
+  if (usingLocation) {
+    pool.forEach(function(f) {
+      f._distanceKm = (f.lat != null && f.lng != null) ? haversineKm(myLocation.lat, myLocation.lng, f.lat, f.lng) : Infinity;
+    });
+    list = pool.slice().sort(function(a, b) { return a._distanceKm - b._distanceKm; });
+  } else {
+    list = pool.slice().sort(function(a, b) {
+      var aNear = a.zone_number === myZone ? 0 : 1;
+      var bNear = b.zone_number === myZone ? 0 : 1;
+      if (aNear !== bNear) return aNear - bNear;
+      return (a.zone_name || '').localeCompare(b.zone_name || '');
+    });
+  }
+
   var container = document.getElementById('fridge-watch-list');
   container.innerHTML = '';
   if (list.length === 0) {
@@ -1775,8 +1866,13 @@ function renderFridgeWatchList() {
     return;
   }
   var lastGroup = null;
-  list.forEach(function(f) {
-    var group = f.zone_number === myZone ? (ar ? 'الأقرب إليك' : 'Nearest to you') : (ar ? 'كل الثلاجات' : 'All fridges');
+  list.forEach(function(f, idx) {
+    var group;
+    if (usingLocation) {
+      group = idx < 3 ? (ar ? '📍 الأقرب إلى موقعك' : '📍 Nearest to your location') : (ar ? 'كل الثلاجات' : 'All fridges');
+    } else {
+      group = f.zone_number === myZone ? (ar ? 'الأقرب إليك (حسب المنطقة)' : 'Nearest to you (by zone)') : (ar ? 'كل الثلاجات' : 'All fridges');
+    }
     if (group !== lastGroup) {
       var h = document.createElement('div');
       h.textContent = group;
@@ -1789,11 +1885,46 @@ function renderFridgeWatchList() {
     row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid ' + (checked ? 'var(--green)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (checked ? 'var(--green-light)' : '#fff') + ';';
     var name = ar && f.name_ar ? f.name_ar : f.name_en;
     var addr = fridgeBluePlate(f, ar);
+    var distLabel = (usingLocation && isFinite(f._distanceKm)) ? (' · ' + f._distanceKm.toFixed(1) + (ar ? ' كم' : ' km')) : '';
     row.innerHTML = '<input type="checkbox" ' + (checked ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:var(--green);flex-shrink:0;">' +
-      '<span style="font-size:13px;font-weight:700;color:var(--text);flex:1;">' + name + ' <span style="color:var(--muted);font-weight:600;">· ' + addr + '</span></span>';
+      '<span style="font-size:13px;font-weight:700;color:var(--text);flex:1;">' + name + ' <span style="color:var(--muted);font-weight:600;">· ' + addr + distLabel + '</span></span>';
     row.querySelector('input').addEventListener('change', function() { toggleFridgeWatch(f.id); });
     container.appendChild(row);
   });
+}
+
+// Toggles between the checklist picker and the compact "here's what you
+// saved" summary — the picker only needs to reappear if the friend wants
+// to change their fridges.
+function updateFridgeWatchView() {
+  var hasSaved = myWatchIds.length > 0;
+  document.getElementById('fridge-watch-summary').style.display = hasSaved ? 'block' : 'none';
+  document.getElementById('fridge-watch-picker').style.display = hasSaved ? 'none' : 'block';
+  if (hasSaved) renderFridgeWatchSummary();
+  else renderFridgeWatchList();
+}
+
+function renderFridgeWatchSummary() {
+  var ar = currentLang === 'ar';
+  var container = document.getElementById('fridge-watch-summary-list');
+  container.innerHTML = '';
+  myWatchIds.forEach(function(id) {
+    var f = (allFridgesCache || []).find(function(x) { return x.id === id; });
+    if (!f) return;
+    var name = ar && f.name_ar ? f.name_ar : f.name_en;
+    var addr = fridgeBluePlate(f, ar);
+    var row = document.createElement('div');
+    row.className = 'fridge-watch-summary-row';
+    row.innerHTML = '<span style="font-size:13px;font-weight:700;color:var(--text);">' + name +
+      ' <span style="color:var(--muted);font-weight:600;">· ' + addr + '</span></span><span style="font-size:15px;">🔔</span>';
+    container.appendChild(row);
+  });
+}
+
+function editFridgeWatches() {
+  document.getElementById('fridge-watch-summary').style.display = 'none';
+  document.getElementById('fridge-watch-picker').style.display = 'block';
+  renderFridgeWatchList();
 }
 
 function toggleFridgeWatch(fridgeId) {
@@ -1829,8 +1960,10 @@ async function saveFridgeWatches() {
     });
     var data = await res.json();
     if (data.error) throw new Error(data.error);
-    document.getElementById('fridge-watch-save-text').textContent = ar ? '✓ تم الحفظ' : '✓ Saved';
-    setTimeout(function() { document.getElementById('fridge-watch-save-text').textContent = ar ? 'حفظ ثلاجاتي' : 'Save my fridges'; }, 2000);
+    document.getElementById('fridge-watch-save-text').textContent = ar ? 'حفظ ثلاجاتي' : 'Save my fridges';
+    // Once saved, drop the checklist in favor of a compact summary — the
+    // picker only needs to come back if they want to change their fridges.
+    updateFridgeWatchView();
   } catch (e) {
     errEl.textContent = ar ? 'تعذر الحفظ. حاول مرة أخرى.' : 'Could not save. Please try again.';
     errEl.classList.add('show');
@@ -1842,6 +1975,101 @@ async function saveFridgeWatches() {
 // ── Wishlist requests ────────────────────────────────────────────────
 
 var wishlistRowCount = 0;
+var WISHLIST_WEEKLY_CAP = 3; // keep in sync with the edge function's own cap
+
+// Suggestion list for the item-request autocomplete — common community
+// fridge / food-bank items. Not exhaustive; friends can still type anything.
+var WISHLIST_SUGGESTIONS_EN = [
+  'Rice', 'Pasta', 'Cooking oil', 'Sugar', 'Flour', 'Milk', 'Eggs', 'Bread',
+  'Canned tuna', 'Canned beans', 'Lentils', 'Chickpeas', 'Tea', 'Coffee',
+  'Baby formula', 'Diapers', 'Baby wipes', 'Sanitary pads', 'Cooking gas',
+  'Salt', 'Spices', 'Tomato paste', 'Cheese', 'Yogurt', 'Fruits',
+  'Vegetables', 'Juice', 'Water bottles', 'Cleaning supplies', 'Soap',
+  'Shampoo', 'Toothpaste', 'Chicken', 'Meat', 'Onions', 'Potatoes'
+];
+var WISHLIST_SUGGESTIONS_AR = [
+  'أرز', 'معكرونة', 'زيت طبخ', 'سكر', 'طحين', 'حليب', 'بيض', 'خبز',
+  'تونة معلبة', 'فول معلب', 'عدس', 'حمص', 'شاي', 'قهوة',
+  'حليب أطفال', 'حفاضات', 'مناديل أطفال', 'فوط صحية', 'أسطوانة غاز',
+  'ملح', 'بهارات', 'معجون طماطم', 'جبن', 'لبن زبادي', 'فواكه',
+  'خضروات', 'عصير', 'مياه', 'مواد تنظيف', 'صابون',
+  'شامبو', 'معجون أسنان', 'دجاج', 'لحم', 'بصل', 'بطاطس'
+];
+
+function levenshteinDistance(a, b) {
+  var m = a.length, n = b.length;
+  var dp = [];
+  for (var i = 0; i <= m; i++) { dp.push([i]); }
+  for (var j = 0; j <= n; j++) { dp[0][j] = j; }
+  for (i = 1; i <= m; i++) {
+    for (j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+// Wires up a lightweight autosuggest + "did you mean" autocorrect on a
+// wishlist item input, without a library: a filtered dropdown while typing,
+// and a gentle correction hint on blur if what was typed is close to (but
+// not exactly) a known item — never force-replaces what the friend typed.
+function attachWishlistAutocomplete(input, dropdown, hint) {
+  function renderMatches(query) {
+    var ar = currentLang === 'ar';
+    var items = ar ? WISHLIST_SUGGESTIONS_AR : WISHLIST_SUGGESTIONS_EN;
+    dropdown.innerHTML = '';
+    var q = query.trim().toLowerCase();
+    if (!q) { dropdown.style.display = 'none'; return; }
+    var matches = items.filter(function(it) { return it.toLowerCase().indexOf(q) !== -1; }).slice(0, 6);
+    if (matches.length === 0) { dropdown.style.display = 'none'; return; }
+    matches.forEach(function(m) {
+      var row = document.createElement('div');
+      row.textContent = m;
+      row.className = 'wishlist-suggest-row';
+      row.onmousedown = function(e) { e.preventDefault(); input.value = m; dropdown.style.display = 'none'; hint.style.display = 'none'; };
+      dropdown.appendChild(row);
+    });
+    dropdown.style.display = 'block';
+  }
+
+  input.addEventListener('input', function() {
+    hint.style.display = 'none';
+    renderMatches(input.value);
+  });
+  input.addEventListener('focus', function() { renderMatches(input.value); });
+  input.addEventListener('blur', function() {
+    setTimeout(function() {
+      dropdown.style.display = 'none';
+      var ar = currentLang === 'ar';
+      var items = ar ? WISHLIST_SUGGESTIONS_AR : WISHLIST_SUGGESTIONS_EN;
+      var val = input.value.trim();
+      if (!val) { hint.style.display = 'none'; return; }
+      var exact = items.some(function(it) { return it.toLowerCase() === val.toLowerCase(); });
+      if (exact) { hint.style.display = 'none'; return; }
+      var best = null, bestDist = Infinity;
+      items.forEach(function(it) {
+        var d = levenshteinDistance(val.toLowerCase(), it.toLowerCase());
+        if (d < bestDist) { bestDist = d; best = it; }
+      });
+      if (best && bestDist > 0 && bestDist <= 2 && val.length >= 3) {
+        hint.innerHTML = '';
+        var pre = document.createElement('span');
+        pre.textContent = ar ? 'هل تقصد: ' : 'Did you mean: ';
+        var link = document.createElement('a');
+        link.textContent = best;
+        link.href = 'javascript:void(0)';
+        link.className = 'wishlist-suggest-link';
+        link.onclick = function() { input.value = best; hint.style.display = 'none'; };
+        hint.appendChild(pre);
+        hint.appendChild(link);
+        hint.appendChild(document.createTextNode('?'));
+        hint.style.display = 'block';
+      } else {
+        hint.style.display = 'none';
+      }
+    }, 150);
+  });
+}
 
 async function loadWishlistSection() {
   var ar = currentLang === 'ar';
@@ -1911,7 +2139,7 @@ function resetWishlistAddRows() {
   var container = document.getElementById('wishlist-add-rows');
   container.innerHTML = '';
   wishlistRowCount = 0;
-  var remaining = Math.max(0, 5 - myWishlistItems.length);
+  var remaining = Math.max(0, WISHLIST_WEEKLY_CAP - myWishlistItems.length);
   var addBtn = document.getElementById('wishlist-add-row-btn');
   var submitBtn = document.getElementById('wishlist-submit-btn');
   if (remaining === 0) {
@@ -1925,17 +2153,28 @@ function resetWishlistAddRows() {
 }
 
 function addWishlistRow() {
-  var remaining = Math.max(0, 5 - myWishlistItems.length);
+  var remaining = Math.max(0, WISHLIST_WEEKLY_CAP - myWishlistItems.length);
   if (wishlistRowCount >= remaining) return;
   wishlistRowCount++;
   var ar = currentLang === 'ar';
   var container = document.getElementById('wishlist-add-rows');
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'position:relative;';
   var input = document.createElement('input');
   input.type = 'text';
   input.className = 'wishlist-row-input';
+  input.autocomplete = 'off';
   input.placeholder = ar ? 'مثال: حليب أطفال، أرز...' : 'e.g. baby formula, rice...';
   input.style.cssText = 'width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:10px;font-size:14px;font-family:Nunito,sans-serif;';
-  container.appendChild(input);
+  var dropdown = document.createElement('div');
+  dropdown.className = 'wishlist-suggest-dropdown';
+  var hint = document.createElement('div');
+  hint.className = 'wishlist-suggest-hint';
+  wrap.appendChild(input);
+  wrap.appendChild(dropdown);
+  wrap.appendChild(hint);
+  container.appendChild(wrap);
+  attachWishlistAutocomplete(input, dropdown, hint);
   if (wishlistRowCount >= remaining) document.getElementById('wishlist-add-row-btn').style.display = 'none';
 }
 
