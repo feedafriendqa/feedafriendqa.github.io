@@ -1,0 +1,1976 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[TEST] Apply | Feed a Friend</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green:#2d7a3a;--green-dark:#1e5528;--green-light:#eaf5ec;--green-mid:#4a9e58;
+  --red:#c0392b;--red-light:#fdeaea;
+  --yellow:#f5b942;--yellow-light:#fef8ec;
+  --blue:#1a5fa8;--blue-light:#e6f4ff;
+  --border:#e0eee2;--off-white:#f7f9f7;--muted:#5a7060;--text:#1a2e1d;
+  --radius:16px;--radius-sm:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:var(--green-dark);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding-bottom:40px;}
+body.ar{direction:rtl;}
+
+/* LANG BAR */
+.lang-bar{width:100%;max-width:480px;display:flex;justify-content:flex-end;gap:8px;padding:12px 16px 0;}
+.lang-btn{background:transparent;border:1.5px solid rgba(255,255,255,0.4);color:white;padding:5px 18px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;transition:all 0.2s;}
+.lang-btn.active{background:white;color:var(--green-dark);border-color:white;}
+.status-subtab-bar{display:flex;gap:8px;margin-bottom:18px;}
+.status-subtab-btn{flex:1;padding:11px 10px;border:2px solid var(--border);border-radius:var(--radius-sm);background:#fff;color:var(--muted);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:800;cursor:pointer;transition:all 0.15s;}
+.status-subtab-btn.active{background:var(--green);border-color:var(--green);color:#fff;}
+.fridge-search-input{width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'Nunito',sans-serif;outline:none;background:var(--off-white);font-weight:700;transition:border-color 0.2s;margin-bottom:10px;}
+.fridge-search-input:focus{border-color:var(--green);background:white;}
+
+/* HERO */
+.hero{text-align:center;padding:20px 20px 16px;color:white;width:100%;max-width:480px;}
+.hero-logo{width:64px;height:64px;background:white;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.2);}
+.hero-logo img{width:56px;height:56px;object-fit:contain;}
+.hero h1{font-size:21px;font-weight:900;margin-bottom:3px;}
+.hero p{font-size:13px;opacity:0.75;}
+
+/* CARD */
+.card{background:white;border-radius:var(--radius);width:100%;max-width:480px;margin:0 16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.25);}
+
+/* HOME SCREEN — two big buttons */
+.home-btns{padding:24px;display:flex;flex-direction:column;gap:14px;}
+.home-btn{display:flex;align-items:center;gap:16px;padding:20px 18px;border-radius:var(--radius-sm);border:2px solid var(--border);cursor:pointer;transition:all 0.15s;text-decoration:none;}
+.home-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.1);}
+.home-btn.new{background:var(--green);border-color:var(--green);}
+.home-btn.existing{background:white;border-color:var(--border);}
+.home-btn-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.home-btn.new .home-btn-icon{background:rgba(255,255,255,0.2);}
+.home-btn.existing .home-btn-icon{background:var(--green-light);}
+.home-btn-text h3{font-size:15px;font-weight:900;margin-bottom:2px;}
+.home-btn-text p{font-size:12px;line-height:1.4;}
+.home-btn.new .home-btn-text h3{color:white;}
+.home-btn.new .home-btn-text p{color:rgba(255,255,255,0.8);}
+.home-btn.existing .home-btn-text h3{color:var(--green-dark);}
+.home-btn.existing .home-btn-text p{color:var(--muted);}
+.home-divider{text-align:center;font-size:12px;color:var(--muted);font-weight:700;padding:0 24px;}
+
+/* SCREENS */
+.screen{display:none;padding:26px 24px;}
+.screen.active{display:block;}
+.screen-title{font-size:18px;font-weight:900;color:var(--text);margin-bottom:5px;}
+.screen-sub{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.5;}
+
+/* FIELDS */
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+.field input{width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:17px;font-family:'Nunito',sans-serif;outline:none;background:var(--off-white);font-weight:700;transition:border-color 0.2s;}
+.field input:focus{border-color:var(--green);background:white;}
+
+/* BUTTONS */
+.btn{width:100%;padding:15px;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:900;font-family:'Nunito',sans-serif;cursor:pointer;transition:all 0.2s;}
+.btn-green{background:var(--green);color:white;}
+.btn-green:hover{background:var(--green-dark);}
+.btn-green:disabled{background:#9cbfa2;cursor:not-allowed;}
+.btn-back{background:none;border:2px solid var(--border);color:var(--muted);margin-top:10px;}
+.btn-back:hover{border-color:var(--green);color:var(--green);}
+
+/* ERROR */
+.err-msg{background:var(--red-light);border:1.5px solid #f5b8b8;border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;font-weight:700;color:var(--red);margin-bottom:14px;display:none;}
+.err-msg.show{display:block;}
+
+.alt-link{text-align:center;font-size:15px;color:var(--muted);margin:-6px 0 18px;cursor:pointer;}
+.alt-link strong{color:var(--green);font-weight:800;}
+.alt-link:hover strong{text-decoration:underline;}
+
+.loc-choice{display:flex;gap:10px;}
+.loc-btn{flex:1;padding:13px 10px;border:2px solid #b9d1bc;border-radius:var(--radius-sm);background:#eef5ef;color:var(--text);font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all 0.2s;}
+.loc-btn:hover{border-color:var(--green);}
+.loc-btn.selected{background:var(--green);border-color:var(--green);color:white;}
+.loc-btn.selected.moved{background:var(--yellow);border-color:var(--yellow);color:var(--text);}
+
+.diaper-pills{display:flex;flex-wrap:wrap;gap:8px;}
+.diaper-pill{padding:9px 18px;border:1.5px solid var(--border);border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;background:var(--yellow-light);color:var(--green-dark);transition:all 0.15s;user-select:none;}
+.diaper-pill.selected{border-color:var(--green);background:var(--green-light);color:var(--green);}
+
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius-sm);padding:28px 16px;text-align:center;cursor:pointer;background:var(--off-white);transition:border-color 0.2s,background 0.2s;}
+.upload-zone:hover{border-color:var(--green);background:var(--green-light);}
+.upload-zone.uploaded{border-color:var(--green);border-style:solid;background:var(--green-light);}
+.upload-zone .upload-icon{font-size:32px;margin-bottom:8px;}
+.upload-zone p{font-size:13px;font-weight:700;color:var(--muted);}
+.capture-scanning{text-align:center;padding:24px 0;font-size:14px;font-weight:700;color:var(--green-dark);}
+.capture-confirm{text-align:center;padding:8px 0 4px;}
+.capture-confirm p{font-size:13px;color:var(--muted);margin-bottom:6px;}
+.capture-name{font-size:19px;font-weight:900;color:var(--text);margin-bottom:18px;}
+
+/* STATUS CARD */
+.status-card{border-radius:var(--radius-sm);padding:18px;margin-bottom:18px;display:flex;align-items:flex-start;gap:14px;}
+.status-card.new{background:var(--off-white);border:1.5px solid var(--border);}
+.status-card.pending{background:#fff8e6;border:1.5px solid #f0d080;}
+.status-card.approved{background:var(--green-light);border:1.5px solid #b2d9b8;}
+.status-card.active{background:var(--blue-light);border:1.5px solid #a8d4f5;}
+.status-card.archived{background:var(--off-white);border:1.5px solid var(--border);}
+.status-card.duplicate{background:var(--red-light);border:1.5px solid #f5b8b8;}
+.status-card.blocked{background:#eceff1;border:1.5px solid #b0bec5;}
+.status-icon{font-size:32px;flex-shrink:0;}
+.status-body h3{font-size:15px;font-weight:900;margin-bottom:4px;}
+.status-body p{font-size:13px;line-height:1.5;}
+.status-card.new .status-body h3{color:var(--text);}
+.status-card.new .status-body p{color:var(--muted);}
+.status-card.pending .status-body h3{color:#9a6800;}
+.status-card.pending .status-body p{color:#7a4a00;}
+.status-card.approved .status-body h3{color:var(--green-dark);}
+.status-card.approved .status-body p{color:var(--green);}
+.status-card.active .status-body h3{color:var(--blue);}
+.status-card.active .status-body p{color:#1a4a8a;}
+.status-card.archived .status-body h3{color:var(--muted);}
+.status-card.archived .status-body p{color:var(--muted);}
+.status-card.duplicate .status-body h3{color:var(--red);}
+.status-card.duplicate .status-body p{color:var(--red);}
+.status-card.blocked .status-body h3{color:#263238;}
+.status-card.blocked .status-body p{color:#455a64;}
+
+/* ALLOWANCE */
+.allowance-wrap{background:var(--off-white);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:16px;}
+.allowance-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.allowance-header span{font-size:12px;font-weight:800;color:var(--muted);}
+.allowance-header strong{font-size:14px;font-weight:900;color:var(--text);}
+.allowance-track{height:10px;background:var(--border);border-radius:5px;overflow:hidden;}
+.allowance-fill{height:100%;border-radius:5px;transition:width 0.6s ease;}
+.fill-ok{background:var(--green);}
+.fill-warn{background:var(--yellow);}
+.fill-full{background:var(--red);}
+
+/* CONFIRM CHECKS */
+.check-item{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:10px;cursor:pointer;transition:border-color 0.15s;}
+.check-item:has(input:checked){border-color:var(--green);background:var(--green-light);}
+.check-item input{width:18px;height:18px;margin-top:1px;accent-color:var(--green);flex-shrink:0;}
+.check-item label{font-size:13px;font-weight:700;color:var(--text);cursor:pointer;line-height:1.5;}
+
+/* ADDRESS */
+.addr-box{background:var(--off-white);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px;position:relative;}
+.addr-box .lock-note{font-size:11px;color:var(--muted);font-style:italic;margin-top:4px;}
+.section-divider{display:flex;align-items:center;gap:8px;margin:22px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--yellow);}
+.section-divider .icon{font-size:16px;}
+.section-divider .label{font-size:13px;font-weight:900;color:#7a5a0a;text-transform:uppercase;letter-spacing:0.4px;}
+.addr-label{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;}
+.addr-val{font-size:15px;font-weight:800;color:var(--text);}
+
+/* SUCCESS */
+.success-wrap{text-align:center;padding:8px 0;}
+.success-emoji{font-size:60px;margin-bottom:12px;}
+.success-title{font-size:22px;font-weight:900;color:var(--green);margin-bottom:8px;}
+.success-month{background:var(--green);color:white;border-radius:var(--radius-sm);padding:14px;margin:14px 0;}
+.success-month .sm-month{font-size:20px;font-weight:900;}
+.success-month .sm-label{font-size:12px;opacity:0.8;margin-top:2px;}
+.success-sub{font-size:13px;color:var(--muted);line-height:1.6;}
+.remaining-tag{display:inline-block;background:var(--green-light);border:1px solid #b2d9b8;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:800;color:var(--green);margin-top:12px;}
+</style>
+</head>
+<body>
+
+<div style="background:#B45309;color:#fff;text-align:center;font-weight:800;font-size:12.5px;padding:8px 12px;">
+  🧪 TEST COPY — fridge feature is ON for internal testing only. Not for applicants.
+</div>
+
+<div class="lang-bar">
+  <button class="lang-btn active" id="btn-en" onclick="setLang('en')">English</button>
+  <button class="lang-btn" id="btn-ar" onclick="setLang('ar')">عربي</button>
+</div>
+
+<div class="hero">
+  <div class="hero-logo"><img src="data:image/png;base64,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" alt="Feed a Friend"></div>
+        <h1 id="hero-title">My Food Box</h1>
+  <p id="hero-sub">Feed a Friend · Qatar</p>
+</div>
+
+<div class="card">
+
+  <!-- HOME -->
+  <div class="screen active" id="screen-home">
+    <div class="home-btns">
+      <p style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;" id="home-q">What would you like to do?</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px;" id="home-sub">Choose an option below</p>
+
+      <a class="home-btn new" href="food-box-application.html" id="apply-new-link">
+        <div class="home-btn-icon">📝</div>
+        <div class="home-btn-text">
+          <h3 id="home-new-title">Apply for the first time</h3>
+          <p id="home-new-sub">Not registered with us yet? Submit a new application</p>
+        </div>
+      </a>
+
+      <div class="home-divider" id="home-or">— or —</div>
+
+      <div class="home-btn existing" onclick="showScreen('screen-verify')">
+        <div class="home-btn-icon">🔍</div>
+        <div class="home-btn-text">
+          <h3 id="home-existing-title">Check my status / Reapply</h3>
+          <p id="home-existing-sub">Already registered? Check your status or request your next box</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VERIFY -->
+  <div class="screen" id="screen-verify">
+    <div class="screen-title" id="s-verify-title">Check your status</div>
+    <div class="screen-sub" id="s-verify-sub">Enter your QID and the WhatsApp number you registered with us.</div>
+    <div class="err-msg" id="verify-err"></div>
+    <div class="field" id="field-qid">
+      <label id="lbl-qid">QID Number</label>
+      <input type="text" id="inp-qid" inputmode="numeric" placeholder="28xxxxxxxxx" maxlength="11" autocomplete="off">
+    </div>
+    <div class="field">
+      <label id="lbl-wa">WhatsApp Number</label>
+      <input type="tel" id="inp-wa" inputmode="tel" placeholder="+974 5xxx xxxx">
+    </div>
+    <div class="field" id="field-password" style="display:none;">
+      <label id="lbl-password">Verification Password</label>
+      <input type="text" id="inp-password" placeholder="Ask our team if you don't have this" autocomplete="off">
+    </div>
+    <div class="alt-link" id="legacy-toggle" onclick="toggleLegacyMode()"></div>
+    <button class="btn btn-green" id="verify-btn" onclick="doVerify()">
+      <span id="verify-btn-text">Check my status →</span>
+    </button>
+    <button class="btn btn-back" onclick="showScreen('screen-home')" id="back-home-btn">← Back</button>
+  </div>
+
+  <!-- CAPTURE QID (legacy applicants with no QID on file) -->
+  <div class="screen" id="screen-capture-qid">
+    <div class="screen-title" id="s-capture-title">Almost done!</div>
+    <div class="screen-sub" id="s-capture-sub">We don't have a QID on file for you yet. Please upload both sides of your QID so we can verify you going forward.</div>
+    <div class="err-msg" id="capture-err"></div>
+    <div class="upload-zone" id="capture-qid-front-zone" style="margin-bottom:12px;" onclick="document.getElementById('capture-qid-front-input').click()">
+      <div class="upload-icon">📷</div>
+      <p id="capture-qid-front-label">Tap to upload the front of your QID</p>
+      <input type="file" id="capture-qid-front-input" accept="image/*" style="display:none" onchange="handleCaptureQIDFront(this)">
+    </div>
+    <div class="upload-zone" id="capture-qid-back-zone" onclick="document.getElementById('capture-qid-back-input').click()">
+      <div class="upload-icon">🔄</div>
+      <p id="capture-qid-back-label">Tap to upload the back of your QID</p>
+      <input type="file" id="capture-qid-back-input" accept="image/*" style="display:none" onchange="handleCaptureQIDBack(this)">
+    </div>
+    <div class="capture-scanning" id="capture-scanning" style="display:none;"><span id="capture-scanning-text">⏳ Reading your QID…</span></div>
+    <div class="capture-confirm" id="capture-confirm" style="display:none;">
+      <p id="capture-confirm-label">Is this you?</p>
+      <div class="capture-name" id="capture-parsed-name"></div>
+      <button class="btn btn-green" id="capture-confirm-btn" onclick="confirmCaptureQID()">Yes, that's me →</button>
+    </div>
+    <button class="btn btn-back" onclick="showScreen('screen-verify')" id="capture-back-btn">← Back</button>
+  </div>
+
+  <!-- STATUS VIEW -->
+  <div class="screen" id="screen-status">
+    <div class="screen-title" id="status-greeting"></div>
+    <div class="screen-sub" id="status-sub-text"></div>
+
+    <div class="status-subtab-bar" id="status-subtab-bar" style="display:none;">
+      <button class="status-subtab-btn active" id="subtab-foodbox-btn" onclick="switchStatusTab('foodbox')">🍱 <span id="subtab-foodbox-label">Food Box</span></button>
+      <button class="status-subtab-btn" id="subtab-fridges-btn" onclick="switchStatusTab('fridges')">🧊 <span id="subtab-fridges-label">Fridges</span></button>
+    </div>
+
+    <div id="tab-foodbox">
+    <div class="status-card" id="upcoming-card" style="display:none;background:#FFF8E6">
+      <div class="status-icon">🚚</div>
+      <div class="status-body">
+        <h3 id="upcoming-title">Scheduled for delivery</h3>
+        <p id="upcoming-msg"></p>
+      </div>
+    </div>
+
+    <div class="status-card" id="delivered-card" style="display:none;background:#EBF7F0">
+      <div class="status-icon">📦</div>
+      <div class="status-body">
+        <h3 id="delivered-title">Delivered</h3>
+        <p id="delivered-msg"></p>
+        <button class="btn btn-green" id="thankyou-open-btn" style="margin-top:10px;padding:10px 18px;font-size:13px" onclick="openThankyou()">Write a thank-you 💌</button>
+        <p id="thankyou-sent-msg" style="display:none;color:#1D7A47;font-weight:700;font-size:13px;margin-top:8px">✓ Your thank-you was sent</p>
+      </div>
+    </div>
+
+    <div class="status-card" id="status-card">
+      <div class="status-icon" id="status-icon"></div>
+      <div class="status-body">
+        <h3 id="status-title"></h3>
+        <p id="status-msg"></p>
+      </div>
+    </div>
+
+    <div id="pending-docs-section" style="display:none;">
+      <div class="field">
+        <label id="lbl-pending-docs">Help speed up your review</label>
+        <div class="upload-zone" id="salary-proof-zone" onclick="document.getElementById('salary-proof-input').click()">
+          <div class="upload-icon">💼</div>
+          <p id="salary-proof-label">Tap to upload salary proof</p>
+          <input type="file" id="salary-proof-input" accept="image/*,.pdf" style="display:none" onchange="handlePendingDoc(this,'salary_proof')">
+        </div>
+        <p id="salary-proof-done" style="display:none;color:#1D7A47;font-weight:700;font-size:13px;margin:4px 0 12px">✓ Salary proof on file</p>
+        <div class="upload-zone" id="rent-proof-zone" onclick="document.getElementById('rent-proof-input').click()">
+          <div class="upload-icon">🏠</div>
+          <p id="rent-proof-label">Tap to upload rent proof</p>
+          <input type="file" id="rent-proof-input" accept="image/*,.pdf" style="display:none" onchange="handlePendingDoc(this,'rent_proof')">
+        </div>
+        <p id="rent-proof-done" style="display:none;color:#1D7A47;font-weight:700;font-size:13px;margin:4px 0 0">✓ Rent proof on file</p>
+      </div>
+    </div>
+
+    <div class="allowance-wrap" id="allowance-wrap" style="display:none;">
+      <div class="allowance-header">
+        <span id="lbl-boxes">Boxes received</span>
+        <strong id="allowance-count" dir="ltr"></strong>
+      </div>
+      <div class="allowance-track">
+        <div class="allowance-fill" id="allowance-fill"></div>
+      </div>
+    </div>
+
+    <div id="reapply-section" style="display:none;">
+      <div class="addr-box">
+        <div class="addr-label" id="lbl-delivery-addr">Delivery address</div>
+        <div class="addr-val" id="status-address" dir="ltr"></div>
+        <div class="lock-note" id="lock-note-address">🔒 On file — tell us below if this has changed</div>
+      </div>
+      <div class="addr-box" id="household-size-box" style="display:none;">
+        <div class="addr-label" id="lbl-household-size">Household members</div>
+        <div class="addr-val" id="status-household-size" dir="ltr"></div>
+        <div class="lock-note" id="lock-note-household">🔒 On file — contact our team to update this</div>
+      </div>
+
+      <div class="section-divider">
+        <span class="icon">📝</span>
+        <span class="label" id="lbl-section-divider">A few quick questions</span>
+      </div>
+
+      <div class="field">
+        <label id="lbl-still-here">Are you still living at this address?</label>
+        <div class="loc-choice">
+          <button type="button" class="loc-btn" id="loc-yes-btn" onclick="chooseStillHere(true)">Yes, still here</button>
+          <button type="button" class="loc-btn" id="loc-no-btn" onclick="chooseStillHere(false)">No, I've moved</button>
+        </div>
+      </div>
+
+      <div id="address-update-block" style="display:none;">
+        <div class="upload-zone" id="reapply-plate-zone" onclick="document.getElementById('reapply-plate-input').click()">
+          <div class="upload-icon">🪧</div>
+          <p id="reapply-plate-label">Tap to upload your new blue address plate</p>
+          <input type="file" id="reapply-plate-input" accept="image/*" style="display:none" onchange="handleReapplyPlate(this)">
+        </div>
+        <div class="capture-scanning" id="reapply-plate-scanning" style="display:none;"><span id="reapply-plate-scanning-text">⏳ Reading your address…</span></div>
+        <div class="addr-box" id="reapply-plate-confirm" style="display:none;">
+          <div class="addr-label" id="lbl-new-addr">New address</div>
+          <div class="addr-val" id="reapply-plate-parsed" dir="ltr"></div>
+        </div>
+      </div>
+
+      <div class="field" id="diaper-question-block">
+        <label id="lbl-needs-diapers">Update diaper size if your child has grown</label>
+        <div class="diaper-pills" id="reapply-diaper-pills"></div>
+        <div class="check-item" style="margin-top:8px">
+          <input type="checkbox" id="chk-no-diapers" onchange="toggleNoDiapers()">
+          <label for="chk-no-diapers" id="lbl-chk-no-diapers">We no longer need diapers</label>
+        </div>
+      </div>
+
+      <div class="field" id="formula-question-block">
+        <label id="lbl-needs-formula">Would you like to request formula?</label>
+        <div class="loc-choice">
+          <button type="button" class="loc-btn" id="formula-yes-btn" onclick="chooseNeedsFormula(true)">Yes</button>
+          <button type="button" class="loc-btn" id="formula-no-btn" onclick="chooseNeedsFormula(false)">No</button>
+        </div>
+      </div>
+
+      <div class="field" id="pregnancy-block" style="display:none;">
+        <label id="lbl-pregnant">Is anyone in your household currently pregnant?</label>
+        <div class="loc-choice">
+          <button type="button" class="loc-btn" id="pregnant-yes-btn" onclick="choosePregnant(true)">Yes</button>
+          <button type="button" class="loc-btn" id="pregnant-no-btn" onclick="choosePregnant(false)">No</button>
+        </div>
+      </div>
+      <div class="field" id="due-date-block" style="display:none;">
+        <label id="lbl-due-date">Expected due date (if known)</label>
+        <input type="date" id="inp-due-date">
+      </div>
+
+      <p id="anticipated-date-note" style="font-size:12px;color:#5a7050;font-weight:700;margin:0 0 10px"></p>
+
+      <div class="check-item">
+        <input type="checkbox" id="chk-need" onchange="updateReapplyBtn()">
+        <label for="chk-need" id="lbl-chk-need">I confirm I still need food support and cannot purchase sufficient food for my household.</label>
+      </div>
+      <div class="err-msg" id="reapply-err"></div>
+      <button class="btn btn-green" id="reapply-btn" disabled onclick="doReapply()" style="margin-top:4px;">
+        <span id="reapply-btn-text">Request my food box →</span>
+      </button>
+    </div>
+    </div><!-- /tab-foodbox -->
+
+    <div id="tab-fridges" style="display:none;">
+    <!-- COMING SOON — fridge alerts + wishlist requests aren't open yet -->
+    <div class="status-card" id="fridges-coming-soon" style="display:none;background:#FFF8E6">
+      <div class="status-icon">🚧</div>
+      <div class="status-body">
+        <h3 id="fridges-coming-soon-title">Coming soon</h3>
+        <p id="fridges-coming-soon-msg">Fridge alerts and item requests aren't ready yet — we'll let you know the moment they're open!</p>
+      </div>
+    </div>
+
+    <!-- FAIRY ON THE WAY -->
+    <div class="status-card active" id="fairy-coming-card" style="display:none;">
+      <div class="status-icon">🧚</div>
+      <div class="status-body">
+        <h3 id="fairy-coming-title">A fairy is on the way</h3>
+        <p id="fairy-coming-msg"></p>
+      </div>
+    </div>
+
+    <!-- FRIDGE ALERTS -->
+    <div id="fridge-watch-section" style="display:none;">
+      <div class="section-divider">
+        <span class="icon">🔔</span>
+        <span class="label" id="lbl-fridge-watch-divider">Fridge alerts</span>
+      </div>
+      <p class="screen-sub" id="fridge-watch-sub" style="margin-bottom:12px;">Pick up to 3 fridges — we'll email you when one of them is refilled.</p>
+      <input type="text" class="fridge-search-input" id="fridge-search-input" placeholder="Search by name, zone, street, building…" oninput="renderFridgeWatchList()">
+      <div id="fridge-watch-list" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;"></div>
+      <div class="err-msg" id="fridge-watch-err"></div>
+      <button class="btn btn-green" id="fridge-watch-save-btn" style="margin-top:12px;" onclick="saveFridgeWatches()">
+        <span id="fridge-watch-save-text">Save my fridges</span>
+      </button>
+    </div>
+
+    <!-- WISHLIST REQUESTS -->
+    <div id="wishlist-section" style="display:none;margin-top:22px;">
+      <div class="section-divider">
+        <span class="icon">🧺</span>
+        <span class="label" id="lbl-wishlist-divider">Request items</span>
+      </div>
+      <p class="screen-sub" id="wishlist-sub" style="margin-bottom:10px;">Ask for up to 5 items a week. Approved requests are picked up by our volunteers.</p>
+      <div id="wishlist-current-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+      <div id="wishlist-add-rows" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div class="err-msg" id="wishlist-err"></div>
+      <button class="btn btn-back" id="wishlist-add-row-btn" type="button" style="margin-top:8px;" onclick="addWishlistRow()">
+        <span id="wishlist-add-row-text">+ Add another item</span>
+      </button>
+      <button class="btn btn-green" id="wishlist-submit-btn" style="margin-top:10px;" onclick="submitWishlistRows()">
+        <span id="wishlist-submit-text">Send request</span>
+      </button>
+    </div>
+    </div><!-- /tab-fridges -->
+
+    <button class="btn btn-back" onclick="showScreen('screen-home')" style="margin-top:12px;" id="status-back-btn">← Back</button>
+  </div>
+
+  <!-- THANK YOU -->
+  <div class="screen" id="screen-thankyou">
+    <div class="screen-title" id="ty-title">Write a thank-you</div>
+    <div class="screen-sub" id="ty-sub">This goes to whoever sponsored your box. Your name and contact details are never shared — it's sent anonymously.</div>
+    <div class="err-msg" id="ty-err"></div>
+    <div class="field">
+      <label id="lbl-ty-message">Your message</label>
+      <textarea id="inp-ty-message" rows="4" style="width:100%;padding:13px 14px;border:2px solid #e5e5dc;border-radius:12px;font-size:14px;font-family:'Nunito Sans',sans-serif;color:#111;background:#fafaf7;outline:none" placeholder="Say thank you in your own words..."></textarea>
+    </div>
+    <div class="upload-zone" id="ty-photo-zone" onclick="document.getElementById('ty-photo-input').click()">
+      <div class="upload-icon">📷</div>
+      <p id="ty-photo-label">Tap to add a photo (optional)</p>
+      <input type="file" id="ty-photo-input" accept="image/*" style="display:none" onchange="handleThankyouPhoto(this)">
+    </div>
+    <div class="capture-confirm" id="ty-photo-confirm" style="display:none;">
+      <p id="ty-photo-confirm-label">Photo attached ✓</p>
+      <button class="btn btn-back" type="button" onclick="clearThankyouPhoto()" id="ty-remove-photo-btn">Remove photo</button>
+    </div>
+    <button class="btn btn-green" id="ty-submit-btn" style="margin-top:14px;" onclick="submitThankyou()">
+      <span id="ty-submit-text">Send thank-you →</span>
+    </button>
+    <button class="btn btn-back" onclick="showScreen('screen-status')" style="margin-top:12px;" id="ty-back-btn">← Back</button>
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="screen" id="screen-success">
+    <div class="success-wrap">
+      <div class="success-emoji">📦</div>
+      <div class="success-title" id="s-success-title">You're confirmed!</div>
+      <div class="success-month">
+        <div class="sm-month" id="success-month"></div>
+        <div class="sm-label" id="success-month-label">Food box distribution</div>
+      </div>
+      <div class="success-sub" id="s-success-sub">Our team will deliver to your registered address. You will receive a WhatsApp message before delivery.</div>
+      <div class="remaining-tag" id="remaining-tag"></div>
+      <a class="btn btn-green" id="success-whatsapp-btn" href="#" target="_blank" rel="noopener" style="display:none;margin-top:16px;text-decoration:none;text-align:center;">💬 WhatsApp us</a>
+    </div>
+    <button class="btn btn-back" onclick="showScreen('screen-home')" style="margin-top:20px;" id="success-back-btn">← Home</button>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SB_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+const EDGE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder';
+const FEEDBACK_EDGE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/food-box-feedback';
+const SCAN_QID_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/scan-qid';
+const FRIEND_PORTAL_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/friend-portal';
+
+var currentLang = 'en';
+var currentApp = null;
+// TEST COPY — this file has the fridge feature switched ON so the team can
+// try it out. It is a duplicate of apply.html, not linked from anywhere on
+// the site, and should never be shared with applicants. The live apply.html
+// keeps FRIDGES_FEATURE_ENABLED = false until the program is ready.
+var FRIDGES_FEATURE_ENABLED = true;
+
+// ── TRANSLATIONS ──────────────────────────────────────────────────
+var T = {
+  en: {
+    'hero-title': 'My Food Box',
+    'hero-sub': 'Feed a Friend · Qatar',
+    'home-q': 'What would you like to do?',
+    'home-sub': 'Choose an option below',
+    'home-new-title': 'Apply for the first time',
+    'home-new-sub': 'Not registered with us yet? Submit a new application',
+    'home-or': '— or —',
+    'home-existing-title': 'Check my status / Reapply',
+    'home-existing-sub': 'Already registered? Check your status or request your next box',
+    's-verify-title': 'Check your status',
+    's-verify-sub': 'Enter your QID and the WhatsApp number you registered with us.',
+    'lbl-qid': 'QID Number',
+    'lbl-wa': 'WhatsApp Number',
+    'verify-btn-text': 'Check my status →',
+    'back-home-btn': '← Back',
+    'capture-back-btn': '← Back',
+    'lbl-boxes': 'Boxes received',
+    'lbl-delivery-addr': 'Delivery address',
+    'lock-note-address': '🔒 On file — tell us below if this has changed',
+    'lock-note-household': '🔒 On file — contact our team to update this',
+    'lbl-section-divider': 'A few quick questions',
+    'lbl-chk-need': 'I confirm I still need food support and cannot purchase sufficient food for my household.',
+    'reapply-btn-text': 'Request my food box →',
+    'status-back-btn': '← Back',
+    's-success-title': "You're confirmed!",
+    'success-month-label': 'Food box distribution',
+    's-success-sub': 'Our team will deliver to your registered address. You will receive a WhatsApp message before delivery.',
+    'success-back-btn': '← Home',
+    'ty-title': 'Write a thank-you',
+    'ty-sub': "This goes to whoever sponsored your box. Your name and contact details are never shared — it's sent anonymously.",
+    'lbl-ty-message': 'Your message',
+    'ty-photo-label': 'Tap to add a photo (optional)',
+    'ty-photo-confirm-label': 'Photo attached ✓',
+    'ty-remove-photo-btn': 'Remove photo',
+    'ty-back-btn': '← Back',
+  },
+  ar: {
+    'hero-title': 'صندوق طعامي',
+    'hero-sub': 'فيد أ فريند · قطر',
+    'home-q': 'ماذا تريد أن تفعل؟',
+    'home-sub': 'اختر من الخيارات أدناه',
+    'home-new-title': 'التقديم لأول مرة',
+    'home-new-sub': 'لم تسجل معنا بعد؟ قدّم طلباً جديداً',
+    'home-or': '— أو —',
+    'home-existing-title': 'تحقق من حالتي / إعادة التقديم',
+    'home-existing-sub': 'مسجل لدينا؟ تحقق من حالة طلبك أو اطلب صندوقك القادم',
+    's-verify-title': 'تحقق من حالتك',
+    's-verify-sub': 'أدخل رقم هويتك ورقم الواتساب المسجل لدينا.',
+    'lbl-qid': 'رقم الهوية القطرية',
+    'lbl-wa': 'رقم واتساب',
+    'verify-btn-text': 'تحقق من حالتي ←',
+    'back-home-btn': '→ رجوع',
+    'capture-back-btn': '→ رجوع',
+    'lbl-boxes': 'الصناديق المستلمة',
+    'lbl-delivery-addr': 'عنوان التوصيل',
+    'lock-note-address': '🔒 مسجل لدينا — أخبرنا أدناه إذا تغيّر',
+    'lock-note-household': '🔒 مسجل لدينا — تواصل مع فريقنا لتحديث هذا',
+    'lbl-section-divider': 'بضعة أسئلة سريعة',
+    'lbl-chk-need': 'أؤكد أنني لا أزال بحاجة إلى دعم غذائي وغير قادر على شراء طعام كافٍ لأسرتي.',
+    'reapply-btn-text': 'طلب صندوق الطعام ←',
+    'status-back-btn': '→ رجوع',
+    's-success-title': 'تم التأكيد!',
+    'success-month-label': 'توزيع صندوق الطعام',
+    's-success-sub': 'سيقوم فريقنا بالتوصيل إلى عنوانك المسجل. ستتلقى رسالة على واتساب قبل التسليم.',
+    'success-back-btn': '→ الرئيسية',
+    'ty-title': 'كتابة رسالة شكر',
+    'ty-sub': 'تصل هذه الرسالة إلى من قام برعاية صندوقك. اسمك وبياناتك لا تُشارك أبداً — تُرسل دون الكشف عن هويتك.',
+    'lbl-ty-message': 'رسالتك',
+    'ty-photo-label': 'اضغط لإضافة صورة (اختياري)',
+    'ty-photo-confirm-label': 'تم إرفاق الصورة ✓',
+    'ty-remove-photo-btn': 'إزالة الصورة',
+    'ty-back-btn': '→ رجوع',
+  }
+};
+
+// Status messages — EN and AR
+var STATUS_CONTENT = {
+  new: {
+    icon: '⏳',
+    en: { title: "Application received", msg: "We've received your application and will be in touch soon. Thank you for your patience." },
+    ar: { title: "تم استلام طلبك", msg: "لقد استلمنا طلبك وسنتواصل معك قريباً. شكراً لصبرك." }
+  },
+  pending: {
+    icon: '⏳',
+    en: { title: "Application received", msg: "We've received your application — thank you. Applications typically take 3–4 weeks to process. Adding your salary and rent proof below (if you haven't already) can help speed up the review." },
+    ar: { title: "تم استلام طلبك", msg: "لقد استلمنا طلبك — شكراً لك. تستغرق معالجة الطلبات عادةً من 3 إلى 4 أسابيع. إضافة إثبات الراتب والإيجار أدناه (إن لم تكن قد أرفقتهما) قد تساعد في تسريع المراجعة." }
+  },
+  approved: {
+    icon: '✅',
+    en: { title: "You're approved!", msg: "Your household is approved for the food box programme. Confirm your details below to request your next box." },
+    ar: { title: "تمت الموافقة عليك!", msg: "أسرتك معتمدة في برنامج صندوق الطعام. أكّد بياناتك أدناه لطلب صندوقك القادم." }
+  },
+  long_term: {
+    icon: '💚',
+    en: { title: "You're part of our long-term support", msg: "Your household is on our long-term support list with no limit on boxes. Confirm your details below to request your next box." },
+    ar: { title: "أنت ضمن برنامج الدعم طويل الأمد", msg: "أسرتك مسجلة في قائمة الدعم طويل الأمد بدون حد لعدد الصناديق. أكّد بياناتك أدناه لطلب صندوقك القادم." }
+  },
+  confirmed: {
+    icon: '📦',
+    en: { title: "Box confirmed!", msg: "Your food box is confirmed for the next distribution. Our team will be in touch about delivery." },
+    ar: { title: "تم تأكيد صندوقك!", msg: "تم تأكيد صندوق طعامك للتوزيع القادم. سيتواصل فريقنا معك بشأن موعد التسليم." }
+  },
+  archived: {
+    icon: '🎁',
+    en: { title: "Allowance reached", msg: "You have received the maximum number of food boxes for your household. We are grateful to have supported you and wish you well." },
+    ar: { title: "تم استنفاد رصيدك", msg: "لقد استلمت الحد الأقصى من صناديق الطعام لأسرتك. نحن ممتنون لدعمكم ونتمنى لكم التوفيق." }
+  },
+  duplicate: {
+    icon: '⚠️',
+    en: { title: "Existing application", msg: "You have applied previously and cannot apply again. Please contact our team if you believe this is an error." },
+    ar: { title: "طلب موجود مسبقاً", msg: "لقد قدمت طلباً من قبل ولا يمكنك التقديم مجدداً. يرجى التواصل مع فريقنا إذا كنت تعتقد أن هذا خطأ." }
+  },
+  blocked: {
+    icon: '🚫',
+    en: { title: "Unable to process this application", msg: "We're unable to move forward with this application. Please contact our team directly if you'd like to discuss this." },
+    ar: { title: "تعذر معالجة هذا الطلب", msg: "لا يمكننا المتابعة مع هذا الطلب. يرجى التواصل مباشرة مع فريقنا إذا كنت ترغب في مناقشة ذلك." }
+  }
+};
+
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.getElementById('btn-ar').classList.toggle('active', lang === 'ar');
+  document.body.classList.toggle('ar', lang === 'ar');
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  var dict = T[lang];
+  Object.keys(dict).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = dict[id];
+  });
+  document.getElementById('inp-qid').placeholder = lang === 'ar' ? '٢٨xxxxxxxxx' : '28xxxxxxxxx';
+  document.getElementById('inp-wa').placeholder = lang === 'ar' ? '+٩٧٤ ٥xxx xxxx' : '+974 5xxx xxxx';
+  var pwEl = document.getElementById('inp-password');
+  if (pwEl) pwEl.placeholder = lang === 'ar' ? 'اطلب كلمة التحقق من فريقنا إن لم تكن لديك' : "Ask our team if you don't have this";
+  var tyMsgEl = document.getElementById('inp-ty-message');
+  if (tyMsgEl) tyMsgEl.placeholder = lang === 'ar' ? 'اكتب شكرك بكلماتك...' : 'Say thank you in your own words...';
+  var tySubmitTextEl = document.getElementById('ty-submit-text');
+  if (tySubmitTextEl) tySubmitTextEl.textContent = lang === 'ar' ? 'إرسال الشكر ←' : 'Send thank-you →';
+  // Carry the current language into the new-application form so switching
+  // to Arabic here doesn't dump someone into an English form they never
+  // asked for.
+  var applyNewLink = document.getElementById('apply-new-link');
+  if (applyNewLink) applyNewLink.href = 'food-box-application.html?lang=' + lang;
+  refreshLegacyToggleText();
+
+  if (currentApp && document.getElementById('screen-status').classList.contains('active')) {
+    showStatusScreen(currentApp.status || 'approved', currentApp, computeCanReapply(currentApp));
+  }
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Converts Arabic-Indic digits (٠-٩) to Western digits (0-9). Used for both
+// the QID field and the WhatsApp number field, since either can be typed
+// using the Arabic numeral keyboard on the Arabic version of this page, and
+// the backend lookup only matches on Western digits.
+function toWesternDigits(str) {
+  return (str || '').replace(/[٠-٩]/g, function(d) { return d.charCodeAt(0) - 0x0660; });
+}
+
+// Two separate WhatsApp numbers so the chat opens with someone who reads
+// that language — same idea as having Arabic/English case handlers.
+var WHATSAPP_NUMBER_EN = '97466602901';
+var WHATSAPP_NUMBER_AR = '97455443127';
+
+function buildWhatsAppLink(message) {
+  var number = currentLang === 'ar' ? WHATSAPP_NUMBER_AR : WHATSAPP_NUMBER_EN;
+  return 'https://wa.me/' + number + '?text=' + encodeURIComponent(message);
+}
+
+// A household is only offered the "reapply" flow once they've actually
+// received at least one box — status alone (approved/long_term) isn't
+// enough, since admins can mark a case approved before boxes_received is
+// bumped. long_term households on 0 boxes still wait for their first
+// confirmation like anyone else.
+function computeCanReapply(data) {
+  if (!data) return false;
+  var statusOk = data.status === 'approved' || data.status === 'long_term';
+  var hasReceivedBox = (data.boxes_received || 0) >= 1;
+  return statusOk && hasReceivedBox;
+}
+
+// ── VERIFY ────────────────────────────────────────────────────────
+var legacyMode = false;
+
+function toggleLegacyMode() {
+  legacyMode = !legacyMode;
+  document.getElementById('field-qid').style.display = legacyMode ? 'none' : 'block';
+  document.getElementById('field-password').style.display = legacyMode ? 'block' : 'none';
+  document.getElementById('verify-err').classList.remove('show');
+  refreshLegacyToggleText();
+}
+
+function refreshLegacyToggleText() {
+  var ar = currentLang === 'ar';
+  document.getElementById('legacy-toggle').innerHTML = legacyMode
+    ? (ar ? 'تملك رقم الهوية؟ <strong>استخدمه بدلاً من ذلك ←</strong>' : 'Have your QID number? <strong>Use it instead →</strong>')
+    : (ar ? 'رقم الهوية لا يعمل؟ <strong>استخدم رقم هاتفك بدلاً من ذلك ←</strong>' : "QID not working? <strong>Use your phone number instead →</strong>");
+  document.getElementById('lbl-password').textContent = ar ? 'كلمة التحقق' : 'Verification Password';
+}
+
+async function doVerify() {
+  if (legacyMode) return doVerifyLegacy();
+  var qid = toWesternDigits(document.getElementById('inp-qid').value.trim());
+  var wa = toWesternDigits(document.getElementById('inp-wa').value.trim());
+  var errEl = document.getElementById('verify-err');
+  var btn = document.getElementById('verify-btn');
+  var ar = currentLang === 'ar';
+  errEl.classList.remove('show');
+
+  if (!qid || qid.length < 8) {
+    errEl.textContent = ar ? 'يرجى إدخال رقم هويتك.' : 'Please enter your QID number.';
+    errEl.classList.add('show'); return;
+  }
+  if (!wa) {
+    errEl.textContent = ar ? 'يرجى إدخال رقم الواتساب.' : 'Please enter your WhatsApp number.';
+    errEl.classList.add('show'); return;
+  }
+
+  btn.disabled = true;
+  document.getElementById('verify-btn-text').textContent = ar ? 'جاري التحقق...' : 'Checking...';
+
+  try {
+    var result = await sb.rpc('check_reapply', { p_qid: qid, p_whatsapp: wa });
+    var data = result.data;
+
+    if (!data) {
+      errEl.textContent = ar ? 'حدث خطأ. يرجى المحاولة مرة أخرى.' : 'Something went wrong. Please try again.';
+      errEl.classList.add('show'); return;
+    }
+
+    if (!data.ok) {
+      var error = data.error || '';
+      if (error === 'not_found') {
+        errEl.textContent = ar
+          ? 'لم يتم العثور على سجل بهذه البيانات. تحقق من رقم الهوية ورقم الواتساب.'
+          : 'No record found. Please check your QID and WhatsApp number.';
+        errEl.classList.add('show'); return;
+      }
+      if (error === 'whatsapp_mismatch') {
+        errEl.textContent = ar ? 'رقم الواتساب غير مطابق لسجلاتنا.' : 'WhatsApp number does not match our records.';
+        errEl.classList.add('show'); return;
+      }
+      currentApp = data;
+      showStatusScreen(data.status || error.replace('status_', ''), data, false);
+      return;
+    }
+
+    currentApp = data;
+    showStatusScreen(data.status || 'approved', data, computeCanReapply(data));
+
+  } catch(e) {
+    errEl.textContent = ar ? 'خطأ في الاتصال. يرجى المحاولة مرة أخرى.' : 'Connection error. Please try again.';
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('verify-btn-text').textContent = ar ? 'تحقق من حالتي ←' : 'Check my status →';
+  }
+}
+
+async function doVerifyLegacy() {
+  var wa = toWesternDigits(document.getElementById('inp-wa').value.trim());
+  var pw = document.getElementById('inp-password').value.trim();
+  var errEl = document.getElementById('verify-err');
+  var btn = document.getElementById('verify-btn');
+  var ar = currentLang === 'ar';
+  errEl.classList.remove('show');
+
+  if (!wa) {
+    errEl.textContent = ar ? 'يرجى إدخال رقم الواتساب.' : 'Please enter your WhatsApp number.';
+    errEl.classList.add('show'); return;
+  }
+  if (!pw) {
+    errEl.textContent = ar ? 'يرجى إدخال كلمة التحقق.' : 'Please enter the verification password.';
+    errEl.classList.add('show'); return;
+  }
+
+  btn.disabled = true;
+  document.getElementById('verify-btn-text').textContent = ar ? 'جاري التحقق...' : 'Checking...';
+
+  try {
+    var res = await fetch(EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+      body: JSON.stringify({ type: 'check_reapply_legacy', whatsapp: wa, password: pw })
+    });
+    var data = await res.json();
+
+    if (!data) {
+      errEl.textContent = ar ? 'حدث خطأ. يرجى المحاولة مرة أخرى.' : 'Something went wrong. Please try again.';
+      errEl.classList.add('show'); return;
+    }
+    if (data.error === 'wrong_password') {
+      errEl.textContent = ar ? 'كلمة التحقق غير صحيحة.' : 'That verification password is incorrect.';
+      errEl.classList.add('show'); return;
+    }
+    if (data.error === 'not_found') {
+      errEl.textContent = ar ? 'لم يتم العثور على سجل بهذا رقم الهاتف.' : 'No record found with that phone number.';
+      errEl.classList.add('show'); return;
+    }
+    if (data.error === 'multiple_matches') {
+      errEl.textContent = ar
+        ? 'تم العثور على أكثر من سجل بهذا الرقم. يرجى التواصل معنا مباشرة على واتساب للتحقق.'
+        : "We found more than one record with that number. Please message us directly on WhatsApp so we can verify it's you.";
+      errEl.classList.add('show'); return;
+    }
+
+    currentApp = data;
+    // Households (or a member within them) with no QID on file used to be
+    // blocked here behind a forced QID-photo upload before they could do
+    // anything else. That's no longer required to reapply — let them go
+    // straight into the normal status/reapply screen. doReapply() checks
+    // currentApp.needs_qid and, if set, routes the submission to admin
+    // review (flagging the case so a team member follows up and collects
+    // QIDs for the household) instead of auto-confirming a box.
+    if (data.ok || data.needs_qid) {
+      showStatusScreen(data.status || 'approved', data, computeCanReapply(data));
+    } else {
+      showStatusScreen(data.status || (data.error || '').replace('status_', ''), data, false);
+    }
+  } catch(e) {
+    errEl.textContent = ar ? 'خطأ في الاتصال. يرجى المحاولة مرة أخرى.' : 'Connection error. Please try again.';
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('verify-btn-text').textContent = ar ? 'تحقق من حالتي ←' : 'Check my status →';
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function() { resolve(reader.result.split(',')[1]); };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Photos of documents (rent contracts, salary slips) taken straight from a
+// phone camera are commonly several MB, which once base64-encoded can push
+// past the edge function's request-size ceiling. Downscale and re-encode as
+// JPEG before uploading so a photo comes in well under that limit — PDFs
+// are left untouched since they can't be resized this way.
+var UPLOAD_MAX_DIMENSION = 1800;
+var UPLOAD_JPEG_QUALITY = 0.82;
+
+function compressUploadFile(file) {
+  if (!file.type || file.type.indexOf('image/') !== 0 || file.type === 'image/svg+xml') {
+    return Promise.resolve(file);
+  }
+  return new Promise(function(resolve) {
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function() {
+      URL.revokeObjectURL(url);
+      var scale = Math.min(1, UPLOAD_MAX_DIMENSION / Math.max(img.width, img.height));
+      if (scale >= 1) { resolve(file); return; }
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(function(blob) {
+        if (!blob) { resolve(file); return; }
+        resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+      }, 'image/jpeg', UPLOAD_JPEG_QUALITY);
+    };
+    img.onerror = function() { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
+// Same zone-to-area lookup used on the public application form
+// (food-box-application.html) and in the admin panel, kept identical so a
+// zone scanned here resolves to the same area name everywhere.
+var ZONE_AREA = {
+  1:'Al Bidda',2:'Al Bidda',3:'Musheirib',4:'Musheirib',5:'Al Najada',
+  6:'Old Al Ghanim',7:'Al Souq',10:'Wadi Al Sail',11:'Rumeilah',12:'Al Bidda',
+  13:'Musheirib',14:'Fereej Abdel Aziz',15:'Doha al Jadidah',16:'Old Al Ghanim',
+  17:'Al Rumaila',18:'New Salata',19:'Doha Port',20:'Wadi Al Sail',21:'Rumeilah',
+  22:'Bin Mahmoud',23:'Bin Mahmoud',24:'Rawdat Al Khail',25:'Al Mansoura',
+  26:'Najma',27:'Umm Ghuwailina',28:'Al Khulaifat',30:'Duhail',31:'Umm Lekhba',
+  32:'Madinat Khalifa North',33:'Al Markhiya',34:'Madinat Khalifa South',
+  35:'Fereej Kulaib',36:'Messila',37:'Bin Omran',38:'Al Sadd',39:'Al Nasr',
+  40:'New Salata',41:'Nuaija',42:'Hilal',43:'Nuaija',44:'Nuaija',
+  45:'Old Airport',46:'Thumama',47:'Thumama',48:'Old Airport',49:'Ras Abu Aboud',
+  50:'Thumama',57:'Industrial Area',58:'Al Waab',61:'Al Dafna',63:'Onaiza',
+  64:'Onaiza',65:'Onaiza',66:'Onaiza',67:'Al Markhiya',68:'Al Markhiya',
+  51:'Al Gharafa',52:'Al Kharaitiyat',53:'Al Waab',54:'Muraikh',55:'Al Waab',
+  56:'Abu Hamour',81:'Al Gharafa',83:'Al Kharaitiyat',96:'Al Egla',97:'Al Egla',
+  69:'Lusail',70:'Al Kheesa',71:'Umm Salal Mohammed',72:'Shahaniya',73:'Shahaniya',
+  74:'Al Khor',75:'Al Khor',76:'Al Khor',77:'Al Khor',78:'Al Khor',79:'Al Khor',
+  80:'Shahaniya',82:'Shahaniya',84:'Shahaniya',85:'Shahaniya',86:'Shahaniya',
+  90:'Wakrah',91:'Wakrah',92:'Wakrah',93:'Wakrah',94:'Wakrah',95:'Wakrah',98:'Wakrah'
+};
+
+function qidDateToISO(d) {
+  if (!d || typeof d !== 'string') return null;
+  var parts = d.split('/');
+  if (parts.length !== 3) return null;
+  var dd = parts[0].padStart(2, '0');
+  var mm = parts[1].padStart(2, '0');
+  var yyyy = parts[2];
+  if (yyyy.length !== 4 || isNaN(dd) || isNaN(mm) || isNaN(yyyy)) return null;
+  return yyyy + '-' + mm + '-' + dd;
+}
+
+var captureQIDFrontFile = null;
+var captureQIDBackFile = null;
+var capturedQIDParsed = null;
+
+function resetCaptureScreen() {
+  captureQIDFrontFile = null;
+  captureQIDBackFile = null;
+  capturedQIDParsed = null;
+  ['capture-qid-front-zone', 'capture-qid-back-zone'].forEach(function(id) {
+    var el = document.getElementById(id);
+    el.style.display = 'block';
+    el.classList.remove('uploaded');
+  });
+  document.getElementById('capture-qid-front-input').value = '';
+  document.getElementById('capture-qid-back-input').value = '';
+  document.getElementById('capture-scanning').style.display = 'none';
+  document.getElementById('capture-confirm').style.display = 'none';
+  document.getElementById('capture-err').classList.remove('show');
+}
+
+function handleCaptureQIDFront(input) {
+  if (!input.files || !input.files[0]) return;
+  captureQIDFrontFile = input.files[0];
+  document.getElementById('capture-qid-front-zone').classList.add('uploaded');
+  if (captureQIDBackFile) scanCapturedQID();
+}
+
+function handleCaptureQIDBack(input) {
+  if (!input.files || !input.files[0]) return;
+  captureQIDBackFile = input.files[0];
+  document.getElementById('capture-qid-back-zone').classList.add('uploaded');
+  if (captureQIDFrontFile) scanCapturedQID();
+}
+
+function scanCapturedQID() {
+  var ar = currentLang === 'ar';
+  document.getElementById('capture-qid-front-zone').style.display = 'none';
+  document.getElementById('capture-qid-back-zone').style.display = 'none';
+  document.getElementById('capture-scanning-text').textContent = ar ? '⏳ جاري قراءة هويتك…' : '⏳ Reading your QID…';
+  document.getElementById('capture-scanning').style.display = 'block';
+  document.getElementById('capture-err').classList.remove('show');
+
+  Promise.all([fileToBase64(captureQIDFrontFile), fileToBase64(captureQIDBackFile)]).then(function(b64s) {
+    return fetch(SCAN_QID_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+      body: JSON.stringify({
+        images: {
+          front: { type: captureQIDFrontFile.type || 'image/jpeg', data: b64s[0] },
+          back: { type: captureQIDBackFile.type || 'image/jpeg', data: b64s[1] }
+        }
+      })
+    });
+  }).then(function(r) { return r.json(); }).then(function(raw) {
+    document.getElementById('capture-scanning').style.display = 'none';
+    if (raw.error || !raw.qid_number) {
+      document.getElementById('capture-err').textContent = ar
+        ? 'تعذّرت قراءة الصورة بوضوح. يرجى تجربة صورة أوضح.'
+        : "Couldn't read that clearly. Please try clearer photos.";
+      document.getElementById('capture-err').classList.add('show');
+      document.getElementById('capture-qid-front-zone').style.display = 'block';
+      document.getElementById('capture-qid-back-zone').style.display = 'block';
+      return;
+    }
+    capturedQIDParsed = raw;
+    document.getElementById('capture-confirm-label').textContent = ar ? 'هل هذا أنت؟' : 'Is this you?';
+    document.getElementById('capture-parsed-name').textContent = raw.name || '';
+    document.getElementById('capture-confirm-btn').textContent = ar ? 'نعم، هذا أنا ←' : "Yes, that's me →";
+    document.getElementById('capture-confirm').style.display = 'block';
+  }).catch(function() {
+    document.getElementById('capture-scanning').style.display = 'none';
+    document.getElementById('capture-err').textContent = ar ? 'حدث خطأ. يرجى المحاولة مرة أخرى.' : 'Something went wrong. Please try again.';
+    document.getElementById('capture-err').classList.add('show');
+    document.getElementById('capture-qid-front-zone').style.display = 'block';
+    document.getElementById('capture-qid-back-zone').style.display = 'block';
+  });
+}
+
+function confirmCaptureQID() {
+  if (!currentApp || !currentApp.id || !capturedQIDParsed) return;
+  var btn = document.getElementById('capture-confirm-btn');
+  var ar = currentLang === 'ar';
+  btn.disabled = true;
+
+  fetch(EDGE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+    body: JSON.stringify({
+      type: 'attach_qid_to_application',
+      application_id: currentApp.id,
+      qid_number: capturedQIDParsed.qid_number,
+      full_name: capturedQIDParsed.name,
+      qid_expiry: qidDateToISO(capturedQIDParsed.expiry),
+      nationality: capturedQIDParsed.nationality
+    })
+  }).then(function(r) { return r.json(); }).then(function() {
+    return Promise.all([
+      fileToBase64(captureQIDFrontFile).then(function(b64) {
+        return fetch(EDGE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+          body: JSON.stringify({ type: 'upload_document', application_id: currentApp.id, doc_key: 'qid_front', file_base64: b64, media_type: captureQIDFrontFile.type || 'image/jpeg' })
+        });
+      }),
+      fileToBase64(captureQIDBackFile).then(function(b64) {
+        return fetch(EDGE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+          body: JSON.stringify({ type: 'upload_document', application_id: currentApp.id, doc_key: 'qid_back', file_base64: b64, media_type: captureQIDBackFile.type || 'image/jpeg' })
+        });
+      })
+    ]);
+  }).then(function() {
+    currentApp.qid_number = capturedQIDParsed.qid_number;
+    currentApp.name = currentApp.name || capturedQIDParsed.name;
+    showStatusScreen(currentApp.status || 'approved', currentApp, computeCanReapply(currentApp));
+  }).catch(function() {
+    document.getElementById('capture-err').textContent = ar ? 'تعذّر الحفظ. يرجى المحاولة مرة أخرى.' : 'Could not save. Please try again.';
+    document.getElementById('capture-err').classList.add('show');
+  }).finally(function() {
+    btn.disabled = false;
+  });
+}
+
+
+function showStatusScreen(status, data, canReapply) {
+  var ar = currentLang === 'ar';
+  var name = (data.name || '').split(' ')[0];
+  var content = STATUS_CONTENT[status] || STATUS_CONTENT.new;
+  var langContent = content[ar ? 'ar' : 'en'];
+
+  document.getElementById('status-greeting').textContent = ar ? ('أهلاً ' + name + '!') : ('Hello, ' + name + '!');
+  document.getElementById('status-sub-text').textContent = ar ? 'هذه حالة طلبك الحالية.' : 'Here is your current application status.';
+
+  var upcomingCard = document.getElementById('upcoming-card');
+  var deliveredCard = document.getElementById('delivered-card');
+  if (data.last_delivered_at) {
+    upcomingCard.style.display = 'none';
+    deliveredCard.style.display = 'flex';
+    var dDate = '—';
+    try { dDate = new Date(data.last_delivered_at).toLocaleDateString(ar ? 'ar-QA' : 'en-GB', { year: 'numeric', month: 'short', day: 'numeric' }); } catch(e) {}
+    document.getElementById('delivered-title').textContent = ar ? 'تم التوصيل' : 'Delivered';
+    document.getElementById('delivered-msg').textContent = (ar ? 'تم توصيل صندوقك بتاريخ ' : 'Your box was delivered on ') + dDate;
+    var thankBtn = document.getElementById('thankyou-open-btn');
+    var thankSent = document.getElementById('thankyou-sent-msg');
+    if (data.thanked_at) { thankBtn.style.display = 'none'; thankSent.style.display = 'block'; }
+    else { thankBtn.style.display = 'inline-block'; thankSent.style.display = 'none'; thankBtn.textContent = ar ? 'كتابة رسالة شكر 💌' : 'Write a thank-you 💌'; }
+  } else if (data.upcoming_trip_date) {
+    deliveredCard.style.display = 'none';
+    upcomingCard.style.display = 'flex';
+    var uDate = '—';
+    try { uDate = new Date(data.upcoming_trip_date).toLocaleDateString(ar ? 'ar-QA' : 'en-GB', { year: 'numeric', month: 'short', day: 'numeric' }); } catch(e) {}
+    document.getElementById('upcoming-title').textContent = ar ? 'مجدول للتوصيل' : 'Scheduled for delivery';
+    document.getElementById('upcoming-msg').textContent = (ar ? 'موعد التوصيل المتوقع: ' : 'Expected around ') + uDate;
+  } else {
+    upcomingCard.style.display = 'none';
+    deliveredCard.style.display = 'none';
+  }
+
+  var card = document.getElementById('status-card');
+  card.className = 'status-card ' + status;
+  document.getElementById('status-icon').textContent = content.icon;
+  document.getElementById('status-title').textContent = langContent.title;
+  document.getElementById('status-msg').textContent = langContent.msg;
+
+  var pendingDocsSection = document.getElementById('pending-docs-section');
+  if (data.status === 'new' || data.status === 'pending') {
+    pendingDocsSection.style.display = 'block';
+    document.getElementById('lbl-pending-docs').textContent = ar ? 'ساعدنا على تسريع مراجعة طلبك' : 'Help speed up your review';
+    document.getElementById('salary-proof-label').textContent = ar ? 'اضغط لرفع إثبات الراتب' : 'Tap to upload salary proof';
+    document.getElementById('rent-proof-label').textContent = ar ? 'اضغط لرفع إثبات الإيجار' : 'Tap to upload rent proof';
+    document.getElementById('salary-proof-done').textContent = ar ? '✓ إثبات الراتب متوفر' : '✓ Salary proof on file';
+    document.getElementById('rent-proof-done').textContent = ar ? '✓ إثبات الإيجار متوفر' : '✓ Rent proof on file';
+    document.getElementById('salary-proof-zone').style.display = data.has_salary_proof ? 'none' : 'block';
+    document.getElementById('salary-proof-done').style.display = data.has_salary_proof ? 'block' : 'none';
+    document.getElementById('rent-proof-zone').style.display = data.has_rent_proof ? 'none' : 'block';
+    document.getElementById('rent-proof-done').style.display = data.has_rent_proof ? 'block' : 'none';
+  } else {
+    pendingDocsSection.style.display = 'none';
+  }
+
+  var allowanceWrap = document.getElementById('allowance-wrap');
+  if (data.boxes_received !== undefined && data.max_boxes) {
+    allowanceWrap.style.display = 'block';
+    var received = data.boxes_received || 0;
+    var max = data.max_boxes;
+    var pct = Math.round((received / max) * 100);
+    document.getElementById('allowance-count').textContent = received + ' / ' + max;
+    var fill = document.getElementById('allowance-fill');
+    fill.style.width = pct + '%';
+    fill.className = 'allowance-fill ' + (pct >= 100 ? 'fill-full' : pct >= 66 ? 'fill-warn' : 'fill-ok');
+    document.getElementById('lbl-boxes').textContent = ar ? 'الصناديق المستلمة' : 'Boxes received';
+  } else {
+    allowanceWrap.style.display = 'none';
+  }
+
+  var reapplySection = document.getElementById('reapply-section');
+  if (canReapply) {
+    reapplySection.style.display = 'block';
+    // Prefer the area name actually on file (rec.area); fall back to the
+    // zone→area lookup used elsewhere on this page if area was never set.
+    // Showing just a bare zone number ("Zone 38") isn't something most
+    // people can confirm against — the area name ("Al Sadd") is.
+    var statusArea = data.area || (data.zone ? (ZONE_AREA[parseInt(data.zone, 10)] || null) : null);
+    var parts = [data.building, data.unit ? (ar ? 'وحدة ' : 'Unit ') + data.unit : null,
+      data.street ? (ar ? 'ش.' : 'St.') + data.street : null,
+      statusArea,
+      data.zone ? (ar ? 'م.' : 'Zone ') + data.zone : null].filter(Boolean);
+    document.getElementById('status-address').textContent = parts.join(', ') || (ar ? 'كما هو مسجل' : 'As registered');
+    document.getElementById('lbl-delivery-addr').textContent = ar ? 'عنوان التوصيل' : 'Delivery address';
+
+    var hhBox = document.getElementById('household-size-box');
+    if (data.household_size) {
+      hhBox.style.display = 'block';
+      document.getElementById('lbl-household-size').textContent = ar ? 'عدد أفراد الأسرة' : 'Household members';
+      document.getElementById('status-household-size').textContent = data.household_size;
+    } else {
+      hhBox.style.display = 'none';
+    }
+
+    document.getElementById('lbl-still-here').textContent = ar ? 'هل ما زلت تعيش في هذا العنوان؟' : 'Are you still living at this address?';
+    document.getElementById('loc-yes-btn').textContent = ar ? 'نعم، ما زلت هنا' : 'Yes, still here';
+    document.getElementById('loc-no-btn').textContent = ar ? 'لا، انتقلت' : "No, I've moved";
+    document.getElementById('reapply-plate-label').textContent = ar ? 'اضغط لرفع لوحة عنوانك الجديدة' : 'Tap to upload your new blue address plate';
+    document.getElementById('lbl-new-addr').textContent = ar ? 'العنوان الجديد' : 'New address';
+
+    // Shows for ANY household with a diaper-eligible child (under 4),
+    // whether or not diaper_size was ever set before — previously this
+    // was gated on already_has_diapers too, which meant a family with a
+    // brand-new baby who'd never been issued diapers could never request
+    // them through reapply at all (had to go through an admin instead).
+    diaperQuestionVisible = !!data.diaper_eligible_child;
+    formulaQuestionVisible = !!(!data.already_has_formula && data.formula_eligible_baby);
+    pregnancyQuestionVisible = !!data.adult_female_present;
+
+    document.getElementById('diaper-question-block').style.display = diaperQuestionVisible ? 'block' : 'none';
+    document.getElementById('lbl-needs-diapers').textContent = ar ? 'حفاضات لطفلك' : 'Diapers for your child';
+    document.getElementById('lbl-chk-no-diapers').textContent = ar ? 'لم نعد بحاجة إلى حفاضات' : 'We no longer need diapers';
+
+    document.getElementById('formula-question-block').style.display = formulaQuestionVisible ? 'block' : 'none';
+    document.getElementById('lbl-needs-formula').textContent = ar ? 'هل تريد طلب حليب أطفال؟' : 'Would you like to request formula?';
+    document.getElementById('formula-yes-btn').textContent = ar ? 'نعم' : 'Yes';
+    document.getElementById('formula-no-btn').textContent = ar ? 'لا' : 'No';
+
+    document.getElementById('pregnancy-block').style.display = pregnancyQuestionVisible ? 'block' : 'none';
+    document.getElementById('lbl-pregnant').textContent = ar ? 'هل توجد حالة حمل حالياً في أسرتك؟' : 'Is anyone in your household currently pregnant?';
+    document.getElementById('pregnant-yes-btn').textContent = ar ? 'نعم' : 'Yes';
+    document.getElementById('pregnant-no-btn').textContent = ar ? 'لا' : 'No';
+    document.getElementById('lbl-due-date').textContent = ar ? 'تاريخ الولادة المتوقع (إن كان معروفاً)' : 'Expected due date (if known)';
+
+    document.getElementById('lbl-chk-need').textContent = ar ? 'أؤكد أنني لا أزال بحاجة إلى دعم غذائي.' : 'I confirm I still need food support.';
+    resetLocationChoice();
+    resetDiaperFormulaChoice(data.diaper_size, data.formula);
+    resetPregnancyChoice(data.is_pregnant);
+
+    var anticipatedMonth = new Date();
+    anticipatedMonth.setMonth(anticipatedMonth.getMonth() + 1);
+    var monthStr = anticipatedMonth.toLocaleDateString(ar ? 'ar-QA' : 'en-GB', { year: 'numeric', month: 'long' });
+    document.getElementById('anticipated-date-note').textContent = (ar ? ' التوزيع القادم المتوقع: ' : 'Anticipated next distribution: ') + monthStr;
+
+    document.getElementById('chk-need').checked = false;
+    document.getElementById('reapply-btn').disabled = true;
+    document.getElementById('reapply-btn-text').textContent = ar ? 'طلب صندوق الطعام ←' : 'Request my food box →';
+    document.getElementById('reapply-err').classList.remove('show');
+  } else {
+    reapplySection.style.display = 'none';
+  }
+
+  document.getElementById('status-back-btn').textContent = ar ? '→ رجوع' : '← Back';
+
+  // Fridge alerts + wishlist requests are available to any real, resolved
+  // application (not the "duplicate"/"blocked" error states, which aren't
+  // an actual household record we can safely attach these to) — but the
+  // feature itself is paused (FRIDGES_FEATURE_ENABLED) until it's ready,
+  // so the tab still shows up but with a "coming soon" card instead.
+  var validApp = ['duplicate', 'blocked'].indexOf(status) === -1 && data.id;
+  var friendFeaturesOk = FRIDGES_FEATURE_ENABLED && validApp;
+  document.getElementById('fridge-watch-section').style.display = friendFeaturesOk ? 'block' : 'none';
+  document.getElementById('wishlist-section').style.display = friendFeaturesOk ? 'block' : 'none';
+  document.getElementById('fridges-coming-soon').style.display = (validApp && !FRIDGES_FEATURE_ENABLED) ? 'flex' : 'none';
+  document.getElementById('fridges-coming-soon-title').textContent = ar ? 'قريباً' : 'Coming soon';
+  document.getElementById('fridges-coming-soon-msg').textContent = ar
+    ? 'تنبيهات الثلاجات وطلبات الأصناف غير متاحة بعد — سنعلمكم فور توفرها!'
+    : "Fridge alerts and item requests aren't ready yet — we'll let you know the moment they're open!";
+  document.getElementById('status-subtab-bar').style.display = validApp ? 'flex' : 'none';
+  document.getElementById('subtab-foodbox-label').textContent = ar ? 'صندوق الطعام' : 'Food Box';
+  document.getElementById('subtab-fridges-label').textContent = FRIDGES_FEATURE_ENABLED
+    ? (ar ? 'الثلاجات' : 'Fridges')
+    : (ar ? 'الثلاجات (قريباً)' : 'Fridges (Coming soon)');
+  switchStatusTab('foodbox');
+  if (friendFeaturesOk) {
+    initFriendFeatureLabels();
+    loadFridgeWatchSection();
+    loadWishlistSection();
+  }
+
+  showScreen('screen-status');
+}
+
+// Splits the status screen into a "Food Box" tab (application status,
+// allowance, reapply) and a "Fridges" tab (fridge alerts + item requests) so
+// the two aren't jumbled together on one long scroll.
+function switchStatusTab(tab) {
+  var isFridges = tab === 'fridges';
+  document.getElementById('tab-foodbox').style.display = isFridges ? 'none' : 'block';
+  document.getElementById('tab-fridges').style.display = isFridges ? 'block' : 'none';
+  document.getElementById('subtab-foodbox-btn').classList.toggle('active', !isFridges);
+  document.getElementById('subtab-fridges-btn').classList.toggle('active', isFridges);
+}
+
+var locationChoice = null; // 'here' | 'moved' | null
+var movedAddressConfirmed = false;
+var reapplyPlateFile = null;
+var diaperChoice = null; // 'yes' | 'no' | null
+var diaperSizeVal = null;
+var formulaChoice = null; // 'yes' | 'no' | null
+var pregnantChoice = null; // 'yes' | 'no' | null
+var diaperQuestionVisible = false;
+var formulaQuestionVisible = false;
+var pregnancyQuestionVisible = false;
+
+var DIAPER_SIZES = ['NB (Newborn)', 'S (Size 1)', 'M (Size 2)', 'L (Size 3)', 'XL (Size 4)', 'XXL (Size 5)'];
+// Display-only Arabic labels — the value saved to the backend (dataset.val)
+// always stays the English string above, since that's what's already on
+// file for existing applicants (e.g. "XL (Size 4)"). Only what the pill
+// shows on screen changes with language.
+var DIAPER_SIZE_LABELS_AR = {
+  'NB (Newborn)': 'حديثي الولادة (NB)',
+  'S (Size 1)': 'قياس 1 (S)',
+  'M (Size 2)': 'قياس 2 (M)',
+  'L (Size 3)': 'قياس 3 (L)',
+  'XL (Size 4)': 'قياس 4 (XL)',
+  'XXL (Size 5)': 'قياس 5 (XXL)'
+};
+
+function openThankyou() {
+  document.getElementById('inp-ty-message').value = '';
+  thankyouPhotoFile = null;
+  document.getElementById('ty-photo-zone').style.display = 'block';
+  document.getElementById('ty-photo-confirm').style.display = 'none';
+  document.getElementById('ty-err').classList.remove('show');
+  showScreen('screen-thankyou');
+}
+
+var thankyouPhotoFile = null;
+
+function handleThankyouPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  thankyouPhotoFile = input.files[0];
+  document.getElementById('ty-photo-zone').style.display = 'none';
+  document.getElementById('ty-photo-confirm').style.display = 'block';
+}
+
+function clearThankyouPhoto() {
+  thankyouPhotoFile = null;
+  document.getElementById('ty-photo-input').value = '';
+  document.getElementById('ty-photo-zone').style.display = 'block';
+  document.getElementById('ty-photo-confirm').style.display = 'none';
+}
+
+async function submitThankyou() {
+  var ar = currentLang === 'ar';
+  var message = document.getElementById('inp-ty-message').value.trim();
+  var errEl = document.getElementById('ty-err');
+  var btn = document.getElementById('ty-submit-btn');
+  errEl.classList.remove('show');
+  if (!message && !thankyouPhotoFile) {
+    errEl.textContent = ar ? 'يرجى كتابة رسالة أو إضافة صورة.' : 'Please write a message or add a photo.';
+    errEl.classList.add('show');
+    return;
+  }
+  btn.disabled = true;
+  document.getElementById('ty-submit-text').textContent = ar ? 'جاري الإرسال...' : 'Sending...';
+  try {
+    var payload = { type: 'submit_thankyou', application_id: currentApp.id, message: message || null };
+    if (thankyouPhotoFile) {
+      payload.photo_base64 = await fileToBase64(thankyouPhotoFile);
+      payload.photo_media_type = thankyouPhotoFile.type || 'image/jpeg';
+    }
+    var res = await fetch(FEEDBACK_EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+      body: JSON.stringify(payload)
+    });
+    var raw = await res.json();
+    var d = raw.data || {};
+    if (d.error) {
+      errEl.textContent = ar ? 'تعذّر الإرسال. حاول مرة أخرى.' : 'Could not send. Please try again.';
+      errEl.classList.add('show');
+      btn.disabled = false;
+      document.getElementById('ty-submit-text').textContent = ar ? 'إرسال الشكر ←' : 'Send thank-you →';
+      return;
+    }
+    currentApp.thanked_at = new Date().toISOString();
+    showScreen('screen-status');
+    document.getElementById('thankyou-open-btn').style.display = 'none';
+    document.getElementById('thankyou-sent-msg').style.display = 'block';
+  } catch (e) {
+    errEl.textContent = ar ? 'خطأ في الاتصال. يرجى المحاولة مرة أخرى.' : 'Connection error. Please try again.';
+    errEl.classList.add('show');
+    btn.disabled = false;
+    document.getElementById('ty-submit-text').textContent = ar ? 'إرسال الشكر ←' : 'Send thank-you →';
+  }
+}
+
+function resetLocationChoice() {
+  locationChoice = null;
+  movedAddressConfirmed = false;
+  reapplyPlateFile = null;
+  document.getElementById('loc-yes-btn').classList.remove('selected');
+  document.getElementById('loc-no-btn').classList.remove('selected', 'moved');
+  document.getElementById('address-update-block').style.display = 'none';
+  document.getElementById('reapply-plate-zone').style.display = 'block';
+  document.getElementById('reapply-plate-confirm').style.display = 'none';
+  document.getElementById('reapply-plate-scanning').style.display = 'none';
+  document.getElementById('reapply-plate-input').value = '';
+}
+
+function resetDiaperFormulaChoice(existingDiaperSize, existingFormula) {
+  diaperChoice = null;
+  diaperSizeVal = null;
+  formulaChoice = null;
+  document.getElementById('chk-no-diapers').checked = false;
+  document.getElementById('reapply-diaper-pills').style.display = 'flex';
+  document.getElementById('formula-yes-btn').classList.remove('selected');
+  document.getElementById('formula-no-btn').classList.remove('selected');
+
+  var pillsContainer = document.getElementById('reapply-diaper-pills');
+  var arPills = currentLang === 'ar';
+  pillsContainer.innerHTML = '';
+  DIAPER_SIZES.forEach(function(s) {
+    var pill = document.createElement('div');
+    pill.className = 'diaper-pill';
+    pill.dataset.val = s;
+    pill.textContent = arPills ? (DIAPER_SIZE_LABELS_AR[s] || s) : s;
+    pill.onclick = function() { selectReapplyDiaper(pill); };
+    if (s === existingDiaperSize) pill.classList.add('selected');
+    pillsContainer.appendChild(pill);
+  });
+  if (existingDiaperSize && DIAPER_SIZES.indexOf(existingDiaperSize) !== -1) {
+    diaperSizeVal = existingDiaperSize;
+  }
+}
+
+function selectReapplyDiaper(pill) {
+  document.querySelectorAll('#reapply-diaper-pills .diaper-pill').forEach(function(p) { p.classList.remove('selected'); });
+  pill.classList.add('selected');
+  diaperSizeVal = pill.dataset.val;
+  updateReapplyBtn();
+}
+
+function toggleNoDiapers() {
+  var optedOut = document.getElementById('chk-no-diapers').checked;
+  diaperChoice = optedOut ? 'no' : null;
+  document.getElementById('reapply-diaper-pills').style.display = optedOut ? 'none' : 'flex';
+  if (optedOut) diaperSizeVal = null;
+  updateReapplyBtn();
+}
+
+function chooseNeedsFormula(isYes) {
+  formulaChoice = isYes ? 'yes' : 'no';
+  document.getElementById('formula-yes-btn').classList.toggle('selected', isYes);
+  document.getElementById('formula-no-btn').classList.toggle('selected', !isYes);
+  updateReapplyBtn();
+}
+
+function choosePregnant(isYes) {
+  pregnantChoice = isYes ? 'yes' : 'no';
+  document.getElementById('pregnant-yes-btn').classList.toggle('selected', isYes);
+  document.getElementById('pregnant-no-btn').classList.toggle('selected', !isYes);
+  document.getElementById('due-date-block').style.display = isYes ? 'block' : 'none';
+  updateReapplyBtn();
+}
+
+function resetPregnancyChoice(existingIsPregnant) {
+  pregnantChoice = null;
+  document.getElementById('pregnant-yes-btn').classList.remove('selected');
+  document.getElementById('pregnant-no-btn').classList.remove('selected');
+  document.getElementById('due-date-block').style.display = 'none';
+  document.getElementById('inp-due-date').value = '';
+  if (existingIsPregnant) choosePregnant(true);
+}
+
+function chooseStillHere(isHere) {
+  locationChoice = isHere ? 'here' : 'moved';
+  movedAddressConfirmed = false;
+  document.getElementById('loc-yes-btn').classList.toggle('selected', isHere);
+  document.getElementById('loc-no-btn').classList.toggle('selected', !isHere);
+  document.getElementById('loc-no-btn').classList.toggle('moved', !isHere);
+  document.getElementById('address-update-block').style.display = isHere ? 'none' : 'block';
+  if (isHere) {
+    document.getElementById('reapply-plate-zone').style.display = 'block';
+    document.getElementById('reapply-plate-confirm').style.display = 'none';
+  }
+  updateReapplyBtn();
+}
+
+function handleReapplyPlate(input) {
+  if (!input.files || !input.files[0]) return;
+  reapplyPlateFile = input.files[0];
+  var ar = currentLang === 'ar';
+  document.getElementById('reapply-plate-zone').style.display = 'none';
+  document.getElementById('reapply-plate-scanning-text').textContent = ar ? '⏳ جاري قراءة عنوانك…' : '⏳ Reading your address…';
+  document.getElementById('reapply-plate-scanning').style.display = 'block';
+
+  compressUploadFile(reapplyPlateFile).then(function(uploadFile) {
+    return fileToBase64(uploadFile).then(function(b64) {
+      var plateMediaType = uploadFile.type || 'image/jpeg';
+      return fetch(EDGE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+        body: JSON.stringify({ type: 'scan_plate', image_base64: b64, media_type: plateMediaType })
+      }).then(function(r) { return r.json(); }).then(function(raw) {
+        return { raw: raw, b64: b64, mediaType: plateMediaType };
+      });
+    });
+  }).then(function(scanResult) {
+    document.getElementById('reapply-plate-scanning').style.display = 'none';
+    var raw = scanResult.raw;
+    var parsed = raw.data || {};
+    if (!parsed.zone && !parsed.street && !parsed.building) {
+      document.getElementById('reapply-err').textContent = ar
+        ? 'تعذّرت قراءة اللوحة بوضوح. يرجى تجربة صورة أوضح.'
+        : "Couldn't read that plate clearly. Please try a clearer photo.";
+      document.getElementById('reapply-err').classList.add('show');
+      document.getElementById('reapply-plate-zone').style.display = 'block';
+      return;
+    }
+    document.getElementById('reapply-err').classList.remove('show');
+
+    var area = parsed.zone ? (ZONE_AREA[parseInt(parsed.zone, 10)] || null) : null;
+
+    // Save the updated address (now including area/flat, which the
+    // update_application_address edge function accepts as of the fix for
+    // the ReAPPPLY address-propagation bug) and separately persist the
+    // scanned plate photo itself as the "blue_plate" document, so it shows
+    // up as a viewable document on the admin side — previously the photo
+    // was used only for OCR and then discarded.
+    return Promise.all([
+      fetch(EDGE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+        body: JSON.stringify({
+          type: 'update_application_address',
+          application_id: currentApp.id,
+          zone: parsed.zone, street: parsed.street, building: parsed.building,
+          unit: parsed.unit, area: area
+        })
+      }).then(function(r) { return r.json(); }),
+      fetch(EDGE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+        body: JSON.stringify({
+          type: 'upload_document',
+          application_id: currentApp.id,
+          doc_key: 'blue_plate',
+          file_base64: scanResult.b64,
+          media_type: scanResult.mediaType
+        })
+      }).then(function(r) { return r.json(); })
+    ]).then(function() {
+      currentApp.zone = parsed.zone; currentApp.street = parsed.street;
+      currentApp.building = parsed.building; currentApp.unit = parsed.unit;
+      currentApp.area = area;
+      var newParts = [parsed.building, parsed.unit ? (ar ? 'وحدة ' : 'Unit ') + parsed.unit : null,
+        parsed.street ? (ar ? 'ش.' : 'St.') + parsed.street : null,
+        area || null,
+        parsed.zone ? (ar ? 'م.' : 'Zone ') + parsed.zone : null].filter(Boolean);
+      document.getElementById('reapply-plate-parsed').textContent = newParts.join(', ');
+      document.getElementById('status-address').textContent = newParts.join(', ');
+      document.getElementById('reapply-plate-confirm').style.display = 'block';
+      movedAddressConfirmed = true;
+      updateReapplyBtn();
+    });
+  }).catch(function() {
+    document.getElementById('reapply-plate-scanning').style.display = 'none';
+    document.getElementById('reapply-err').textContent = ar ? 'حدث خطأ. يرجى المحاولة مرة أخرى.' : 'Something went wrong. Please try again.';
+    document.getElementById('reapply-err').classList.add('show');
+    document.getElementById('reapply-plate-zone').style.display = 'block';
+  });
+}
+
+function handlePendingDoc(input, docKey) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var ar = currentLang === 'ar';
+  var zoneEl = document.getElementById(docKey.replace('_', '-') + '-zone');
+  var doneEl = document.getElementById(docKey.replace('_', '-') + '-done');
+  var originalLabel = zoneEl.querySelector('p').textContent;
+  zoneEl.querySelector('p').textContent = ar ? '⏳ جاري الرفع…' : '⏳ Uploading…';
+
+  compressUploadFile(file).then(function(uploadFile) {
+    return fileToBase64(uploadFile).then(function(b64) {
+      return fetch(EDGE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+        body: JSON.stringify({
+          type: 'upload_document',
+          application_id: currentApp.id,
+          doc_key: docKey,
+          file_base64: b64,
+          media_type: uploadFile.type || 'image/jpeg'
+        })
+      });
+    });
+  }).then(function(r) { return r.json(); }).then(function(raw) {
+    // The upload_document edge function returns {ok:true, path} at the
+    // TOP LEVEL of the response body — not nested under a "data" key. The
+    // old check here (`raw.data && raw.data.ok`) was therefore always
+    // false, so every upload — including ones that saved to storage just
+    // fine — was reported to the applicant as "Could not upload the
+    // file." This is the fix for that: check raw.ok directly, the same
+    // way the admin console's own upload handler already does.
+    if (raw.ok) {
+      zoneEl.style.display = 'none';
+      doneEl.style.display = 'block';
+    } else {
+      zoneEl.querySelector('p').textContent = originalLabel;
+      alert(ar ? 'تعذّر رفع الملف. حاول مرة أخرى.' : (raw.error ? 'Could not upload the file: ' + raw.error : 'Could not upload the file. Please try again.'));
+    }
+  }).catch(function() {
+    zoneEl.querySelector('p').textContent = originalLabel;
+    alert(ar ? 'خطأ في الاتصال.' : 'Connection error. Please try again.');
+  });
+}
+
+function updateReapplyBtn() {
+  var locationOk = locationChoice === 'here' || (locationChoice === 'moved' && movedAddressConfirmed);
+  var diaperOk = !diaperQuestionVisible || diaperChoice === 'no' || !!diaperSizeVal;
+  var formulaOk = !formulaQuestionVisible || formulaChoice === 'yes' || formulaChoice === 'no';
+  var pregnantOk = !pregnancyQuestionVisible || pregnantChoice === 'yes' || pregnantChoice === 'no';
+  var ok = locationOk && diaperOk && formulaOk && pregnantOk && document.getElementById('chk-need').checked;
+  document.getElementById('reapply-btn').disabled = !ok;
+}
+
+async function doReapply() {
+  if (!currentApp || !currentApp.id) return;
+  var ar = currentLang === 'ar';
+  var btn = document.getElementById('reapply-btn');
+  var errEl = document.getElementById('reapply-err');
+  btn.disabled = true;
+  document.getElementById('reapply-btn-text').textContent = ar ? 'جاري التأكيد...' : 'Confirming...';
+  errEl.classList.remove('show');
+
+  var extrasPayload = { type: 'update_reapply_extras', application_id: currentApp.id };
+  if (diaperQuestionVisible) {
+    extrasPayload.diaper_size = diaperChoice === 'no' ? 'Not needed' : diaperSizeVal;
+  }
+  if (formulaQuestionVisible) {
+    extrasPayload.formula = formulaChoice === 'yes' ? 'Yes' : 'Not needed';
+  }
+  if (pregnancyQuestionVisible) {
+    extrasPayload.is_pregnant = pregnantChoice === 'yes';
+    extrasPayload.due_date = pregnantChoice === 'yes' ? (document.getElementById('inp-due-date').value || null) : null;
+  }
+
+  fetch(EDGE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
+    body: JSON.stringify(extrasPayload)
+  }).catch(function() {});
+
+  try {
+    // Households (or a member within them) with no QID on file don't get
+    // auto-confirmed for a box — the RPC instead flags the application for
+    // a team member to review and collect QIDs for the group.
+    var result = await sb.rpc('do_reapply', { p_application_id: currentApp.id, p_no_qid: !!currentApp.needs_qid });
+    var data = result.data;
+
+    if (!data || !data.ok) {
+      errEl.textContent = ar ? 'حدث خطأ. يرجى المحاولة مرة أخرى.' : 'Something went wrong. Please try again.';
+      errEl.classList.add('show');
+      btn.disabled = false;
+      document.getElementById('reapply-btn-text').textContent = ar ? 'طلب صندوق الطعام ←' : 'Request my food box →';
+      return;
+    }
+
+    if (data.pending_review) {
+      document.getElementById('success-month').textContent = '';
+      document.getElementById('success-month-label').textContent = '';
+      document.getElementById('s-success-title').textContent = ar ? 'تم استلام طلبك' : 'Request received';
+      document.getElementById('s-success-sub').textContent = ar
+        ? 'يرجى مراسلتنا على واتساب وإرسال صور بطاقات الهوية القطرية لجميع أفراد أسرتك، بالإضافة إلى صورة اللوحة الزرقاء لعنوانك، لإكمال هذا الطلب.'
+        : 'Please WhatsApp us the QIDs for everyone in your household, plus a photo of your blue address plate, to complete this.';
+      document.getElementById('remaining-tag').textContent = '';
+      document.getElementById('success-back-btn').textContent = ar ? '→ الرئيسية' : '← Home';
+      var waMsg = ar
+        ? 'مرحباً، لقد قدمت طلب إعادة تقديم لصندوق الطعام ولا تتوفر لدي هوية مسجلة لدى فريقكم. سأرسل الآن صور الهوية القطرية لجميع أفراد أسرتي بالإضافة إلى صورة اللوحة الزرقاء لعنواني.'
+        : "Hi, I just submitted a reapplication for my food box and don't have a QID on file with you. I'll send the QIDs for everyone in my household, plus a photo of my blue address plate, now.";
+      var waBtn = document.getElementById('success-whatsapp-btn');
+      waBtn.href = buildWhatsAppLink(waMsg);
+      waBtn.textContent = ar ? '💬 راسلنا على واتساب' : '💬 WhatsApp us';
+      waBtn.style.display = 'inline-block';
+      showScreen('screen-success');
+      return;
+    }
+
+    // data.confirmed_for is always the English month name from the backend
+    // (it runs a fixed Postgres to_char format) — for Arabic we compute the
+    // same "next calendar month" date client-side instead and format it
+    // with the ar-QA locale, the same way anticipated-date-note already does.
+    var confirmedMonthDate = new Date();
+    confirmedMonthDate.setMonth(confirmedMonthDate.getMonth() + 1);
+    var month = ar
+      ? confirmedMonthDate.toLocaleDateString('ar-QA', { year: 'numeric', month: 'long' })
+      : (data.confirmed_for || confirmedMonthDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'long' }));
+    document.getElementById('success-month').textContent = month;
+    document.getElementById('success-month-label').textContent = ar ? 'توزيع صندوق الطعام' : 'Food box distribution';
+    document.getElementById('s-success-title').textContent = ar ? 'تم التأكيد!' : "You're confirmed!";
+    document.getElementById('s-success-sub').textContent = ar
+      ? 'سيقوم فريقنا بالتوصيل إلى عنوانك. ستتلقى رسالة واتساب قبل التسليم.'
+      : 'Our team will deliver to your registered address. You will receive a WhatsApp message before delivery.';
+    // This screen is shared with the no-QID pending_review case above,
+    // which shows this button — hide it here so a normal confirmed
+    // reapply doesn't carry it over from a previous visit.
+    document.getElementById('success-whatsapp-btn').style.display = 'none';
+    if (currentApp.status === 'long_term' || currentApp.max_boxes == null) {
+      document.getElementById('remaining-tag').textContent = ar
+        ? 'أنت ضمن برنامج الدعم طويل الأمد — بلا حد لعدد الصناديق'
+        : "You're on long-term support — no limit on boxes";
+    } else {
+      var remaining = (currentApp.max_boxes || 3) - (currentApp.boxes_received || 0) - 1;
+      document.getElementById('remaining-tag').textContent = ar
+        ? 'الصناديق المتبقية في رصيدك: ' + remaining
+        : 'Boxes remaining in your allowance: ' + remaining;
+    }
+    document.getElementById('success-back-btn').textContent = ar ? '→ الرئيسية' : '← Home';
+    showScreen('screen-success');
+
+  } catch(e) {
+    errEl.textContent = ar ? 'خطأ في الاتصال.' : 'Connection error. Please try again.';
+    errEl.classList.add('show');
+    btn.disabled = false;
+    document.getElementById('reapply-btn-text').textContent = ar ? 'طلب صندوق الطعام ←' : 'Request my food box →';
+  }
+}
+
+// Arabic-Indic digits (٠-٩) typed into the QID or WhatsApp field are left
+// on screen exactly as typed — we don't rewrite them to Western digits
+// live, since that reads as "my Arabic keyboard typed English numbers" to
+// the person filling it in. Matching against the backend still works
+// either way: doVerify() and doVerifyLegacy() both run toWesternDigits()
+// on the field value at submit time, right before the lookup.
+
+// Honor an inbound ?lang=ar (e.g. from a WhatsApp broadcast link or a QR
+// code aimed at Arabic speakers) so this page actually opens in Arabic
+// instead of always defaulting to English regardless of how someone got
+// here. setLang() already updates the "Submit a new application" link's
+// href to carry the same lang through to food-box-application.html, so
+// this one fix covers both pages.
+var _initialLang = new URLSearchParams(window.location.search).get('lang');
+if (_initialLang === 'ar') {
+  setLang('ar');
+} else {
+  refreshLegacyToggleText();
+}
+
+// ── FRIDGE ALERTS + WISHLIST REQUESTS ───────────────────────────────
+// Both features hang off currentApp.id (set by doVerify/doVerifyLegacy).
+// Reads (fridge list, my watched fridges, my wishlist) go straight to
+// Supabase with the anon key — all three are safe to read publicly.
+// Writes (choosing watched fridges, submitting requests) go through the
+// friend-portal edge function, which is the only thing allowed to write
+// to these tables (see RLS: "no direct write").
+
+var allFridgesCache = null;      // [{id,code,name_en,name_ar,zone_number,zone_name,zone_name_ar}]
+var myWatchIds = [];             // fridge ids currently selected (max 3), pending save
+var myWishlistItems = [];        // this week's wishlist rows for currentApp
+
+function initFriendFeatureLabels() {
+  var ar = currentLang === 'ar';
+  document.getElementById('lbl-fridge-watch-divider').textContent = ar ? 'تنبيهات الثلاجات' : 'Fridge alerts';
+  document.getElementById('fridge-watch-sub').textContent = ar
+    ? 'اختر حتى 3 ثلاجات — سنرسل لك بريدًا إلكترونيًا عند تعبئة إحداها.'
+    : "Pick up to 3 fridges — we'll email you when one of them is refilled.";
+  document.getElementById('fridge-watch-save-text').textContent = ar ? 'حفظ ثلاجاتي' : 'Save my fridges';
+  document.getElementById('lbl-wishlist-divider').textContent = ar ? 'طلب أصناف' : 'Request items';
+  document.getElementById('wishlist-sub').textContent = ar
+    ? 'اطلب حتى 5 أصناف أسبوعيًا. الطلبات المعتمدة يتم استلامها من قبل متطوعينا.'
+    : 'Ask for up to 5 items a week. Approved requests are picked up by our volunteers.';
+  document.getElementById('wishlist-add-row-text').textContent = ar ? '+ إضافة صنف آخر' : '+ Add another item';
+  document.getElementById('wishlist-submit-text').textContent = ar ? 'إرسال الطلب' : 'Send request';
+  document.getElementById('fairy-coming-title').textContent = ar ? 'جنية في الطريق إليك' : 'A fairy is on the way';
+}
+
+// ── Fridge alerts ────────────────────────────────────────────────────
+
+async function loadFridgeWatchSection() {
+  var ar = currentLang === 'ar';
+  try {
+    if (!allFridgesCache) {
+      var res = await sb.from('fridges').select('id,code,name_en,name_ar,zone_number,zone_name,zone_name_ar,street,building').order('zone_name');
+      allFridgesCache = res.data || [];
+    }
+    var watchRes = await sb.from('friend_fridge_watches').select('fridge_id').eq('application_id', currentApp.id);
+    myWatchIds = (watchRes.data || []).map(function(w) { return w.fridge_id; });
+    renderFridgeWatchList();
+  } catch (e) {
+    document.getElementById('fridge-watch-err').textContent = ar ? 'تعذر تحميل قائمة الثلاجات.' : 'Could not load the fridge list.';
+    document.getElementById('fridge-watch-err').classList.add('show');
+  }
+}
+
+// Builds the "blue plate" style address for a fridge — Qatar's official
+// Zone/Street/Building numbering (the blue address plate on the building) —
+// falling back to the zone name alone if street/building aren't on file.
+function fridgeBluePlate(f, ar) {
+  var parts = [];
+  parts.push((ar ? 'منطقة ' : 'Zone ') + f.zone_number);
+  if (f.street) parts.push((ar ? 'شارع ' : 'St ') + f.street);
+  if (f.building) parts.push((ar ? 'مبنى ' : 'Bldg ') + f.building);
+  return parts.join(' · ');
+}
+
+// Smart search: every whitespace-separated word the friend types must show
+// up somewhere in the fridge's name/zone/street/building — so typing
+// "onaiza" or "54" or "st 12" all narrow the list sensibly, in any order.
+function fridgeMatchesSearch(f, query) {
+  if (!query) return true;
+  var hay = [f.name_en, f.name_ar, f.zone_name, f.zone_name_ar, f.zone_number, f.street, f.building, f.code].join(' ').toLowerCase();
+  return query.toLowerCase().trim().split(/\s+/).every(function(tok) { return hay.indexOf(tok) !== -1; });
+}
+
+function renderFridgeWatchList() {
+  var ar = currentLang === 'ar';
+  var myZone = parseInt(String(currentApp.zone || '').replace(/\D/g, ''), 10);
+  var query = (document.getElementById('fridge-search-input') || {}).value || '';
+  var list = (allFridgesCache || []).filter(function(f) { return fridgeMatchesSearch(f, query); }).sort(function(a, b) {
+    var aNear = a.zone_number === myZone ? 0 : 1;
+    var bNear = b.zone_number === myZone ? 0 : 1;
+    if (aNear !== bNear) return aNear - bNear;
+    return (a.zone_name || '').localeCompare(b.zone_name || '');
+  });
+  var container = document.getElementById('fridge-watch-list');
+  container.innerHTML = '';
+  if (list.length === 0) {
+    var empty = document.createElement('p');
+    empty.textContent = ar ? 'لا توجد ثلاجات مطابقة.' : 'No fridges match your search.';
+    empty.style.cssText = 'font-size:13px;color:var(--muted);padding:10px 0;';
+    container.appendChild(empty);
+    return;
+  }
+  var lastGroup = null;
+  list.forEach(function(f) {
+    var group = f.zone_number === myZone ? (ar ? 'الأقرب إليك' : 'Nearest to you') : (ar ? 'كل الثلاجات' : 'All fridges');
+    if (group !== lastGroup) {
+      var h = document.createElement('div');
+      h.textContent = group;
+      h.style.cssText = 'font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-top:8px;';
+      container.appendChild(h);
+      lastGroup = group;
+    }
+    var checked = myWatchIds.indexOf(f.id) !== -1;
+    var row = document.createElement('label');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid ' + (checked ? 'var(--green)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (checked ? 'var(--green-light)' : '#fff') + ';';
+    var name = ar && f.name_ar ? f.name_ar : f.name_en;
+    var addr = fridgeBluePlate(f, ar);
+    row.innerHTML = '<input type="checkbox" ' + (checked ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:var(--green);flex-shrink:0;">' +
+      '<span style="font-size:13px;font-weight:700;color:var(--text);flex:1;">' + name + ' <span style="color:var(--muted);font-weight:600;">· ' + addr + '</span></span>';
+    row.querySelector('input').addEventListener('change', function() { toggleFridgeWatch(f.id); });
+    container.appendChild(row);
+  });
+}
+
+function toggleFridgeWatch(fridgeId) {
+  var ar = currentLang === 'ar';
+  var errEl = document.getElementById('fridge-watch-err');
+  errEl.classList.remove('show');
+  var idx = myWatchIds.indexOf(fridgeId);
+  if (idx !== -1) {
+    myWatchIds.splice(idx, 1);
+  } else {
+    if (myWatchIds.length >= 3) {
+      errEl.textContent = ar ? 'يمكنك اختيار 3 ثلاجات كحد أقصى.' : 'You can pick up to 3 fridges.';
+      errEl.classList.add('show');
+      renderFridgeWatchList();
+      return;
+    }
+    myWatchIds.push(fridgeId);
+  }
+  renderFridgeWatchList();
+}
+
+async function saveFridgeWatches() {
+  var ar = currentLang === 'ar';
+  var btn = document.getElementById('fridge-watch-save-btn');
+  var errEl = document.getElementById('fridge-watch-err');
+  errEl.classList.remove('show');
+  btn.disabled = true;
+  document.getElementById('fridge-watch-save-text').textContent = ar ? 'جارٍ الحفظ...' : 'Saving...';
+  try {
+    var res = await fetch(FRIEND_PORTAL_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set_fridge_watches', application_id: currentApp.id, fridge_ids: myWatchIds })
+    });
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById('fridge-watch-save-text').textContent = ar ? '✓ تم الحفظ' : '✓ Saved';
+    setTimeout(function() { document.getElementById('fridge-watch-save-text').textContent = ar ? 'حفظ ثلاجاتي' : 'Save my fridges'; }, 2000);
+  } catch (e) {
+    errEl.textContent = ar ? 'تعذر الحفظ. حاول مرة أخرى.' : 'Could not save. Please try again.';
+    errEl.classList.add('show');
+    document.getElementById('fridge-watch-save-text').textContent = ar ? 'حفظ ثلاجاتي' : 'Save my fridges';
+  }
+  btn.disabled = false;
+}
+
+// ── Wishlist requests ────────────────────────────────────────────────
+
+var wishlistRowCount = 0;
+
+async function loadWishlistSection() {
+  var ar = currentLang === 'ar';
+  try {
+    var res = await fetch(FRIEND_PORTAL_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get_wishlist', application_id: currentApp.id })
+    });
+    var data = await res.json();
+    myWishlistItems = data.items || [];
+    renderWishlistCurrent();
+    renderFairyComingCard();
+    resetWishlistAddRows();
+  } catch (e) {
+    document.getElementById('wishlist-err').textContent = ar ? 'تعذر تحميل طلباتك.' : 'Could not load your requests.';
+    document.getElementById('wishlist-err').classList.add('show');
+  }
+}
+
+var WISHLIST_STATUS_LABEL = {
+  pending: { en: '⏳ Awaiting review', ar: '⏳ قيد المراجعة' },
+  approved: { en: '✅ Approved — waiting for a fairy', ar: '✅ تمت الموافقة — بانتظار جنية' },
+  fulfilled: { en: '📦 Delivered', ar: '📦 تم التسليم' },
+  rejected: { en: '✗ Not approved', ar: '✗ لم تتم الموافقة' },
+  expired: { en: 'Expired', ar: 'منتهي الصلاحية' }
+};
+
+function renderWishlistCurrent() {
+  var ar = currentLang === 'ar';
+  var container = document.getElementById('wishlist-current-list');
+  container.innerHTML = '';
+  myWishlistItems.forEach(function(item) {
+    var claimed = !!item.fulfilled_by_volunteer_id && item.status === 'approved';
+    var label = WISHLIST_STATUS_LABEL[item.status] || { en: item.status, ar: item.status };
+    var statusText = claimed ? (ar ? '🧚 جنية في الطريق' : '🧚 A fairy is on the way') : label[ar ? 'ar' : 'en'];
+    var row = document.createElement('div');
+    row.style.cssText = 'background:var(--off-white);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;';
+    row.innerHTML = '<div style="font-weight:800;font-size:13.5px;color:var(--text);">' + item.item + '</div>' +
+      '<div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-top:2px;">' + statusText + '</div>';
+    container.appendChild(row);
+  });
+}
+
+function renderFairyComingCard() {
+  var ar = currentLang === 'ar';
+  var card = document.getElementById('fairy-coming-card');
+  var claimedItem = myWishlistItems.find(function(w) { return w.status === 'approved' && w.fulfilled_by_volunteer_id && w.delivery_at; });
+  if (!claimedItem) { card.style.display = 'none'; return; }
+  card.style.display = 'flex';
+  var when = new Date(claimedItem.delivery_at);
+  var isAsap = (when.getTime() - Date.now()) < 45 * 60000;
+  var fmt = when.toLocaleString(ar ? 'ar-QA' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+  var msg;
+  if (ar) {
+    msg = isAsap
+      ? ('سيقوم أحد جنياتنا بإحضار "' + claimedItem.item + '" خلال الثلاثين دقيقة القادمة تقريبًا.')
+      : ('سيقوم أحد جنياتنا بإحضار "' + claimedItem.item + '" حوالي ' + fmt + '.');
+  } else {
+    msg = isAsap
+      ? ('One of our fairies is bringing "' + claimedItem.item + '" within about 30 minutes.')
+      : ('One of our fairies is bringing "' + claimedItem.item + '" around ' + fmt + '.');
+  }
+  document.getElementById('fairy-coming-msg').textContent = msg;
+}
+
+function resetWishlistAddRows() {
+  var container = document.getElementById('wishlist-add-rows');
+  container.innerHTML = '';
+  wishlistRowCount = 0;
+  var remaining = Math.max(0, 5 - myWishlistItems.length);
+  var addBtn = document.getElementById('wishlist-add-row-btn');
+  var submitBtn = document.getElementById('wishlist-submit-btn');
+  if (remaining === 0) {
+    addBtn.style.display = 'none';
+    submitBtn.style.display = 'none';
+  } else {
+    addBtn.style.display = 'block';
+    submitBtn.style.display = 'block';
+    addWishlistRow();
+  }
+}
+
+function addWishlistRow() {
+  var remaining = Math.max(0, 5 - myWishlistItems.length);
+  if (wishlistRowCount >= remaining) return;
+  wishlistRowCount++;
+  var ar = currentLang === 'ar';
+  var container = document.getElementById('wishlist-add-rows');
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'wishlist-row-input';
+  input.placeholder = ar ? 'مثال: حليب أطفال، أرز...' : 'e.g. baby formula, rice...';
+  input.style.cssText = 'width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:10px;font-size:14px;font-family:Nunito,sans-serif;';
+  container.appendChild(input);
+  if (wishlistRowCount >= remaining) document.getElementById('wishlist-add-row-btn').style.display = 'none';
+}
+
+async function submitWishlistRows() {
+  var ar = currentLang === 'ar';
+  var errEl = document.getElementById('wishlist-err');
+  errEl.classList.remove('show');
+  var inputs = document.querySelectorAll('.wishlist-row-input');
+  var items = Array.prototype.map.call(inputs, function(i) { return i.value.trim(); }).filter(Boolean);
+  if (items.length === 0) {
+    errEl.textContent = ar ? 'أدخل صنفًا واحدًا على الأقل.' : 'Enter at least one item.';
+    errEl.classList.add('show');
+    return;
+  }
+  var btn = document.getElementById('wishlist-submit-btn');
+  btn.disabled = true;
+  document.getElementById('wishlist-submit-text').textContent = ar ? 'جارٍ الإرسال...' : 'Sending...';
+  try {
+    var res = await fetch(FRIEND_PORTAL_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'submit_wishlist', application_id: currentApp.id, items: items })
+    });
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+    await loadWishlistSection();
+  } catch (e) {
+    errEl.textContent = e.message || (ar ? 'تعذر إرسال الطلب.' : 'Could not send your request.');
+    errEl.classList.add('show');
+  }
+  btn.disabled = false;
+  document.getElementById('wishlist-submit-text').textContent = ar ? 'إرسال الطلب' : 'Send request';
+}
+</script>
+</body>
+</html>
