@@ -59,6 +59,12 @@ const TXT = {
     fridges:"fridges", cleanedLbl:"cleaned", since: d => `Since ${d}`,
     loading:"Loading…",
     getDirections:"Get directions", kmAway: km => `${km} km away`,
+    claimThis:"I'll bring this", asapBtn:"ASAP (~30 min)", scheduleBtn:"Schedule a time",
+    pickTime:"Pick a date & time", confirmSchedule:"Confirm", cancelSchedule:"Cancel",
+    claimedByMe:"You're bringing this", claimedByOther:"Claimed by another fairy",
+    arrivingAsap: time => `Arriving between ${time}`, arrivingAt: time => `Arriving around ${time}`,
+    markDeliveredBtn:"Mark as delivered ✓", releaseIt:"I can't make it — release it",
+    deliveredLbl:"Delivered ✓", callFriend:"Call", whatsappFriend:"WhatsApp", noPhone:"No phone on file",
   },
   ar: {
     home:"الرئيسية", becomeFairy:"انضم كجنية الثلاجة", helpKeep:"ساعد في إبقاء ثلاجات المجتمع في قطر ممتلئة.",
@@ -95,6 +101,12 @@ const TXT = {
     fridges:"ثلاجات", cleanedLbl:"نُظفت", since: d => `منذ ${d}`,
     loading:"جارٍ التحميل…",
     getDirections:"احصل على الاتجاهات", kmAway: km => `${km} كم`,
+    claimThis:"سأحضر هذا", asapBtn:"في أقرب وقت (~٣٠ دقيقة)", scheduleBtn:"حدد موعدًا",
+    pickTime:"اختر التاريخ والوقت", confirmSchedule:"تأكيد", cancelSchedule:"إلغاء",
+    claimedByMe:"أنت من سيحضر هذا", claimedByOther:"تم استلامه من جنية أخرى",
+    arrivingAsap: time => `الوصول بين ${time}`, arrivingAt: time => `الوصول حوالي ${time}`,
+    markDeliveredBtn:"تحديد كتم التسليم ✓", releaseIt:"لا أستطيع الحضور — إلغاء الاستلام",
+    deliveredLbl:"تم التسليم ✓", callFriend:"اتصال", whatsappFriend:"واتساب", noPhone:"لا يوجد رقم هاتف",
   },
 };
 function toArabicDigits(str){
@@ -214,6 +226,10 @@ function App(){
   const [loading,setLoading]=React.useState(true);
   const [search,setSearch]=React.useState("");
   const [myLocation,setMyLocation]=React.useState(null);
+  const [schedulingId,setSchedulingId]=React.useState(null);
+  const [scheduleTime,setScheduleTime]=React.useState("");
+  const [claimingId,setClaimingId]=React.useState(null);
+  const [claimError,setClaimError]=React.useState("");
 
   React.useEffect(()=>{
     sb.auth.getSession().then(({data})=>{
@@ -233,22 +249,38 @@ function App(){
     }catch(e){}
   },[]);
 
+  // Supabase Auth's own error messages always come back in English (that's
+  // a platform-level thing, not something a frontend fix can fully solve)
+  // — this maps the handful a fairy is actually likely to hit so an
+  // Arabic session isn't dropped back to English on a login/signup typo.
+  const AUTH_ERROR_AR = {
+    "Invalid login credentials": "بيانات تسجيل الدخول غير صحيحة.",
+    "User already registered": "هذا البريد الإلكتروني مسجّل بالفعل.",
+    "Email not confirmed": "لم يتم تأكيد البريد الإلكتروني بعد.",
+    "Password should be at least 6 characters.": "يجب أن تتكون كلمة المرور من ٦ أحرف على الأقل.",
+    "Unable to validate email address: invalid format": "تعذر التحقق من صيغة البريد الإلكتروني.",
+  };
+  function authErrorText(message){
+    if(!message) return message;
+    return (isAr && AUTH_ERROR_AR[message]) ? AUTH_ERROR_AR[message] : message;
+  }
+
   async function login(){
     setLoginErr("");
     const {data,error} = await sb.auth.signInWithPassword({email,password});
-    if(error){ setLoginErr(error.message); return; }
+    if(error){ setLoginErr(authErrorText(error.message)); return; }
     setSession(data.session);
     load(data.session.user.id);
   }
 
   async function signup(){
     setSignupMsg("");
-    if(!firstName.trim() || !surname.trim() || !dob || !phone.trim() || !nationality.trim()){ setSignupMsg("Please fill in all required fields."); return; }
-    if(!email.trim() || password.length<6){ setSignupMsg("Please enter a valid email and a password of at least 6 characters."); return; }
+    if(!firstName.trim() || !surname.trim() || !dob || !phone.trim() || !nationality.trim()){ setSignupMsg(isAr?"يرجى تعبئة جميع الحقول المطلوبة.":"Please fill in all required fields."); return; }
+    if(!email.trim() || password.length<6){ setSignupMsg(isAr?"يرجى إدخال بريد إلكتروني صحيح وكلمة مرور مكونة من ٦ أحرف على الأقل.":"Please enter a valid email and a password of at least 6 characters."); return; }
     setSignupLoading(true);
     const {data,error} = await sb.auth.signUp({email, password});
-    if(error){ setSignupMsg(error.message); setSignupLoading(false); return; }
-    if(!data.user){ setSignupMsg("Something went wrong — please try again."); setSignupLoading(false); return; }
+    if(error){ setSignupMsg(authErrorText(error.message)); setSignupLoading(false); return; }
+    if(!data.user){ setSignupMsg(isAr?"حدث خطأ ما — يرجى المحاولة مرة أخرى.":"Something went wrong — please try again."); setSignupLoading(false); return; }
     const {error:profErr} = await sb.from("profiles").insert({
       id: data.user.id, first_name: firstName.trim(), surname: surname.trim(), email: email.trim(),
       dob, phone: phone.trim(), nationality: nationality.trim(), fun_fact: funFact.trim(),
@@ -256,13 +288,13 @@ function App(){
       is_working: employment==="working", profession: prof.trim(),
       projects: ["fridges"], role: "volunteer", approved: false
     });
-    if(profErr){ setSignupMsg(profErr.message); setSignupLoading(false); return; }
+    if(profErr){ setSignupMsg(authErrorText(profErr.message)); setSignupLoading(false); return; }
     setSignupLoading(false);
     if(data.session){
       setSession(data.session);
       load(data.user.id);
     } else {
-      setSignupMsg("Account created! Check your email to confirm it, then sign in above.");
+      setSignupMsg(isAr?"تم إنشاء الحساب! تحقق من بريدك الإلكتروني لتأكيده، ثم سجّل الدخول أعلاه.":"Account created! Check your email to confirm it, then sign in above.");
       setAuthMode("signin");
     }
   }
@@ -274,12 +306,12 @@ function App(){
 
   async function changePassword(){
     setPwMsg("");
-    if(newPassword.length<6){ setPwMsg("Password must be at least 6 characters."); return; }
+    if(newPassword.length<6){ setPwMsg(isAr?"يجب أن تتكون كلمة المرور من ٦ أحرف على الأقل.":"Password must be at least 6 characters."); return; }
     setPwSaving(true);
     const {error} = await sb.auth.updateUser({password: newPassword});
     setPwSaving(false);
-    if(error){ setPwMsg(error.message); return; }
-    setPwMsg("Password updated ✓");
+    if(error){ setPwMsg(authErrorText(error.message)); return; }
+    setPwMsg(isAr?"تم تحديث كلمة المرور ✓":"Password updated ✓");
     setNewPassword("");
   }
 
@@ -303,7 +335,7 @@ function App(){
     const ids = new Set((local||[]).map(l=>l.fridge_id));
     setLocalIds(ids);
     const myZones = new Set((fr||[]).filter(f=>ids.has(f.id)).map(f=>f.zone_number));
-    const {data:wl} = await sb.from("friend_wishlist_items").select("*, food_box_applications(zone,full_name_en,full_name,whatsapp)").eq("status","approved");
+    const {data:wl} = await sb.from("friend_wishlist_items").select("*, food_box_applications(zone,full_name_en,full_name,whatsapp)").in("status",["approved","fulfilled"]);
     const wlAppIds = [...new Set((wl||[]).map(w=>w.application_id))];
     const {data:watchRows} = wlAppIds.length ? await sb.from("friend_fridge_watches").select("application_id,fridge_id").in("application_id",wlAppIds) : {data:[]};
     const watchesByApp = {};
@@ -324,6 +356,78 @@ function App(){
     setLoading(false);
   }
 
+  const FRIEND_PORTAL_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/friend-portal";
+
+  // The edge function's thrown errors come back as plain English text —
+  // translate the ones a fairy can actually trigger so an Arabic-language
+  // session doesn't drop back to English mid-flow. Anything not in this
+  // list (unexpected server errors) falls back to the raw message, which
+  // is better than hiding it entirely.
+  const CLAIM_ERROR_AR = {
+    "This request is no longer available to claim.": "هذا الطلب لم يعد متاحًا للاستلام.",
+    "Someone has already claimed this request.": "قامت جنية أخرى بالفعل باستلام هذا الطلب.",
+    "This request was not claimed by you.": "لم تقم أنت باستلام هذا الطلب.",
+    "Wishlist item not found": "لم يتم العثور على الطلب.",
+  };
+  function claimErrorText(message){
+    if(!message) return isAr ? "حدث خطأ ما." : "Something went wrong.";
+    if(isAr && CLAIM_ERROR_AR[message]) return CLAIM_ERROR_AR[message];
+    return message;
+  }
+
+  // Claims a wishlist request for this fairy — the edge function does the
+  // claim atomically (only succeeds if it's still approved and unclaimed),
+  // so two fairies tapping at once can't both end up bringing the same
+  // item. Also tells the friend when to expect it, via email + their
+  // status page (both handled server-side).
+  async function claimWishlistItem(itemId, deliveryAt, asap){
+    setClaimingId(itemId);
+    setClaimError("");
+    try{
+      const res = await fetch(FRIEND_PORTAL_URL,{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({action:"claim_wishlist_item", wishlist_item_id:itemId, volunteer_id:session.user.id, delivery_at:deliveryAt, asap})
+      });
+      const data = await res.json();
+      if(data.error) throw new Error(data.error);
+      setSchedulingId(null); setScheduleTime("");
+      load(session.user.id);
+    }catch(e){
+      setClaimError(claimErrorText(e.message));
+    }
+    setClaimingId(null);
+  }
+
+  async function cancelClaim(itemId){
+    setClaimingId(itemId);
+    setClaimError("");
+    try{
+      const res = await fetch(FRIEND_PORTAL_URL,{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({action:"cancel_claim", wishlist_item_id:itemId, volunteer_id:session.user.id})
+      });
+      const data = await res.json();
+      if(data.error) throw new Error(data.error);
+      load(session.user.id);
+    }catch(e){ setClaimError(claimErrorText(e.message)); }
+    setClaimingId(null);
+  }
+
+  async function markDelivered(itemId){
+    setClaimingId(itemId);
+    setClaimError("");
+    try{
+      const res = await fetch(FRIEND_PORTAL_URL,{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({action:"mark_delivered", wishlist_item_id:itemId, volunteer_id:session.user.id})
+      });
+      const data = await res.json();
+      if(data.error) throw new Error(data.error);
+      load(session.user.id);
+    }catch(e){ setClaimError(claimErrorText(e.message)); }
+    setClaimingId(null);
+  }
+
   async function toggleLocal(fridgeId){
     const uid = session.user.id;
     const wasLocal = localIds.has(fridgeId);
@@ -337,10 +441,10 @@ function App(){
 
   async function saveUsername(){
     setUsernameMsg("");
-    if(!username.trim()){ setUsernameMsg("Username can't be empty."); return; }
+    if(!username.trim()){ setUsernameMsg(isAr?"لا يمكن أن يكون اسم المستخدم فارغًا.":"Username can't be empty."); return; }
     const {error} = await sb.from("profiles").update({username: username.trim()}).eq("id",session.user.id);
-    if(error) setUsernameMsg(error.message.includes("duplicate") ? "That username is taken." : error.message);
-    else { setUsernameMsg("Saved ✓"); setEditingUsername(false); }
+    if(error) setUsernameMsg(error.message.includes("duplicate") ? (isAr?"اسم المستخدم هذا مُستخدم بالفعل.":"That username is taken.") : authErrorText(error.message));
+    else { setUsernameMsg(isAr?"تم الحفظ ✓":"Saved ✓"); setEditingUsername(false); }
   }
 
   async function toggleNotifyEmail(){
@@ -557,10 +661,14 @@ function App(){
             const wHasCoords = wFridge && wFridge.lat!=null && wFridge.lng!=null;
             const wDistKm = (wHasCoords && myLocation) ? haversineKm(myLocation.lat, myLocation.lng, wFridge.lat, wFridge.lng) : null;
             const wDirectionsUrl = wHasCoords ? `https://www.google.com/maps/dir/?api=1&destination=${wFridge.lat},${wFridge.lng}&travelmode=driving` : null;
+            const wClaimed = !!w.fulfilled_by_volunteer_id;
+            const wClaimedByMe = w.fulfilled_by_volunteer_id === session.user.id;
+            const wPhone = w.food_box_applications?.whatsapp;
+            const fmtTime = iso => new Date(iso).toLocaleString(isAr?"ar":undefined,{dateStyle:"medium",timeStyle:"short"});
             return (
             <div key={w.id} style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:12,padding:12}}>
               <div style={{fontWeight:700,fontSize:14}}>{w.item}</div>
-              <div style={{color:MT,fontSize:12,marginTop:3}}>{isAr?"منطقة":"Zone"} {w.food_box_applications?.zone} · {w.food_box_applications?.whatsapp||(isAr?"لا يوجد رقم هاتف":"no phone on file")}</div>
+              <div style={{color:MT,fontSize:12,marginTop:3}}>{isAr?"منطقة":"Zone"} {w.food_box_applications?.zone}</div>
               {wFridge && (
                 <div style={{fontSize:12,color:MT,marginTop:2}}>
                   📍 {isAr && wFridge.name_ar ? wFridge.name_ar : wFridge.name_en}
@@ -570,8 +678,70 @@ function App(){
               {wDirectionsUrl && (
                 <a href={wDirectionsUrl} target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:6,fontSize:12,fontWeight:700,color:DK,textDecoration:"none"}}>🧭 {t.getDirections} →</a>
               )}
+
+              {/* Friend's own contact number — only shown to a fairy who has
+                  claimed this request, so they can coordinate drop-off. */}
+              {wClaimedByMe && (
+                <div style={{marginTop:6,fontSize:12,color:MT}}>
+                  {wPhone ? (
+                    <span style={{display:"flex",gap:10}}>
+                      <a href={`tel:${wPhone}`} style={{color:DK,fontWeight:700,textDecoration:"none"}}>📞 {t.callFriend}</a>
+                      <a href={`https://wa.me/${String(wPhone).replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{color:DK,fontWeight:700,textDecoration:"none"}}>💬 {t.whatsappFriend}</a>
+                    </span>
+                  ) : t.noPhone}
+                </div>
+              )}
+
+              {!wClaimed && w.status==="approved" && (
+                schedulingId===w.id ? (
+                  <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:6}}>
+                    <label style={{fontSize:11.5,fontWeight:700,color:DK}}>{t.pickTime}</label>
+                    <input type="datetime-local" value={scheduleTime} onChange={e=>setScheduleTime(e.target.value)}
+                      style={{padding:"8px 10px",borderRadius:8,border:"1.5px solid #BBF7D0",fontSize:13}}/>
+                    <div style={{display:"flex",gap:8,marginTop:4}}>
+                      <button disabled={!scheduleTime||claimingId===w.id}
+                        onClick={()=>claimWishlistItem(w.id, new Date(scheduleTime).toISOString(), false)}
+                        style={{flex:1,padding:"8px 10px",borderRadius:8,border:"none",background:DK,color:"#fff",fontWeight:700,fontSize:12.5,cursor:"pointer",opacity:!scheduleTime?0.6:1}}>{t.confirmSchedule}</button>
+                      <button onClick={()=>{setSchedulingId(null);setScheduleTime("");}}
+                        style={{flex:1,padding:"8px 10px",borderRadius:8,border:"1.5px solid #BBF7D0",background:"#fff",color:DK,fontWeight:700,fontSize:12.5,cursor:"pointer"}}>{t.cancelSchedule}</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}}>
+                    <button disabled={claimingId===w.id}
+                      onClick={()=>claimWishlistItem(w.id, new Date(Date.now()+30*60000).toISOString(), true)}
+                      style={{padding:"8px 12px",borderRadius:8,border:"none",background:DK,color:"#fff",fontWeight:700,fontSize:12.5,cursor:"pointer"}}>{t.asapBtn}</button>
+                    <button disabled={claimingId===w.id} onClick={()=>setSchedulingId(w.id)}
+                      style={{padding:"8px 12px",borderRadius:8,border:`1.5px solid ${DK}`,background:"#fff",color:DK,fontWeight:700,fontSize:12.5,cursor:"pointer"}}>{t.scheduleBtn}</button>
+                  </div>
+                )
+              )}
+
+              {wClaimed && w.status!=="fulfilled" && wClaimedByMe && (
+                <div style={{marginTop:10}}>
+                  <div style={{fontSize:12.5,fontWeight:700,color:DK}}>✓ {t.claimedByMe}</div>
+                  <div style={{fontSize:12,color:MT,marginTop:2}}>
+                    {w.delivery_at ? (new Date(w.delivery_at).getTime()-Date.now()<45*60000 ? t.arrivingAsap(fmtTime(w.delivery_at)) : t.arrivingAt(fmtTime(w.delivery_at))) : ""}
+                  </div>
+                  <div style={{display:"flex",gap:8,marginTop:8}}>
+                    <button disabled={claimingId===w.id} onClick={()=>markDelivered(w.id)}
+                      style={{padding:"8px 12px",borderRadius:8,border:"none",background:DK,color:"#fff",fontWeight:700,fontSize:12.5,cursor:"pointer"}}>{t.markDeliveredBtn}</button>
+                    <button disabled={claimingId===w.id} onClick={()=>cancelClaim(w.id)}
+                      style={{padding:"8px 12px",borderRadius:8,border:"1.5px solid #DC2626",background:"#fff",color:"#DC2626",fontWeight:700,fontSize:12,cursor:"pointer"}}>{t.releaseIt}</button>
+                  </div>
+                </div>
+              )}
+
+              {wClaimed && w.status!=="fulfilled" && !wClaimedByMe && (
+                <div style={{fontSize:12.5,fontWeight:700,color:MT,marginTop:8}}>🧚 {t.claimedByOther}</div>
+              )}
+
+              {w.status==="fulfilled" && (
+                <div style={{fontSize:12.5,fontWeight:700,color:DK,marginTop:8}}>✓ {t.deliveredLbl}</div>
+              )}
             </div>
           )})}
+          {claimError && <div style={{color:"#DC2626",fontSize:12.5,marginTop:4}}>{claimError}</div>}
         </div>
       )}
 
