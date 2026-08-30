@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Fridge Fairies — Feed a Friend</title>
 <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Poppins,sans-serif;background:#fff;color:#15803D}.spartan{font-family:'League Spartan',sans-serif;font-weight:900}</style>
 </head>
@@ -58,6 +58,7 @@ const TXT = {
     update:"Update", saving:"Saving…", save:"Save", edit:"Edit", refills:"refills",
     fridges:"fridges", cleanedLbl:"cleaned", since: d => `Since ${d}`,
     loading:"Loading…",
+    getDirections:"Get directions", kmAway: km => `${km} km away`,
   },
   ar: {
     home:"الرئيسية", becomeFairy:"انضم كجنية الثلاجة", helpKeep:"ساعد في إبقاء ثلاجات المجتمع في قطر ممتلئة.",
@@ -93,6 +94,7 @@ const TXT = {
     update:"تحديث", saving:"جارٍ الحفظ…", save:"حفظ", edit:"تعديل", refills:"تعبئات",
     fridges:"ثلاجات", cleanedLbl:"نُظفت", since: d => `منذ ${d}`,
     loading:"جارٍ التحميل…",
+    getDirections:"احصل على الاتجاهات", kmAway: km => `${km} كم`,
   },
 };
 function toArabicDigits(str){
@@ -133,6 +135,13 @@ const QUOTES = [
   "\"A generous person will prosper; whoever refreshes others will be refreshed.\" — Proverbs 11:25",
 ];
 function pickQuote(){ return QUOTES[Math.floor(Math.random()*QUOTES.length)]; }
+
+function haversineKm(lat1,lng1,lat2,lng2){
+  const R=6371, toRad=d=>d*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLng=toRad(lng2-lng1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
 
 function Header({lang, setLang, isAr, t}){
   return (
@@ -204,12 +213,24 @@ function App(){
   const [quote]=React.useState(pickQuote());
   const [loading,setLoading]=React.useState(true);
   const [search,setSearch]=React.useState("");
+  const [myLocation,setMyLocation]=React.useState(null);
 
   React.useEffect(()=>{
     sb.auth.getSession().then(({data})=>{
       setSession(data.session||null);
       if(data.session) load(data.session.user.id);
     });
+    // Best-effort — used only to show distance/directions on wishlist
+    // requests. Silently does nothing if denied or unsupported.
+    try{
+      if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(
+          pos => setMyLocation({lat:pos.coords.latitude, lng:pos.coords.longitude}),
+          () => {},
+          {enableHighAccuracy:false, timeout:8000}
+        );
+      }
+    }catch(e){}
   },[]);
 
   async function login(){
@@ -283,9 +304,22 @@ function App(){
     setLocalIds(ids);
     const myZones = new Set((fr||[]).filter(f=>ids.has(f.id)).map(f=>f.zone_number));
     const {data:wl} = await sb.from("friend_wishlist_items").select("*, food_box_applications(zone,full_name_en,full_name,whatsapp)").eq("status","approved");
+    const wlAppIds = [...new Set((wl||[]).map(w=>w.application_id))];
+    const {data:watchRows} = wlAppIds.length ? await sb.from("friend_fridge_watches").select("application_id,fridge_id").in("application_id",wlAppIds) : {data:[]};
+    const watchesByApp = {};
+    (watchRows||[]).forEach(r=>{ (watchesByApp[r.application_id] = watchesByApp[r.application_id]||[]).push(r.fridge_id); });
+    // Match the same targeting the fairy-alert email uses: prefer the
+    // friend's specific saved fridges, only falling back to zone-wide
+    // matching if they haven't picked any fridges yet.
     setWishlist((wl||[]).filter(w=>{
+      const watched = watchesByApp[w.application_id];
+      if(watched && watched.length>0) return watched.some(fid=>ids.has(fid));
       const z = parseInt(String(w.food_box_applications?.zone||"").replace(/\D/g,""),10);
       return myZones.has(z);
+    }).map(w=>{
+      const watched = watchesByApp[w.application_id];
+      const matchedFridgeId = watched ? watched.find(fid=>ids.has(fid)) : null;
+      return {...w, _fridge_id: matchedFridgeId || null};
     }));
     setLoading(false);
   }
@@ -518,12 +552,26 @@ function App(){
         <div style={{color:MT,fontSize:13,marginTop:10}}>{t.nothingYetWishlist}</div>
       ) : (
         <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:8}}>
-          {wishlist.map(w=>(
+          {wishlist.map(w=>{
+            const wFridge = w._fridge_id ? fridges.find(f=>f.id===w._fridge_id) : null;
+            const wHasCoords = wFridge && wFridge.lat!=null && wFridge.lng!=null;
+            const wDistKm = (wHasCoords && myLocation) ? haversineKm(myLocation.lat, myLocation.lng, wFridge.lat, wFridge.lng) : null;
+            const wDirectionsUrl = wHasCoords ? `https://www.google.com/maps/dir/?api=1&destination=${wFridge.lat},${wFridge.lng}&travelmode=driving` : null;
+            return (
             <div key={w.id} style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:12,padding:12}}>
               <div style={{fontWeight:700,fontSize:14}}>{w.item}</div>
               <div style={{color:MT,fontSize:12,marginTop:3}}>{isAr?"منطقة":"Zone"} {w.food_box_applications?.zone} · {w.food_box_applications?.whatsapp||(isAr?"لا يوجد رقم هاتف":"no phone on file")}</div>
+              {wFridge && (
+                <div style={{fontSize:12,color:MT,marginTop:2}}>
+                  📍 {isAr && wFridge.name_ar ? wFridge.name_ar : wFridge.name_en}
+                  {wDistKm!=null ? ` · ${t.kmAway(isAr?toArabicDigits(wDistKm.toFixed(1)):wDistKm.toFixed(1))}` : ""}
+                </div>
+              )}
+              {wDirectionsUrl && (
+                <a href={wDirectionsUrl} target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:6,fontSize:12,fontWeight:700,color:DK,textDecoration:"none"}}>🧭 {t.getDirections} →</a>
+              )}
             </div>
-          ))}
+          )})}
         </div>
       )}
 
