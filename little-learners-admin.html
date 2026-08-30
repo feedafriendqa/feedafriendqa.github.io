@@ -313,6 +313,28 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
     <div class="lf"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••"></div>
     <button class="btn-forest" id="login-btn" onclick="doLogin()">Sign In</button>
     <div class="login-err" id="login-err"></div>
+    <div style="text-align:center;margin-top:14px;">
+      <a href="#" onclick="showForgotPassword(event)" style="font-size:13px;color:var(--teal);font-weight:700;text-decoration:none;">Forgot password?</a>
+    </div>
+  </div>
+
+  <div class="login-card" id="forgot-card" style="display:none;">
+    <h2>Reset Password</h2>
+    <p>Enter your email and we'll send you a reset link.</p>
+    <div class="lf"><label>Email</label><input type="email" id="forgot-email" placeholder="you@example.com"></div>
+    <button class="btn-forest" id="forgot-btn" onclick="sendPasswordReset()">Send Reset Link</button>
+    <div class="login-err" id="forgot-err"></div>
+    <div id="forgot-success" style="display:none;text-align:center;color:var(--forest);font-weight:700;font-size:13px;margin-top:10px;">✅ Check your email for a reset link.</div>
+    <div style="text-align:center;margin-top:14px;">
+      <a href="#" onclick="hideForgotPassword(event)" style="font-size:13px;color:var(--teal);font-weight:700;text-decoration:none;">← Back to Sign In</a>
+    </div>
+  </div>
+  <div class="login-card" id="reset-card" style="display:none;">
+    <h2>Set New Password</h2>
+    <p>Choose a new password for your account.</p>
+    <div class="lf"><label>New Password</label><input type="password" id="reset-pass" placeholder="••••••••"></div>
+    <button class="btn-forest" id="reset-btn" onclick="setNewPassword()">Save New Password</button>
+    <div class="login-err" id="reset-err"></div>
   </div>
 </div>
 
@@ -608,6 +630,40 @@ const STATUS_LABELS = {
 };
 
 // ── AUTH ──
+function showForgotPassword(e) {
+  e.preventDefault();
+  document.querySelector('.login-card').style.display = 'none';
+  document.getElementById('forgot-card').style.display = 'block';
+}
+
+function hideForgotPassword(e) {
+  e.preventDefault();
+  document.getElementById('forgot-card').style.display = 'none';
+  document.querySelector('.login-card').style.display = 'block';
+}
+
+async function sendPasswordReset() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const err = document.getElementById('forgot-err');
+  const success = document.getElementById('forgot-success');
+  err.textContent = '';
+  success.style.display = 'none';
+  if(!email) { err.textContent = 'Please enter your email.'; return; }
+  const btn = document.getElementById('forgot-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  const { error } = await db.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  btn.disabled = false;
+  btn.textContent = 'Send Reset Link';
+  if(error) {
+    err.textContent = 'Something went wrong: ' + error.message;
+  } else {
+    success.style.display = 'block';
+  }
+}
+
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass = document.getElementById('login-pass').value;
@@ -659,6 +715,13 @@ async function showApp() {
 }
 
 db.auth.onAuthStateChange((event,session)=>{
+  if(event==='PASSWORD_RECOVERY'){
+    document.getElementById('login-wrap').style.display='flex';
+    document.querySelector('.login-card').style.display='none';
+    document.getElementById('forgot-card').style.display='none';
+    document.getElementById('reset-card').style.display='block';
+    return;
+  }
   if(event==='SIGNED_IN'&&session){
     currentUserEmail = session.user.email;
     // Supabase re-fires SIGNED_IN when the tab regains focus (e.g. returning from the
@@ -670,6 +733,26 @@ db.auth.onAuthStateChange((event,session)=>{
     }
   }
 });
+
+async function setNewPassword() {
+  const pass = document.getElementById('reset-pass').value;
+  const err = document.getElementById('reset-err');
+  err.textContent = '';
+  if(!pass || pass.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
+  const btn = document.getElementById('reset-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  const { error } = await db.auth.updateUser({ password: pass });
+  btn.disabled = false;
+  btn.textContent = 'Save New Password';
+  if(error) {
+    err.textContent = 'Something went wrong: ' + error.message;
+  } else {
+    showToast('✅ Password updated — signing you in…');
+    document.getElementById('reset-card').style.display='none';
+    await showApp();
+  }
+}
 
 // ── DATA ──
 async function loadData() {
@@ -2047,7 +2130,7 @@ function renderPackTab(f, children) {
       const overdue = daysSince(anchorDate) !== null && daysSince(anchorDate) >= 90;
       body = `
         <div class="fam-meta" style="margin-bottom:8px;">
-          <span>📦 Level: <strong>${c.material_level||'—'}</strong></span>
+          <span>📦 Pack Level: <strong>${defaultLevel||'—'}</strong></span>
           <span>📅 Given: ${c.pack_given_date ? new Date(c.pack_given_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '—'}</span>
           <span>${lastCheckin ? '📞 Last check-in: '+new Date(lastCheckin).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '📞 No check-in logged yet'}</span>
           ${overdue?'<span style="color:var(--coral);font-weight:700;">⏰ Quarterly check-in due</span>':''}
@@ -2066,8 +2149,8 @@ function renderPackTab(f, children) {
           <div class="af">
             <div><label>Outcome</label>
               <select id="booksck-outcome-${c.id}">
-                <option value="additional_material">Needs more practice — give additional material at ${c.material_level||'current'} level</option>
-                <option value="next_level" ${!nextYearGroupLevel(c.material_level)?'disabled':''}>Ready — progress to ${nextYearGroupLevel(c.material_level)||'next level (unavailable — already at top level)'}</option>
+                <option value="additional_material">Needs more practice — give additional material at ${defaultLevel||'current'} level</option>
+                <option value="next_level" ${!nextYearGroupLevel(defaultLevel)?'disabled':''}>Ready — progress to ${nextYearGroupLevel(defaultLevel)||'next level (unavailable — already at top level)'}</option>
               </select>
             </div>
             <div><label>Notes</label><textarea id="booksck-notes-${c.id}" placeholder="Observations from checking their booklet…"></textarea></div>
