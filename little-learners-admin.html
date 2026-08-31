@@ -356,7 +356,8 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 
 <div class="bottombar">
   <button class="bb-item on" onclick="showPg('dash',this)"><div class="bb-ic">🏠</div><div class="bb-tx">Dashboard</div></button>
-  <button class="bb-item" onclick="showPg('fams',this)"><div class="bb-ic">👪</div><div class="bb-tx">Families</div></button>
+  <button class="bb-item" onclick="showPg('fams',this)"><div class="bb-ic">👪</div><div class="bb-tx">Pipeline</div></button>
+  <button class="bb-item" onclick="goToLearners()"><div class="bb-ic">🌟</div><div class="bb-tx">Learners</div></button>
   <button class="bb-item" id="bb-assess-days" onclick="showPg('assess-days',this)"><div class="bb-ic">📅</div><div class="bb-tx">Events</div></button>
   <button class="bb-item" onclick="showPg('qid-signin',this)"><div class="bb-ic">🪪</div><div class="bb-tx">QID Sign-In</div></button>
   <button class="bb-item" onclick="toggleProfileMenu()"><div class="bb-ic">👤</div><div class="bb-tx" id="bb-profile-name">Profile</div></button>
@@ -373,6 +374,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
     <div class="stat gold" onclick="goToFamilies({pipeline:'year_group_pending'})"><span class="stat-ic">📚</span><div class="stat-num" id="s-pending-yg">—</div><div class="stat-lbl">Awaiting YG Approval</div></div>
     <div class="stat coral" onclick="goToFamilies({assigned:'unassigned'})"><span class="stat-ic">❗</span><div class="stat-num" id="s-unassigned">—</div><div class="stat-lbl">Unassigned</div></div>
     <div class="stat forest" onclick="goToFamilies({dupOnly:true})"><span class="stat-ic">⚠️</span><div class="stat-num" id="s-dups">—</div><div class="stat-lbl">Duplicates</div></div>
+    <div class="stat sky" onclick="goToLearners()"><span class="stat-ic">🌟</span><div class="stat-num" id="s-learners">—</div><div class="stat-lbl">Little Learners</div></div>
   </div>
 
   <div class="gp-sect"><div class="gp-badge">🎂</div><div class="sec-title" style="margin-bottom:0;">Turning 3 — New Cases Needed <span class="pill" id="turning3-pill">0</span></div></div>
@@ -417,6 +419,19 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
   </div>
   <div id="dup-filter-banner"></div>
   <div id="fams-list"><div class="loading">Loading…</div></div>
+</div>
+
+<!-- LITTLE LEARNERS (post-assessment child profiles) -->
+<div class="pg" id="pg-learners">
+  <div style="height:12px;"></div>
+  <div class="gp-sect" style="margin:0 0 4px;"><div class="gp-badge">🌟</div><div class="sec-title" style="margin-bottom:0;">Little Learners <span class="pill" id="learners-count">0</span></div></div>
+  <div style="font-size:12px;color:#6b7280;margin:0 0 14px 41px;">Children whose year group has been confirmed after assessment — their booklets, catch-ins, and events all live here.</div>
+  <div class="toolbar">
+    <div class="search-row">
+      <input class="search" id="learners-search" placeholder="🔍 Search Little Learner, URN…" oninput="renderLearners()">
+    </div>
+  </div>
+  <div id="learners-list"><div class="loading">Loading…</div></div>
 </div>
 
 <!-- EVENTS (assessment days, workshops, socials) -->
@@ -563,6 +578,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
   </div>
   <div class="modal-body">
     <div class="tab-bar">
+      <button class="tab" onclick="switchTab('profile',this)">🌟 Profile</button>
       <button class="tab on" onclick="switchTab('overview',this)">Overview</button>
       <button class="tab" onclick="switchTab('children',this)">Children</button>
       <button class="tab" onclick="switchTab('documents',this)">Documents</button>
@@ -572,6 +588,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
       <button class="tab" onclick="switchTab('checklist',this)">Checklist</button>
       <button class="tab" onclick="switchTab('activity',this)">Activity Log</button>
     </div>
+    <div class="tpanel" id="tp-profile"></div>
     <div class="tpanel on" id="tp-overview"></div>
     <div class="tpanel" id="tp-children"></div>
     <div class="tpanel" id="tp-documents"></div>
@@ -598,6 +615,7 @@ let allFamilies = [], allChildren = [], allAdmins = [], allActivityLogs = [], al
 let dashExpanded = {turning3:false, checkins:false, referrals:false, recent:false};
 let foodBoxFriendIds = new Set(), welcomeBabyFriendIds = new Set();
 let currentFamily = null, currentChildren = [], currentUser = null, currentUserRole = null, currentUserEmail = '';
+let profileFocusChildId = null;
 let allEvents = [], allEventAttendees = [], currentAssessDay = null;
 let allAssessors = [];
 const AGE_BANDS = [
@@ -628,6 +646,15 @@ const STATUS_LABELS = {
   year_group_pending:'YG Pending Approval',year_group_confirmed:'YG Confirmed',
   pack_sent:'Pack Sent',assessment_day:'Assessment Day',completed:'Completed'
 };
+
+// A child becomes a "Little Learner" with their own profile once their family's
+// case has passed assessment and a year group has been confirmed for them.
+const POST_ASSESS_STATUSES = new Set(['year_group_confirmed','pack_sent','assessment_day','completed']);
+function isPostAssessChild(c) {
+  const fam = allFamilies.find(f=>f.id===c.family_id);
+  if(!fam) return false;
+  return POST_ASSESS_STATUSES.has(fam.pipeline_status) && !!(c.final_year_group || c.year_group_override);
+}
 
 // ── AUTH ──
 function showForgotPassword(e) {
@@ -664,6 +691,25 @@ async function sendPasswordReset() {
   }
 }
 
+async function setNewPassword() {
+  const pass = document.getElementById('reset-pass').value;
+  const err = document.getElementById('reset-err');
+  err.textContent = '';
+  if(!pass || pass.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
+  const btn = document.getElementById('reset-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  const { error } = await db.auth.updateUser({ password: pass });
+  btn.disabled = false;
+  btn.textContent = 'Save New Password';
+  if(error) {
+    err.textContent = 'Something went wrong: ' + error.message;
+  } else {
+    showToast('✅ Password updated — signing you in…');
+    document.getElementById('reset-card').style.display='none';
+    await showApp();
+  }
+}
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass = document.getElementById('login-pass').value;
@@ -734,26 +780,6 @@ db.auth.onAuthStateChange((event,session)=>{
   }
 });
 
-async function setNewPassword() {
-  const pass = document.getElementById('reset-pass').value;
-  const err = document.getElementById('reset-err');
-  err.textContent = '';
-  if(!pass || pass.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
-  const btn = document.getElementById('reset-btn');
-  btn.disabled = true;
-  btn.textContent = 'Saving…';
-  const { error } = await db.auth.updateUser({ password: pass });
-  btn.disabled = false;
-  btn.textContent = 'Save New Password';
-  if(error) {
-    err.textContent = 'Something went wrong: ' + error.message;
-  } else {
-    showToast('✅ Password updated — signing you in…');
-    document.getElementById('reset-card').style.display='none';
-    await showApp();
-  }
-}
-
 // ── DATA ──
 async function loadData() {
   const [{data:fams},{data:kids},{data:admins},{data:logs},{data:referrals},{data:adays},{data:attendees},{data:fbApps},{data:wbFams},{data:assessors}] = await Promise.all([
@@ -796,6 +822,7 @@ async function loadData() {
   renderDash();
   renderPipelineTabs();
   renderFams();
+  renderLearners();
   renderReferrals();
   renderTurning3();
   renderCheckinsDue();
@@ -1214,8 +1241,9 @@ function renderAttendeesForDay() {
   const awaiting = attendees.filter(a=>a.invite_status!=='confirmed');
   const confirmedYes = attendees.filter(a=>a.invite_status==='confirmed' && a.attendance==='attended');
   const confirmedNo = attendees.filter(a=>a.invite_status==='confirmed' && a.attendance==='declined');
-  const waiting = confirmedYes.filter(a=>a.day_status!=='attended');
+  const waiting = confirmedYes.filter(a=>a.day_status!=='attended' && a.day_status!=='no_show');
   const arrived = confirmedYes.filter(a=>a.day_status==='attended');
+  const noShow = confirmedYes.filter(a=>a.day_status==='no_show');
 
   function rsvpMeta(a, fam) {
     const bits = [];
@@ -1229,12 +1257,27 @@ function renderAttendeesForDay() {
     const child = allChildren.find(c=>c.id===a.child_id);
     const fam = allFamilies.find(f=>f.id===a.family_id);
     const name = child?.full_name||'Child';
-    return `<div onclick="markAttendance('${a.id}','${isArrived?'':'attended'}')"
-        style="background:white;border-radius:12px;box-shadow:var(--shadow);padding:10px;margin-bottom:8px;text-align:center;cursor:pointer;${isArrived?'border:2px solid var(--lime);':''}">
+    return `<div
+        style="background:white;border-radius:12px;box-shadow:var(--shadow);padding:10px;margin-bottom:8px;text-align:center;${isArrived?'border:2px solid var(--lime);':''}">
+      <div onclick="markAttendance('${a.id}','${isArrived?'':'attended'}')" style="cursor:pointer;">
+        <div style="display:flex;justify-content:center;margin-bottom:6px;">${avatarHTML(child,'att-photo-',a.id,52)}</div>
+        <div style="font-weight:800;font-size:13px;">${name}</div>
+        <div style="margin-top:3px;font-size:13px;">${senAllergyConsentIcons(child,a)}</div>
+        ${rsvpMeta(a,fam)}
+      </div>
+      ${!isArrived ? `<button class="pipe-tab" style="margin-top:8px;font-size:11px;" onclick="event.stopPropagation();markAttendance('${a.id}','no_show')">Mark No Show</button>` : ''}
+    </div>`;
+  }
+
+  function noShowCardHTML(a) {
+    const child = allChildren.find(c=>c.id===a.child_id);
+    const fam = allFamilies.find(f=>f.id===a.family_id);
+    const name = child?.full_name||'Child';
+    return `<div style="background:white;border-radius:12px;box-shadow:var(--shadow);padding:10px;margin-bottom:8px;text-align:center;opacity:.75;">
       <div style="display:flex;justify-content:center;margin-bottom:6px;">${avatarHTML(child,'att-photo-',a.id,52)}</div>
       <div style="font-weight:800;font-size:13px;">${name}</div>
-      <div style="margin-top:3px;font-size:13px;">${senAllergyConsentIcons(child,a)}</div>
       ${rsvpMeta(a,fam)}
+      <button class="pipe-tab" style="margin-top:8px;font-size:11px;" onclick="markAttendance('${a.id}','')">Undo — Back to Waiting</button>
     </div>`;
   }
 
@@ -1280,6 +1323,11 @@ function renderAttendeesForDay() {
         <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;text-align:center;">✅ Arrived (${arrived.length})</div>
         ${arrived.map(a=>checkinCardHTML(a,true)).join('') || '<div class="empty" style="padding:10px 0;font-size:12.5px;">None yet</div>'}
       </div>
+    </div>
+
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:18px 0 8px;">🚫 No Show (${noShow.length})</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      ${noShow.map(noShowCardHTML).join('') || '<div class="empty" style="padding:10px 0;font-size:12.5px;">None</div>'}
     </div>
 
     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:18px 0 8px;">❌ Confirmed — Can't Attend (${confirmedNo.length})</div>
@@ -2335,7 +2383,7 @@ function renderCheckinsDue() {
         return `<div class="fam-card" style="cursor:pointer;" onclick="openProfile('${family.id}','pack')">
           <div class="fam-info">
             <div class="fam-name">${c.full_name||'Child'} <span style="font-size:11px;color:var(--muted);">(${family.urn||'—'})</span></div>
-            <div class="fam-meta"><span>📦 Level: ${c.material_level||'—'}</span><span>⏰ ${daysSince(anchor)} days since last contact</span></div>
+            <div class="fam-meta"><span>📦 Pack Level: ${c.material_level || c.final_year_group || '—'}</span><span>⏰ ${daysSince(anchor)} days since last contact</span></div>
           </div>
         </div>`;
       }, 'checkins')
@@ -2486,6 +2534,7 @@ function renderDash() {
   document.getElementById('s-pending-yg').textContent = fams.filter(f=>f.pipeline_status==='year_group_pending').length;
   document.getElementById('s-unassigned').textContent = fams.filter(f=>!f.assigned_to).length;
   document.getElementById('s-dups').textContent = dups.size;
+  document.getElementById('s-learners').textContent = kids.filter(isPostAssessChild).length;
   const recent = fams.filter(f => !(f.source==='Referral' && !f.assigned_to)).slice(0,15);
   document.getElementById('recent-pill').textContent = recent.length;
   document.getElementById('recent-list').innerHTML = recent.length
@@ -2509,6 +2558,52 @@ function goToFamilies({pipeline, assigned, dupOnly} = {}) {
 function clearDupFilter() {
   showDupOnly = false;
   renderFams();
+}
+
+// ── LITTLE LEARNERS (post-assessment child profiles) ──
+function goToLearners() {
+  const btn = document.querySelector('.bb-item[onclick*="goToLearners"]');
+  showPg('learners', btn);
+  renderLearners();
+}
+
+function learnerCardHTML(c, f) {
+  const yg = c.final_year_group || c.year_group_override || '—';
+  const packStatus = c.pack_status || 'pending';
+  const packLabel = packStatus==='given' ? '📦 Pack given' : packStatus==='not_given' ? '🚫 No pack' : '⏳ Pack pending';
+  const anchor = c.last_checkin_date || c.pack_given_date;
+  const overdue = packStatus==='given' && daysSince(anchor)!==null && daysSince(anchor)>=90;
+  const lstatus = c.learner_status || 'active';
+  return `<div class="fam-card" onclick="openProfile('${f.id}','profile','${c.id}')">
+    <div class="urn-badge">${f.urn||'—'}</div>
+    <div class="fam-info">
+      <div class="fam-name">${c.preferred_name||c.full_name||'Child'}</div>
+      <div class="fam-meta">
+        <span>🎓 ${yg}</span>
+        <span>🎂 ${childAgeYears(c)}y</span>
+        <span>${packLabel}</span>
+        ${overdue?'<span style="color:var(--coral);font-weight:700;">⏰ Check-in due</span>':''}
+        ${programPillsHTML(f)}
+      </div>
+    </div>
+    <span class="status-tag st-${lstatus==='active'?'year_group_confirmed':lstatus}">${LEARNER_STATUS_LABELS[lstatus]||lstatus}</span>
+  </div>`;
+}
+
+function renderLearners() {
+  const q = (document.getElementById('learners-search')?.value||'').toLowerCase();
+  let kids = visibleChildren().filter(isPostAssessChild);
+  if(q) {
+    kids = kids.filter(c => {
+      const f = allFamilies.find(x=>x.id===c.family_id);
+      const text = ((c.full_name||'')+' '+(c.preferred_name||'')+' '+(c.qid||'')+' '+(f?.urn||'')).toLowerCase();
+      return text.includes(q);
+    });
+  }
+  document.getElementById('learners-count').textContent = kids.length;
+  document.getElementById('learners-list').innerHTML = kids.length
+    ? kids.map(c => { const f=allFamilies.find(x=>x.id===c.family_id); return f?learnerCardHTML(c,f):''; }).join('')
+    : '<div class="empty"><div class="eicon">🌟</div><p>No Little Learners yet — children appear here once their year group is confirmed after assessment.</p></div>';
 }
 
 // ── PIPELINE TABS ──
@@ -2656,11 +2751,12 @@ function suggestYG(child) {
 }
 
 // ── PROFILE ──
-async function openProfile(id, tab) {
+async function openProfile(id, tab, focusChildId) {
   currentFamily = allFamilies.find(f=>f.id===id);
   if(!currentFamily) return;
   currentChildren = allChildren.filter(c=>c.family_id===id);
   const f = currentFamily;
+  profileFocusChildId = focusChildId || null;
 
   const status = f.pipeline_status||'new';
   document.getElementById('m-title').innerHTML = `${f.father_name||'Family'}${f.mother_name?' & '+f.mother_name:''} <span style="background:var(--teal);color:white;font-size:10px;padding:2px 8px;border-radius:50px;margin-left:6px;">${f.urn||'—'}</span>`;
@@ -2676,6 +2772,7 @@ async function openProfile(id, tab) {
   renderAssessment(f,currentChildren);
   renderEventsTab(f,currentChildren);
   renderPackTab(f,currentChildren);
+  renderLearnerProfile(f,currentChildren,profileFocusChildId);
   renderChecklist(f);
   renderActivityLog(f.id);
   const targetTab = tab || 'overview';
@@ -3621,6 +3718,84 @@ function switchTab(t,btn) {
   document.querySelectorAll('.tpanel').forEach(p=>p.className='tpanel');
   if(btn) btn.className='tab on'; else document.querySelector('.tab').className='tab on';
   document.getElementById('tp-'+t).className='tpanel on';
+}
+function jumpToTab(t) {
+  const btn = [...document.querySelectorAll('.tab')].find(b => b.getAttribute('onclick')?.includes(`'${t}'`));
+  switchTab(t, btn);
+}
+
+// ── LITTLE LEARNER PROFILE (single-child hub: pack, check-ins, events) ──
+function renderLearnerProfile(f, children, focusChildId) {
+  const el = document.getElementById('tp-profile');
+  if(!el) return;
+  const postKids = children.filter(isPostAssessChild);
+  if(!postKids.length) {
+    el.innerHTML = `<div class="empty"><div class="eicon">🌱</div><p>No Little Learner profile yet — this appears here once a child's year group is confirmed after assessment.</p></div>`;
+    return;
+  }
+  if(!focusChildId || !postKids.some(c=>c.id===focusChildId)) focusChildId = postKids[0].id;
+  profileFocusChildId = focusChildId;
+  const c = postKids.find(x=>x.id===focusChildId);
+  const yg = c.final_year_group || c.year_group_override || '—';
+  const lstatus = c.learner_status || 'active';
+  const packStatus = c.pack_status || 'pending';
+  const anchor = c.last_checkin_date || c.pack_given_date;
+  const overdue = packStatus==='given' && daysSince(anchor)!==null && daysSince(anchor)>=90;
+  const events = allEventAttendees.filter(a=>a.child_id===c.id).map(a=>{
+    const ev = allEvents.find(e=>e.id===a.event_id);
+    return ev ? {...a, ev} : null;
+  }).filter(Boolean).sort((a,b)=> new Date(b.ev.event_date||0) - new Date(a.ev.event_date||0));
+
+  el.innerHTML = `
+    ${postKids.length>1?`
+    <div class="fg" style="margin-bottom:14px;">
+      <label>Little Learner</label>
+      <select class="assign-select" style="width:100%;" onchange="renderLearnerProfile(currentFamily,currentChildren,this.value)">
+        ${postKids.map(k=>`<option value="${k.id}" ${k.id===c.id?'selected':''}>${k.preferred_name||k.full_name||'Child'}</option>`).join('')}
+      </select>
+    </div>`:''}
+    <div class="child-profile">
+      <div class="child-profile-header">
+        <div class="child-photo" id="lp-photo-${c.id}">${c.profile_photo_path?`<img id="lp-img-${c.id}" style="width:100%;height:100%;object-fit:cover;" alt="">`:initials(c.full_name)}</div>
+        <div class="child-header-info">
+          <div class="child-header-name">${c.preferred_name||c.full_name||'Child'}</div>
+          <div class="child-header-sub">
+            <span>🎂 ${childAgeYears(c)}y</span>
+            <span>🎓 ${yg}</span>
+            <span class="status-tag st-${lstatus==='active'?'year_group_confirmed':lstatus}" style="padding:1px 8px;">${LEARNER_STATUS_LABELS[lstatus]||lstatus}</span>
+          </div>
+        </div>
+      </div>
+      <div class="child-profile-body">
+        ${c.aspiration_response?`<div class="note" style="margin-bottom:12px;">💭 "${c.aspiration_response}"</div>`:''}
+        ${lstatus==='archived'&&c.archived_reason?`<div class="warn-box">🗄 ${c.archived_reason}</div>`:''}
+        <div class="info-grid" style="margin-bottom:14px;">
+          <div class="irow"><div class="ikey">Learning Pack</div><div class="ival">${packStatus==='given'?'📦 Given — '+(c.material_level||'—')+' level':packStatus==='not_given'?'🚫 Not given':'⏳ Pending'}</div></div>
+          <div class="irow"><div class="ikey">Last Check-in</div><div class="ival">${anchor?new Date(anchor).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—'}${overdue?' ⏰ due':''}</div></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+          <button class="btn-small" onclick="jumpToTab('pack')">📚 Manage Learning Pack</button>
+          <button class="btn-small" onclick="jumpToTab('events')">📅 View All Events</button>
+          <button class="btn-small" onclick="jumpToTab('overview')">👪 Family Case File</button>
+        </div>
+        <h3 style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">Event History</h3>
+        ${events.length ? events.map(a=>`
+          <div class="fam-card" style="margin-bottom:8px;">
+            <div class="fam-info">
+              <div class="fam-name">${a.ev.title} <span style="font-size:11px;color:var(--muted);">${EVENT_TYPE_LABELS_SHORT[a.ev.event_type]||''}</span></div>
+              <div class="fam-meta">
+                <span>📆 ${a.ev.event_date?new Date(a.ev.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—'}</span>
+                ${a.attendance?`<span>✅ ${a.attendance}</span>`:''}
+              </div>
+            </div>
+          </div>`).join('') : '<div class="empty" style="padding:16px 0;"><p style="font-size:13px;">No events yet</p></div>'}
+      </div>
+    </div>`;
+  if(c.profile_photo_path) {
+    db.storage.from('ll-documents').createSignedUrl(c.profile_photo_path, 300).then(({data})=>{
+      if(data?.signedUrl) { const img = document.getElementById('lp-img-'+c.id); if(img) img.src = data.signedUrl; }
+    });
+  }
 }
 
 // ── NAV ──
