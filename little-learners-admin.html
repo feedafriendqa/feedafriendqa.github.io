@@ -580,6 +580,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
     <div class="tab-bar">
       <button class="tab" onclick="switchTab('profile',this)">🌟 Profile</button>
       <button class="tab on" onclick="switchTab('overview',this)">Overview</button>
+      <button class="tab" onclick="switchTab('parents',this)">👪 Parents</button>
       <button class="tab" onclick="switchTab('children',this)">Children</button>
       <button class="tab" onclick="switchTab('documents',this)">Documents</button>
       <button class="tab" onclick="switchTab('assess',this)">Introductory Call</button>
@@ -590,6 +591,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
     </div>
     <div class="tpanel" id="tp-profile"></div>
     <div class="tpanel on" id="tp-overview"></div>
+    <div class="tpanel" id="tp-parents"></div>
     <div class="tpanel" id="tp-children"></div>
     <div class="tpanel" id="tp-documents"></div>
     <div class="tpanel" id="tp-assess"></div>
@@ -1956,9 +1958,10 @@ async function applyQidScan() {
       const path = familyId+'/'+docKey+'.'+ext;
       const {error: uErr} = await db.storage.from('ll-documents').upload(path, file, {upsert:true});
       if(!uErr) {
+        const whoLabel = type==='child' ? (allChildren.find(c=>c.id===childId)?.full_name||'Child') : (type==='father'?'Father':'Mother');
         await db.from('ll_documents').insert({
           family_id: familyId, child_id: childId||null,
-          file_name: (type==='child'?'Child':type)+' QID '+side,
+          file_name: whoLabel+' QID — '+side,
           file_path: path, doc_type: docKey,
         });
       }
@@ -2106,7 +2109,7 @@ async function scanChildQidSignin(childId) {
         if(!uErr) {
           await db.from('ll_documents').insert({
             family_id: child.family_id, child_id: childId,
-            file_name: 'Child QID '+side,
+            file_name: (child.full_name||'Child')+' QID — '+side,
             file_path: path, doc_type: docKey,
           });
         } else {
@@ -2773,6 +2776,7 @@ async function openProfile(id, tab, focusChildId) {
   renderEventsTab(f,currentChildren);
   renderPackTab(f,currentChildren);
   renderLearnerProfile(f,currentChildren,profileFocusChildId);
+  renderParentsTab(f);
   renderChecklist(f);
   renderActivityLog(f.id);
   const targetTab = tab || 'overview';
@@ -3175,16 +3179,20 @@ async function setPipelineStatus(status, updateUI=true) {
 }
 
 // ── DOCUMENTS ──
+// Documents only lists things that actually exist as an uploaded file in ll_documents —
+// never a bare QID number typed/imported onto the family or child record. A QID scan done
+// anywhere (Overview's "Scan QID", the new Profile tab, or the QID Sign-In queue) writes a
+// real row here via the same storage convention, so it always shows up and opens on click.
 async function renderDocs(f) {
-  const {data:docs} = await db.from('ll_documents').select('*').eq('family_id',f.id);
+  const {data:docs} = await db.from('ll_documents').select('*').eq('family_id',f.id).order('created_at',{ascending:false});
   let html = '';
-  if(f.father_qid) html += `<div class="doc-item">🪪 Father QID — ${f.father_qid}</div>`;
-  if(f.mother_qid) html += `<div class="doc-item">🪪 Mother QID — ${f.mother_qid}</div>`;
-  currentChildren.forEach(c=>{ if(c.qid) html += `<div class="doc-item">🪪 ${c.full_name||'Child'} — ${c.qid}</div>`; });
   if(docs&&docs.length) {
-    docs.forEach(d=>{ html += `<div class="doc-item" onclick="viewDoc('${d.file_path}')">📄 ${d.file_name||d.doc_type} <span style="margin-left:auto;font-size:11px;color:var(--muted);">tap to view ↗</span></div>`; });
+    docs.forEach(d=>{
+      const icon = /qid/i.test(d.doc_type||'') ? '🪪' : '📄';
+      html += `<div class="doc-item" onclick="viewDoc('${d.file_path}')">${icon} ${d.file_name||d.doc_type||'Document'} <span style="margin-left:auto;font-size:11px;color:var(--muted);">tap to view ↗</span></div>`;
+    });
   }
-  if(!html) html = '<p style="color:var(--muted);font-size:13px;font-weight:600;">No documents uploaded yet.</p>';
+  if(!html) html = '<p style="color:var(--muted);font-size:13px;font-weight:600;">No documents uploaded yet. Use "🪪 Scan QID" on the Overview or Profile tab, or the QID Sign-In queue, to add one.</p>';
   document.getElementById('tp-documents').innerHTML = html;
 }
 
@@ -3724,6 +3732,69 @@ function jumpToTab(t) {
   switchTab(t, btn);
 }
 
+// ── PARENTS TAB (dedicated father/mother snapshot — QID scan data, read-only) ──
+async function saveParentPreferredName(familyId, role, val) {
+  const name = val.trim();
+  const field = role+'_preferred_name';
+  const {error} = await db.from('ll_families').update({[field]: name||null}).eq('id', familyId);
+  if(error) { showToast('Error: '+error.message); return; }
+  const idx = allFamilies.findIndex(x=>x.id===familyId);
+  if(idx>=0) allFamilies[idx][field] = name||null;
+  if(currentFamily && currentFamily.id===familyId) currentFamily[field] = name||null;
+  showToast('✅ Preferred name saved');
+}
+
+async function setPrimaryContact(familyId, role) {
+  const {error} = await db.from('ll_families').update({primary_contact: role}).eq('id', familyId);
+  if(error) { showToast('Error: '+error.message); return; }
+  const idx = allFamilies.findIndex(x=>x.id===familyId);
+  if(idx>=0) allFamilies[idx].primary_contact = role;
+  if(currentFamily && currentFamily.id===familyId) {
+    currentFamily.primary_contact = role;
+    renderParentsTab(currentFamily);
+  }
+  showToast('✅ Primary contact set');
+}
+
+function parentFullCardHTML(role, roleKey, name, preferredName, phone, qid, expiry, nationality, dob, scanType, familyId, isPrimary) {
+  const has = !!name;
+  const expiryPast = expiry && new Date(expiry) < new Date();
+  return `<div style="background:white;border:2px solid ${isPrimary?'var(--gold)':'var(--border)'};border-radius:var(--r);padding:16px 18px;position:relative;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;">${role}${isPrimary?' <span style="color:#7A5000;">⭐ Primary Contact</span>':''}</div>
+      <button class="qid-scan-btn-sm" onclick="openQidScan('${scanType}','${familyId}')">🪪 ${has?'Re-scan':'Scan'} QID</button>
+    </div>
+    ${has ? `
+      <div style="font-size:16px;font-weight:900;font-family:'Nunito',sans-serif;color:var(--forest);">${name}</div>
+      <div class="fg" style="margin-top:10px;margin-bottom:2px;">
+        <label>Preferred Name</label>
+        <input class="preferred-name-input" placeholder="What they like to be called" value="${preferredName||''}" onblur="saveParentPreferredName('${familyId}','${roleKey}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+      </div>
+      <div class="info-grid" style="margin-top:12px;">
+        <div class="irow"><div class="ikey">QID Number</div><div class="ival">${qid?`<span class="qid-pill" style="margin-top:0;">🪪 ${qid}</span>`:'—'}</div></div>
+        <div class="irow"><div class="ikey">QID Expiry</div><div class="ival" style="${expiryPast?'color:var(--coral);font-weight:800;':''}">${expiry?(expiryPast?'⚠️ Expired — ':'')+new Date(expiry).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—'}</div></div>
+        <div class="irow"><div class="ikey">Nationality</div><div class="ival">${nationality||'—'}</div></div>
+        <div class="irow"><div class="ikey">Date of Birth</div><div class="ival">${dob||'—'}</div></div>
+        <div class="irow"><div class="ikey">Phone</div><div class="ival">${phone||'—'}</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:10px;">🔒 Name, QID, expiry, nationality, DOB and phone come from a QID scan or the original application — they can't be typed over here. Use "Scan QID" to update them from a fresh photo. Preferred name is the one field you can set directly.</div>
+      ${!isPrimary?`<button class="btn-small" style="margin-top:10px;" onclick="setPrimaryContact('${familyId}','${roleKey}')">⭐ Make Primary Contact</button>`:''}
+    ` : `<p style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:6px;">No ${role.toLowerCase()} on file yet — scan a QID to add one.</p>`}
+  </div>`;
+}
+
+function renderParentsTab(f) {
+  const el = document.getElementById('tp-parents');
+  if(!el) return;
+  const primary = f.primary_contact || null;
+  el.innerHTML = `
+    ${parentFullCardHTML('Father / Guardian 1', 'father', f.father_name, f.father_preferred_name, f.father_phone, f.father_qid, f.father_qid_expiry, f.father_nationality, f.father_dob, 'father', f.id, primary==='father')}
+    <div style="text-align:center;padding:8px 0;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">
+      ${primary ? `⭐ ${primary==='father'?(f.father_preferred_name||f.father_name||'Father'):(f.mother_preferred_name||f.mother_name||'Mother')} is the primary contact` : (f.father_name && f.mother_name ? '⚠️ No primary contact set yet' : '')}
+    </div>
+    ${parentFullCardHTML('Mother / Guardian 2', 'mother', f.mother_name, f.mother_preferred_name, f.mother_phone, f.mother_qid, f.mother_qid_expiry, f.mother_nationality, f.mother_dob, 'mother', f.id, primary==='mother')}`;
+}
+
 // ── LITTLE LEARNER PROFILE (single-child hub: pack, check-ins, events) ──
 function renderLearnerProfile(f, children, focusChildId) {
   const el = document.getElementById('tp-profile');
@@ -3767,6 +3838,10 @@ function renderLearnerProfile(f, children, focusChildId) {
         </div>
       </div>
       <div class="child-profile-body">
+        <div class="fg" style="margin-bottom:12px;">
+          <label>Preferred Name</label>
+          <input class="preferred-name-input" placeholder="e.g. Bebo" value="${c.preferred_name||''}" onblur="savePreferredName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+        </div>
         ${c.aspiration_response?`<div class="note" style="margin-bottom:12px;">💭 "${c.aspiration_response}"</div>`:''}
         ${lstatus==='archived'&&c.archived_reason?`<div class="warn-box">🗄 ${c.archived_reason}</div>`:''}
         <div class="info-grid" style="margin-bottom:14px;">
