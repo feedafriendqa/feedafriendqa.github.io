@@ -178,6 +178,8 @@ const DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const TLBL={volunteer:"🙋 Volunteer",meeting:"📋 Meeting",event:"🎉 Event",training:"📚 Training"};
 const NOW=new Date(),TY=NOW.getFullYear(),TM=NOW.getMonth();
 let curY=TY,curM=TM,view="month",filter="all",isAdmin=false,isSuperAdmin=false,toastT;
+let authToken=null,authRefresh=null,authName="";
+const SESSION_KEY="faf_cal_session";
 let allEvents=[];
 
 const gp=id=>PROGS.find(p=>p.id===id)||PROGS[0];
@@ -187,6 +189,7 @@ const f12=t=>{if(!t)return"";const[h,m]=t.split(":"),hh=+h;return`${hh>12?hh-12:
 const tc=p=>p.tc==="#fff"?"white":p.tc;
 
 const H={"apikey":SUPA_KEY,"Authorization":"Bearer "+SUPA_KEY,"Content-Type":"application/json"};
+function AH(){return authToken?{"apikey":SUPA_KEY,"Authorization":"Bearer "+authToken,"Content-Type":"application/json"}:H;}
 
 // ── FETCH FROM SUPABASE ───────────────────────────────────────
 async function fetchAll(){
@@ -209,8 +212,8 @@ async function fetchAll(){
     let calRes = {ok:false}; let calEvs = [];
     try {
       calRes = await fetch(
-        SUPA_URL+"/rest/v1/calendar_events?approved=eq.true&order=event_date&select=*",
-        {headers:H}
+        SUPA_URL+"/rest/v1/calendar_events?order=event_date&select=*",
+        {headers:AH()}
       );
       calEvs = calRes.ok ? await calRes.json() : [];
     } catch(e){}
@@ -243,8 +246,10 @@ async function fetchAll(){
     // Map calendar_events → events (if table exists)
     calEvs.forEach(r=>{
       if(!r.event_date) return;
+      if(!r.approved) return; // unapproved events only appear in the Pending review queue
       events.push({
         id:"cal_"+r.id,
+        realId:r.id,
         title:r.title,
         prog:r.programme||"faf-general",
         date:new Date(r.event_date+"T00:00:00"),
@@ -500,7 +505,7 @@ async function doSubmit(){
     approved:isAdmin,
   };
   try{
-    await fetch(SUPA_URL+"/rest/v1/calendar_events",{method:"POST",headers:{...H,"Prefer":"return=representation"},body:JSON.stringify(body)});
+    await fetch(SUPA_URL+"/rest/v1/calendar_events",{method:"POST",headers:{...AH(),"Prefer":"return=representation"},body:JSON.stringify(body)});
     closeModal();await renderContent();
     toast(isAdmin?"Added to calendar!":"Submitted for review!");
   }catch(e){toast("Could not save. Please try again.");console.error(e);}
@@ -520,49 +525,126 @@ function openDetail(ev){
       ${ev.desc?`<p style="font-size:13px;line-height:1.7;color:#444;margin-top:10px">${ev.desc}</p>`:""}
       ${ev.volLink?`<div class="vc"><div style="font-size:28px">🙋</div><div class="vct">Sign up to volunteer through the FaF volunteer portal.</div><button class="btn btng" style="padding:7px 14px;font-size:12px" onclick="window.open('https://feedafriendqa.github.io/','_blank')">Sign Up ↗</button></div>`:""}
     </div>
-    <div class="mf"><button class="btn btno" onclick="closeModal()">Close</button>${ev.volLink?`<button class="btn btng" onclick="window.open('https://feedafriendqa.github.io/','_blank')">🙋 Volunteer for This →</button>`:""}</div>
+    <div class="mf">${(isAdmin&&ev.source==="calendar")?`<button class="btn" style="background:#c0392b;color:#fff" onclick="deleteEventFromDetail('${ev.realId}')">🗑️ Delete</button>`:""}<button class="btn btno" onclick="closeModal()">Close</button>${ev.volLink?`<button class="btn btng" onclick="window.open('https://feedafriendqa.github.io/','_blank')">🙋 Volunteer for This →</button>`:""}</div>
   </div></div>`;
   document.getElementById("ov").onclick=e=>{if(e.target===e.currentTarget)closeModal();};
+}
+
+async function deleteEventFromDetail(id){
+  if(!confirm("Delete this event? This cannot be undone.")) return;
+  try{
+    const res=await fetch(SUPA_URL+"/rest/v1/calendar_events?id=eq."+id,{method:"DELETE",headers:AH()});
+    if(!res.ok) throw new Error("delete failed ("+res.status+")");
+    toast("🗑️ Event deleted");
+    closeModal();
+    await renderContent();
+    if(isSuperAdmin) await refreshPendingCount();
+  }catch(e){toast("Could not delete. Please try again — you may need to sign in again.");console.error(e);}
 }
 
 function openLogin(){
   document.getElementById("modal").innerHTML=`<div class="ov" id="ov"><div class="modal" style="max-width:340px">
-    <div class="mh" style="background:#2A6E35;color:white"><div><h2>Project Heads Portal</h2><p>Enter your access code</p></div><button class="xb" style="color:white" onclick="closeModal()">✕</button></div>
+    <div class="mh" style="background:#2A6E35;color:white"><div><h2>Project Heads Portal</h2><p>Sign in with your FaF account</p></div><button class="xb" style="color:white" onclick="closeModal()">✕</button></div>
     <div class="mb">
-      <div class="fg"><label>Access Code</label><input class="fi" id="codeIn" type="password" placeholder="· · · · · · ·" style="font-size:20px;text-align:center;letter-spacing:5px;font-weight:900" onkeydown="if(event.key==='Enter')doLogin()"/></div>
-      <p style="font-size:11px;color:#8a9e8c;line-height:1.5">For FaF programme leads only. Birthdays and private events visible in this mode.</p>
+      <div class="fg"><label>Email</label><input class="fi" id="emailIn" type="email" placeholder="you@example.com" autocomplete="username" onkeydown="if(event.key==='Enter'){document.getElementById('pwIn').focus();}"/></div>
+      <div class="fg"><label>Password</label><input class="fi" id="pwIn" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <p style="font-size:11px;color:#8a9e8c;line-height:1.5">Use the same email and password you use for the other FaF project-lead tools. Birthdays and private events become visible once you're signed in.</p>
     </div>
-    <div class="mf"><button class="btn btno" onclick="closeModal()">Cancel</button><button class="btn btng" onclick="doLogin()">Access Portal →</button></div>
+    <div class="mf"><button class="btn btno" onclick="closeModal()">Cancel</button><button class="btn btng" id="loginGo" onclick="doLogin()">Sign In →</button></div>
   </div></div>`;
   document.getElementById("ov").onclick=e=>{if(e.target===e.currentTarget)closeModal();};
-  setTimeout(()=>{const ci=document.getElementById("codeIn");if(ci)ci.focus();},80);
+  setTimeout(()=>{const ei=document.getElementById("emailIn");if(ei)ei.focus();},80);
 }
 
-function doLogin(){
-  const v=document.getElementById("codeIn").value.trim().toLowerCase();
-  if(v==="fafsuper26"){
-    isAdmin=true;isSuperAdmin=true;closeModal();
-    document.getElementById("adminBadge").style.display="flex";
-    document.getElementById("adminBadge").innerHTML='<span class="blink"></span>Super Admin';
-    document.getElementById("exitAdmin").style.display="flex";
-    document.getElementById("loginBtn").style.display="none";
-    renderContent();toast("🔓 Super Admin view active");
-    refreshPendingCount();
-  } else if(v==="fafadmin"){
-    isAdmin=true;isSuperAdmin=false;closeModal();
-    document.getElementById("adminBadge").style.display="flex";
-    document.getElementById("adminBadge").innerHTML='<span class="blink"></span>Admin';
-    document.getElementById("exitAdmin").style.display="flex";
-    document.getElementById("loginBtn").style.display="none";
-    renderContent();toast("🔓 Project Heads view active");
-  } else toast("❌ Incorrect code");
+async function doLogin(){
+  const email=(document.getElementById("emailIn")||{}).value.trim();
+  const pw=(document.getElementById("pwIn")||{}).value;
+  if(!email||!pw){toast("Enter your email and password");return;}
+  const go=document.getElementById("loginGo");if(go){go.textContent="Signing in...";go.disabled=true;}
+  try{
+    const res=await fetch(SUPA_URL+"/auth/v1/token?grant_type=password",{
+      method:"POST",
+      headers:{"apikey":SUPA_KEY,"Content-Type":"application/json"},
+      body:JSON.stringify({email,password:pw})
+    });
+    const data=await res.json();
+    if(!res.ok||!data.access_token){
+      toast("❌ "+(data.error_description||data.msg||"Incorrect email or password"));
+      if(go){go.textContent="Sign In →";go.disabled=false;}
+      return;
+    }
+    const profRes=await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+data.user.id+"&select=role,first_name",{
+      headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+data.access_token}
+    });
+    const profRows=profRes.ok?await profRes.json():[];
+    const role=profRows[0]?profRows[0].role:null;
+    if(role!=="admin"&&role!=="superadmin"){
+      toast("❌ This account doesn't have project-lead access");
+      if(go){go.textContent="Sign In →";go.disabled=false;}
+      return;
+    }
+    authToken=data.access_token;authRefresh=data.refresh_token;authName=profRows[0].first_name||"";
+    try{localStorage.setItem(SESSION_KEY,JSON.stringify({refresh_token:data.refresh_token}));}catch(e){}
+    closeModal();
+    applySessionUI(role);
+    await renderContent();
+    if(isSuperAdmin) await refreshPendingCount();
+    toast("🔓 Welcome back"+(authName?", "+authName:"")+"!");
+  }catch(e){
+    toast("Could not sign in. Please try again.");console.error(e);
+    if(go){go.textContent="Sign In →";go.disabled=false;}
+  }
+}
+
+function applySessionUI(role){
+  isAdmin=true;isSuperAdmin=(role==="superadmin");
+  document.getElementById("adminBadge").style.display="flex";
+  document.getElementById("adminBadge").innerHTML='<span class="blink"></span>'+(isSuperAdmin?"Super Admin":"Admin");
+  document.getElementById("exitAdmin").style.display="flex";
+  document.getElementById("loginBtn").style.display="none";
+}
+
+async function restoreSession(){
+  let saved=null;
+  try{saved=JSON.parse(localStorage.getItem(SESSION_KEY)||"null");}catch(e){}
+  if(!saved||!saved.refresh_token) return;
+  try{
+    const res=await fetch(SUPA_URL+"/auth/v1/token?grant_type=refresh_token",{
+      method:"POST",
+      headers:{"apikey":SUPA_KEY,"Content-Type":"application/json"},
+      body:JSON.stringify({refresh_token:saved.refresh_token})
+    });
+    const data=await res.json();
+    if(!res.ok||!data.access_token){try{localStorage.removeItem(SESSION_KEY);}catch(e){}return;}
+    const profRes=await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+data.user.id+"&select=role,first_name",{
+      headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+data.access_token}
+    });
+    const profRows=profRes.ok?await profRes.json():[];
+    const role=profRows[0]?profRows[0].role:null;
+    if(role!=="admin"&&role!=="superadmin"){try{localStorage.removeItem(SESSION_KEY);}catch(e){}return;}
+    authToken=data.access_token;authRefresh=data.refresh_token;authName=profRows[0].first_name||"";
+    try{localStorage.setItem(SESSION_KEY,JSON.stringify({refresh_token:data.refresh_token}));}catch(e){}
+    applySessionUI(role);
+    if(isSuperAdmin) await refreshPendingCount();
+  }catch(e){console.error(e);}
+}
+
+function doLogout(){
+  authToken=null;authRefresh=null;authName="";isAdmin=false;isSuperAdmin=false;
+  try{localStorage.removeItem(SESSION_KEY);}catch(e){}
+  document.getElementById("adminBadge").style.display="none";
+  document.getElementById("exitAdmin").style.display="none";
+  document.getElementById("pendingBtn").style.display="none";
+  document.getElementById("loginBtn").style.display="flex";
+  renderContent();
+  toast("Public view restored");
 }
 
 // ── PENDING EVENTS (super admin approval queue only) ─────────────
 async function refreshPendingCount(){
   if(!isSuperAdmin) return;
   try{
-    const res=await fetch(SUPA_URL+"/rest/v1/calendar_events?approved=eq.false&select=id",{headers:H});
+    const res=await fetch(SUPA_URL+"/rest/v1/calendar_events?approved=eq.false&select=id",{headers:AH()});
     const rows=res.ok?await res.json():[];
     const el=document.getElementById("pendingCount");
     if(el) el.textContent=rows.length;
@@ -586,7 +668,7 @@ async function renderPendingList(){
   const box=document.getElementById("pendingList");
   if(!box) return;
   try{
-    const res=await fetch(SUPA_URL+"/rest/v1/calendar_events?approved=eq.false&order=event_date&select=*",{headers:H});
+    const res=await fetch(SUPA_URL+"/rest/v1/calendar_events?approved=eq.false&order=event_date&select=*",{headers:AH()});
     const rows=res.ok?await res.json():[];
     if(!rows.length){
       box.innerHTML='<p style="font-size:13px;color:#8a9e8c;text-align:center;padding:20px 0">No pending events 🎉</p>';
@@ -618,7 +700,7 @@ async function renderPendingList(){
 
 async function approvePending(id){
   try{
-    await fetch(SUPA_URL+"/rest/v1/calendar_events?id=eq."+id,{method:"PATCH",headers:{...H,"Prefer":"return=minimal"},body:JSON.stringify({approved:true})});
+    await fetch(SUPA_URL+"/rest/v1/calendar_events?id=eq."+id,{method:"PATCH",headers:{...AH(),"Prefer":"return=minimal"},body:JSON.stringify({approved:true})});
     toast("✅ Event approved");
     await renderPendingList();
     await refreshPendingCount();
@@ -629,7 +711,7 @@ async function approvePending(id){
 async function rejectPending(id){
   if(!confirm("Reject and delete this event submission? This cannot be undone.")) return;
   try{
-    await fetch(SUPA_URL+"/rest/v1/calendar_events?id=eq."+id,{method:"DELETE",headers:H});
+    await fetch(SUPA_URL+"/rest/v1/calendar_events?id=eq."+id,{method:"DELETE",headers:AH()});
     toast("🗑️ Event rejected");
     await renderPendingList();
     await refreshPendingCount();
@@ -644,7 +726,7 @@ document.getElementById("vMonth").onclick=()=>{view="month";document.getElementB
 document.getElementById("vList").onclick=()=>{view="list";document.getElementById("vList").classList.add("on");document.getElementById("vMonth").classList.remove("on");renderContent();};
 document.getElementById("submitBtn").onclick=function(){openSubmit();};
 document.getElementById("loginBtn").onclick=openLogin;
-document.getElementById("exitAdmin").onclick=()=>{isAdmin=false;isSuperAdmin=false;document.getElementById("adminBadge").style.display="none";document.getElementById("exitAdmin").style.display="none";document.getElementById("pendingBtn").style.display="none";document.getElementById("loginBtn").style.display="flex";renderContent();toast("Public view restored");};
+document.getElementById("exitAdmin").onclick=doLogout;
 document.getElementById("pendingBtn").onclick=openPending;
 
 // ── EXPOSE for volunteer portal ─────────────────────────────
@@ -667,7 +749,7 @@ window.FaFCalendar={
 };
 
 renderChips();
-renderContent();
+restoreSession().then(()=>renderContent());
 </script>
 </body>
 </html>
