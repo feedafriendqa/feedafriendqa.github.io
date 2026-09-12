@@ -267,9 +267,12 @@ body.lang-ar .alt-contact-actions{text-align:left}
   <!-- Areas for this trip -->
   <div class="dash-stack" id="pnl-areas" style="display:none;padding-bottom:24px">
     <div class="back-row"><button class="back-btn" onclick="showDashMain()" data-en="← Back" data-ar="→ رجوع">← Back</button></div>
-    <div class="dash-hero"><img class="login-logo" alt="Feed a Friend"><div class="login-title" data-en="Pick your areas" data-ar="اختر مناطقك">Pick your areas</div><div class="login-sub" data-en="Up to 6 areas this round" data-ar="حتى 6 مناطق لهذه الجولة">Up to 6 areas this round</div></div>
+    <div class="dash-hero"><img class="login-logo" alt="Feed a Friend"><div class="login-title" data-en="Pick your areas" data-ar="اختر مناطقك">Pick your areas</div><div class="login-sub" data-en="Pick as many areas as you can cover this round" data-ar="اختر أكبر عدد ممكن من المناطق لهذه الجولة">Pick as many areas as you can cover this round</div></div>
     <p class="dash-desc" data-en="Add or remove any areas — not just your saved ones. We'll match friends and boxes to fit your vehicle." data-ar="أضف أو أزل أي مناطق — وليس فقط المحفوظة لديك. سنطابق الأصدقاء والصناديق بما يناسب سيارتك.">Add or remove any areas — not just your saved ones. We'll match friends and boxes to fit your vehicle.</p>
     <div class="card" style="margin:0 16px">
+      <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px">
+        <button type="button" onclick="toggleAllTripAreas()" id="trip-area-all-btn" style="flex-shrink:0;background:none;border:none;color:var(--forest);font-weight:700;font-size:12px;text-decoration:underline;cursor:pointer;white-space:nowrap" data-en="I don't mind — select all" data-ar="لا يهمني — اختر الكل">I don't mind — select all</button>
+      </div>
       <input type="text" id="area-search" placeholder="Search areas…" data-en-placeholder="Search areas…" data-ar-placeholder="ابحث عن منطقة…" oninput="filterTripAreaGrid(this.value)" class="inp" style="margin-bottom:10px">
       <div class="area-grid" id="trip-agrid"></div>
       <div id="area-show-more" style="display:none;text-align:center;padding-top:8px"><button class="tb-out" style="font-size:12px;padding:8px 16px" onclick="EXPAND_AREAS=true;buildTripAreaGrid();"><span data-en="Show all" data-ar="عرض كل الـ">Show all</span> <span id="area-total-n"></span> <span data-en="areas" data-ar="منطقة">areas</span></button></div>
@@ -542,10 +545,10 @@ var TR={
   area_list_load_fail:{en:"Could not load the area list — try again in a moment.",ar:"تعذر تحميل قائمة المناطق — حاول مرة أخرى بعد قليل."},
   no_areas_match:{en:"No areas match your search.",ar:"لا توجد مناطق مطابقة لبحثك."},
   select_at_least_1:{en:"Select at least 1 area.",ar:"اختر منطقة واحدة على الأقل."},
-  areas_max_prefix:{en:"✓ ",ar:"✓ "},
-  areas_max_suffix:{en:" areas — that's the max for now.",ar:" مناطق — هذا هو الحد الأقصى حالياً."},
   area_selected_suffix_en_s:{en:" area selected for this trip.",ar:" منطقة مُختارة لهذه الرحلة."},
   area_selected_suffix_en_p:{en:" areas selected for this trip.",ar:" مناطق مُختارة لهذه الرحلة."},
+  trip_area_select_all:{en:"I don't mind — select all",ar:"لا يهمني — اختر الكل"},
+  trip_area_clear_all:{en:"Clear all",ar:"إلغاء الكل"},
   reservation_expired:{en:'Reservation expired — tap <strong>"↺ Shuffle all"</strong> for a fresh list before confirming.',ar:'انتهت مدة الحجز — اضغط على <strong>"↺ خلط الكل"</strong> للحصول على قائمة جديدة قبل التأكيد.'},
   searching_your_areas:{en:"Searching your areas…",ar:"جارٍ البحث في مناطقك…"},
   confirm_these:{en:"Confirm these →",ar:"أكّد هؤلاء ←"},
@@ -657,6 +660,10 @@ function setLang(lang){
   }
   if(DP&&document.getElementById("pnl-none")&&document.getElementById("pnl-none").style.display!=="none"){
     document.getElementById("cap-remind").textContent=capRemindText(DP);
+  }
+  if(document.getElementById("pnl-areas")&&document.getElementById("pnl-areas").style.display!=="none"){
+    updTripAreaStat();
+    updTripAreaAllBtn();
   }
   if(DP)setHero("dash");
 }
@@ -1336,21 +1343,38 @@ function renderTripAreaGrid(list,isSearch){
     moreEl.style.display="none";
   }
   updTripAreaStat();
+  updTripAreaAllBtn();
 }
 
 function togTripArea(el,a){
   if(el.classList.contains("on")){SELAREAS=SELAREAS.filter(function(x){return x!==a;});el.classList.remove("on");}
   else{
-    if(SELAREAS.length>=6){updTripAreaStat();return;}
     SELAREAS.push(a);el.classList.add("on");
   }
   updTripAreaStat();
+  updTripAreaAllBtn();
+}
+
+// "I don't mind" — a quick way to say any area works, instead of tapping
+// every chip by hand. Toggles to "Clear all" once everything's selected.
+function toggleAllTripAreas(){
+  if(ALL_AREAS.length>0&&SELAREAS.length>=ALL_AREAS.length){SELAREAS=[];}
+  else{SELAREAS=ALL_AREAS.slice();}
+  buildTripAreaGrid();
+}
+function updTripAreaAllBtn(){
+  var btn=document.getElementById("trip-area-all-btn");
+  if(!btn)return;
+  var allSelected=ALL_AREAS.length>0&&SELAREAS.length>=ALL_AREAS.length;
+  var key=allSelected?"trip_area_clear_all":"trip_area_select_all";
+  btn.setAttribute("data-en",TR[key].en);
+  btn.setAttribute("data-ar",TR[key].ar);
+  btn.textContent=t(key);
 }
 
 function updTripAreaStat(){
   var n=SELAREAS.length,el=document.getElementById("trip-astat"),btn=document.getElementById("areas-continue-btn");
   if(n===0){el.textContent=t("select_at_least_1");el.className="area-stat warn";btn.disabled=true;}
-  else if(n>=6){el.textContent=t("areas_max_prefix")+n+t("areas_max_suffix");el.className="area-stat ok";btn.disabled=false;}
   else{el.textContent=n+(n===1?t("area_selected_suffix_en_s"):t("area_selected_suffix_en_p"));el.className="area-stat ok";btn.disabled=false;}
 }
 
