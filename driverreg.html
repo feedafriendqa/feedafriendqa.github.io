@@ -296,6 +296,26 @@ body.lang-ar .rv-v{text-align:left}
     </div>
   </div>
 
+  <!-- Wrong document type (e.g. QID uploaded instead of a driving licence) -->
+  <div class="card" id="lic-wrongdoc-card" style="display:none">
+    <div style="text-align:center;padding:8px 0 4px">
+      <div class="fail-ic-badge"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#fff"><path d="M12 3.5 22 20H2L12 3.5Zm0 5.2-6.4 9.8h12.8L12 8.7Z"/><rect x="11.1" y="11.5" width="1.8" height="4.6" rx="0.9"/><circle cx="12" cy="17.4" r="1"/></svg></div>
+      <div class="fail-t" id="lic-wrongdoc-t" data-en="That looks like a Qatar ID, not a driving licence" data-ar="يبدو أن هذه بطاقة الهوية القطرية وليست رخصة قيادة">That looks like a Qatar ID, not a driving licence</div>
+      <div class="fail-d" id="lic-wrongdoc-d" data-en="Please upload a photo of your driving licence instead — the card with your licence number and vehicle category." data-ar="يرجى رفع صورة رخصة القيادة بدلاً من ذلك — البطاقة التي تحمل رقم الرخصة وفئة المركبة.">Please upload a photo of your driving licence instead — the card with your licence number and vehicle category.</div>
+      <button class="retake-btn" onclick="resetScan()" data-en="↺ Upload the driving licence" data-ar="↺ ارفع رخصة القيادة">↺ Upload the driving licence</button>
+    </div>
+  </div>
+
+  <!-- Licence has expired — cannot continue to sign up as a distributor -->
+  <div class="card" id="lic-expired-card" style="display:none">
+    <div style="text-align:center;padding:8px 0 4px">
+      <div class="fail-ic-badge"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#fff"><path d="M12 3.5 22 20H2L12 3.5Zm0 5.2-6.4 9.8h12.8L12 8.7Z"/><rect x="11.1" y="11.5" width="1.8" height="4.6" rx="0.9"/><circle cx="12" cy="17.4" r="1"/></svg></div>
+      <div class="fail-t" data-en="This driving licence has expired" data-ar="انتهت صلاحية رخصة القيادة هذه">This driving licence has expired</div>
+      <div class="fail-d" id="lic-expired-d" data-en="Your licence expired — you can't register as a distributor with an expired licence. Please renew it and scan it again." data-ar="انتهت صلاحية رخصتك — لا يمكنك التسجيل كموزّع برخصة منتهية الصلاحية. يرجى تجديدها ومسحها مرة أخرى.">Your licence expired — you can't register as a distributor with an expired licence. Please renew it and scan it again.</div>
+      <button class="retake-btn" onclick="resetScan()" data-en="↺ Scan a valid licence" data-ar="↺ امسح رخصة سارية">↺ Scan a valid licence</button>
+    </div>
+  </div>
+
   <div class="err" id="e2" style="margin:10px 16px 0"></div>
 </div>
 
@@ -541,6 +561,7 @@ var D={
   contact_name:"", contact_phone:"",
   email:"", pw:"",
   lic_num:"", lic_exp:"", lic_name:"", lic_nat:"", lic_scanned:false,
+  lic_photo_base64:"", lic_photo_media_type:"",
   car:null, use_back:false, boot_b:0, back_b:0, total_b:0, areas:[]
 };
 
@@ -632,7 +653,11 @@ function resetScan(){
   document.getElementById("lic-spin-card").style.display="none";
   document.getElementById("lic-result-card").style.display="none";
   document.getElementById("lic-fail-card").style.display="none";
+  document.getElementById("lic-wrongdoc-card").style.display="none";
+  document.getElementById("lic-expired-card").style.display="none";
   D.lic_scanned=false;
+  D.lic_photo_base64="";
+  D.lic_photo_media_type="";
   // Unlock the name field so a retake/manual path can be typed in again —
   // it only gets locked once a scan has actually filled it in below.
   var nameEl=document.getElementById("f-driver-name");
@@ -648,6 +673,8 @@ async function scanLicence(inp){
   document.getElementById("lic-spin-card").style.display="block";
   document.getElementById("lic-result-card").style.display="none";
   document.getElementById("lic-fail-card").style.display="none";
+  document.getElementById("lic-wrongdoc-card").style.display="none";
+  document.getElementById("lic-expired-card").style.display="none";
   clearErr("e2");
   try{
     var b64=await toB64(inp.files[0]);
@@ -655,12 +682,36 @@ async function scanLicence(inp){
       body:JSON.stringify({type:"scan_licence",image_base64:b64.split(",")[1],media_type:inp.files[0].type||"image/jpeg"})});
     var data=await r.json();
     var info=data.data||{};
+    // The scan can succeed technically (fields extracted) while the photo
+    // is of the wrong document — most commonly a Qatar ID uploaded instead
+    // of a driving licence. The edge function now classifies document_type,
+    // so catch that case explicitly instead of treating any extracted name
+    // as a valid licence scan.
+    if(info.document_type&&info.document_type!=="driving_licence"){
+      var wrongErr=new Error("wrong_document_type");
+      wrongErr.wrongDocType=info.document_type;
+      throw wrongErr;
+    }
     if(!info.name&&!info.licence_number)throw new Error("empty");
+    // Don't let a driver with an expired licence continue signing up as a
+    // distributor — checked before D.lic_scanned is ever set true, so the
+    // existing "Continue requires a scanned licence" gate on v2() blocks
+    // step 2 for them exactly like an unscanned licence would.
+    if(info.expiry&&isLicenceExpired(info.expiry)){
+      var expiredErr=new Error("licence_expired");
+      expiredErr.licenceExpired=true;
+      expiredErr.expiryValue=info.expiry;
+      throw expiredErr;
+    }
     D.lic_name=info.name||"";
     D.lic_num=info.licence_number||"";
     D.lic_exp=info.expiry||"";
     D.lic_nat=info.nationality||"";
     D.lic_scanned=true;
+    // Keep the actual licence photo (not just the OCR'd fields) so it can be
+    // reviewed on the volunteer's record and submitted with registration.
+    D.lic_photo_base64=b64.split(",")[1];
+    D.lic_photo_media_type=inp.files[0].type||"image/jpeg";
     document.getElementById("sc-name").textContent=D.lic_name||"—";
     document.getElementById("sc-num").textContent=D.lic_num||"—";
     document.getElementById("sc-exp").textContent=D.lic_exp||"—";
@@ -681,11 +732,52 @@ async function scanLicence(inp){
   }catch(e){
     D.lic_scanned=false;
     document.getElementById("lic-spin-card").style.display="none";
-    document.getElementById("lic-fail-card").style.display="block";
+    if(e&&e.licenceExpired){
+      var expD=document.getElementById("lic-expired-d");
+      var expEn="Your licence expired on "+e.expiryValue+" — you can't register as a distributor with an expired licence. Please renew it and scan it again.";
+      var expAr="انتهت صلاحية رخصتك بتاريخ "+e.expiryValue+" — لا يمكنك التسجيل كموزّع برخصة منتهية الصلاحية. يرجى تجديدها ومسحها مرة أخرى.";
+      expD.setAttribute("data-en",expEn); expD.setAttribute("data-ar",expAr);
+      expD.innerHTML=LANG==="ar"?expAr:expEn;
+      document.getElementById("lic-expired-card").style.display="block";
+    }else if(e&&e.wrongDocType){
+      var wdMsgs=(e.wrongDocType==="qatar_id")
+        ? {tEn:"That looks like a Qatar ID, not a driving licence",tAr:"يبدو أن هذه بطاقة الهوية القطرية وليست رخصة قيادة",
+           dEn:"Please upload a photo of your driving licence instead — the card with your licence number and vehicle category.",dAr:"يرجى رفع صورة رخصة القيادة بدلاً من ذلك — البطاقة التي تحمل رقم الرخصة وفئة المركبة."}
+        : {tEn:"That doesn't look like a driving licence",tAr:"لا يبدو أن هذه رخصة قيادة",
+           dEn:"Please upload a clear photo of your driving licence — the card with your licence number and vehicle category.",dAr:"يرجى رفع صورة واضحة لرخصة القيادة — البطاقة التي تحمل رقم الرخصة وفئة المركبة."};
+      var wdT=document.getElementById("lic-wrongdoc-t"), wdD=document.getElementById("lic-wrongdoc-d");
+      wdT.setAttribute("data-en",wdMsgs.tEn); wdT.setAttribute("data-ar",wdMsgs.tAr);
+      wdD.setAttribute("data-en",wdMsgs.dEn); wdD.setAttribute("data-ar",wdMsgs.dAr);
+      wdT.innerHTML=LANG==="ar"?wdMsgs.tAr:wdMsgs.tEn;
+      wdD.innerHTML=LANG==="ar"?wdMsgs.dAr:wdMsgs.dEn;
+      document.getElementById("lic-wrongdoc-card").style.display="block";
+    }else{
+      document.getElementById("lic-fail-card").style.display="block";
+    }
   }
 }
 
 function toB64(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsDataURL(file);});}
+
+// Accepts either an ISO "YYYY-MM-DD" expiry (what the scanner is asked for)
+// or whatever else got printed on the card; falls back to Date.parse and,
+// if the date genuinely can't be understood, doesn't block the driver on a
+// guess — returns false rather than a false positive.
+function isLicenceExpired(expStr){
+  if(!expStr)return false;
+  var d, iso=/^(\d{4})-(\d{2})-(\d{2})/.exec(expStr);
+  if(iso){
+    d=new Date(Date.UTC(+iso[1],+iso[2]-1,+iso[3]));
+  }else{
+    var parsed=Date.parse(expStr);
+    if(isNaN(parsed))return false;
+    d=new Date(parsed);
+  }
+  if(isNaN(d.getTime()))return false;
+  var today=new Date();
+  var todayUTC=Date.UTC(today.getFullYear(),today.getMonth(),today.getDate());
+  return d.getTime()<todayUTC;
+}
 
 // ── STEP 3: DETAILS ──────────────────────────────────────────────────
 function v3(){
@@ -841,6 +933,7 @@ async function submit(){
         contact_name:D.driver_mode==="them"?D.contact_name:"",
         contact_phone:D.driver_mode==="them"?D.contact_phone:"",
         licence_number:D.lic_num,licence_expiry:D.lic_exp||null,licence_name:D.lic_name,
+        licence_photo_base64:D.lic_photo_base64||null,licence_photo_media_type:D.lic_photo_media_type||null,
         car_make:D.car?D.car.make:null,car_model:D.car?D.car.model:null,
         boot_litres:D.car?D.car.bootL:0,uses_back_seats:D.use_back,
         back_litres:(D.use_back&&D.car)?D.car.backL:0,

@@ -686,6 +686,7 @@ var allActivePledges = [];
 var sponsorProfileMap = {};
 var allDistributors = [];
 var currentApprovalFilter = 'pending';
+var currentDistId = null;
 // Single source of truth for "which distribution are we on" — the most
 // relevant row in distribution_rounds (same table used for monthly pledge
 // matching; there's no separate "pledge round" concept, it's all just
@@ -3418,7 +3419,7 @@ function renderApprovalsTable() {
       '<td>' + ((d.car_make||'') + ' ' + (d.car_model||'')).trim() + '</td>' +
       '<td>' + (d.boxes_capacity != null ? d.boxes_capacity + ' boxes' : '–') + '</td>' +
       '<td>' + areasTxt + '</td>' +
-      '<td>' + (d.licence_number || '–') + (d.licence_expiry ? ('<br><span style="font-size:11px;color:var(--muted);">exp. ' + d.licence_expiry + '</span>') : '') + '</td>' +
+      '<td>' + (d.licence_number || '–') + (d.licence_expiry ? ('<br><span style="font-size:11px;' + (isDateExpired(d.licence_expiry) ? 'color:var(--red);font-weight:700;' : 'color:var(--muted);') + '">exp. ' + d.licence_expiry + (isDateExpired(d.licence_expiry) ? ' — EXPIRED' : '') + '</span>') : '') + (d.licence_photo_path ? '<br><span style="font-size:11px;color:var(--green-dark);">📷 photo on file</span>' : '') + '</td>' +
       '<td>' + (d.created_at ? new Date(d.created_at).toLocaleDateString('en-GB') : '–') + '</td>' +
       '<td>' + badge + '</td>' +
       '<td>' + actions + '</td>' +
@@ -3429,6 +3430,7 @@ function renderApprovalsTable() {
 function viewDistributor(id) {
   var d = allDistributors.find(function(x){ return x.id === id; });
   if (!d) return;
+  currentDistId = id;
   var di = function(lbl, val) { return val == null || val === '' ? '' : ('<div class="detail-item" style="margin-bottom:10px;"><div class="lbl">' + lbl + '</div><div style="font-weight:700;">' + val + '</div></div>'); };
   var body = '<h3 style="margin:0 0 14px;">' + (d.preferred_name || d.name) + '</h3>';
   body += di('Full name', d.name);
@@ -3437,8 +3439,11 @@ function viewDistributor(id) {
   if (d.driver_mode === 'them') body += di('Registered by', (d.contact_name||'') + (d.contact_phone ? (' · ' + d.contact_phone) : ''));
   body += di('QID', d.qid_number);
   body += di('Licence number', d.licence_number);
-  body += di('Licence expiry', d.licence_expiry);
+  var expiredBadge = isDateExpired(d.licence_expiry) ? ' <span style="color:var(--red);font-weight:700;">— EXPIRED</span>' : '';
+  body += di('Licence expiry', d.licence_expiry ? (d.licence_expiry + expiredBadge) : null);
   body += di('Licence holder name', d.licence_name);
+  body += '<div class="detail-item" style="margin-bottom:10px;"><div class="lbl">Driving licence photo</div><div id="dist-licence-photo-slot" style="font-size:12px;color:var(--muted);">' +
+    (d.licence_photo_path ? 'Loading…' : 'Not provided') + '</div></div>';
   body += di('Vehicle', ((d.car_make||'') + ' ' + (d.car_model||'')).trim());
   body += di('Boot capacity', d.boot_litres ? (d.boot_litres + ' L') : null);
   body += di('Uses back seats', d.uses_back_seats ? ('Yes (+' + (d.back_litres||0) + ' L)') : 'No');
@@ -3482,10 +3487,71 @@ function viewDistributor(id) {
   body += '</div>';
   document.getElementById('dist-detail-body').innerHTML = body;
   document.getElementById('dist-detail-modal').classList.add('visible');
+
+  if (d.licence_photo_path) {
+    fetchDistributorLicenceUrl(id).then(function(url) {
+      // The admin may have closed this modal or opened a different
+      // distributor while the signed URL was in flight — only touch the DOM
+      // if we're still looking at the same one.
+      if (currentDistId !== id) return;
+      var slot = document.getElementById('dist-licence-photo-slot');
+      if (!slot) return;
+      slot.innerHTML = url
+        ? '<a href="' + url + '" target="_blank" rel="noopener"><img src="' + url + '" style="max-width:280px;max-height:200px;border-radius:8px;border:1px solid var(--border);display:block;margin-top:4px;" alt="Driving licence"></a>'
+        : '<span style="color:var(--red);">Could not load photo</span>';
+    });
+  }
+}
+
+// True only when we can confidently parse the date and it's in the past —
+// never blocks display on a date we can't understand.
+function isDateExpired(dateStr) {
+  if (!dateStr) return false;
+  var d = new Date(dateStr);
+  if (isNaN(d.getTime())) return false;
+  var today = new Date();
+  var todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  return d.getTime() < todayUTC;
+}
+
+// Licence photos live in the same private bucket as application documents —
+// needs the admin's real session (checked server-side), same as get_document_url.
+function fetchDistributorLicenceUrl(distributorId) {
+  return sb.auth.getSession().then(function(res) {
+    var session = res && res.data ? res.data.session : null;
+    var token = session ? session.access_token : ANON_KEY;
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ type: 'get_distributor_document_url', distributor_id: distributorId })
+    }).then(function(r){ return r.json(); }).then(function(json){ return json.url || null; });
+  }).catch(function(){ return null; });
+}
+
+// distributors.status/admin_notes/approved_at are service-role-only now (the
+// RLS tightening that scoped authenticated's UPDATE grant to safe profile
+// columns), so reject/reset/notes go through this edge function action
+// instead of a direct REST PATCH — mirrors approveDistributor's session-token
+// pattern, just for the other status transitions.
+function callAdminUpdateDistributor(payload) {
+  return sb.auth.getSession().then(function(res) {
+    var session = res && res.data ? res.data.session : null;
+    var token = session ? session.access_token : ANON_KEY;
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(Object.assign({ type: 'admin_update_distributor' }, payload))
+    });
+  }).then(function(r) { return r.json().then(function(json) { return { ok: r.ok, json: json }; }); })
+  .then(function(res) {
+    if (!res.ok || res.json.error) throw new Error(res.json.error || 'Save failed');
+    return res.json;
+  });
 }
 
 function closeDistDetailModal() {
   document.getElementById('dist-detail-modal').classList.remove('visible');
+  currentDistId = null;
 }
 
 // The only one of the three that goes through the edge function rather
@@ -3525,16 +3591,7 @@ function rejectDistributor(id) {
   var d = allDistributors.find(function(x){ return x.id === id; });
   if (!d) return;
   if (!confirm('Reject this distributor application? They will not be notified automatically.')) return;
-  apiHeadersAsync().then(function(headers) {
-    return fetch(SUPABASE_URL + '/rest/v1/distributors?id=eq.' + id, {
-      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
-      body: JSON.stringify({ status: 'rejected' })
-    });
-  }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
-    return r.json();
-  }).then(function(rows) {
-    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
+  callAdminUpdateDistributor({ distributor_id: id, status: 'rejected' }).then(function() {
     d.status = 'rejected';
     renderApprovalsTable();
     updateApprovalsBadge();
@@ -3547,16 +3604,7 @@ function resetDistributorStatus(id) {
   var d = allDistributors.find(function(x){ return x.id === id; });
   if (!d) return;
   if (!confirm('Reset this distributor back to pending?')) return;
-  apiHeadersAsync().then(function(headers) {
-    return fetch(SUPABASE_URL + '/rest/v1/distributors?id=eq.' + id, {
-      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
-      body: JSON.stringify({ status: 'pending', approved_at: null })
-    });
-  }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
-    return r.json();
-  }).then(function(rows) {
-    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
+  callAdminUpdateDistributor({ distributor_id: id, status: 'pending', approved_at: null }).then(function() {
     d.status = 'pending'; d.approved_at = null;
     renderApprovalsTable();
     updateApprovalsBadge();
@@ -3579,16 +3627,7 @@ function addDistributorComment(id) {
   try { comments = JSON.parse(d.admin_notes || '[]'); if (!Array.isArray(comments)) throw 0; } catch(e) { comments = []; }
   comments.push({ type: typeEl.value, text: text, ts: new Date().toISOString(), author: myName || 'Admin' });
   var notesJson = JSON.stringify(comments);
-  apiHeadersAsync().then(function(headers) {
-    return fetch(SUPABASE_URL + '/rest/v1/distributors?id=eq.' + id, {
-      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
-      body: JSON.stringify({ admin_notes: notesJson })
-    });
-  }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
-    return r.json();
-  }).then(function(rows) {
-    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
+  callAdminUpdateDistributor({ distributor_id: id, admin_notes: notesJson }).then(function() {
     d.admin_notes = notesJson;
     viewDistributor(id);
   }).catch(function(e){ alert('Save failed: ' + e.message); });
