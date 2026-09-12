@@ -235,7 +235,10 @@ body.lang-ar .alt-contact-actions{text-align:left}
 
   <div class="dash-topbar">
     <div class="lang-toggle"><button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button><button class="lang-btn" data-lang="ar" onclick="setLang('ar')">AR</button></div>
-    <button class="so-btn" id="so-btn" onclick="signOut()" data-en="Sign out" data-ar="تسجيل الخروج">Sign out</button>
+    <div style="display:flex;gap:8px">
+      <button class="so-btn" id="pf-btn" onclick="showProfile()" data-en="Edit profile" data-ar="تعديل الملف الشخصي">Edit profile</button>
+      <button class="so-btn" id="so-btn" onclick="signOut()" data-en="Sign out" data-ar="تسجيل الخروج">Sign out</button>
+    </div>
   </div>
 
   <!-- Active trip -->
@@ -335,6 +338,31 @@ body.lang-ar .alt-contact-actions{text-align:left}
     <div id="past-list"></div>
   </div>
 
+  <!-- Edit profile -->
+  <div class="dash-stack" id="pnl-profile" style="display:none;padding-bottom:24px">
+    <div class="back-row"><button class="back-btn" onclick="showDashMain()" data-en="← Back" data-ar="→ رجوع">← Back</button></div>
+    <div class="dash-hero"><img class="login-logo" alt="Feed a Friend"><div class="login-title" data-en="Edit profile" data-ar="تعديل الملف الشخصي">Edit profile</div><div class="login-sub" data-en="Update your details anytime" data-ar="عدّل بياناتك في أي وقت">Update your details anytime</div></div>
+    <div class="card">
+      <div class="field"><label class="lbl" data-en="Preferred name" data-ar="الاسم المفضّل">Preferred name</label>
+        <input class="inp" id="pf-name" type="text" placeholder="What should we call you?" data-en-placeholder="What should we call you?" data-ar-placeholder="ماذا نناديك؟" oninput="clearPfMsg()"></div>
+      <div class="field"><label class="lbl" data-en="Phone" data-ar="الهاتف">Phone</label>
+        <input class="inp" id="pf-phone" type="tel" placeholder="Your phone number" data-en-placeholder="Your phone number" data-ar-placeholder="رقم هاتفك" oninput="clearPfMsg()"></div>
+      <div class="field"><label class="lbl" data-en="Car make" data-ar="ماركة السيارة">Car make</label>
+        <input class="inp" id="pf-car-make" type="text" placeholder="e.g. Nissan" data-en-placeholder="e.g. Nissan" data-ar-placeholder="مثال: نيسان" oninput="clearPfMsg()"></div>
+      <div class="field"><label class="lbl" data-en="Car model" data-ar="طراز السيارة">Car model</label>
+        <input class="inp" id="pf-car-model" type="text" placeholder="e.g. Patrol" data-en-placeholder="e.g. Patrol" data-ar-placeholder="مثال: باترول" oninput="clearPfMsg()"></div>
+      <div class="field"><label class="lbl" data-en="Vehicle capacity (boxes)" data-ar="سعة السيارة (صناديق)">Vehicle capacity (boxes)</label>
+        <input class="inp" id="pf-capacity" type="number" min="1" step="1" placeholder="5" oninput="clearPfMsg()"></div>
+      <div class="field"><label class="lbl" data-en="Alternate contact name (optional)" data-ar="اسم جهة اتصال بديلة (اختياري)">Alternate contact name (optional)</label>
+        <input class="inp" id="pf-contact-name" type="text" placeholder="If someone else may deliver for you" data-en-placeholder="If someone else may deliver for you" data-ar-placeholder="إن كان شخص آخر قد يوصّل نيابة عنك" oninput="clearPfMsg()"></div>
+      <div class="field"><label class="lbl" data-en="Alternate contact phone (optional)" data-ar="هاتف جهة الاتصال البديلة (اختياري)">Alternate contact phone (optional)</label>
+        <input class="inp" id="pf-contact-phone" type="tel" placeholder="Their phone number" data-en-placeholder="Their phone number" data-ar-placeholder="رقم هاتفهم" oninput="clearPfMsg()"></div>
+      <div class="err" id="pf-err"></div>
+      <div class="err" id="pf-ok" style="color:#1D7A47"></div>
+      <button class="cta" id="pf-save-btn" onclick="saveProfile()" style="margin-top:14px" data-en="Save changes" data-ar="حفظ التغييرات">Save changes</button>
+    </div>
+  </div>
+
 </div><!-- /v-dash -->
 
 <!-- ── LOGIN ── -->
@@ -402,7 +430,7 @@ body.lang-ar .alt-contact-actions{text-align:left}
 
 </div></body>
 <script>
-var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4",EDGE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder";
+var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4",EDGE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder",EDGE_PROFILE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/update-driver-profile";
 // Works around a known supabase-js deadlock (supabase/supabase-js#1594,
 // #2013, #2111): internally it serializes every auth call (getSession,
 // signOut, etc.) through navigator.locks, and if that browser-level lock
@@ -425,6 +453,11 @@ var CU=null,DP=null,AT=null,ALLOC=null,ALLOC_META=null,SELAREAS=[],KEPT={},REMOV
 // since it doesn't exist in the DOM until a render function runs.
 var LANG="en";
 var TR={
+  profile_saving:{en:"Saving…",ar:"جارٍ الحفظ…"},
+  profile_save_btn:{en:"Save changes",ar:"حفظ التغييرات"},
+  profile_saved:{en:"✓ Saved",ar:"✓ تم الحفظ"},
+  profile_save_failed_prefix:{en:"Could not save: ",ar:"تعذر الحفظ: "},
+  profile_invalid_capacity:{en:"Please enter a valid capacity (1 or more).",ar:"يرجى إدخال سعة صحيحة (1 أو أكثر)."},
   something_went_wrong:{en:"Something went wrong: ",ar:"حدث خطأ: "},
   lookup_failed_prefix:{en:"Lookup failed: ",ar:"فشل البحث: "},
   could_not_load_trips_prefix:{en:"Could not load trips: ",ar:"تعذر تحميل الرحلات: "},
@@ -641,6 +674,7 @@ function showV(id){
   });
   document.getElementById("l-btn")&&(document.getElementById("l-btn").parentElement.style.display=id==="v-login"?"block":"none");
   document.getElementById("so-btn").style.display=(id==="v-dash")?"block":"none";
+  document.getElementById("pf-btn").style.display=(id==="v-dash")?"block":"none";
   // Full-bleed gradient + centered fading card only on the sign-in screen —
   // every other view keeps the ordinary green nav + page-header layout.
   document.body.classList.toggle("login-mode",id==="v-login"||id==="v-pending"||id==="v-reset");
@@ -672,8 +706,66 @@ function showDashMain(){
   document.getElementById("pnl-fams").style.display="none";
   document.getElementById("pnl-areas").style.display="none";
   document.getElementById("pnl-alloc").style.display="none";
+  document.getElementById("pnl-past").style.display="none";
+  document.getElementById("pnl-profile").style.display="none";
   document.getElementById("pnl-active").style.display=AT?"block":"none";
   document.getElementById("pnl-none").style.display=AT?"none":"block";
+}
+
+function clearPfMsg(){
+  document.getElementById("pf-err").textContent="";
+  document.getElementById("pf-ok").textContent="";
+}
+
+function showProfile(){
+  if(!DP)return;
+  document.getElementById("pnl-active").style.display="none";
+  document.getElementById("pnl-none").style.display="none";
+  document.getElementById("pnl-fams").style.display="none";
+  document.getElementById("pnl-areas").style.display="none";
+  document.getElementById("pnl-alloc").style.display="none";
+  document.getElementById("pnl-past").style.display="none";
+  clearPfMsg();
+  document.getElementById("pf-name").value=DP.preferred_name||"";
+  document.getElementById("pf-phone").value=DP.phone||"";
+  document.getElementById("pf-car-make").value=DP.car_make||"";
+  document.getElementById("pf-car-model").value=DP.car_model||"";
+  document.getElementById("pf-capacity").value=DP.boxes_capacity||"";
+  document.getElementById("pf-contact-name").value=DP.contact_name||"";
+  document.getElementById("pf-contact-phone").value=DP.contact_phone||"";
+  document.getElementById("pnl-profile").style.display="block";
+}
+
+async function saveProfile(){
+  if(!DP||!CU)return;
+  var btn=document.getElementById("pf-save-btn");
+  var err=document.getElementById("pf-err"),ok=document.getElementById("pf-ok");
+  err.textContent="";ok.textContent="";
+  var capRaw=document.getElementById("pf-capacity").value.trim();
+  var cap=capRaw?parseInt(capRaw,10):null;
+  if(capRaw&&(isNaN(cap)||cap<1)){err.textContent=t("profile_invalid_capacity");return;}
+  btn.disabled=true;btn.textContent=t("profile_saving");
+  var payload={
+    driver_email:CU.email,
+    preferred_name:document.getElementById("pf-name").value.trim(),
+    phone:document.getElementById("pf-phone").value.trim(),
+    car_make:document.getElementById("pf-car-make").value.trim(),
+    car_model:document.getElementById("pf-car-model").value.trim(),
+    contact_name:document.getElementById("pf-contact-name").value.trim(),
+    contact_phone:document.getElementById("pf-contact-phone").value.trim()
+  };
+  if(capRaw)payload.boxes_capacity=cap;
+  try{
+    var res=await fetch(EDGE_PROFILE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    var r=await res.json();
+    if(!res.ok||r.error)throw new Error(r.error||("HTTP "+res.status));
+    if(r.distributor)DP=r.distributor;
+    ok.textContent=t("profile_saved");
+  }catch(e){
+    err.textContent=t("profile_save_failed_prefix")+e.message;
+  }finally{
+    btn.disabled=false;btn.textContent=t("profile_save_btn");
+  }
 }
 
 async function init(){
