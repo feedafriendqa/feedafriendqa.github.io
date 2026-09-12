@@ -114,6 +114,7 @@ body.lang-ar .scan-ok-row{flex-direction:row-reverse}
 .inp:focus{border-color:var(--forest);background:#fff;box-shadow:0 0 0 3px rgba(20,108,67,.08)}
 .inp::placeholder{color:var(--muted-2)}
 .inp.prefilled{border-color:var(--forest);background:var(--mint);color:var(--forest);font-weight:700}
+.inp[readonly]{cursor:not-allowed}
 .hint{font-size:11.5px;color:var(--muted-2);font-weight:600;margin-top:6px;line-height:1.5}
 .divider{height:1px;background:var(--line);margin:14px 0}
 .section-lbl{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--forest);margin-bottom:12px;margin-top:20px}
@@ -307,6 +308,7 @@ body.lang-ar .rv-v{text-align:left}
     <div class="field">
       <label class="lbl" data-en="Driver's full name" data-ar="الاسم الكامل للسائق">Driver's full name</label>
       <input class="inp" id="f-driver-name" type="text" placeholder="As on the driving licence">
+      <div class="fname-note" id="fname-note" style="display:none;font-size:11px;color:#888;font-weight:600;margin-top:6px" data-en="Matched from your licence — contact us if this needs correcting." data-ar="تمت مطابقته من رخصتك — تواصل معنا إذا احتاج إلى تصحيح.">Matched from your licence — contact us if this needs correcting.</div>
     </div>
     <div class="field">
       <label class="lbl" data-en="Preferred name" data-ar="الاسم المفضل">Preferred name</label>
@@ -389,7 +391,10 @@ body.lang-ar .rv-v{text-align:left}
 <!-- ═══ STEP 5: AREAS ═══ -->
 <div class="sv" id="s5">
   <div class="card">
-    <p style="font-size:13px;color:#666;font-weight:600;line-height:1.6;margin-bottom:16px" data-en="Select every area you can comfortably reach. More areas means better route matching." data-ar="اختر كل منطقة يمكنك الوصول إليها بسهولة. كلما زادت المناطق كان التوفيق بالمسارات أفضل.">Select every area you can comfortably reach. More areas means better route matching.</p>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px">
+      <p style="font-size:13px;color:#666;font-weight:600;line-height:1.6;margin:0" data-en="Select every area you can comfortably reach. More areas means better route matching." data-ar="اختر كل منطقة يمكنك الوصول إليها بسهولة. كلما زادت المناطق كان التوفيق بالمسارات أفضل.">Select every area you can comfortably reach. More areas means better route matching.</p>
+      <button type="button" onclick="toggleAllAreas()" id="area-all-btn" style="flex-shrink:0;background:none;border:none;color:var(--forest);font-weight:700;font-size:12px;text-decoration:underline;cursor:pointer;white-space:nowrap" data-en="Select all" data-ar="اختر الكل">Select all</button>
+    </div>
     <div class="area-grid" id="agrid"></div>
     <div class="area-stat warn" id="astat" style="margin-top:14px" data-en="Select at least 3 areas." data-ar="اختر 3 مناطق على الأقل.">Select at least 3 areas.</div>
   </div>
@@ -628,6 +633,13 @@ function resetScan(){
   document.getElementById("lic-result-card").style.display="none";
   document.getElementById("lic-fail-card").style.display="none";
   D.lic_scanned=false;
+  // Unlock the name field so a retake/manual path can be typed in again —
+  // it only gets locked once a scan has actually filled it in below.
+  var nameEl=document.getElementById("f-driver-name");
+  nameEl.removeAttribute("readonly");
+  nameEl.classList.remove("prefilled");
+  nameEl.value="";
+  document.getElementById("fname-note").style.display="none";
 }
 
 async function scanLicence(inp){
@@ -655,10 +667,14 @@ async function scanLicence(inp){
     document.getElementById("sc-nat").textContent=D.lic_nat||"—";
     document.getElementById("lic-spin-card").style.display="none";
     document.getElementById("lic-result-card").style.display="block";
-    // Pre-fill driver name
+    // Pre-fill driver name — locked once matched from the licence, since this
+    // is the verified ID name; only the preferred name stays freely editable.
     if(D.lic_name){
-      document.getElementById("f-driver-name").value=D.lic_name;
-      document.getElementById("f-driver-name").classList.add("prefilled");
+      var nameEl=document.getElementById("f-driver-name");
+      nameEl.value=D.lic_name;
+      nameEl.classList.add("prefilled");
+      nameEl.setAttribute("readonly","readonly");
+      document.getElementById("fname-note").style.display="block";
       document.getElementById("f-pref").value=D.lic_name.split(" ")[0];
       document.getElementById("f-pref").classList.add("prefilled");
     }
@@ -750,16 +766,29 @@ function buildGrid(){
   AREAS_LOADED.then(function(){
     document.getElementById("agrid").innerHTML=AREAS.map(function(a){
       return'<div class="chip'+(D.areas.includes(a)?" on":"")+'" onclick="togA(this,\''+ a +'\')">'+a+'</div>';
-    }).join("");updStat();
+    }).join("");updStat();updAreaAllBtn();
   });
 }
 function togA(el,a){
   if(el.classList.contains("on")){D.areas=D.areas.filter(function(x){return x!==a;});el.classList.remove("on");}
   else{
-    if(D.areas.length>=6){updStat();return;}
     D.areas.push(a);el.classList.add("on");
   }
   updStat();
+  updAreaAllBtn();
+}
+function toggleAllAreas(){
+  if(D.areas.length>=AREAS.length){D.areas=[];}
+  else{D.areas=AREAS.slice();}
+  buildGrid();
+}
+function updAreaAllBtn(){
+  var btn=document.getElementById("area-all-btn");
+  if(!btn)return;
+  var allSelected=AREAS.length>0&&D.areas.length>=AREAS.length;
+  btn.setAttribute("data-en",allSelected?"Clear all":"Select all");
+  btn.setAttribute("data-ar",allSelected?"إلغاء الكل":"اختر الكل");
+  btn.textContent=LANG==="ar"?(allSelected?"إلغاء الكل":"اختر الكل"):(allSelected?"Clear all":"Select all");
 }
 function updStat(){
   var n=D.areas.length,el=document.getElementById("astat");
@@ -767,10 +796,6 @@ function updStat(){
   else if(n<3){
     el.textContent=LANG==="ar"?"تم اختيار "+n+" — يلزم "+(3-n)+" أخرى.":n+" selected — "+(3-n)+" more needed.";
     el.className="area-stat warn";
-  }
-  else if(n>=6){
-    el.textContent=LANG==="ar"?"✓ "+n+" منطقة — هذا الحد الأقصى حالياً.":"✓ "+n+" areas — that's the max for now.";
-    el.className="area-stat ok";
   }
   else{
     el.textContent=LANG==="ar"?"✓ "+n+" منطقة — تغطية ممتازة!":"✓ "+n+" areas — great coverage!";
