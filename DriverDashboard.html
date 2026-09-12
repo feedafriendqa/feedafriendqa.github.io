@@ -655,6 +655,9 @@ function setLang(lang){
     // isn't kept around afterward — cheapest correct fix is just reloading it.
     loadTrips().catch(function(){});
   }
+  if(DP&&document.getElementById("pnl-none")&&document.getElementById("pnl-none").style.display!=="none"){
+    document.getElementById("cap-remind").textContent=capRemindText(DP);
+  }
   if(DP)setHero("dash");
 }
 (function(){
@@ -817,7 +820,11 @@ function clearE(){document.getElementById("l-err").textContent="";}
 async function loadDriver(){
   showV("v-loading");
   try{
-    var r=await sb.from("distributors").select("*").eq("email",CU.email).maybeSingle();
+    // Match case-insensitively — a distributor row saved with different email
+    // casing than the auth account (e.g. typed with a capital letter at
+    // registration) would otherwise silently fail to match here and get
+    // stuck showing "pending" even when actually approved.
+    var r=await sb.from("distributors").select("*").ilike("email",CU.email).maybeSingle();
     if(r.error)throw new Error(t("lookup_failed_prefix")+r.error.message);
     DP=r.data;
     if(!DP){setHero("pending");showV("v-pending");return;}
