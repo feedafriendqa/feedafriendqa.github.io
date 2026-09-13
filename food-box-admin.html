@@ -126,6 +126,7 @@ select.edit-field{cursor:pointer;}
 .badge-confirmed{background:#e0f7fa;color:#007a6e;border:1px solid #80d5ce;}
 .assigned-pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:800;background:#f0f4f0;color:var(--green);border:1px solid var(--border);}
 .badge-rejected{background:var(--red-light);color:var(--red);border:1px solid #f5b8b8;}
+.badge-rejected_reapply{background:#e6f7f9;color:#0878a0;border:1px solid #7fd8e8;}
 .badge-translation{background:#fff0f8;color:#a0186a;border:1px solid #f0a8d8;font-size:10px;margin-left:4px;}
 .lang-tag{display:inline-block;font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px;background:var(--off-white);border:1px solid var(--border);color:var(--muted);}
 
@@ -335,6 +336,7 @@ select.edit-field{cursor:pointer;}
       <button class="filter-btn" data-status="approved" onclick="setFilter('approved',this)">Approved</button>
       <button class="filter-btn" data-status="confirmed" onclick="setFilter('confirmed',this)">Confirmed</button>
       <button class="filter-btn" data-status="rejected" onclick="setFilter('rejected',this)">Rejected</button>
+      <button class="filter-btn" data-status="rejected_reapply" onclick="setFilter('rejected_reapply',this)">🔁 Apply Again</button>
       <button class="filter-btn" data-status="blocked" onclick="setFilter('blocked',this)">Blocked</button>
       <button class="filter-btn" data-status="archived" onclick="setFilter('archived',this)">Archived</button>
       <button class="filter-btn" id="my-cases-toggle" style="display:none;" onclick="toggleMyCases(this)">My cases only</button>
@@ -749,7 +751,7 @@ function findPossibleDuplicates(app) {
   return allApps.filter(function(a) {
     if (a.id === app.id) return false;
     if (a.id === app.duplicate_of || app.id === a.duplicate_of) return false;
-    if (['duplicate', 'rejected', 'blocked'].indexOf(resolveStatus(a)) !== -1) return false;
+    if (['duplicate', 'rejected', 'rejected_reapply', 'blocked'].indexOf(resolveStatus(a)) !== -1) return false;
     var aQid = (a.qid_number || '').trim();
     var aWa = normalizePhoneLast8(a.whatsapp);
     return (qid && aQid && aQid === qid) || (wa && aWa && aWa === wa);
@@ -1136,12 +1138,12 @@ function updateStats() {
   document.getElementById('stat-archived').textContent = scoped.filter(function(a){return resolveStatus(a)==='archived';}).length;
   document.getElementById('stat-translation').textContent = scoped.filter(function(a){return a.translation_pending;}).length;
   document.getElementById('stat-wbb-review').textContent = scoped.filter(function(a){
-    return hasPregnantPerson(a) && !a.wbb_case_created && ['duplicate','rejected','blocked','archived'].indexOf(resolveStatus(a)) === -1;
+    return hasPregnantPerson(a) && !a.wbb_case_created && ['duplicate','rejected','rejected_reapply','blocked','archived'].indexOf(resolveStatus(a)) === -1;
   }).length;
 }
 
 var LANG_TAGS = {ar:'🇶🇦 AR',bn:'🇧🇩 BN',hi:'🇮🇳 HI',ur:'🇵🇰 UR',tl:'🇵🇭 TL',en:'🇬🇧 EN'};
-var STATUS_OPTIONS = ['new','pending','approved','confirmed','rejected','duplicate','blocked','archived'];
+var STATUS_OPTIONS = ['new','pending','approved','confirmed','rejected','rejected_reapply','duplicate','blocked','archived'];
 
 // Same zone-to-area lookup used on the public application form
 // (food-box-application.html), kept identical so a zone scanned here
@@ -1179,7 +1181,7 @@ function renderTable(apps) {
     var dispColor = disp <= (app.household_size === 2 ? 1000 : 1500) ? 'color:var(--green);' : 'color:var(--red);';
     var date = app.created_at ? new Date(app.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '–';
     var status = resolveStatus(app);
-    var statusLabel = status === 'confirmed' ? 'Confirmed' : status;
+    var statusLabel = status === 'confirmed' ? 'Confirmed' : status === 'rejected_reapply' ? '🔁 Apply Again' : status;
     var statusBadge = '<span class="badge badge-' + status + '">' + statusLabel + '</span>';
     if (app.translation_pending) statusBadge += '<span class="badge badge-translation">🌐</span>';
     // Tags
@@ -1262,7 +1264,7 @@ function setFilterFromTile(status) {
     document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
     var filtered = allApps.filter(function(a){
       if (!hasPregnantPerson(a) || a.wbb_case_created) return false;
-      if (['duplicate','rejected','blocked','archived'].indexOf(resolveStatus(a)) !== -1) return false;
+      if (['duplicate','rejected','rejected_reapply','blocked','archived'].indexOf(resolveStatus(a)) !== -1) return false;
       if (myCasesOnly && (a.assigned_to || autoAssign(a)) !== myName) return false;
       return true;
     });
@@ -1438,7 +1440,7 @@ function renderModal(app, members, urlMap) {
   if (!isActiveCase) boxesValText = '–';
   else if (isLongTerm) boxesValText = receivedSoFar + ' &middot; ♾';
   else boxesValText = receivedSoFar + ' / ' + (app.max_boxes != null ? app.max_boxes : '–');
-  var statusLbl = status === 'confirmed' ? 'Confirmed' : (status.charAt(0).toUpperCase() + status.slice(1));
+  var statusLbl = status === 'confirmed' ? 'Confirmed' : status === 'rejected_reapply' ? 'Rejected – Apply Again' : (status.charAt(0).toUpperCase() + status.slice(1));
   var householdCount = 1 + (members ? members.length : 0);
   body += '<div class="stat-band">';
   body += '<div class="stat-band-item"><div class="stat-band-lbl">Status</div><div class="stat-band-val">' + statusLbl + '</div></div>';
@@ -1739,7 +1741,7 @@ function renderModal(app, members, urlMap) {
   body += '<div style="display:flex;gap:8px;align-items:center;">';
   body += '<select class="edit-field" id="status-dropdown" style="max-width:220px;">';
   STATUS_OPTIONS.forEach(function(opt){
-    var lbl = opt === 'confirmed' ? 'Confirmed' : (opt.charAt(0).toUpperCase() + opt.slice(1));
+    var lbl = opt === 'confirmed' ? 'Confirmed' : opt === 'rejected_reapply' ? 'Rejected – Apply Again' : (opt.charAt(0).toUpperCase() + opt.slice(1));
     body += '<option value="'+opt+'"'+(opt===status?' selected':'')+'>'+lbl+'</option>';
   });
   body += '</select>';
@@ -1749,11 +1751,27 @@ function renderModal(app, members, urlMap) {
   // status page), so surface whatever's currently saved here — and let an
   // admin re-open the reject modal to change it, without having to flip
   // the status away and back just to edit the wording.
-  if (status === 'rejected') {
+  if (status === 'rejected' || status === 'rejected_reapply') {
     body += '<div style="margin-top:10px;background:var(--red-light);border-radius:8px;padding:10px 12px;font-size:12px;">';
     body += '<div style="font-weight:800;color:var(--red);margin-bottom:2px;">Rejection reason' + (app.rejection_reason ? '' : ' — none on file') + '</div>';
     if (app.rejection_reason) body += '<div style="color:var(--text);margin-bottom:6px;">' + app.rejection_reason.replace(/</g,'&lt;') + '</div>';
     body += '<button class="btn-comment" style="padding:4px 10px;font-size:11px;" onclick="openRejectModal(\''+app.id+'\')">' + (app.rejection_reason ? 'Edit reason' : 'Add reason') + '</button>';
+    body += '</div>';
+  }
+  // "Rejected – Apply Again" is the deliberate signal (set via the status
+  // dropdown above) that this case is missing so much — financial info,
+  // household members, documents, etc. — that patching it here isn't
+  // practical, and the applicant should instead redo the whole form. It's
+  // a distinct status from plain "rejected" specifically so this doesn't
+  // happen by accident: only a case explicitly marked this way lets the
+  // public "Apply for the first time" form's duplicate-QID check let them
+  // through instead of turning them away. Once they resubmit, this same
+  // case record gets overwritten with their new answers and status flips
+  // back to "pending" for review — nothing to do here in the meantime.
+  if (status === 'rejected_reapply') {
+    body += '<div style="margin-top:10px;background:#e6f7f9;border:1.5px solid #7fd8e8;border-radius:8px;padding:10px 12px;font-size:12px;">';
+    body += '<div style="font-weight:800;color:#0878a0;margin-bottom:2px;">🔁 Cleared to apply again</div>';
+    body += '<div style="color:var(--text);">This QID (' + (app.qid_number || 'no QID on file') + ') can now submit a brand-new application on the public form. Their new answers will replace what\'s on this case, and it\'ll come back into the queue as "Pending" for review.</div>';
     body += '</div>';
   }
   if (app.qid_reapply_review) {

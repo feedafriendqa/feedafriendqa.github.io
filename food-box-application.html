@@ -818,6 +818,20 @@ function translateSelectOptions(selectId, arMap, lang) {
 // ── STATE ─────────────────────────────────────────────────────────────────────
 var registeredQIDs = {};
 
+// Set only when the applicant's own QID matches an existing application that
+// an admin has explicitly marked "Rejected – Apply Again" (see the admin
+// console's status dropdown). That status means the case is cleared for a
+// full from-scratch resubmission — the original was rejected for missing so
+// much (financial info, household members, etc.) that patching it in the
+// admin console isn't practical. Every other status, including a plain
+// "rejected", still hard-blocks a fresh submission via checkDuplicateQID
+// below, so this never lets someone route around an active rejection or an
+// already-used allowance just by reapplying as if new. Sent along with the
+// final submission so the backend updates that same case instead of trying
+// to insert a second row (which the qid_number unique constraint would
+// reject anyway).
+var resubmitApplicationId = null;
+
 function checkDuplicateQID(qidNumber, name, context) {
   if (!qidNumber) return Promise.resolve(false);
   // Also track in-session
@@ -828,12 +842,21 @@ function checkDuplicateQID(qidNumber, name, context) {
       : 'This QID has already been added to this application.');
     return Promise.resolve(true);
   }
+  if (context === 'applicant') resubmitApplicationId = null;
   return fetch(EDGE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
     body: JSON.stringify({ type: 'check_qid', qid_number: qidNumber })
   }).then(function(r) { return r.json(); }).then(function(data) {
     if (data.exists) {
+      // Only the applicant's own QID check can hit the "apply again"
+      // exemption — a household member's QID matching someone else's
+      // separate application is always still a hard block.
+      if (context === 'applicant' && data.can_resubmit && data.application_id) {
+        resubmitApplicationId = data.application_id;
+        registeredQIDs[qidNumber] = name || 'Unknown';
+        return false;
+      }
       var ar = currentLang === 'ar';
       var rec = data.record || {};
       alert(ar
@@ -1212,10 +1235,13 @@ function scanQID(frontFile, backFile) {
       var sp = document.getElementById('scraped-sponsor'); if (sp) sp.textContent = parsed.sponsor || '–';
       if (scraped) scraped.classList.add('visible');
       // Applicant-level duplicate check — mirrors the household-member check
-      // below. The QID lookup itself has no status filter (it flags a match
-      // whether the existing record is approved, rejected, or archived), so
-      // this closes the gap where a person already in the system could
-      // submit a brand-new "first time" application undetected client-side.
+      // below. The QID lookup flags a match regardless of the existing
+      // record's status (approved, rejected, archived, etc.), closing the
+      // gap where a person already in the system could submit a brand-new
+      // "first time" application undetected client-side — except for the
+      // one deliberate carve-out described above resubmitApplicationId,
+      // where an admin has explicitly cleared that specific case to be
+      // resubmitted from scratch.
       if (parsed.qid_number) {
         // Field stays locked either way — a duplicate just clears the value,
         // it doesn't need unlocking first.
@@ -2064,7 +2090,7 @@ function submitApplication() {
   fetch(EDGE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
-    body: JSON.stringify({ type: 'submit_application', application: application, members: members, submission_lang: currentLang })
+    body: JSON.stringify({ type: 'submit_application', application: application, members: members, submission_lang: currentLang, resubmit_application_id: resubmitApplicationId || undefined })
   }).then(function(r) { return r.json(); }).then(function(data) {
     if (data.ok) {
       showSuccessScreen(application.qid_number, application.whatsapp);
