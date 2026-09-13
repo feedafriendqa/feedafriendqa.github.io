@@ -1311,8 +1311,9 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   const [opps,setOpps]=useState([]);
   const [su,setSu]=useState([]);
   const [fp,setFp]=useState("all");
-  const [form,setForm]=useState({activity:"",hours:"",date:"",project:"food-boxes",notes:""});
+  const [form,setForm]=useState({activity:"",hours:"",date:"",project:"general",notes:""});
   const [toast,setToast]=useState(null);
+  const [driverStats,setDriverStats]=useState(null);
   const [signupModal,setSignupModal]=useState(null);
   const [answers,setAnswers]=useState({});
   const [editingProfile,setEditingProfile]=useState(false);
@@ -1338,6 +1339,14 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
     prevTh.current=newTh;
     localStorage.setItem(storageKey,newTh);
     setOpps(o||[]); setLogs(l||[]); setSu(s||[]);
+    if((profile.projects||[]).includes("food-boxes")){
+      try{
+        const res=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_stats",driver_email:profile.email})});
+        const d=await res.json();
+        if(res.ok && d && typeof d.total_deliveries==="number") setDriverStats(d);
+        else setDriverStats(null);
+      }catch(e){ setDriverStats(null); }
+    } else setDriverStats(null);
   }
 
   async function submitLog(){
@@ -1472,6 +1481,13 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
             <div style={{fontSize:11,fontWeight:600,color:DK,marginTop:3}}>{s.label}</div>
           </div>)}
         </div>
+        {driverStats&&<div style={{background:"#fff",borderRadius:14,padding:"14px 16px",border:"1px solid "+BR,borderLeft:"5px solid "+gp("food-boxes").bg,marginBottom:16,display:"flex",alignItems:"center",gap:14}}>
+          <div style={{fontSize:28,flexShrink:0}}>🚚</div>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:HF,fontWeight:900,fontSize:20,color:DK,lineHeight:1}}>{driverStats.total_deliveries} <span style={{fontSize:12,fontWeight:600,color:MT,textTransform:"uppercase",letterSpacing:.5}}>deliveries</span></div>
+            <div style={{fontSize:12,color:MT,fontFamily:BF,marginTop:2}}>{driverStats.total_people} people fed · tracked automatically from your trips</div>
+          </div>
+        </div>}
         <h2 style={{fontFamily:HF,fontSize:17,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>Upcoming Events</h2>
         <div style={{marginBottom:16}}>
           {su.filter(s=>s.status==="approved"&&!s.checked_out).length===0
@@ -1544,7 +1560,8 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
         <p style={{color:MT,fontSize:13,marginBottom:18,fontFamily:BF}}>Every hour counts — thank you!</p>
         <div style={{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            <Field label="Project"><select value={form.project} onChange={e=>setForm(f=>{return{...f,project:e.target.value};} )} style={inp}>{PROJECTS.map(p=><option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}</select></Field>
+            <Field label="Project"><select value={form.project} onChange={e=>setForm(f=>{return{...f,project:e.target.value};} )} style={inp}>{PROJECTS.filter(p=>p.id!=="food-boxes").map(p=><option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}</select></Field>
+            <p style={{fontSize:11,color:MT,fontFamily:BF,marginTop:-6}}>📦 Food Box distribution deliveries are tracked automatically — no need to log hours for those trips.</p>
             <Field label="Event Name"><input type="text" placeholder="e.g. Pantry Stock" value={form.activity} onChange={e=>setForm(f=>{return{...f,activity:e.target.value};} )} style={inp}/></Field>
             <Field label="Date of Event"><input type="date" value={form.date} onChange={e=>setForm(f=>{return{...f,date:e.target.value};} )} style={inp}/></Field>
             <Field label="Hours Volunteered"><input type="number" placeholder="e.g. 3" value={form.hours} onChange={e=>setForm(f=>{return{...f,hours:e.target.value};} )} style={inp}/></Field>
@@ -1571,6 +1588,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
                 {profile.is_student&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>🎓 {profile.student_level||"Student"}{profile.student_school?" · "+profile.student_school:""}</span>}
                 {profile.is_working&&<span style={{background:"#FFEDD5",color:"#9A3412",borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>💼 {profile.profession||"Working"}</span>}
                 <span style={{background:DK,color:MD,borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>⏱ {Math.round(th*100)/100}h volunteered</span>
+                {driverStats&&<span style={{background:gp("food-boxes").bg,color:"#fff",borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>🚚 {driverStats.total_deliveries} deliveries</span>}
               </div>
               {profile.fun_fact&&<div style={{marginTop:8,padding:"8px 12px",background:"#FEF9C3",borderRadius:10,border:"1px solid #FDE68A",fontSize:12,color:"#78350F",fontStyle:"italic"}}>✨ "{profile.fun_fact}"</div>}
             </div>
@@ -1607,6 +1625,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
                   <div style={{color:"#fff",fontSize:"clamp(14px,4vw,20px)",fontWeight:900,fontFamily:"Georgia,serif",textTransform:"uppercase",marginBottom:12}}>{profile.first_name} {profile.surname}</div>
                   <div style={{display:"flex",flexDirection:"column",gap:5}}>
                     <div style={{color:"rgba(255,255,255,0.85)",fontSize:"clamp(9px,2.5vw,12px)"}}>⏱ <strong>{Math.round(th*100)/100}h</strong> volunteered · <strong>{approvedLogs.length}</strong> sessions</div>
+                    {driverStats&&<div style={{color:"rgba(255,255,255,0.85)",fontSize:"clamp(9px,2.5vw,12px)"}}>🚚 <strong>{driverStats.total_deliveries}</strong> deliveries · <strong>{driverStats.total_people}</strong> people fed</div>}
                     {profile.nationality&&<div style={{color:"rgba(255,255,255,0.85)",fontSize:"clamp(9px,2.5vw,12px)"}}>🌍 {profile.nationality}</div>}
                     {profile.is_student&&<div style={{color:"rgba(255,255,255,0.85)",fontSize:"clamp(9px,2.5vw,12px)"}}>🎓 {profile.student_level||"Student"}{profile.student_school?" · "+profile.student_school:""}</div>}
                     {profile.is_working&&<div style={{color:"rgba(255,255,255,0.85)",fontSize:"clamp(9px,2.5vw,12px)"}}>💼 {profile.profession||"Working professional"}</div>}
