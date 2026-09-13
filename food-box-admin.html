@@ -985,6 +985,15 @@ function loadApps() {
     var prefLabels = myLanguages.map(function(l){ return PREFERRED_LANG_LABELS[l]; }).filter(Boolean);
     var orParts = ['submission_lang.in.(' + myLanguages.join(',') + ')'];
     if (prefLabels.length > 0) orParts.push('preferred_lang.in.(' + prefLabels.join(',') + ')');
+    // A case can already be assigned to this admin for reasons the language
+    // filter above doesn't capture — e.g. autoAssign()'s nationality fallback
+    // routes Bangladeshi applicants to Badana even when the form itself was
+    // filled out in English, so submission_lang/preferred_lang say English.
+    // Without this, a case assigned to someone is invisible to them: it never
+    // even reaches their browser, so no search can find it (see the
+    // "Rasel Mir" visibility bug, Sept 2026). Once assigned_to names this
+    // admin, they must be able to see and search it regardless of language.
+    if (myName) orParts.push('assigned_to.eq.' + encodeURIComponent(myName));
     langFilter = '&or=(' + orParts.join(',') + ')';
   }
 
