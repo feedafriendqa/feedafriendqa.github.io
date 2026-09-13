@@ -471,6 +471,9 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
     </div>
     <div class="field-row">
       <div class="field"><label id="lbl-expiry">QID expiry date <span class="req">*</span></label><input type="date" id="inp-expiry"></div>
+      <div class="field"><label id="lbl-dob">Date of birth <span class="req">*</span></label><input type="date" id="inp-dob"></div>
+    </div>
+    <div class="field-row">
       <div class="field"><label id="lbl-sponsor">Sponsor / employer</label><input type="text" id="inp-sponsor" placeholder="e.g. Qatar Petroleum" data-en="e.g. Qatar Petroleum" data-ar="مثال: شركة قطر للبترول"></div>
     </div>
     <div class="field-row">
@@ -660,7 +663,7 @@ const T = {
     'lbl-qid-tap':'Tap to upload','lbl-qid-tap2':'Tap to upload',
     'scan-msg':'Scanning QID…','scraped-verify-note':'Please check and correct if needed.',
     'lbl-fullname':'Full name (as on QID)','lbl-qidnum':'QID number',
-    'lbl-expiry':'QID expiry date','lbl-sponsor':'Sponsor / employer',
+    'lbl-expiry':'QID expiry date','lbl-dob':'Date of birth','lbl-sponsor':'Sponsor / employer',
     'lbl-whatsapp':'WhatsApp number','lbl-nationality':'Nationality',
     'lbl-lang':'Preferred language',
     'lbl-working':'Are you currently working?',
@@ -719,7 +722,7 @@ const T = {
     'lbl-qid-tap':'اضغط للرفع','lbl-qid-tap2':'اضغط للرفع',
     'scan-msg':'جاري قراءة الهوية…','scraped-verify-note':'يرجى التحقق والتصحيح إذا لزم.',
     'lbl-fullname':'الاسم الكامل (كما في الهوية)','lbl-qidnum':'رقم الهوية القطرية',
-    'lbl-expiry':'تاريخ انتهاء الهوية','lbl-sponsor':'الكفيل / صاحب العمل',
+    'lbl-expiry':'تاريخ انتهاء الهوية','lbl-dob':'تاريخ الميلاد','lbl-sponsor':'الكفيل / صاحب العمل',
     'lbl-whatsapp':'رقم واتساب','lbl-nationality':'الجنسية',
     'lbl-lang':'اللغة المفضلة',
     'lbl-working':'هل تعمل حالياً؟',
@@ -956,6 +959,11 @@ function setLang(lang) {
 }
 
 // ── ELIGIBILITY ───────────────────────────────────────────────────────────────
+// Households of exactly 2 have a lower disposable-income cap (QAR 1,000);
+// every other household size (3+) keeps the standard QAR 1,500 cap.
+function incomeLimitForHH(hh) {
+  return hh === 2 ? 1000 : 1500;
+}
 function adjustHH(delta) {
   hhCount = Math.max(1, hhCount + delta);
   document.getElementById('elig-hh-count').textContent = hhCount;
@@ -1025,12 +1033,13 @@ function calcEligibility() {
     if (mainForm) mainForm.style.display = 'none';
     return;
   }
-  if (disp > 1500) {
-    var over = Math.round(disp - 1500);
+  var incomeLimit = incomeLimitForHH(hh);
+  if (disp > incomeLimit) {
+    var over = Math.round(disp - incomeLimit);
     if (icon) icon.textContent = '⛔';
     if (msg) msg.textContent = ar
       ? 'عذراً، الدخل المتاح للأسرة ' + Math.round(disp) + ' ريال، يتجاوز الحد بمقدار ' + over + ' ريال.'
-      : 'Sorry — household disposable income of QAR ' + Math.round(disp) + ' is QAR ' + over + ' above our QAR 1,500 limit.';
+      : 'Sorry — household disposable income of QAR ' + Math.round(disp) + ' is QAR ' + over + ' above our QAR ' + incomeLimit.toLocaleString() + ' limit.';
     verdict.className = 'elig-verdict ineligible show';
     if (mainForm) mainForm.style.display = 'none';
     return;
@@ -1056,7 +1065,8 @@ function updateFinancialCalc() {
   if (!salary && !rent) { result.className = 'elig-result'; return; }
   var disp = salary - rent;
   var ar = currentLang === 'ar';
-  if (disp <= 1500) {
+  var incomeLimit = incomeLimitForHH(hhCount);
+  if (disp <= incomeLimit) {
     result.className = 'elig-result eligible';
     document.getElementById('fin-icon').textContent = '✅';
     document.getElementById('fin-msg').textContent = ar
@@ -1180,6 +1190,7 @@ function scanQID(frontFile, backFile) {
       if (parsed.full_name) document.getElementById('inp-fullname').value = parsed.full_name;
       if (parsed.qid_number) document.getElementById('inp-qidnum').value = parsed.qid_number;
       if (parsed.expiry_date) document.getElementById('inp-expiry').value = parsed.expiry_date;
+      if (parsed.dob) document.getElementById('inp-dob').value = parsed.dob;
       if (parsed.sponsor) document.getElementById('inp-sponsor').value = parsed.sponsor;
       if (parsed.nationality) {
         var sel = document.getElementById('inp-nationality');
@@ -1885,6 +1896,7 @@ function validateApplication(members, memberFormIndices) {
   checkVal('inp-fullname', ar ? 'الاسم الكامل (ارفع الهوية أولاً)' : 'Full name (upload your QID above first)');
   checkVal('inp-qidnum', ar ? 'رقم الهوية القطرية (ارفع الهوية أولاً)' : 'QID number (upload your QID above first)');
   checkVal('inp-expiry', ar ? 'تاريخ انتهاء الهوية' : 'QID expiry date');
+  checkVal('inp-dob', ar ? 'تاريخ الميلاد' : 'Date of birth');
   checkVal('inp-whatsapp', ar ? 'رقم واتساب' : 'WhatsApp number');
   checkVal('inp-nationality', ar ? 'الجنسية (ارفع الهوية أولاً)' : 'Nationality (upload your QID above first)');
   checkVal('inp-area', ar ? 'المنطقة' : 'Area');
@@ -2029,6 +2041,7 @@ function submitApplication() {
     nationality: getVal('inp-nationality'),
     sponsor: getVal('inp-sponsor'),
     qid_expiry: getVal('inp-expiry') || null,
+    dob: getVal('inp-dob') || null,
     whatsapp: toWesternDigits(getVal('inp-whatsapp')),
     email: getVal('inp-email') || null,
     preferred_lang: getRadio('pref-lang'),

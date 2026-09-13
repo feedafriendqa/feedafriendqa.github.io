@@ -686,7 +686,6 @@ var allActivePledges = [];
 var sponsorProfileMap = {};
 var allDistributors = [];
 var currentApprovalFilter = 'pending';
-var currentDistId = null;
 // Single source of truth for "which distribution are we on" — the most
 // relevant row in distribution_rounds (same table used for monthly pledge
 // matching; there's no separate "pledge round" concept, it's all just
@@ -1060,7 +1059,7 @@ function loadAllMembersForSearch() {
   membersByApp = {};
   var pageSize = 1000;
   function fetchPage(offset, headers) {
-    return fetch(SUPABASE_URL + '/rest/v1/food_box_members?select=application_id,full_name,full_name_en,qid_number,whatsapp&order=id&offset=' + offset + '&limit=' + pageSize, {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_members?select=application_id,full_name,full_name_en,qid_number,whatsapp,is_pregnant&order=id&offset=' + offset + '&limit=' + pageSize, {
       headers: headers
     }).then(function(r) { return r.json(); }).then(function(rows) {
       rows = Array.isArray(rows) ? rows : [];
@@ -1075,6 +1074,7 @@ function loadAllMembersForSearch() {
     return fetchPage(0, headers);
   }).then(function() {
     filterApps(); // re-run current search now that member data is available
+    updateStats(); // WBB review count depends on members' is_pregnant too — refresh once loaded
   }).catch(function(e) { console.error('Failed to load members for search:', e.message); });
 }
 
@@ -1106,6 +1106,19 @@ function getDummyApps() {
   ];
 }
 
+// A case needs a Welcome Baby look whether the pregnancy belongs to the
+// main applicant OR to any household member on that application (e.g. a
+// pregnant wife listed as a member rather than as the applicant herself) —
+// previously only a.is_pregnant (the applicant's own field) was checked,
+// so a pregnant family member never surfaced here at all. wbb_case_created
+// is still tracked at the application level, so once a case is handled
+// (for either kind of pregnancy) it still drops off this queue on its own.
+function hasPregnantPerson(a) {
+  if (a.is_pregnant) return true;
+  var mems = membersByApp[a.id] || [];
+  return mems.some(function(m) { return m.is_pregnant; });
+}
+
 function updateStats() {
   var scoped = myCasesOnly ? allApps.filter(function(a){ return (a.assigned_to || autoAssign(a)) === myName; }) : allApps;
   document.getElementById('stat-total').textContent = scoped.length;
@@ -1123,7 +1136,7 @@ function updateStats() {
   document.getElementById('stat-archived').textContent = scoped.filter(function(a){return resolveStatus(a)==='archived';}).length;
   document.getElementById('stat-translation').textContent = scoped.filter(function(a){return a.translation_pending;}).length;
   document.getElementById('stat-wbb-review').textContent = scoped.filter(function(a){
-    return a.is_pregnant && !a.wbb_case_created && ['duplicate','rejected','blocked','archived'].indexOf(resolveStatus(a)) === -1;
+    return hasPregnantPerson(a) && !a.wbb_case_created && ['duplicate','rejected','blocked','archived'].indexOf(resolveStatus(a)) === -1;
   }).length;
 }
 
@@ -1163,7 +1176,7 @@ function renderTable(apps) {
   tbody.innerHTML = '';
   apps.forEach(function(app) {
     var disp = (app.monthly_salary||0) - (app.monthly_rent||0);
-    var dispColor = disp <= 1500 ? 'color:var(--green);' : 'color:var(--red);';
+    var dispColor = disp <= (app.household_size === 2 ? 1000 : 1500) ? 'color:var(--green);' : 'color:var(--red);';
     var date = app.created_at ? new Date(app.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '–';
     var status = resolveStatus(app);
     var statusLabel = status === 'confirmed' ? 'Confirmed' : status;
@@ -1248,7 +1261,7 @@ function setFilterFromTile(status) {
     currentFilter = 'all';
     document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
     var filtered = allApps.filter(function(a){
-      if (!a.is_pregnant || a.wbb_case_created) return false;
+      if (!hasPregnantPerson(a) || a.wbb_case_created) return false;
       if (['duplicate','rejected','blocked','archived'].indexOf(resolveStatus(a)) !== -1) return false;
       if (myCasesOnly && (a.assigned_to || autoAssign(a)) !== myName) return false;
       return true;
@@ -1385,7 +1398,7 @@ function renderModal(app, members, urlMap) {
   var name = app.full_name_en || app.full_name || '–';
   var disp = (app.monthly_salary||0) - (app.monthly_rent||0);
   var date = app.created_at ? new Date(app.created_at).toLocaleString('en-GB') : '–';
-  var dispColor = disp <= 1500 ? 'color:var(--green)' : 'color:var(--red)';
+  var dispColor = disp <= (app.household_size === 2 ? 1000 : 1500) ? 'color:var(--green)' : 'color:var(--red)';
   var status = resolveStatus(app);
   var qidFrontUrl = app.qid_front_path ? urlMap[app.qid_front_path] : null;
   var tags = Array.isArray(app.tags) ? app.tags : (app.tags ? (() => { try { return JSON.parse(app.tags); } catch(e) { return []; } })() : []);
@@ -1535,6 +1548,7 @@ function renderModal(app, members, urlMap) {
   body += dif('Preferred name','ef-preferred_name',app.preferred_name);
   body += dif('QID number','ef-qid_number',app.qid_number);
   body += '<div class="detail-item"><div class="lbl">QID expiry</div>'+sd('ef-qid_expiry',app.qid_expiry)+'</div>';
+  body += '<div class="detail-item"><div class="lbl">Date of birth</div>'+sd('ef-dob',app.dob)+'</div>';
   body += '<div class="detail-item"><div class="lbl">Gender</div><select class="edit-field" id="ef-gender"><option value="male"'+(app.gender==='male'?' selected':'')+'>Male</option><option value="female"'+(app.gender==='female'?' selected':'')+'>Female</option></select></div>';
   body += dif('Nationality','ef-nationality',app.nationality);
   body += dif('WhatsApp','ef-whatsapp',app.whatsapp);
@@ -1547,7 +1561,7 @@ function renderModal(app, members, urlMap) {
   body += dif('Diaper size','ef-diaper_size',app.diaper_size);
   body += dif('Formula needed','ef-formula',app.formula);
   body += '</div>';
-  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',preferred_name:\'ef-preferred_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\',diaper_size:\'ef-diaper_size\',formula:\'ef-formula\'})">Save applicant</button>';
+  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',preferred_name:\'ef-preferred_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',dob:\'ef-dob|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\',diaper_size:\'ef-diaper_size\',formula:\'ef-formula\'})">Save applicant</button>';
   body += accEnd;
   // ── ADDRESS (editable) ──
   body += accStart('address', 'Address');
@@ -1571,11 +1585,11 @@ function renderModal(app, members, urlMap) {
 
   // ── FINANCIAL (editable) ──
   body += accStart('financial', 'Financial') + '<div class="detail-grid">';
-  body += '<div class="detail-item"><div class="lbl">Household monthly salary (QAR)</div>'+sn('ef-monthly_salary',app.monthly_salary)+'</div>';
-  body += '<div class="detail-item"><div class="lbl">Monthly rent (QAR)</div>'+sn('ef-monthly_rent',app.monthly_rent)+'</div>';
-  body += '<div class="detail-item"><div class="lbl">Household size</div>'+sn('ef-household_size',app.household_size,'onchange="updateMaxBoxesFromFamilyType(\''+app.id+'\')"')+'</div>';
+  body += '<div class="detail-item"><div class="lbl">Household monthly salary (QAR)</div>'+sn('ef-monthly_salary',app.monthly_salary,'onchange="recalcDisposableIncome(\''+app.id+'\')"')+'</div>';
+  body += '<div class="detail-item"><div class="lbl">Monthly rent (QAR)</div>'+sn('ef-monthly_rent',app.monthly_rent,'onchange="recalcDisposableIncome(\''+app.id+'\')"')+'</div>';
+  body += '<div class="detail-item"><div class="lbl">Household size</div>'+sn('ef-household_size',app.household_size,'onchange="updateMaxBoxesFromFamilyType(\''+app.id+'\');recalcDisposableIncome(\''+app.id+'\')"')+'</div>';
   body += '<div class="detail-item"><div class="lbl">Household type</div><select class="edit-field" id="ef-is_family" onchange="updateMaxBoxesFromFamilyType(\''+app.id+'\')"><option value="true"'+(app.is_family!==false?' selected':'')+'>Family (up to 6 boxes if 3+ people)</option><option value="false"'+(app.is_family===false?' selected':'')+'>Bachelor (up to 3 boxes)</option></select></div>';
-  body += di('Disposable income','<span style="font-weight:900;'+dispColor+'">QAR '+Math.round(disp).toLocaleString()+'</span>');
+  body += di('Disposable income','<span id="disp-display-'+app.id+'" style="font-weight:900;'+dispColor+'">QAR '+Math.round(disp).toLocaleString()+'</span>');
   body += '<div class="detail-item"><div class="lbl">Boxes received</div>'+sn('ef-boxes_received',app.boxes_received)+'</div>';
   body += '<div class="detail-item"><div class="lbl">Max boxes'+(isLongTerm?' <span style="font-size:10px;color:var(--orange);">♾ Long Term</span>':' <span style="font-size:10px;color:var(--muted);">(auto-set by household type, editable)</span>')+'</div>'+sn('ef-max_boxes',app.max_boxes)+'</div>';
   body += '</div>';
@@ -1788,6 +1802,29 @@ function renderModal(app, members, urlMap) {
 // has deliberately customized for a specific case. Runs on both the
 // household-type dropdown and the household-size field, since either one
 // changing can flip which allowance applies.
+// Live-recalculates the "Disposable income" figure shown in the Financial
+// accordion whenever an admin edits salary or rent by hand — previously
+// that figure was computed once at render time from the saved app record
+// and never updated until the page was reloaded after saving, so an admin
+// editing salary/rent would keep seeing the OLD disposable income (and its
+// old green/red color) right up until they hit Save and re-opened the case.
+// Households of exactly 2 use the QAR 1,000 cap; everyone else uses QAR 1,500
+// (matches incomeLimitForHH() in food-box-application.html).
+function recalcDisposableIncome(appId) {
+  var salaryField = document.getElementById('ef-monthly_salary');
+  var rentField = document.getElementById('ef-monthly_rent');
+  var hhField = document.getElementById('ef-household_size');
+  var display = document.getElementById('disp-display-' + appId);
+  if (!salaryField || !rentField || !display) return;
+  var salary = parseFloat(salaryField.value) || 0;
+  var rent = parseFloat(rentField.value) || 0;
+  var hh = hhField ? parseInt(hhField.value, 10) : NaN;
+  var disp = salary - rent;
+  var limit = hh === 2 ? 1000 : 1500;
+  display.style.color = disp <= limit ? 'var(--green)' : 'var(--red)';
+  display.textContent = 'QAR ' + Math.round(disp).toLocaleString();
+}
+
 function updateMaxBoxesFromFamilyType(appId) {
   var isFamily = document.getElementById('ef-is_family').value === 'true';
   var householdSizeField = document.getElementById('ef-household_size');
@@ -3419,7 +3456,7 @@ function renderApprovalsTable() {
       '<td>' + ((d.car_make||'') + ' ' + (d.car_model||'')).trim() + '</td>' +
       '<td>' + (d.boxes_capacity != null ? d.boxes_capacity + ' boxes' : '–') + '</td>' +
       '<td>' + areasTxt + '</td>' +
-      '<td>' + (d.licence_number || '–') + (d.licence_expiry ? ('<br><span style="font-size:11px;' + (isDateExpired(d.licence_expiry) ? 'color:var(--red);font-weight:700;' : 'color:var(--muted);') + '">exp. ' + d.licence_expiry + (isDateExpired(d.licence_expiry) ? ' — EXPIRED' : '') + '</span>') : '') + (d.licence_photo_path ? '<br><span style="font-size:11px;color:var(--green-dark);">📷 photo on file</span>' : '') + '</td>' +
+      '<td>' + (d.licence_number || '–') + (d.licence_expiry ? ('<br><span style="font-size:11px;color:var(--muted);">exp. ' + d.licence_expiry + '</span>') : '') + '</td>' +
       '<td>' + (d.created_at ? new Date(d.created_at).toLocaleDateString('en-GB') : '–') + '</td>' +
       '<td>' + badge + '</td>' +
       '<td>' + actions + '</td>' +
@@ -3430,7 +3467,6 @@ function renderApprovalsTable() {
 function viewDistributor(id) {
   var d = allDistributors.find(function(x){ return x.id === id; });
   if (!d) return;
-  currentDistId = id;
   var di = function(lbl, val) { return val == null || val === '' ? '' : ('<div class="detail-item" style="margin-bottom:10px;"><div class="lbl">' + lbl + '</div><div style="font-weight:700;">' + val + '</div></div>'); };
   var body = '<h3 style="margin:0 0 14px;">' + (d.preferred_name || d.name) + '</h3>';
   body += di('Full name', d.name);
@@ -3439,11 +3475,8 @@ function viewDistributor(id) {
   if (d.driver_mode === 'them') body += di('Registered by', (d.contact_name||'') + (d.contact_phone ? (' · ' + d.contact_phone) : ''));
   body += di('QID', d.qid_number);
   body += di('Licence number', d.licence_number);
-  var expiredBadge = isDateExpired(d.licence_expiry) ? ' <span style="color:var(--red);font-weight:700;">— EXPIRED</span>' : '';
-  body += di('Licence expiry', d.licence_expiry ? (d.licence_expiry + expiredBadge) : null);
+  body += di('Licence expiry', d.licence_expiry);
   body += di('Licence holder name', d.licence_name);
-  body += '<div class="detail-item" style="margin-bottom:10px;"><div class="lbl">Driving licence photo</div><div id="dist-licence-photo-slot" style="font-size:12px;color:var(--muted);">' +
-    (d.licence_photo_path ? 'Loading…' : 'Not provided') + '</div></div>';
   body += di('Vehicle', ((d.car_make||'') + ' ' + (d.car_model||'')).trim());
   body += di('Boot capacity', d.boot_litres ? (d.boot_litres + ' L') : null);
   body += di('Uses back seats', d.uses_back_seats ? ('Yes (+' + (d.back_litres||0) + ' L)') : 'No');
@@ -3487,71 +3520,10 @@ function viewDistributor(id) {
   body += '</div>';
   document.getElementById('dist-detail-body').innerHTML = body;
   document.getElementById('dist-detail-modal').classList.add('visible');
-
-  if (d.licence_photo_path) {
-    fetchDistributorLicenceUrl(id).then(function(url) {
-      // The admin may have closed this modal or opened a different
-      // distributor while the signed URL was in flight — only touch the DOM
-      // if we're still looking at the same one.
-      if (currentDistId !== id) return;
-      var slot = document.getElementById('dist-licence-photo-slot');
-      if (!slot) return;
-      slot.innerHTML = url
-        ? '<a href="' + url + '" target="_blank" rel="noopener"><img src="' + url + '" style="max-width:280px;max-height:200px;border-radius:8px;border:1px solid var(--border);display:block;margin-top:4px;" alt="Driving licence"></a>'
-        : '<span style="color:var(--red);">Could not load photo</span>';
-    });
-  }
-}
-
-// True only when we can confidently parse the date and it's in the past —
-// never blocks display on a date we can't understand.
-function isDateExpired(dateStr) {
-  if (!dateStr) return false;
-  var d = new Date(dateStr);
-  if (isNaN(d.getTime())) return false;
-  var today = new Date();
-  var todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-  return d.getTime() < todayUTC;
-}
-
-// Licence photos live in the same private bucket as application documents —
-// needs the admin's real session (checked server-side), same as get_document_url.
-function fetchDistributorLicenceUrl(distributorId) {
-  return sb.auth.getSession().then(function(res) {
-    var session = res && res.data ? res.data.session : null;
-    var token = session ? session.access_token : ANON_KEY;
-    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ type: 'get_distributor_document_url', distributor_id: distributorId })
-    }).then(function(r){ return r.json(); }).then(function(json){ return json.url || null; });
-  }).catch(function(){ return null; });
-}
-
-// distributors.status/admin_notes/approved_at are service-role-only now (the
-// RLS tightening that scoped authenticated's UPDATE grant to safe profile
-// columns), so reject/reset/notes go through this edge function action
-// instead of a direct REST PATCH — mirrors approveDistributor's session-token
-// pattern, just for the other status transitions.
-function callAdminUpdateDistributor(payload) {
-  return sb.auth.getSession().then(function(res) {
-    var session = res && res.data ? res.data.session : null;
-    var token = session ? session.access_token : ANON_KEY;
-    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify(Object.assign({ type: 'admin_update_distributor' }, payload))
-    });
-  }).then(function(r) { return r.json().then(function(json) { return { ok: r.ok, json: json }; }); })
-  .then(function(res) {
-    if (!res.ok || res.json.error) throw new Error(res.json.error || 'Save failed');
-    return res.json;
-  });
 }
 
 function closeDistDetailModal() {
   document.getElementById('dist-detail-modal').classList.remove('visible');
-  currentDistId = null;
 }
 
 // The only one of the three that goes through the edge function rather
@@ -3591,7 +3563,16 @@ function rejectDistributor(id) {
   var d = allDistributors.find(function(x){ return x.id === id; });
   if (!d) return;
   if (!confirm('Reject this distributor application? They will not be notified automatically.')) return;
-  callAdminUpdateDistributor({ distributor_id: id, status: 'rejected' }).then(function() {
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/distributors?id=eq.' + id, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ status: 'rejected' })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
     d.status = 'rejected';
     renderApprovalsTable();
     updateApprovalsBadge();
@@ -3604,7 +3585,16 @@ function resetDistributorStatus(id) {
   var d = allDistributors.find(function(x){ return x.id === id; });
   if (!d) return;
   if (!confirm('Reset this distributor back to pending?')) return;
-  callAdminUpdateDistributor({ distributor_id: id, status: 'pending', approved_at: null }).then(function() {
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/distributors?id=eq.' + id, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ status: 'pending', approved_at: null })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
     d.status = 'pending'; d.approved_at = null;
     renderApprovalsTable();
     updateApprovalsBadge();
@@ -3627,7 +3617,16 @@ function addDistributorComment(id) {
   try { comments = JSON.parse(d.admin_notes || '[]'); if (!Array.isArray(comments)) throw 0; } catch(e) { comments = []; }
   comments.push({ type: typeEl.value, text: text, ts: new Date().toISOString(), author: myName || 'Admin' });
   var notesJson = JSON.stringify(comments);
-  callAdminUpdateDistributor({ distributor_id: id, admin_notes: notesJson }).then(function() {
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/distributors?id=eq.' + id, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ admin_notes: notesJson })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
     d.admin_notes = notesJson;
     viewDistributor(id);
   }).catch(function(e){ alert('Save failed: ' + e.message); });
@@ -3964,6 +3963,8 @@ function scanMainQid(appId) {
     if (raw.qid_number) document.getElementById('ef-qid_number').value = raw.qid_number;
     var expiry = qidDateToISO(raw.expiry);
     if (expiry) document.getElementById('ef-qid_expiry').value = expiry;
+    var scannedDob = qidDateToISO(raw.dob);
+    if (scannedDob) { var dobEl = document.getElementById('ef-dob'); if (dobEl) dobEl.value = scannedDob; }
     if (raw.nationality) {
       var natEl = document.getElementById('ef-nationality');
       if (natEl) natEl.value = raw.nationality;
