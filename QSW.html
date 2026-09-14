@@ -124,6 +124,17 @@
   .done-v{ font-size:13.5px; color:var(--card-ink); font-weight:600; margin-top:4px; }
   .done-foot{ border-top:1px solid #e8ebe6; margin-top:18px; padding-top:16px; font-size:12.5px; color:var(--card-sub); line-height:1.5; }
   .done-back{ margin-top:24px; }
+  .cal-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:18px; padding-top:16px; border-top:1px solid #e8ebe6; }
+  .cal-btn{
+    display:inline-flex; align-items:center; gap:7px; border:1.5px solid var(--card-line); background:#fff;
+    color:var(--card-ink); font-weight:700; font-size:12.5px; padding:9px 14px; border-radius:10px; cursor:pointer; text-decoration:none;
+  }
+  .cal-btn:hover{ border-color:var(--bg); color:var(--bg); }
+  .cal-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.08em; color:#7c8177; width:100%; margin-bottom:2px; }
+
+  .social-row{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-light); }
+  .social-row a{ display:inline-flex; align-items:center; gap:6px; color:var(--lime); font-weight:700; }
+  .social-row a:hover{ color:#fff; }
 
   [hidden]{ display:none !important; }
 </style>
@@ -250,6 +261,7 @@ async function renderCalendar(){
     <div class="footer-note">
       <div><b>Signing up a team?</b> Add your company name and how many are coming — we'll do the rest.</div>
       <div>Questions: <a href="mailto:salaam@feedafriend.org">salaam@feedafriend.org</a></div>
+      <div class="social-row">Follow us: <a href="https://instagram.com/feed.a.friend" target="_blank" rel="noopener">@feed.a.friend on Instagram ↗</a></div>
     </div>
   `;
   const list = document.getElementById("events-list");
@@ -607,6 +619,53 @@ async function submitForm(){
   }
 }
 
+function pad2(n){ return String(n).padStart(2, "0"); }
+
+function icsDateUTC(isoDate, hhmm){
+  // Qatar is UTC+3 year-round — convert the local session time to a UTC
+  // instant so the .ics renders correctly in any calendar app/timezone.
+  const [y, mo, d] = isoDate.split("-").map(Number);
+  const [h, mi] = hhmm.split(":").map(Number);
+  const utcMs = Date.UTC(y, mo - 1, d, h - 3, mi);
+  const dt = new Date(utcMs);
+  return dt.getUTCFullYear() + pad2(dt.getUTCMonth() + 1) + pad2(dt.getUTCDate())
+    + "T" + pad2(dt.getUTCHours()) + pad2(dt.getUTCMinutes()) + "00Z";
+}
+
+function buildIcs(s){
+  const lines = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Feed a Friend//QSW 2026//EN",
+    "BEGIN:VEVENT",
+    "UID:" + s.key + "-" + Date.now() + "@feedafriend.org",
+    "DTSTAMP:" + icsDateUTC(s.isoDate, s.startTime),
+    "DTSTART:" + icsDateUTC(s.isoDate, s.startTime),
+    "DTEND:" + icsDateUTC(s.isoDate, s.endTime),
+    "SUMMARY:" + s.title,
+    "LOCATION:" + s.place,
+    "DESCRIPTION:Qatar Sustainability Week 2026 \\u2014 Feed a Friend x Together for Good",
+    "END:VEVENT", "END:VCALENDAR",
+  ];
+  return lines.join("\r\n");
+}
+
+function googleCalUrl(s){
+  const start = icsDateUTC(s.isoDate, s.startTime);
+  const end = icsDateUTC(s.isoDate, s.endTime);
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: s.title,
+    dates: start + "/" + end,
+    details: "Qatar Sustainability Week 2026 — Feed a Friend x Together for Good",
+    location: s.place,
+  });
+  return "https://calendar.google.com/calendar/render?" + params.toString();
+}
+
+function icsDataUrl(s){
+  const ics = buildIcs(s);
+  return "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+}
+
 function renderDone(row, attendeeNames){
   document.getElementById("view-form").hidden = true;
   const el = document.getElementById("view-done");
@@ -617,6 +676,15 @@ function renderDone(row, attendeeNames){
   const body = row.is_waitlist
     ? `This session is fully booked. You're first in line on the waitlist for ${esc(s.title)} — we'll email ${esc(row.email)} the moment a spot opens up.`
     : `A confirmation email is on its way to ${esc(row.email)} with everything you need, including a calendar invite.`;
+
+  const calRow = row.is_waitlist ? "" : `
+      <div class="cal-row">
+        <div class="cal-label">ADD TO CALENDAR</div>
+        <a class="cal-btn" href="${googleCalUrl(s)}" target="_blank" rel="noopener">📅 Google Calendar</a>
+        <a class="cal-btn" href="${icsDataUrl(s)}" download="${s.key}.ics">🍎 Apple Calendar</a>
+        <a class="cal-btn" href="${icsDataUrl(s)}" download="${s.key}.ics">📆 Outlook (.ics)</a>
+      </div>`;
+
   el.innerHTML = `
     <div class="done-kicker">${kicker}</div>
     <div class="done-heading">${heading}</div>
@@ -628,8 +696,10 @@ function renderDone(row, attendeeNames){
         <div><div class="done-k">WHERE</div><div class="done-v">${esc(s.locName)}<br>${esc(s.locSub)}</div></div>
         <div><div class="done-k">WHO</div><div class="done-v">${esc(attendeeNames.join(", "))}</div></div>
       </div>
+      ${calRow}
       <div class="done-foot">Please arrive 10 minutes early. Questions any time: <a href="mailto:salaam@feedafriend.org" style="color:var(--card-ink);text-decoration:underline">salaam@feedafriend.org</a></div>
     </div>
+    <div class="social-row" style="margin-top:20px">Follow us: <a href="https://instagram.com/feed.a.friend" target="_blank" rel="noopener">@feed.a.friend on Instagram ↗</a></div>
     <button class="back-btn done-back" onclick="goCalendar()">← BACK TO ALL SESSIONS</button>
   `;
 }
