@@ -152,8 +152,6 @@ const MAILER_URL = SUPABASE_URL + "/functions/v1/qsw-signup-mailer";
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const CAPACITY = 30;
-
 const sessions = [
   {
     key: "food-sorting-2026-11-01",
@@ -166,20 +164,20 @@ const sessions = [
     locSub: "Ain Khaled, Doha",
     desc: "Volunteers decorate and pack food boxes for community fridges and families in need, while learning about food insecurity in Qatar.",
     note: "Indoors, all ages welcome. Gloves and aprons provided.",
-    signup: true, capacity: CAPACITY,
+    signup: true, capacity: 30,
   },
   {
     key: "fridge-refill-2026-11-02",
     dayNum: "2", shortDay: "MON", dateLabel: "MON 2 NOV",
     isoDate: "2026-11-02", startTime: "09:30", endTime: "18:00",
-    title: "Community Fridge Refill Challenge",
+    title: "Community Fridge Refill Race",
     time: "9:30am – 6:00pm",
     place: "From your office to various locations across Qatar",
     locName: "From your office",
     locSub: "to various locations across Qatar",
     desc: "A fun, office-based challenge collecting and assembling snack packs for community fridges across Qatar — reducing food waste and supporting friends directly.",
     note: "Run this one from your own office — we'll send a simple pack list.",
-    signup: true, capacity: CAPACITY,
+    signup: true, capacity: 100,
   },
   {
     key: "welcome-baby-2026-11-04",
@@ -192,7 +190,7 @@ const sessions = [
     locSub: "Ain Khaled, Doha",
     desc: "Sorting and quality-checking preloved baby clothes & essentials, preparing bundles for newborns in need — everyday giving in action.",
     note: "Gentle, seated work — great for teams who want a calmer session.",
-    signup: true, capacity: CAPACITY,
+    signup: true, capacity: 30,
   },
   {
     key: "books-for-good-2026-11-05",
@@ -205,7 +203,7 @@ const sessions = [
     locSub: "Ain Khaled, Doha",
     desc: "Sorting, cleaning and preparing preloved books for redistribution, supporting literacy while keeping books away from landfills.",
     note: "Great for book lovers — expect some fun finds along the way.",
-    signup: true, capacity: CAPACITY,
+    signup: true, capacity: 30,
   },
   {
     key: "book-sale-2026-11-06",
@@ -247,7 +245,7 @@ async function renderCalendar(){
   const el = document.getElementById("view-calendar");
   el.innerHTML = `
     <div class="hero">Sign up.<br><span>Show up.</span><br><span>Feed a friend.</span></div>
-    <div class="lede">Five days of volunteer sessions and one public book sale. Teams welcome — bring your colleagues. Sessions run at Together for Good HQ, Ain Khaled, except the fridge challenge, which happens from your own office to locations across Qatar.</div>
+    <div class="lede">Four days of volunteer sessions and one public book sale. Teams welcome — bring your colleagues. Sessions run at Together for Good HQ, Ain Khaled, except the Community Fridge Refill Race, which happens from your own office to locations across Qatar.</div>
     <div class="events" id="events-list"></div>
     <div class="footer-note">
       <div><b>Signing up a team?</b> Add your company name and how many are coming — we'll do the rest.</div>
@@ -304,11 +302,10 @@ async function refreshSpotsUI(i){
     return;
   }
   const left = Math.max(s.capacity - taken, 0);
-  tag.textContent = left > 0 ? `${left} of ${s.capacity} spots left` : "Session full";
+  tag.textContent = left > 0 ? `${left} of ${s.capacity} spots left` : "Fully booked — waitlist open";
   tag.classList.toggle("full", left <= 0);
   if (btn && left <= 0){
-    btn.disabled = true;
-    btn.textContent = "Full";
+    btn.textContent = "Join waitlist";
   }
 }
 
@@ -322,9 +319,16 @@ let form = { mode: "solo", name: "", email: "", phone: "", company: "", people: 
 let err = {};
 let askSure = false;
 
+let knownFull = false;
+
 function resetForm(){
   form = { mode: "solo", name: "", email: "", phone: "", company: "", people: 1, photos: true, names: [""] };
-  err = {}; askSure = false;
+  err = {}; askSure = false; knownFull = false;
+}
+
+function submitLabel(){
+  if (knownFull) return "Join waitlist" + (form.people > 1 ? ` (${form.people})` : "");
+  return "Reserve " + (form.people > 1 ? form.people + " spots" : "my spot");
 }
 
 function openForm(i){
@@ -459,8 +463,8 @@ function renderForm(){
             </div>
           </div>
 
-          <button class="submit-btn" id="submit-btn" onclick="submitForm()">Reserve ${form.people > 1 ? form.people + " spots" : "my spot"}</button>
-          <div class="submit-note">Sign-ups go straight to the Feed a Friend volunteer sheet. We'll only contact you about this session.</div>
+          <button class="submit-btn" id="submit-btn" onclick="submitForm()">${submitLabel()}</button>
+          <div class="submit-note" id="submit-note">Sign-ups go straight to the Feed a Friend volunteer sheet. We'll only contact you about this session.</div>
         </div>
       </div>
     </div>
@@ -478,16 +482,20 @@ function renderForm(){
 
   fetchSpots(s.key).then(taken => {
     const tag = document.getElementById("form-spots");
-    if (!tag) return;
-    if (taken === null){ tag.textContent = s.capacity + " total"; return; }
+    if (taken === null){ if (tag) tag.textContent = s.capacity + " total"; return; }
     const left = Math.max(s.capacity - taken, 0);
-    tag.textContent = left + " left of " + s.capacity;
+    if (tag) tag.textContent = left > 0 ? left + " left of " + s.capacity : "Waitlist open";
+    knownFull = left <= 0;
+    const btn = document.getElementById("submit-btn");
+    const note = document.getElementById("submit-note");
+    if (btn) btn.textContent = submitLabel();
+    if (note && knownFull) note.textContent = "This session is fully booked — you'll be added to the waitlist and we'll reach out the moment a spot opens.";
   });
 }
 
 function confirmSure(){
   askSure = false;
-  doSubmit();
+  submitForm();
 }
 function cancelSure(){
   askSure = false;
@@ -523,13 +531,23 @@ async function submitForm(){
 
   const btn = document.getElementById("submit-btn");
   btn.disabled = true;
-  btn.textContent = "Reserving…";
+  btn.textContent = knownFull ? "Joining waitlist…" : "Reserving…";
   const errBox = document.getElementById("form-error");
   errBox.classList.remove("show");
 
   const attendeeNames = form.people > 1
     ? form.names.map(n => n.trim()).filter(Boolean)
     : [form.name.trim()];
+
+  let isWaitlist = knownFull;
+  try {
+    const { data: takenNow, error: spotsErr } = await sb.rpc("qsw_spots_taken", { p_session_key: activeSession.key });
+    if (!spotsErr && takenNow !== null) {
+      isWaitlist = (takenNow + form.people) > activeSession.capacity;
+    }
+  } catch (e) {
+    console.warn("fresh spots check failed, using last known state", e);
+  }
 
   const row = {
     session_key: activeSession.key,
@@ -545,11 +563,15 @@ async function submitForm(){
     people_count: form.people,
     attendee_names: attendeeNames,
     photos_consent: !!form.photos,
+    is_waitlist: isWaitlist,
   };
 
   try {
     const { error } = await sb.from("qsw_signups").insert(row);
     if (error) throw error;
+    // Note: row.is_waitlist reflects our just-in-time check. In the rare case two
+    // people fill the last spot at the exact same moment, the database trigger is
+    // the final authority and may silently flip one to a waitlist entry server-side.
 
     // fire the confirmation + team notification emails (best-effort)
     fetch(MAILER_URL, {
@@ -569,7 +591,7 @@ async function submitForm(){
         signup: {
           fullName: row.full_name, email: row.email, phone: row.phone,
           mode: row.mode, company: row.company, peopleCount: row.people_count,
-          attendeeNames, photosConsent: row.photos_consent,
+          attendeeNames, photosConsent: row.photos_consent, isWaitlist: row.is_waitlist,
         },
       }),
     }).catch(e => console.warn("mailer call failed", e));
@@ -579,7 +601,7 @@ async function submitForm(){
   } catch (e) {
     console.error(e);
     btn.disabled = false;
-    btn.textContent = "Reserve " + (form.people > 1 ? form.people + " spots" : "my spot");
+    btn.textContent = submitLabel();
     errBox.textContent = (e && e.message) ? e.message : "Something went wrong — please try again.";
     errBox.classList.add("show");
   }
@@ -590,10 +612,15 @@ function renderDone(row, attendeeNames){
   const el = document.getElementById("view-done");
   el.hidden = false;
   const s = activeSession;
+  const kicker = row.is_waitlist ? "YOU'RE ON THE WAITLIST" : "YOU'RE ON THE LIST";
+  const heading = row.is_waitlist ? "You're on the waitlist" : "See you there!";
+  const body = row.is_waitlist
+    ? `This session is fully booked. You're first in line on the waitlist for ${esc(s.title)} — we'll email ${esc(row.email)} the moment a spot opens up.`
+    : `A confirmation email is on its way to ${esc(row.email)} with everything you need, including a calendar invite.`;
   el.innerHTML = `
-    <div class="done-kicker">YOU'RE ON THE LIST</div>
-    <div class="done-heading">See you there!</div>
-    <div class="done-body">A confirmation email is on its way to ${esc(row.email)} with everything you need, including a calendar invite.</div>
+    <div class="done-kicker">${kicker}</div>
+    <div class="done-heading">${heading}</div>
+    <div class="done-body">${body}</div>
     <div class="done-card">
       <div class="done-title">${esc(s.title)}</div>
       <div class="done-grid">
