@@ -100,6 +100,7 @@ body.lang-ar .photo-btn-text{text-align:right}
 .sf-v{font-size:13px;color:var(--ink);font-weight:700;font-family:"League Spartan",sans-serif;text-align:right;max-width:65%;line-height:1.4}
 body.lang-ar .sf-v{text-align:left}
 body.lang-ar .scan-ok-row{flex-direction:row-reverse}
+body.lang-ar .scan-ok-lbl{letter-spacing:normal}
 .retake-btn{display:block;width:100%;text-align:center;font-size:12px;color:var(--muted-2);font-weight:700;margin-top:12px;background:none;border:1.5px dashed var(--line-2);border-radius:12px;padding:9px;cursor:pointer;font-family:"Manrope",sans-serif}
 .retake-btn:hover{border-color:var(--forest);color:var(--forest)}
 .fail-t{font-family:"League Spartan",sans-serif;font-size:14px;font-weight:800;color:var(--ink);margin-bottom:6px;text-align:center}
@@ -139,6 +140,7 @@ body.lang-ar .co-name,body.lang-ar .co-sub{text-align:right}
 .cap-unit{font-size:13px;color:rgba(255,255,255,.45);font-weight:700;margin-left:3px}
 .bxgrid{display:flex;flex-wrap:wrap;gap:4px;max-width:150px;justify-content:flex-end}
 body.lang-ar .cap-top{flex-direction:row-reverse}
+body.lang-ar .cap-lbl{letter-spacing:normal}
 body.lang-ar .cap-unit{margin-left:0;margin-right:3px}
 body.lang-ar .bxgrid{justify-content:flex-start}
 .bx{width:26px;height:26px;border-radius:7px;background:var(--forest);display:flex;align-items:center;justify-content:center;font-size:13px}
@@ -219,19 +221,19 @@ body.lang-ar .rv-v{text-align:left}
 
 <!-- ═══ STEP 1: WHO'S DRIVING ═══ -->
 <div class="sv on" id="s1">
-  <div class="choice-card" id="choice-me" onclick="selectDriver('me')">
-    <div class="choice-ic" id="ic-me"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4.42 0-8 2.24-8 5v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1c0-2.76-3.58-5-8-5z" fill="#fff"/></svg></div>
-    <div>
-      <div class="choice-t" data-en="It's me — I'm the driver" data-ar="أنا من سيقود">It's me — I'm the driver</div>
-      <div class="choice-s" data-en="I'll be doing the deliveries myself" data-ar="سأتولى التوصيل بنفسي">I'll be doing the deliveries myself</div>
-    </div>
-    <div class="radio"></div>
-  </div>
   <div class="choice-card" id="choice-them" onclick="selectDriver('them')">
     <div class="choice-ic" id="ic-them"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g transform="translate(-2,1) scale(0.72)"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4.42 0-8 2.24-8 5v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1c0-2.76-3.58-5-8-5z" fill="#fff" opacity="0.55"/></g><g transform="translate(4,-1) scale(0.72)"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4.42 0-8 2.24-8 5v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1c0-2.76-3.58-5-8-5z" fill="#fff"/></g></svg></div>
     <div>
       <div class="choice-t" data-en="I have a driver" data-ar="لدي سائق">I have a driver</div>
       <div class="choice-s" data-en="Someone else drives — I'm the contact person" data-ar="شخص آخر سيقود — وأنا جهة التواصل">Someone else drives — I'm the contact person</div>
+    </div>
+    <div class="radio"></div>
+  </div>
+  <div class="choice-card" id="choice-me" onclick="selectDriver('me')">
+    <div class="choice-ic" id="ic-me"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4.42 0-8 2.24-8 5v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1c0-2.76-3.58-5-8-5z" fill="#fff"/></svg></div>
+    <div>
+      <div class="choice-t" data-en="It's me — I'm the driver" data-ar="أنا من سيقود">It's me — I'm the driver</div>
+      <div class="choice-s" data-en="I'll be doing the deliveries myself" data-ar="سأتولى التوصيل بنفسي">I'll be doing the deliveries myself</div>
     </div>
     <div class="radio"></div>
   </div>
@@ -254,7 +256,7 @@ body.lang-ar .rv-v{text-align:left}
       <span class="photo-btn-ic"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.4 6h5.2l.9 1.8H18a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9.8a2 2 0 0 1 2-2h2.5L9.4 6Z" fill="#fff"/><circle cx="12" cy="13" r="3.1" fill="#146c43"/></svg></span>
       <div class="photo-btn-text">
         <div class="photo-btn-t" data-en="Take a photo" data-ar="التقط صورة">Take a photo</div>
-        <div class="photo-btn-s" data-en="Opens your camera" data-ar="يفتح الكاميرا">Opens your camera</div>
+        <div class="photo-btn-s" data-en="Opens your camera" data-ar="الكاميرا تفتح تلقائياً">Opens your camera</div>
       </div>
     </label>
     <label class="photo-btn">
@@ -390,7 +392,7 @@ body.lang-ar .rv-v{text-align:left}
     <div class="cap-card" style="margin:10px 16px 0">
       <div class="cap-top">
         <div>
-          <div class="cap-lbl" data-en="Boxes you can carry" data-ar="عدد الصناديق التي يمكنك حملها">Boxes you can carry</div>
+          <div class="cap-lbl" data-en="Boxes you can carry" data-ar="عدد الصناديق:">Boxes you can carry</div>
           <div><span class="cap-big" id="cap-n">0</span><span class="cap-unit" data-en="boxes" data-ar="صندوق">boxes</span></div>
         </div>
         <div class="bxgrid" id="bxgrid"></div>
