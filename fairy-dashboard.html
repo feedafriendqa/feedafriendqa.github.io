@@ -65,10 +65,14 @@ const TXT = {
     arrivingAsap: time => `Arriving between ${time}`, arrivingAt: time => `Arriving around ${time}`,
     markDeliveredBtn:"Mark as delivered ✓", releaseIt:"I can't make it — release it",
     deliveredLbl:"Delivered ✓", callFriend:"Call", whatsappFriend:"WhatsApp", noPhone:"No phone on file",
+    cancel:"Cancel", deleteLbl:"Delete", deleteConfirm:"Delete this entry? This can't be undone.",
+    notesLbl:"Notes (optional)", fridgeLbl:"Fridge", activityTypeLbl:"Type",
+    activityUpdateErr:"Couldn't save changes — try again.", activityDeleteErr:"Couldn't delete — try again.",
+    activityTypes:{refill:"Refill", cleaning:"Cleaning", report_broken:"Report broken", report_moved:"Report moved", report_closed:"Report closed"},
   },
   ar: {
-    home:"الرئيسية", becomeFairy:"انضم كجنية الثلاجة", helpKeep:"ساعد في إبقاء ثلاجات المجتمع في قطر ممتلئة.",
-    whyJoin:"لماذا تنضم كجنية؟",
+    home:"الرئيسية", becomeFairy:"انضم كصديق للثلاجة", helpKeep:"ساعد في إبقاء ثلاجات المجتمع في قطر ممتلئة.",
+    whyJoin:"لماذا تنضم كصديق للثلاجة؟",
     benefit1:"حدد الثلاجات القريبة منك كـ\"محلية\" واحصل على طلبات من تلك المنطقة",
     benefit2:"خطط لمسار لزيارة عدة ثلاجات في رحلة واحدة، بالترتيب الذي يناسبك",
     benefit3:"اِبنِ عدد تعبئاتك العلني تحت اسم المستخدم الخاص بك",
@@ -103,10 +107,14 @@ const TXT = {
     getDirections:"احصل على الاتجاهات", kmAway: km => `${km} كم`,
     claimThis:"سأحضر هذا", asapBtn:"في أقرب وقت (~٣٠ دقيقة)", scheduleBtn:"حدد موعدًا",
     pickTime:"اختر التاريخ والوقت", confirmSchedule:"تأكيد", cancelSchedule:"إلغاء",
-    claimedByMe:"أنت من سيحضر هذا", claimedByOther:"تم استلامه من جنية أخرى",
+    claimedByMe:"أنت من سيحضر هذا", claimedByOther:"تم استلامه من صديق آخر للثلاجة",
     arrivingAsap: time => `الوصول بين ${time}`, arrivingAt: time => `الوصول حوالي ${time}`,
     markDeliveredBtn:"تحديد كتم التسليم ✓", releaseIt:"لا أستطيع الحضور — إلغاء الاستلام",
     deliveredLbl:"تم التسليم ✓", callFriend:"اتصال", whatsappFriend:"واتساب", noPhone:"لا يوجد رقم هاتف",
+    cancel:"إلغاء", deleteLbl:"حذف", deleteConfirm:"حذف هذا السجل؟ لا يمكن التراجع عن ذلك.",
+    notesLbl:"ملاحظات (اختياري)", fridgeLbl:"الثلاجة", activityTypeLbl:"النوع",
+    activityUpdateErr:"تعذر حفظ التغييرات — حاول مرة أخرى.", activityDeleteErr:"تعذر الحذف — حاول مرة أخرى.",
+    activityTypes:{refill:"تعبئة", cleaning:"تنظيف", report_broken:"إبلاغ عن عطل", report_moved:"إبلاغ عن نقل", report_closed:"إبلاغ عن إغلاق"},
   },
 };
 function toArabicDigits(str){
@@ -230,6 +238,11 @@ function App(){
   const [scheduleTime,setScheduleTime]=React.useState("");
   const [claimingId,setClaimingId]=React.useState(null);
   const [claimError,setClaimError]=React.useState("");
+  const [editingActivityId,setEditingActivityId]=React.useState(null);
+  const [editActivityForm,setEditActivityForm]=React.useState({fridge_id:"", activity_type:"refill", notes:""});
+  const [confirmDeleteId,setConfirmDeleteId]=React.useState(null);
+  const [activityBusy,setActivityBusy]=React.useState(false);
+  const [activityMsg,setActivityMsg]=React.useState("");
 
   React.useEffect(()=>{
     sb.auth.getSession().then(({data})=>{
@@ -323,7 +336,7 @@ function App(){
       sb.from("profiles").select("*").eq("id",uid).single(),
       sb.from("fridge_activity").select("id",{count:"exact",head:true}).eq("volunteer_id",uid).eq("activity_type","refill"),
       sb.from("fridge_activity").select("id",{count:"exact",head:true}).eq("volunteer_id",uid).eq("activity_type","cleaning"),
-      sb.from("fridge_activity").select("id,activity_type,created_at,notes,fridges(name_en,name_ar,code)").eq("volunteer_id",uid).order("created_at",{ascending:false}).limit(20)
+      sb.from("fridge_activity").select("id,fridge_id,activity_type,created_at,notes,fridges(name_en,name_ar,code)").eq("volunteer_id",uid).order("created_at",{ascending:false}).limit(20)
     ]);
     setFridges(fr||[]);
     setProfile(prof||null);
@@ -365,7 +378,7 @@ function App(){
   // is better than hiding it entirely.
   const CLAIM_ERROR_AR = {
     "This request is no longer available to claim.": "هذا الطلب لم يعد متاحًا للاستلام.",
-    "Someone has already claimed this request.": "قامت جنية أخرى بالفعل باستلام هذا الطلب.",
+    "Someone has already claimed this request.": "قام صديق آخر للثلاجة بالفعل باستلام هذا الطلب.",
     "This request was not claimed by you.": "لم تقم أنت باستلام هذا الطلب.",
     "Wishlist item not found": "لم يتم العثور على الطلب.",
   };
@@ -426,6 +439,52 @@ function App(){
       load(session.user.id);
     }catch(e){ setClaimError(claimErrorText(e.message)); }
     setClaimingId(null);
+  }
+
+  // Lets a fairy fix a mistaken or duplicate refill/cleaning log entry —
+  // own rows only (RLS also enforces volunteer_id = auth.uid() on both
+  // update and delete, so this can't touch anyone else's activity).
+  function startEditActivity(a){
+    setConfirmDeleteId(null);
+    setActivityMsg("");
+    setEditingActivityId(a.id);
+    setEditActivityForm({fridge_id:a.fridge_id, activity_type:a.activity_type, notes:a.notes||""});
+  }
+  function cancelEditActivity(){
+    setEditingActivityId(null);
+  }
+  async function saveActivityEdit(id){
+    setActivityBusy(true);
+    setActivityMsg("");
+    const { error } = await sb.from("fridge_activity")
+      .update({
+        fridge_id: editActivityForm.fridge_id,
+        activity_type: editActivityForm.activity_type,
+        notes: editActivityForm.notes.trim() || null
+      })
+      .eq("id", id)
+      .eq("volunteer_id", session.user.id);
+    setActivityBusy(false);
+    if(error){ setActivityMsg(t.activityUpdateErr); return; }
+    setEditingActivityId(null);
+    load(session.user.id);
+  }
+  function askDeleteActivity(id){
+    setEditingActivityId(null);
+    setActivityMsg("");
+    setConfirmDeleteId(id);
+  }
+  function cancelDeleteActivity(){
+    setConfirmDeleteId(null);
+  }
+  async function deleteActivityEntry(id){
+    setActivityBusy(true);
+    setActivityMsg("");
+    const { error } = await sb.from("fridge_activity").delete().eq("id", id).eq("volunteer_id", session.user.id);
+    setActivityBusy(false);
+    setConfirmDeleteId(null);
+    if(error){ setActivityMsg(t.activityDeleteErr); return; }
+    load(session.user.id);
   }
 
   async function toggleLocal(fridgeId){
@@ -593,7 +652,7 @@ function App(){
       )}
       {pwMsg && <div style={{textAlign:"right",fontSize:11.5,marginTop:4,color:pwMsg.includes("updated")?DK:"#DC2626"}}>{pwMsg}</div>}
 
-      <h1 className="spartan" style={{fontSize:26,color:DK,marginTop:12,display:"flex",alignItems:"center",gap:8}}><Sparkle size={22} color={DK}/> {isAr?"جنيات الثلاجة":"Fridge Fairies"}</h1>
+      <h1 className="spartan" style={{fontSize:26,color:DK,marginTop:12,display:"flex",alignItems:"center",gap:8}}><Sparkle size={22} color={DK}/> {isAr?"أصدقاء الثلاجة":"Fridge Fairies"}</h1>
       <div style={{marginTop:10}}>
         <div style={{fontWeight:700,fontSize:15,color:DK}}>{t.welcomeBack(profile?.username || profile?.first_name || (isAr?"صديق":"friend"))}</div>
         <div style={{fontSize:12.5,color:MT,marginTop:4,fontStyle:"italic",lineHeight:1.5}}>{quote}</div>
@@ -629,18 +688,52 @@ function App(){
       </div>
 
       <h2 style={{fontSize:14,textTransform:"uppercase",letterSpacing:0.4,color:MT,marginTop:28}}>{t.myActivity}</h2>
+      {activityMsg && <div style={{color:"#DC2626",fontSize:12,marginTop:6}}>{activityMsg}</div>}
       {myActivity.length===0 ? (
         <div style={{color:MT,fontSize:13,marginTop:8}}>{t.nothingLogged}</div>
       ) : (
         <div style={{marginTop:10,display:"flex",flexDirection:"column"}}>
           {myActivity.map((a,i)=>(
-            <div key={a.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom: i<myActivity.length-1 ? "1px solid #F0F0F0" : "none"}}>
-              <span style={{width:6,height:6,borderRadius:"50%",background: a.activity_type==='cleaning' ? "#22C55E" : DK, flexShrink:0}}></span>
-              <div style={{flex:1,minWidth:0}}>
-                <span style={{fontSize:13,color:"#374151"}}>{isAr && a.fridges?.name_ar ? a.fridges.name_ar : a.fridges?.name_en} · {a.fridges?.code} — {a.activity_type==='cleaning'?t.cleaned:t.refilled}</span>
-                {a.notes && <div style={{fontSize:11,color:MT,marginTop:2}}>{a.notes}</div>}
-              </div>
-              <span style={{fontSize:11.5,color:MT,flexShrink:0}}>{timeAgo(a.created_at)}</span>
+            <div key={a.id} style={{padding:"10px 0",borderBottom: i<myActivity.length-1 ? "1px solid #F0F0F0" : "none"}}>
+              {editingActivityId===a.id ? (
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  <select value={editActivityForm.fridge_id} onChange={e=>setEditActivityForm({...editActivityForm, fridge_id:Number(e.target.value)})}
+                    style={{padding:"7px 8px",borderRadius:8,border:"1.5px solid #E5E7EB",fontSize:12.5,fontFamily:"inherit"}}>
+                    {fridges.map(f=><option key={f.id} value={f.id}>{isAr && f.name_ar ? f.name_ar : f.name_en} · {f.code}</option>)}
+                  </select>
+                  <select value={editActivityForm.activity_type} onChange={e=>setEditActivityForm({...editActivityForm, activity_type:e.target.value})}
+                    style={{padding:"7px 8px",borderRadius:8,border:"1.5px solid #E5E7EB",fontSize:12.5,fontFamily:"inherit"}}>
+                    {Object.entries(t.activityTypes).map(([k,label])=><option key={k} value={k}>{label}</option>)}
+                  </select>
+                  <input value={editActivityForm.notes} onChange={e=>setEditActivityForm({...editActivityForm, notes:e.target.value})} placeholder={t.notesLbl}
+                    style={{padding:"7px 8px",borderRadius:8,border:"1.5px solid #E5E7EB",fontSize:12.5,fontFamily:"inherit"}}/>
+                  <div style={{display:"flex",gap:8}}>
+                    <button disabled={activityBusy} onClick={()=>saveActivityEdit(a.id)}
+                      style={{flex:1,padding:"7px 10px",borderRadius:8,border:"none",background:DK,color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer"}}>{activityBusy?t.saving:t.save}</button>
+                    <button disabled={activityBusy} onClick={cancelEditActivity}
+                      style={{flex:1,padding:"7px 10px",borderRadius:8,border:"1.5px solid #E5E7EB",background:"#fff",color:"#374151",fontWeight:700,fontSize:12,cursor:"pointer"}}>{t.cancel}</button>
+                  </div>
+                </div>
+              ) : confirmDeleteId===a.id ? (
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{flex:1,fontSize:12.5,color:"#DC2626"}}>{t.deleteConfirm}</span>
+                  <button disabled={activityBusy} onClick={()=>deleteActivityEntry(a.id)}
+                    style={{padding:"6px 10px",borderRadius:8,border:"none",background:"#DC2626",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",flexShrink:0}}>{t.deleteLbl}</button>
+                  <button disabled={activityBusy} onClick={cancelDeleteActivity}
+                    style={{padding:"6px 10px",borderRadius:8,border:"1.5px solid #E5E7EB",background:"#fff",color:"#374151",fontWeight:700,fontSize:12,cursor:"pointer",flexShrink:0}}>{t.cancel}</button>
+                </div>
+              ) : (
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{width:6,height:6,borderRadius:"50%",background: a.activity_type==='cleaning' ? "#22C55E" : DK, flexShrink:0}}></span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <span style={{fontSize:13,color:"#374151"}}>{isAr && a.fridges?.name_ar ? a.fridges.name_ar : a.fridges?.name_en} · {a.fridges?.code} — {t.activityTypes[a.activity_type] || (a.activity_type==='cleaning'?t.cleaned:t.refilled)}</span>
+                    {a.notes && <div style={{fontSize:11,color:MT,marginTop:2}}>{a.notes}</div>}
+                  </div>
+                  <span style={{fontSize:11.5,color:MT,flexShrink:0}}>{timeAgo(a.created_at)}</span>
+                  <button onClick={()=>startEditActivity(a)} title={t.edit} style={{background:"none",border:"none",cursor:"pointer",fontSize:13,padding:4,color:MT,flexShrink:0}}>✏️</button>
+                  <button onClick={()=>askDeleteActivity(a.id)} title={t.deleteLbl} style={{background:"none",border:"none",cursor:"pointer",fontSize:13,padding:4,color:MT,flexShrink:0}}>🗑️</button>
+                </div>
+              )}
             </div>
           ))}
         </div>
