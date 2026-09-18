@@ -533,6 +533,29 @@ async function doRegister(){
 // September roster if we recognize their WhatsApp number ──
 async function revealPledgeStep(user, session, phone){
   currentUser = user; currentSession = session;
+  var isArCheck = document.body.classList.contains("lang-ar");
+
+  // ── Duplicate-submission guard: if this sponsor already has a September
+  // sponsorship on file (any status except cancelled), never let them create
+  // a second one through this page — send them to My Payments instead ──
+  var existingRes = await sbClient.from("sponsorships").select("id,payment_status").eq("sponsor_id", user.id).eq("distribution_event", "September 2026 Food Box Distribution");
+  var existingRows = (existingRes && existingRes.data) ? existingRes.data.filter(function(r){ return r.payment_status !== "cancelled"; }) : [];
+  if(existingRows.length > 0){
+    document.getElementById("step-auth").style.display = "none";
+    document.querySelector(".nav").classList.add("solid");
+    document.getElementById("progress-wrap").style.display = "none";
+    var pledgeStepEl = document.getElementById("step-pledge");
+    pledgeStepEl.style.display = "block";
+    pledgeStepEl.innerHTML =
+      '<div style="text-align:center;padding:40px 20px">' +
+      '<div style="font-size:40px;margin-bottom:12px">✅</div>' +
+      '<h2 style="margin-bottom:12px">' + (isArCheck ? "لديك بالفعل صندوق سبتمبر مؤكد" : "You already have a September sponsorship confirmed") + '</h2>' +
+      '<p style="margin-bottom:20px;color:#555">' + (isArCheck ? "يمكنك رفع إثبات الدفع أو مراجعة تفاصيلك من صفحة مدفوعاتي." : "You can upload payment proof or review your details from My Payments. If you meant to add more boxes or make a change, please contact us on WhatsApp rather than submitting again.") + '</p>' +
+      '<a href="my-payments.html" style="display:inline-block;background:#0A3D1F;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">' + (isArCheck ? "الذهاب إلى مدفوعاتي →" : "Go to My Payments →") + '</a>' +
+      '</div>';
+    return;
+  }
+
   document.getElementById("step-auth").style.display = "none";
   document.querySelector(".nav").classList.add("solid");
   document.getElementById("progress-wrap").style.display = "block";
