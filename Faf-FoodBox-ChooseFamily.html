@@ -89,6 +89,7 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .fam-id,body.lang-ar .surp
 .fam-tag{font-size:10px;font-weight:800;letter-spacing:.03em;color:#1D7A47;background:#fff;border:1.5px solid #cdebd9;padding:4px 10px;border-radius:30px}
 .fam-area-tag{font-size:10px;font-weight:800;letter-spacing:.03em;color:#a37a00;background:#fff;border:1.5px solid #f5e2ad;padding:4px 10px;border-radius:30px}
 .fam-box-tag{font-size:10px;font-weight:900;letter-spacing:.03em;color:#fff;background:#1D7A47;padding:4px 10px;border-radius:30px}
+.fam-lang-tag{font-size:10px;font-weight:800;letter-spacing:.03em;color:#3a6ea5;background:#fff;border:1.5px solid #cfe0f0;padding:4px 10px;border-radius:30px}
 
 .surprise-card{border:2px dashed #d8d8cc;border-radius:18px;padding:18px 16px;text-align:center;margin:4px 20px 8px;background:#fcfcfa}
 .surprise-card .ic{font-size:24px;margin-bottom:6px}
@@ -281,6 +282,26 @@ var TAG_LABELS = {
   long_term: { en: "Long-term support", ar: "دعم طويل الأمد" }
 };
 
+// ── Spoken-language display, plus the plain en/ar code used to bias
+// "Surprise me" toward families who speak the sponsor's portal language ──
+var LANGUAGE_LABELS = {
+  english: { code: "en", en: "English speaking", ar: "يتحدث الإنجليزية" },
+  arabic:  { code: "ar", en: "Arabic speaking", ar: "يتحدث العربية" },
+  bengali: { code: "",   en: "Bengali speaking", ar: "يتحدث البنغالية" },
+  urdu:    { code: "",   en: "Urdu speaking", ar: "يتحدث الأردية" },
+  hindi:   { code: "",   en: "Hindi speaking", ar: "يتحدث الهندية" },
+  tagalog: { code: "",   en: "Tagalog speaking", ar: "يتحدث التاغالوغية" }
+};
+function languageInfo(raw){
+  var key = (raw || "").trim().toLowerCase();
+  if(!key) return null;
+  var known = LANGUAGE_LABELS[key];
+  if(known) return known;
+  // Unrecognized value — still show it (raw fallback), same graceful
+  // pattern as AREA_AR / NATIONALITY_AR_MASC, but no en/ar bias code.
+  return { code: "", en: raw + " speaking", ar: raw };
+}
+
 function mapPoolRowToFamily(row){
   var tagKeys = [];
   if(row.has_children_u3) tagKeys.push('baby');
@@ -292,9 +313,13 @@ function mapPoolRowToFamily(row){
   var householdTypeAr = nat
     ? (row.is_family ? ("أسرة " + cap.natFem) : ("بيت عزاب " + cap.natMasc))
     : (row.is_family ? "أسرة" : "بيت عزاب");
+  var lang = languageInfo(row.language);
   return {
     id: row.id,
     area: row.area_en || row.area || '',
+    langCode: lang ? lang.code : "",
+    languageEn: lang ? lang.en : "",
+    languageAr: lang ? lang.ar : "",
     size: row.household_size || 1,
     // boxesNeeded must reflect actual per-distribution need, not the static
     // max_boxes eligibility cap stored on the row (3 for bachelors / 6 for
@@ -325,7 +350,7 @@ function loadFamilyPool(){
   }
   window.sbClient
     .from("food_box_public_pool")
-    .select("id,area,area_en,household_size,max_boxes,has_children_u18,has_children_u3,is_long_term,is_family,nationality,is_working,n_children")
+    .select("id,area,area_en,household_size,max_boxes,has_children_u18,has_children_u3,is_long_term,is_family,nationality,is_working,n_children,language")
     .then(function(res){
       if(res.error) throw res.error;
       FRIENDS = (res.data || []).map(mapPoolRowToFamily);
@@ -467,6 +492,8 @@ function renderFamilies(){
     var tagsHtml = tags.map(function(t){ return '<span class="fam-tag">' + t + '</span>'; }).join("");
     var areaTag = '<span class="fam-area-tag">📍 ' + areaName + (inPrefArea ? preferredLabel : "") + '</span>';
     var boxTag = '<span class="fam-box-tag">' + boxLabel + '</span>';
+    var langLabel = isAr ? f.languageAr : f.languageEn;
+    var langTag = langLabel ? '<span class="fam-lang-tag">🗣️ ' + langLabel + '</span>' : "";
     return '<div class="fam-card" id="fam-' + f.id + '" onclick="toggleFamily(\'' + f.id + '\')">'
       + '<div class="fam-top">'
       + '<div class="fam-id-wrap">'
@@ -477,7 +504,7 @@ function renderFamilies(){
       + '<div class="fam-check"></div>'
       + '</div>'
       + '<div class="fam-note">\u201c' + note + '\u201d</div>'
-      + '<div class="fam-tags">' + boxTag + ' ' + areaTag + tagsHtml + '</div>'
+      + '<div class="fam-tags">' + boxTag + ' ' + areaTag + langTag + tagsHtml + '</div>'
       + '</div>';
   }).join("");
 }
@@ -597,7 +624,22 @@ function surpriseMe(){
   selectedIds = [];
   document.querySelectorAll(".fam-card").forEach(function(c){ c.classList.remove("sel"); });
 
-  var pool = visibleFamilies.slice().sort(function(){ return Math.random() - 0.5; });
+  // Soft language preference: match the sponsor's current portal language
+  // first. pickBestCombo's subset-sum fills each reachable total using
+  // whichever pool item it reaches first (lowest index wins ties), so
+  // putting language-matching families first in the array means the combo
+  // is built from them whenever they alone can cover the pledge — falling
+  // back to the rest of the pool only when there isn't enough matching
+  // supply to reach targetBoxes. This is a soft nudge, never a hard filter.
+  var isArLang = document.body.classList.contains("lang-ar");
+  var currentLangCode = isArLang ? "ar" : "en";
+  var matching = [], other = [];
+  visibleFamilies.forEach(function(f){
+    (f.langCode === currentLangCode ? matching : other).push(f);
+  });
+  matching.sort(function(){ return Math.random() - 0.5; });
+  other.sort(function(){ return Math.random() - 0.5; });
+  var pool = matching.concat(other);
   var picks = pickBestCombo(pool, targetBoxes);
   picks.forEach(function(f){
     selectedIds.push(f.id);
