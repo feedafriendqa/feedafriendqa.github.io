@@ -25,6 +25,15 @@
   .page { display:none; }
   .page.active { display:block; }
 
+  /* ============ IN-PAGE FRIDGE BROWSER ============ */
+  .fridge-card { display:flex; gap:11px; align-items:center; padding:9px; border:1.5px solid #e6ebe1; border-radius:12px; cursor:pointer; text-align:left; background:#ffffff; width:100%; }
+  .fridge-card:hover, .fridge-card:focus { border-color:#1b7a43; background:#f4f9f0; }
+  .fridge-card img.fridge-thumb { width:52px; height:52px; border-radius:9px; object-fit:cover; flex:none; background:#e6ebe1; border:1px solid #d9ded6; }
+  .fridge-thumb-fallback { width:52px; height:52px; border-radius:9px; flex:none; background:#e6ebe1; display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .fridge-card .fc-name { font-family:'Outfit',sans-serif; font-weight:700; font-size:13.5px; color:#14261a; line-height:1.3; }
+  .fridge-card .fc-meta { font-size:11px; color:#7a8579; margin-top:2px; }
+  .fridge-card .fc-flame { display:inline-block; margin-top:3px; font-size:10.5px; font-weight:700; color:#7a5200; background:#fff8e6; border:1px solid #f4a832; border-radius:99px; padding:1.5px 8px; }
+
   /* ============ CELEBRATION: confetti + points toast ============ */
   #confettiLayer { position:fixed; inset:0; pointer-events:none; z-index:9998; overflow:hidden; }
   .confetti-piece { position:absolute; top:-20px; will-change:transform, opacity; animation-name:confetti-fall; animation-timing-function:cubic-bezier(0.25,0.46,0.45,0.94); animation-fill-mode:forwards; }
@@ -76,6 +85,8 @@
       <div style="display:inline-block; background:#f4a832; color:#0e3d24; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; padding:5px 12px; border-radius:99px; transform:rotate(-2deg)">FRIDGE REFILL RACE</div>
       <div style="font-family:'Outfit',sans-serif; font-weight:800; font-size:clamp(34px,8.5vw,54px); line-height:1.18; color:#ffffff; letter-spacing:-0.035em; margin:14px 0 12px; text-shadow:4px 4px 0 rgba(0,0,0,0.18)">Refill it.<br><span style="color:#c6f24a">Clean it.</span><br><span style="color:#ff6f59">Climb the board.</span></div>
       <div style="font-size:14.5px; color:#dff0e4; max-width:480px; line-height:1.55">Build a team of up to 6, keep Qatar's community fridges stocked, and log every refill for points. National leaderboard updates live.</div>
+
+      <div id="needsMostStat" style="display:none; margin-top:14px; background:#fff8e6; border:1.5px solid #f4a832; border-radius:99px; padding:8px 16px; font-size:12.5px; color:#7a5200; font-weight:700; width:fit-content"><span id="needsMostStatCount">0</span> fridges need you most right now</div>
 
       <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:24px">
         <div style="background:#ffffff; border:3px solid #1b7a43; border-radius:12px; padding:11px 16px; font-size:12.5px; color:#14261a; box-shadow:5px 5px 0 rgba(0,0,0,0.22); transform:rotate(-1deg)"><b style="color:#1b7a43">+10</b> refill</div>
@@ -180,22 +191,26 @@
           </label>
           <label style="display:block">
             <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">FRIDGE LOCATION</span>
-            <input id="lfLocation" list="fridgeList" placeholder="Start typing a fridge name or area…" style="width:100%; margin-top:5px; border:1.5px solid #d9ded6; border-radius:10px; padding:11px 12px; font-size:14px; color:#14261a; outline:none">
+            <input id="lfLocation" list="fridgeList" autocomplete="off" oninput="onFridgePicked()" onchange="onFridgePicked()" placeholder="Start typing a fridge name or area…" style="width:100%; margin-top:5px; border:1.5px solid #d9ded6; border-radius:10px; padding:11px 12px; font-size:14px; color:#14261a; outline:none">
             <datalist id="fridgeList"></datalist>
-            <span id="lfLocationErr" style="font-size:11.5px; color:#c0392b; display:none">Tell us which fridge</span>
-            <a href="https://connect.feedafriend.org/fridges" target="_blank" rel="noopener" style="display:inline-block; margin-top:6px; font-size:11.5px; color:#1b7a43; font-weight:700">📍 Find a fridge near you →</a>
-          </label>
-          <label style="display:flex; gap:10px; align-items:flex-start; cursor:pointer; padding-top:2px">
-            <input type="checkbox" id="lfNeedsMost" onchange="updatePreviewPoints()" style="width:18px; height:18px; margin:1px 0 0; accent-color:#1b7a43; flex:none">
-            <span style="font-size:12.5px; color:#5d6359; line-height:1.45">This fridge is flagged "Needs You Most" — it hasn't been logged in a while <b>(+10 pts bonus)</b></span>
+            <span id="lfLocationErr" style="font-size:11.5px; color:#c0392b; display:none">Pick a real fridge from the list</span>
+            <button type="button" id="fridgeBrowseToggle" onclick="toggleFridgeBrowser()" style="display:inline-flex; align-items:center; gap:5px; margin-top:7px; background:none; border:none; padding:0; font-size:11.5px; color:#1b7a43; font-weight:700; cursor:pointer">🔎 Browse fridges near you (with photos) →</button>
+            <div id="needsMostBadge" style="display:none; margin-top:9px; background:#fff8e6; border:1.5px solid #f4a832; border-radius:10px; padding:9px 12px; font-size:12px; color:#7a5200; line-height:1.4"><b>🔥 Needs You Most</b> — <span id="needsMostReason"></span> <b>(+10 pts auto-bonus)</b></div>
+
+            <div id="fridgeBrowser" style="display:none; margin-top:10px; border:1.5px solid #d9ded6; border-radius:14px; padding:11px; background:#f8faf6">
+              <input id="fridgeBrowseSearch" type="text" oninput="renderFridgeBrowser()" placeholder="Search by name or zone…" style="width:100%; border:1.5px solid #d9ded6; border-radius:9px; padding:9px 10px; font-size:13px; color:#14261a; outline:none; margin-bottom:9px">
+              <div id="fridgeBrowseList" style="display:flex; flex-direction:column; gap:7px; max-height:280px; overflow-y:auto"></div>
+              <div id="fridgeBrowseEmpty" style="display:none; font-size:12px; color:#7a8579; text-align:center; padding:14px 0">No fridges match — try a different search.</div>
+            </div>
           </label>
           <label style="display:flex; gap:10px; align-items:flex-start; cursor:pointer">
             <input type="checkbox" id="lfCleaned" onchange="updatePreviewPoints()" style="width:18px; height:18px; margin:1px 0 0; accent-color:#1b7a43; flex:none">
             <span style="font-size:12.5px; color:#5d6359; line-height:1.45">I cleaned the fridge too <b>(+10 pts)</b></span>
           </label>
           <label style="display:block">
-            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">PHOTO PROOF (OPTIONAL)</span>
-            <input type="file" id="lfPhoto" accept="image/*" onchange="onPhotoChange(event)" style="width:100%; margin-top:5px; border:1.5px solid #d9ded6; border-radius:10px; padding:9px 10px; font-size:13px; color:#14261a; outline:none">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">PHOTO PROOF (REQUIRED)</span>
+            <input type="file" id="lfPhoto" accept="image/*" capture="environment" onchange="onPhotoChange(event)" style="width:100%; margin-top:5px; border:1.5px solid #d9ded6; border-radius:10px; padding:9px 10px; font-size:13px; color:#14261a; outline:none">
+            <span id="lfPhotoErr" style="font-size:11.5px; color:#c0392b; display:none">A photo is required to log this refill</span>
             <img id="lfPhotoPreview" alt="Preview" style="margin-top:8px; max-height:120px; border-radius:10px; display:none">
           </label>
 
@@ -237,6 +252,8 @@ const CONFIG = {
   supabaseLeaderboardView: 'fridge_leaderboard',
   supabaseTeamsView: 'fridge_teams_public',
   fridgesTable: 'fridges',
+  fridgeActivityTable: 'fridge_activity',
+  friendPortalUrl: 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/friend-portal',
   storageBucket: 'fridge-race-photos',
   mailerFunctionUrl: 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/fridge-race-mailer',
   raceLabel: '1–7 Nov',
@@ -484,29 +501,169 @@ function populateTeamSelect() {
 
 // ===================== REAL FRIDGE LIST =====================
 // Pulled from your live fridge locator (public.fridges) so "Log a refill"
-// picks from real fridges instead of free text. Matched back to a fridge_id
-// on submit when the typed text matches one of these exactly.
-state.fridgeIndex = {}; // "Name — Zone" -> fridge id
+// picks a real fridge, not free text — and so "Needs You Most" can be
+// worked out by the system instead of the person self-reporting it.
+//
+// CRITERIA — a fridge auto-flags as "Needs You Most" when either is true:
+//   • it has never had a refill logged (last_refill_at is null), or
+//   • its last logged refill was more than NEEDS_MOST_DAYS days ago
+// This reads fridges.last_refill_at, which your real locator already
+// keeps up to date (a DB trigger updates it every time anyone — race or
+// not — logs a 'refill' activity), so the flag is always live and can't
+// be gamed by a team just ticking a box.
+const NEEDS_MOST_DAYS = 30;
+
+state.fridgeIndex = {}; // "Name — Zone" -> { id, lastRefillAt, photoUrl }
+state.fridgeList = [];  // full array, same objects, for the in-page browser
 
 function loadFridgeList() {
   const c = cfg();
   if (!c.url || !c.key) return;
-  fetch(c.url + '/rest/v1/' + CONFIG.fridgesTable + '?select=id,name_en,zone_name&status=eq.active&order=name_en.asc', { headers: headers() })
+  fetch(c.url + '/rest/v1/' + CONFIG.fridgesTable + '?select=id,name_en,zone_name,last_refill_at,photo_url&status=eq.active&order=name_en.asc', { headers: headers() })
     .then(r => r.ok ? r.json() : Promise.reject())
     .then(rows => {
       const datalist = document.getElementById('fridgeList');
       if (!datalist) return;
       datalist.innerHTML = '';
       state.fridgeIndex = {};
+      state.fridgeList = [];
       (rows || []).forEach(f => {
         const label = f.name_en + ' — ' + f.zone_name;
-        state.fridgeIndex[label] = f.id;
+        const entry = { id: f.id, label, name: f.name_en, zone: f.zone_name, lastRefillAt: f.last_refill_at, photoUrl: f.photo_url };
+        state.fridgeIndex[label] = entry;
+        state.fridgeList.push(entry);
         const opt = document.createElement('option');
         opt.value = label;
         datalist.appendChild(opt);
       });
+      onFridgePicked();
+      if (document.getElementById('fridgeBrowser').style.display !== 'none') renderFridgeBrowser();
+      updateNeedsMostStat();
     })
-    .catch(() => { /* datalist just stays empty — free text still works */ });
+    .catch(() => { /* datalist just stays empty — matching then fails at submit, which is caught */ });
+}
+
+// Live count of fridges currently flagging as "Needs You Most", shown as
+// a stat chip on the main leaderboard page so it isn't only visible once
+// someone opens the log form's fridge browser.
+function updateNeedsMostStat() {
+  const stat = document.getElementById('needsMostStat');
+  if (!stat) return;
+  const count = state.fridgeList.filter(fridgeNeedsMost).length;
+  document.getElementById('needsMostStatCount').textContent = count;
+  stat.style.display = count > 0 ? 'block' : 'none';
+}
+
+function daysSince(iso) {
+  return (Date.now() - new Date(iso).getTime()) / 86400000;
+}
+
+function fridgeNeedsMost(entry) {
+  if (!entry.lastRefillAt) return true;
+  return daysSince(entry.lastRefillAt) > NEEDS_MOST_DAYS;
+}
+
+// ===================== IN-PAGE FRIDGE BROWSER =====================
+// Brings real fridge browsing (search + photos) directly into the race
+// page so nobody has to leave the site to find one. Pulls from the same
+// public.fridges data as the real locator — deliberately leaves out
+// anything from the wishlist/fairy-delivery system, which lives
+// elsewhere and isn't part of this race.
+function toggleFridgeBrowser() {
+  const panel = document.getElementById('fridgeBrowser');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  document.getElementById('fridgeBrowseToggle').textContent = isOpen
+    ? '🔎 Browse fridges near you (with photos) →'
+    : '✕ Close fridge browser';
+  if (!isOpen) {
+    document.getElementById('fridgeBrowseSearch').value = '';
+    renderFridgeBrowser();
+    document.getElementById('fridgeBrowseSearch').focus();
+  }
+}
+
+function renderFridgeBrowser() {
+  const list = document.getElementById('fridgeBrowseList');
+  const empty = document.getElementById('fridgeBrowseEmpty');
+  const q = (document.getElementById('fridgeBrowseSearch').value || '').trim().toLowerCase();
+
+  let rows = state.fridgeList.filter(f => !q || f.name.toLowerCase().includes(q) || f.zone.toLowerCase().includes(q));
+  // Needs-you-most fridges float to the top so teams can spot where
+  // help is most useful, then alphabetical within each group.
+  rows = rows.slice().sort((a, b) => {
+    const na = fridgeNeedsMost(a), nb = fridgeNeedsMost(b);
+    if (na !== nb) return na ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  list.innerHTML = '';
+  empty.style.display = rows.length ? 'none' : 'block';
+
+  rows.forEach(f => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'fridge-card';
+    btn.onclick = () => selectFridgeFromBrowser(f.label);
+
+    const thumbHtml = f.photoUrl
+      ? '<img class="fridge-thumb" src="' + f.photoUrl.replace(/"/g, '&quot;') + '" alt="">'
+      : '<div class="fridge-thumb-fallback">🧊</div>';
+
+    const needsMost = fridgeNeedsMost(f);
+    const metaText = f.lastRefillAt
+      ? 'Last refilled ' + Math.floor(daysSince(f.lastRefillAt)) + 'd ago'
+      : 'Never logged yet';
+
+    btn.innerHTML = thumbHtml +
+      '<div style="min-width:0; flex:1">' +
+        '<div class="fc-name">' + f.name.replace(/</g, '&lt;') + '</div>' +
+        '<div class="fc-meta">' + f.zone.replace(/</g, '&lt;') + ' · ' + metaText + '</div>' +
+        (needsMost ? '<div class="fc-flame">🔥 Needs you most</div>' : '') +
+      '</div>';
+    list.appendChild(btn);
+  });
+}
+
+function selectFridgeFromBrowser(label) {
+  document.getElementById('lfLocation').value = label;
+  onFridgePicked();
+  document.getElementById('fridgeBrowser').style.display = 'none';
+  document.getElementById('fridgeBrowseToggle').textContent = '🔎 Browse fridges near you (with photos) →';
+}
+
+// Called as the person types/selects — looks up whatever they've typed
+// against the real fridge list and, on an exact match, auto-computes the
+// "Needs You Most" badge from that fridge's real last_refill_at. No
+// match yet (still typing) just hides the badge; it never asks the
+// person to judge this themselves.
+function onFridgePicked() {
+  const text = document.getElementById('lfLocation').value.trim();
+  const match = state.fridgeIndex[text];
+  const badge = document.getElementById('needsMostBadge');
+  const reasonEl = document.getElementById('needsMostReason');
+
+  if (!match) {
+    state.lf.needsMostAuto = false;
+    badge.style.display = 'none';
+    updatePreviewPoints();
+    return;
+  }
+
+  if (!match.lastRefillAt) {
+    state.lf.needsMostAuto = true;
+    reasonEl.textContent = "it's never been logged before";
+  } else {
+    const days = daysSince(match.lastRefillAt);
+    if (days > NEEDS_MOST_DAYS) {
+      state.lf.needsMostAuto = true;
+      reasonEl.textContent = 'last refilled ' + Math.floor(days) + ' days ago';
+    } else {
+      state.lf.needsMostAuto = false;
+    }
+  }
+  badge.style.display = state.lf.needsMostAuto ? 'block' : 'none';
+  updatePreviewPoints();
 }
 
 // ===================== NEW TEAM =====================
@@ -571,7 +728,7 @@ function submitTeam() {
 
 // ===================== LOG A REFILL =====================
 function computePoints() {
-  const needsMost = document.getElementById('lfNeedsMost').checked;
+  const needsMost = !!state.lf.needsMostAuto;
   const cleaned = document.getElementById('lfCleaned').checked;
   return 10 + (needsMost ? 10 : 0) + (cleaned ? 10 : 0);
 }
@@ -581,7 +738,8 @@ function updatePreviewPoints() {
 
 function onPhotoChange(ev) {
   const file = ev.target.files && ev.target.files[0];
-  if (!file) return;
+  document.getElementById('lfPhotoErr').style.display = 'none';
+  if (!file) { state.lf.photo = null; document.getElementById('lfPhotoPreview').style.display = 'none'; return; }
   state.lf.photo = file;
   const url = URL.createObjectURL(file);
   state.lf.photoPreview = url;
@@ -590,7 +748,7 @@ function onPhotoChange(ev) {
 }
 
 function clearLfErrors() {
-  ['lfTeamErr', 'lfLocationErr'].forEach(id => document.getElementById(id).style.display = 'none');
+  ['lfTeamErr', 'lfLocationErr', 'lfPhotoErr'].forEach(id => document.getElementById(id).style.display = 'none');
 }
 
 function submitLog() {
@@ -598,27 +756,31 @@ function submitLog() {
   document.getElementById('lfPostFailed').style.display = 'none';
   const teamId = document.getElementById('lfTeam').value;
   const location_ = document.getElementById('lfLocation').value.trim();
-  const needsMost = document.getElementById('lfNeedsMost').checked;
+  const fridgeMatch = state.fridgeIndex[location_];
   const cleaned = document.getElementById('lfCleaned').checked;
+  const needsMost = !!state.lf.needsMostAuto;
   const photo = state.lf.photo;
 
   let hasErr = false;
   if (!teamId) { document.getElementById('lfTeamErr').style.display = 'inline'; hasErr = true; }
-  if (!location_) { document.getElementById('lfLocationErr').style.display = 'inline'; hasErr = true; }
+  if (!fridgeMatch) { document.getElementById('lfLocationErr').style.display = 'inline'; hasErr = true; }
+  if (!photo) { document.getElementById('lfPhotoErr').style.display = 'inline'; hasErr = true; }
   if (hasErr) return;
 
   const btn = document.getElementById('lfSubmitBtn');
   btn.textContent = 'Saving…'; btn.style.background = '#6aa382';
   const c = cfg();
   const points = computePoints();
+  const teamInfo = (state.teamOptions || []).find(t => String(t.id) === String(teamId));
+  const teamLabel = teamInfo ? (teamInfo.name + (teamInfo.business ? ' (' + teamInfo.business + ')' : '')) : 'Fridge Refill Race team';
 
   const resetLogForm = () => {
     document.getElementById('lfLocation').value = '';
-    document.getElementById('lfNeedsMost').checked = false;
     document.getElementById('lfCleaned').checked = false;
     document.getElementById('lfPhoto').value = '';
     document.getElementById('lfPhotoPreview').style.display = 'none';
-    updatePreviewPoints();
+    state.lf.photo = null;
+    onFridgePicked();
   };
 
   const finishLog = () => {
@@ -626,6 +788,7 @@ function submitLog() {
     resetLogForm();
     location.hash = '#/board';
     loadData();
+    loadFridgeList(); // this fridge's last_refill_at just changed
     celebrate(points);
   };
 
@@ -634,30 +797,64 @@ function submitLog() {
     return;
   }
 
+  // Logs to TWO places: fridge_activity (your real, production fridge
+  // locator — so this refill shows up there exactly like any other, and
+  // its last_refill_at trigger fires normally) and fridge_logs (the
+  // race's own points ledger, for the leaderboard).
   const insertLog = (photoUrl) => {
-    const matchedFridgeId = state.fridgeIndex[location_] || null;
-    const record = { team_id: teamId, fridge_id: matchedFridgeId, fridge_location: location_, needs_most: !!needsMost, cleaned: !!cleaned, points: points, photo_url: photoUrl || null };
-    fetch(c.url + '/rest/v1/' + c.logsTable, {
-      method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, headers()), body: JSON.stringify(record)
-    }).then(r => {
-      if (!r.ok) throw new Error();
-      finishLog();
-      notifyMailer({ type: 'log', teamId: teamId, location: location_, points: points });
-    }).catch(() => {
-      btn.textContent = 'Log this refill'; btn.style.background = '#1b7a43';
-      document.getElementById('lfPostFailed').style.display = 'block';
-    });
+    const activityRecord = {
+      fridge_id: fridgeMatch.id,
+      guest_name: teamLabel,
+      activity_type: 'refill',
+      is_clean: !!cleaned,
+      is_working: true,
+      photo_url: photoUrl,
+      notes: 'Logged via the Fridge Refill Race (QSW 2026)'
+    };
+
+    fetch(c.url + '/rest/v1/' + CONFIG.fridgeActivityTable, {
+      method: 'POST', headers: Object.assign({ Prefer: 'return=representation' }, headers()), body: JSON.stringify(activityRecord)
+    }).then(r => r.ok ? r.json() : Promise.reject())
+      .then(activityRows => {
+        const activityId = activityRows && activityRows[0] && activityRows[0].id;
+        // Best-effort: same "fridge near you just got refilled" emails the
+        // real locator sends. Never blocks the race flow if it fails.
+        if (activityId && CONFIG.friendPortalUrl) {
+          fetch(CONFIG.friendPortalUrl, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'notify_zone', fridge_id: fridgeMatch.id, fridge_activity_id: activityId })
+          }).catch(() => {});
+          fetch(CONFIG.friendPortalUrl, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'notify_fridge', fridge_id: fridgeMatch.id, fridge_activity_id: activityId })
+          }).catch(() => {});
+        }
+
+        const logRecord = { team_id: teamId, fridge_id: fridgeMatch.id, fridge_location: location_, needs_most: needsMost, cleaned: !!cleaned, points: points, photo_url: photoUrl };
+        return fetch(c.url + '/rest/v1/' + c.logsTable, {
+          method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, headers()), body: JSON.stringify(logRecord)
+        });
+      })
+      .then(r => {
+        if (!r.ok) throw new Error();
+        finishLog();
+        notifyMailer({ type: 'log', teamId: teamId, location: location_, points: points });
+      }).catch(() => {
+        btn.textContent = 'Log this refill'; btn.style.background = '#1b7a43';
+        document.getElementById('lfPostFailed').style.display = 'block';
+      });
   };
 
-  if (photo) {
-    const path = 'refill-' + Date.now() + '-' + photo.name.replace(/[^a-zA-Z0-9.]/g, '_');
-    fetch(c.url + '/storage/v1/object/' + c.bucket + '/' + path, {
-      method: 'POST', headers: { apikey: c.key, Authorization: 'Bearer ' + c.key, 'Content-Type': photo.type || 'application/octet-stream' }, body: photo
-    }).then(r => { if (!r.ok) throw new Error(); insertLog(c.url + '/storage/v1/object/public/' + c.bucket + '/' + path); })
-      .catch(() => insertLog(null));
-  } else {
-    insertLog(null);
-  }
+  const path = 'refill-' + Date.now() + '-' + photo.name.replace(/[^a-zA-Z0-9.]/g, '_');
+  fetch(c.url + '/storage/v1/object/' + c.bucket + '/' + path, {
+    method: 'POST', headers: { apikey: c.key, Authorization: 'Bearer ' + c.key, 'Content-Type': photo.type || 'application/octet-stream' }, body: photo
+  }).then(r => {
+    if (!r.ok) throw new Error();
+    insertLog(c.url + '/storage/v1/object/public/' + c.bucket + '/' + path);
+  }).catch(() => {
+    btn.textContent = 'Log this refill'; btn.style.background = '#1b7a43';
+    document.getElementById('lfPostFailed').style.display = 'block';
+  });
 }
 
 // ===================== INIT =====================
