@@ -182,18 +182,18 @@ body.lang-ar .hero-h1,body.lang-ar .hero-eyebrow,body.lang-ar .hero-sub{font-fam
       <div class="hero-content">
         <a class="hero-back" href="connect.html">← Home</a>
         <div class="hero-eyebrow" id="auth-hero-eyebrow" data-en="Monthly Food Box Program" data-ar="برنامج الصندوق الغذائي الشهري">Monthly Food Box Program</div>
-        <div class="hero-h1" id="auth-hero-h1">Your <em>September</em> box.</div>
+        <div class="hero-h1" id="auth-hero-h1">Your <em>September</em> Boxes</div>
         <div class="hero-sub" id="auth-hero-sub">Quick two-minute check-in so we know your gift is still on this month, and to match you with our friends.</div>
         <div class="form-card">
       <div class="auth-gate">
       <div id="step-email">
         <div class="field">
           <label class="lbl" data-en="WhatsApp number" data-ar="رقم الواتساب">WhatsApp number</label>
-          <input class="inp" id="phone-input" type="tel" placeholder="+974 XXXX XXXX" autocomplete="tel" inputmode="tel">
+          <input class="inp" id="phone-input" type="tel" placeholder="+974 XXXX XXXX" data-en-ph="+974 XXXX XXXX" data-ar-ph="أدخل رقم الواتساب" autocomplete="tel" inputmode="tel">
         </div>
         <div class="field">
           <label class="lbl" data-en="Email" data-ar="البريد الإلكتروني">Email</label>
-          <input class="inp" id="email-input" type="email" placeholder="you@example.com" autocomplete="email">
+          <input class="inp" id="email-input" type="email" placeholder="you@example.com" data-en-ph="you@example.com" data-ar-ph="أدخل بريدك الإلكتروني" autocomplete="email">
         </div>
         <button class="auth-btn" id="continue-btn" onclick="handleContinue()" data-en="Continue &rarr;" data-ar="متابعة ←">Continue &rarr;</button>
         <div class="auth-err" id="email-err"></div>
@@ -241,7 +241,7 @@ body.lang-ar .hero-h1,body.lang-ar .hero-eyebrow,body.lang-ar .hero-sub{font-fam
 
   <div id="step-pledge" style="display:none">
     <div class="header">
-      <div class="h1" data-en="Confirm your <em>gift</em>" data-ar="أكد <em>عطاءك</em>">Confirm your <em>gift</em></div>
+      <div class="h1" data-en="Confirm your <em>boxes</em>" data-ar="أكد <em>صناديقك</em>">Confirm your <em>boxes</em></div>
       <div class="sub" id="pledge-sub" data-en="How many boxes are you sponsoring this month?" data-ar="كم صندوقًا تتكفل به هذا الشهر؟">How many boxes are you sponsoring this month?</div>
     </div>
 
@@ -293,6 +293,12 @@ body.lang-ar .hero-h1,body.lang-ar .hero-eyebrow,body.lang-ar .hero-sub{font-fam
       </div>
     </div>
 
+    <div class="section">
+      <div class="opt-label" data-en="Contact details" data-ar="بيانات التواصل">Contact details</div>
+      <div class="section-sub" data-en="We'll use this WhatsApp number to reach you about this month's box." data-ar="سنستخدم رقم الواتساب هذا للتواصل معك بشأن صندوق هذا الشهر.">We'll use this WhatsApp number to reach you about this month's box.</div>
+      <input class="search-input" id="contact-phone" type="tel" placeholder="+974 XXXX XXXX" data-en-ph="+974 XXXX XXXX" data-ar-ph="أدخل رقم الواتساب" autocomplete="tel" inputmode="tel" style="padding-left:16px">
+    </div>
+
     <div class="cta-bar">
       <button class="cta-btn" id="pledge-continue-btn" disabled onclick="confirmPledgeAndContinue()" data-en="Continue to matching &rarr;" data-ar="متابعة إلى المطابقة ←">Continue to matching &rarr;</button>
       <div class="cta-hint" id="pledge-cta-hint" data-en="Select a delivery method to continue" data-ar="اختر طريقة التوصيل للمتابعة">Select a delivery method to continue</div>
@@ -303,7 +309,7 @@ body.lang-ar .hero-h1,body.lang-ar .hero-eyebrow,body.lang-ar .hero-sub{font-fam
 
 <script>
 var QATAR_DISTRICTS = [{"name": "Al Jasrah", "muni": "Doha"}, {"name": "Al Bidda", "muni": "Doha"}, {"name": "Fereej Mohamed Bin Jasim", "muni": "Doha"}, {"name": "Mushayrib", "muni": "Doha"}, {"name": "Al Najada", "muni": "Doha"}, {"name": "Barahat Al Jufairi", "muni": "Doha"}, {"name": "Fereej Al Asmakh", "muni": "Doha"}, {"name": "Old Al Ghanim", "muni": "Doha"}, {"name": "Al Souq", "muni": "Doha"}, {"name": "Wadi Al Sail", "muni": "Doha"}, {"name": "Rumeilah", "muni": "Doha"}, {"name": "Fereej Abdel Aziz", "muni": "Doha"}, {"name": "Ad Dawhah al Jadidah", "muni": "Doha"}, {"name": "Al Rufaa", "muni": "Doha"}, {"name": "Old Al Hitmi", "muni": "Doha"}, {"name": "As Salatah", "muni": "Doha"}, {"name": "Al Mirqab", "muni": "Doha"}, {"name": "Doha Port", "muni": "Doha"}, {"name": "Fereej Bin Mahmoud", "muni": "Doha"}, {"name": "Rawdat Al Khail", "muni": "Doha"}, {"name": "Fereej Bin Durham", "muni": "Doha"}, {"name": "Al Mansoura", "muni": "Doha"}, {"name": "Najma", "muni": "Doha"}, {"name": "Umm Ghuwailina", "muni": "Doha"}, {"name": "Al Khulaifat", "muni": "Doha"}, {"name": "Ras Abu Aboud", "muni": "Doha"}, {"name": "Duhail", "muni": "Doha"}, {"name": "Umm Lekhba", "muni": "Doha"}, {"name": "Madinat Khalifa North", "muni": "Doha"}, {"name": "Dahl Al Hamam", "muni": "Doha"}, {"name": "Al Markhiya", "muni": "Doha"}, {"name": "Madinat Khalifa South", "muni": "Doha"}, {"name": "Fereej Kulaib", "muni": "Doha"}, {"name": "Al Messila", "muni": "Doha"}, {"name": "Fereej Bin Omran", "muni": "Doha"}, {"name": "New Al Hitmi", "muni": "Doha"}, {"name": "Hamad Medical City", "muni": "Doha"}, {"name": "Al Sadd", "muni": "Doha"}, {"name": "New Al Mirqab", "muni": "Doha"}, {"name": "Fereej Al Nasr", "muni": "Doha"}, {"name": "New Salatah", "muni": "Doha"}, {"name": "Nuaija", "muni": "Doha"}, {"name": "Al Hilal", "muni": "Doha"}, {"name": "Old Airport", "muni": "Doha"}, {"name": "Al Thumama", "muni": "Doha"}, {"name": "Doha International Airport", "muni": "Doha"}, {"name": "Ras Abu Fontas", "muni": "Doha"}, {"name": "Industrial Area", "muni": "Doha"}, {"name": "Wholesale Market", "muni": "Doha"}, {"name": "Al Dafna", "muni": "Doha"}, {"name": "Al Qassar", "muni": "Doha"}, {"name": "Onaiza", "muni": "Doha"}, {"name": "Lejbailat", "muni": "Doha"}, {"name": "Leqtaifiya", "muni": "Doha"}, {"name": "Hazm Al Markhiya", "muni": "Doha"}, {"name": "Jelaiah", "muni": "Doha"}, {"name": "Al Tarfa", "muni": "Doha"}, {"name": "Jeryan Nejaima", "muni": "Doha"}, {"name": "West Bay", "muni": "Doha"}, {"name": "Al Waab", "muni": "Doha"}, {"name": "The Pearl", "muni": "Doha"}, {"name": "Al Gharrafa", "muni": "Al Rayyan"}, {"name": "Gharrafat Al Rayyan", "muni": "Al Rayyan"}, {"name": "Izghawa", "muni": "Al Rayyan"}, {"name": "Bani Hajer", "muni": "Al Rayyan"}, {"name": "Al Seej", "muni": "Al Rayyan"}, {"name": "Rawdat Egdaim", "muni": "Al Rayyan"}, {"name": "Al Luqta", "muni": "Al Rayyan"}, {"name": "Lebday", "muni": "Al Rayyan"}, {"name": "Old Al Rayyan", "muni": "Al Rayyan"}, {"name": "Al Shagub", "muni": "Al Rayyan"}, {"name": "Fereej Al Zaeem", "muni": "Al Rayyan"}, {"name": "New Al Rayyan", "muni": "Al Rayyan"}, {"name": "Al Wajbah", "muni": "Al Rayyan"}, {"name": "Muaither", "muni": "Al Rayyan"}, {"name": "Fereej Al Amir", "muni": "Al Rayyan"}, {"name": "Luaib", "muni": "Al Rayyan"}, {"name": "Muraikh", "muni": "Al Rayyan"}, {"name": "Baaya", "muni": "Al Rayyan"}, {"name": "Mehairja", "muni": "Al Rayyan"}, {"name": "Fereej Al Soudan", "muni": "Al Rayyan"}, {"name": "Al Aziziya", "muni": "Al Rayyan"}, {"name": "New Fereej Al Ghanim", "muni": "Al Rayyan"}, {"name": "Fereej Al Murra", "muni": "Al Rayyan"}, {"name": "Fereej Al Asiri", "muni": "Al Rayyan"}, {"name": "New Fereej Al Khulaifat", "muni": "Al Rayyan"}, {"name": "Bu Samra", "muni": "Al Rayyan"}, {"name": "Al Mamoura", "muni": "Al Rayyan"}, {"name": "Abu Hamour", "muni": "Al Rayyan"}, {"name": "Mesaimeer", "muni": "Al Rayyan"}, {"name": "Mebaireek", "muni": "Al Rayyan"}, {"name": "Al Karaana", "muni": "Al Rayyan"}, {"name": "Abu Samra", "muni": "Al Rayyan"}, {"name": "Sawda Natheel", "muni": "Al Rayyan"}, {"name": "Jabal Thuaileb", "muni": "Al Daayen"}, {"name": "Al Kharayej", "muni": "Al Daayen"}, {"name": "Lusail", "muni": "Al Daayen"}, {"name": "Al Egla", "muni": "Al Daayen"}, {"name": "Wadi Al Banat", "muni": "Al Daayen"}, {"name": "Leabaib", "muni": "Al Daayen"}, {"name": "Al Ebb", "muni": "Al Daayen"}, {"name": "Jeryan Jenaihat", "muni": "Al Daayen"}, {"name": "Al Kheesa", "muni": "Al Daayen"}, {"name": "Rawdat Al Hamama", "muni": "Al Daayen"}, {"name": "Wadi Al Wasaah", "muni": "Al Daayen"}, {"name": "Al Sakhama", "muni": "Al Daayen"}, {"name": "Bu Fasseela", "muni": "Umm Salal"}, {"name": "Izghawa (Umm Salal)", "muni": "Umm Salal"}, {"name": "Al Kharaitiyat", "muni": "Umm Salal"}, {"name": "Umm Salal Ali", "muni": "Umm Salal"}, {"name": "Umm Salal Mohammed", "muni": "Umm Salal"}, {"name": "Saina Al-Husain", "muni": "Umm Salal"}, {"name": "Simaisma", "muni": "Al Khor"}, {"name": "Al Jeryan", "muni": "Al Khor"}, {"name": "Al Khor City", "muni": "Al Khor"}, {"name": "Al Thakhira", "muni": "Al Khor"}, {"name": "Ras Laffan", "muni": "Al Khor"}, {"name": "Umm Birka", "muni": "Al Khor"}, {"name": "Al Ghuwariyah", "muni": "Al Khor"}, {"name": "Ain Sinan", "muni": "Al Shamal"}, {"name": "Madinat Al Kaaban", "muni": "Al Shamal"}, {"name": "Fuwayrit", "muni": "Al Shamal"}, {"name": "Abu Dhalouf", "muni": "Al Shamal"}, {"name": "Zubarah", "muni": "Al Shamal"}, {"name": "Madinat ash Shamal", "muni": "Al Shamal"}, {"name": "Ar Ru'ays", "muni": "Al Shamal"}, {"name": "Al Utouriya", "muni": "Al-Shahaniya"}, {"name": "Al Jemailiya", "muni": "Al-Shahaniya"}, {"name": "Al-Shahaniya City", "muni": "Al-Shahaniya"}, {"name": "Rawdat Rashed", "muni": "Al-Shahaniya"}, {"name": "Umm Bab", "muni": "Al-Shahaniya"}, {"name": "Al Nasraniya", "muni": "Al-Shahaniya"}, {"name": "Dukhan", "muni": "Al-Shahaniya"}, {"name": "Al Wakrah", "muni": "Al Wakrah"}, {"name": "Al Wukair", "muni": "Al Wakrah"}, {"name": "Al Mashaf", "muni": "Al Wakrah"}, {"name": "Mesaieed", "muni": "Al Wakrah"}, {"name": "Mesaieed Industrial Area", "muni": "Al Wakrah"}, {"name": "Shagra", "muni": "Al Wakrah"}, {"name": "Al Kharrara", "muni": "Al Wakrah"}, {"name": "Khor Al Adaid", "muni": "Al Wakrah"}];
-var ROSTER = [{"name": "Zahra Al Ouer", "phone": "33031098", "boxes": 10, "delivery": "vol", "prefs": ""}, {"name": "Nada al Meejan", "phone": "31145146", "boxes": 5, "delivery": "vol", "prefs": "Al Waab"}, {"name": "Zareena Rizwana", "phone": "66249338", "boxes": 2, "delivery": "self", "prefs": "Would prefer Muslim family"}, {"name": "Hamda Al Thani", "phone": "77642266", "boxes": 10, "delivery": "self", "prefs": "Arabic-speaking family; Al Rayyan preferred but flexible"}, {"name": "Ryad", "phone": "55848279", "boxes": 9, "delivery": "vol", "prefs": ""}, {"name": "Eni", "phone": "66996772", "boxes": 3, "delivery": "vol", "prefs": ""}, {"name": "Nasrin", "phone": "77261003", "boxes": 4, "delivery": "vol", "prefs": ""}, {"name": "Mega Sukma", "phone": "71171729", "boxes": 6, "delivery": "open", "prefs": ""}, {"name": "Clara Dasika", "phone": "66332736", "boxes": 4, "delivery": "vol", "prefs": ""}, {"name": "Roxy", "phone": "7581086270", "boxes": 2, "delivery": "vol", "prefs": "Muraikh"}, {"name": "Dilraz", "phone": "66862030", "boxes": 5, "delivery": "vol", "prefs": "Al Waab, Muaither, Al Rayyan"}, {"name": "Mubasheer", "phone": "50295735", "boxes": 10, "delivery": "vol", "prefs": ""}, {"name": "Vitri Armila", "phone": "55933036", "boxes": 9, "delivery": "self", "prefs": "Ain Khalid, Al Waab, Aziziya"}, {"name": "Asiya Shabbir", "phone": "55989668", "boxes": 1, "delivery": "vol", "prefs": "Family"}, {"name": "Anissah Ramtoolah", "phone": "66149228", "boxes": 3, "delivery": "vol", "prefs": ""}, {"name": "Mahdiyya Khan", "phone": "70424195", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Haifa Shaikh", "phone": "66632508", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Niha Hashim", "phone": "55609738", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Amer Zahid", "phone": "33208628", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Maria Tahir", "phone": "33137838", "boxes": 10, "delivery": "vol", "prefs": ""}, {"name": "Jamilah Sherally", "phone": "31650874", "boxes": 1, "delivery": "self", "prefs": ""}, {"name": "Exi Idrus", "phone": "51100417", "boxes": 4, "delivery": "self", "prefs": "Any location"}, {"name": "Sarah elSabbagh", "phone": "55443127", "boxes": 2, "delivery": "self", "prefs": ""}, {"name": "Ksenia", "phone": "71714440", "boxes": 4, "delivery": "self", "prefs": ""}, {"name": "Kirsty Henderson", "phone": "50592919", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Yahia Hali", "phone": "30179846", "boxes": 1, "delivery": "self", "prefs": "Old Airport, Nuaija"}, {"name": "Aliza Noor", "phone": "33033261", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Saima Ali", "phone": "30165551", "boxes": 1, "delivery": "open", "prefs": ""}, {"name": "Sara Hussein", "phone": "33413377", "boxes": 3, "delivery": "vol", "prefs": ""}, {"name": "Doaa Ahmed", "phone": "447754096749", "boxes": 2, "delivery": "open", "prefs": ""}, {"name": "Aysha Salim Patel", "phone": "447468602888", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Anshu", "phone": "33032835", "boxes": 2, "delivery": "vol", "prefs": ""}, {"name": "Morag", "phone": "66067628", "boxes": 2, "delivery": "self", "prefs": "Around Al Waab"}, {"name": "Samira Shaikh", "phone": "33053762", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Helen", "phone": "447585688926", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Diane Lennard", "phone": "55287766", "boxes": 5, "delivery": "vol", "prefs": ""}, {"name": "Nada Anvar", "phone": "66696821", "boxes": 2, "delivery": "vol", "prefs": ""}, {"name": "Ruhul Chowdhury", "phone": "66488957", "boxes": 1, "delivery": "vol", "prefs": ""}];
+var ROSTER = [{"name": "Zahra Al Ouer", "phone": "33031098", "boxes": 10, "delivery": "vol", "prefs": ""}, {"name": "Nada al Meejan", "phone": "31145146", "boxes": 5, "delivery": "vol", "prefs": "Al Waab"}, {"name": "Zareena Rizwana", "phone": "66249338", "boxes": 2, "delivery": "self", "prefs": "Would prefer Muslim family"}, {"name": "Hamda Al Thani", "phone": "77642266", "boxes": 10, "delivery": "self", "prefs": "Arabic-speaking family; Al Rayyan preferred but flexible"}, {"name": "Ryad", "phone": "55848279", "boxes": 9, "delivery": "vol", "prefs": ""}, {"name": "Eni", "phone": "66996772", "boxes": 3, "delivery": "vol", "prefs": ""}, {"name": "Nasrin", "phone": "77261003", "boxes": 4, "delivery": "vol", "prefs": ""}, {"name": "Mega Sukma", "phone": "71171729", "boxes": 6, "delivery": "open", "prefs": ""}, {"name": "Clara Dasika", "phone": "66332736", "boxes": 4, "delivery": "vol", "prefs": ""}, {"name": "Roxy", "phone": "7581086270", "boxes": 2, "delivery": "vol", "prefs": "Muraikh"}, {"name": "Dilraz", "phone": "66862030", "boxes": 5, "delivery": "vol", "prefs": "Al Waab, Muaither, Al Rayyan"}, {"name": "Mubasheer", "phone": "50295735", "boxes": 10, "delivery": "vol", "prefs": ""}, {"name": "Vitri Armila", "phone": "55933036", "boxes": 9, "delivery": "self", "prefs": "Ain Khalid, Al Waab, Aziziya"}, {"name": "Asiya Shabbir", "phone": "55989668", "boxes": 1, "delivery": "vol", "prefs": "Family"}, {"name": "Anissah Ramtoolah", "phone": "66149228", "boxes": 3, "delivery": "vol", "prefs": ""}, {"name": "Mahdiyya Khan", "phone": "70424195", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Haifa Shaikh", "phone": "66632508", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Niha Hashim", "phone": "55609738", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Amer Zahid", "phone": "33208628", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Maria Tahir", "phone": "33137838", "boxes": 10, "delivery": "vol", "prefs": ""}, {"name": "Jamilah Sherally", "phone": "31650874", "boxes": 1, "delivery": "self", "prefs": ""}, {"name": "Exi Idrus", "phone": "51100417", "boxes": 4, "delivery": "self", "prefs": "Any location"}, {"name": "Sarah elSabbagh", "phone": "55443127", "boxes": 2, "delivery": "self", "prefs": ""}, {"name": "Ksenia", "phone": "71714440", "boxes": 4, "delivery": "self", "prefs": ""}, {"name": "Kirsty Henderson", "phone": "50592919", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Yahia Hali", "phone": "30179846", "boxes": 1, "delivery": "self", "prefs": "Old Airport, Nuaija"}, {"name": "Aliza Noor", "phone": "33033261", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Saima Ali", "phone": "30165551", "boxes": 1, "delivery": "open", "prefs": ""}, {"name": "Sara Hussein", "phone": "33413377", "boxes": 3, "delivery": "vol", "prefs": ""}, {"name": "Doaa Ahmed", "phone": "447754096749", "boxes": 2, "delivery": "open", "prefs": ""}, {"name": "Aysha Salim Patel", "phone": "447468602888", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Anshu", "phone": "33032835", "boxes": 2, "delivery": "vol", "prefs": ""}, {"name": "Morag", "phone": "66067628", "boxes": 2, "delivery": "self", "prefs": "Around Al Waab"}, {"name": "Samira Shaikh", "phone": "33053762", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Helen", "phone": "447585688926", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Diane Lennard", "phone": "55287766", "boxes": 5, "delivery": "vol", "prefs": ""}, {"name": "Nada Anvar", "phone": "66696821", "boxes": 2, "delivery": "vol", "prefs": ""}, {"name": "Ruhul Chowdhury", "phone": "66488957", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Alliyah Choudhury", "phone": "30867777", "boxes": 1, "delivery": "self", "prefs": ""}];
 
 var SUPABASE_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
 var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
@@ -311,6 +317,7 @@ var EDGE_FUNCTION_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/c
 var sbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 var checkedEmail = "";
 var checkedPhone = "";
+var currentAuthMode = "email";
 var currentUser = null, currentSession = null, currentPledge = null;
 var deliveryMethod = null, selectedAreas = [];
 var rosterMatch = null;
@@ -341,8 +348,13 @@ function setLang(lang){
     var v = isAr ? el.getAttribute("data-ar") : el.getAttribute("data-en");
     if(v !== null) el.innerHTML = v;
   });
+  document.querySelectorAll("[data-en-ph]").forEach(function(el){
+    var v = isAr ? el.getAttribute("data-ar-ph") : el.getAttribute("data-en-ph");
+    if(v !== null) el.setAttribute("placeholder", v);
+  });
   sessionStorage.setItem("faf_lang", lang);
   renderSelectedAreas();
+  if(typeof updateAuthHero === "function") updateAuthHero(currentAuthMode);
 }
 (function(){ setLang(sessionStorage.getItem("faf_lang") || "en"); })();
 
@@ -427,6 +439,7 @@ function backToEmail(){
 // Swaps the hero headline/subhead by auth mode, matching the
 // hero pattern on the live connect.feedafriend.org/foodbox page.
 function updateAuthHero(mode){
+  currentAuthMode = mode;
   var isAr = document.body.classList.contains("lang-ar");
   var h1 = document.getElementById("auth-hero-h1");
   var sub = document.getElementById("auth-hero-sub");
@@ -437,7 +450,7 @@ function updateAuthHero(mode){
     h1.innerHTML = isAr ? "لننشئ حسابك." : "Let's set up your <em>account.</em>";
     sub.textContent = isAr ? "دقيقتان فقط لإنشاء حسابك ومتابعة عطائك بنفسك." : "Just two minutes to create your account and manage your gift yourself.";
   } else {
-    h1.innerHTML = "Your <em>September</em> box.";
+    h1.innerHTML = isAr ? "صناديق <em>سبتمبر</em> الخاصة بك" : "Your <em>September</em> Boxes";
     sub.textContent = isAr
       ? "تسجيل سريع لدقيقتين لنعرف أن عطاءك مستمر لهذا الشهر، ولنطابقك مع أصدقائنا."
       : "Quick two-minute check-in so we know your gift is still on this month, and to match you with our friends.";
@@ -517,8 +530,8 @@ async function revealPledgeStep(user, session, phone){
   document.getElementById("seg-2").classList.add("active");
   var isAr = document.body.classList.contains("lang-ar");
   document.getElementById("progress-label").innerHTML = isAr
-    ? "الخطوة ٢ من ٣ · تأكيد عطائك"
-    : "Step 2 of 3 &middot; Confirm your gift";
+    ? "الخطوة ٢ من ٣ · تأكيد صناديقك"
+    : "Step 2 of 3 &middot; Confirm your boxes";
 
   var pledgeRes = await sbClient.from("sponsor_pledges").select("*").eq("sponsor_id", user.id).in("status", ["active","paused"]).maybeSingle();
   currentPledge = pledgeRes && pledgeRes.data ? pledgeRes.data : null;
@@ -548,6 +561,7 @@ async function revealPledgeStep(user, session, phone){
 
   document.getElementById("box-count").value = boxes;
   document.getElementById("box-count-display").textContent = boxes;
+  document.getElementById("contact-phone").value = phone ? formatPhoneDisplay(phone) : "";
   selectDelivery(delivery);
   if(priorPrefsText && delivery === "self"){
     var noteEl = document.getElementById("prior-note");
@@ -707,10 +721,16 @@ async function confirmPledgeAndContinue(){
     var prof = profRes && profRes.data ? profRes.data : {};
     var sponsorName = [prof.first_name, prof.surname].filter(Boolean).join(" ") || null;
 
+    var contactPhoneRaw = document.getElementById("contact-phone").value.trim();
+    var contactPhone = contactPhoneRaw || prof.phone || null;
+    if(contactPhoneRaw && normPhone(contactPhoneRaw) !== normPhone(prof.phone || "")){
+      await sbClient.from("profiles").update({ phone: contactPhoneRaw }).eq("id", currentUser.id);
+    }
+
     var insertRes = await sbClient.from("sponsorships").insert({
       sponsor_id: currentUser.id,
       sponsor_name: sponsorName,
-      whatsapp: prof.phone || null,
+      whatsapp: contactPhone,
       email: prof.email || currentUser.email,
       delivery_method: deliveryMethod,
       preferred_areas: deliveryMethod === "self" ? selectedAreas : null,
