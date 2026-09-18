@@ -122,6 +122,9 @@ body.lang-ar .hero-h1,body.lang-ar .hero-eyebrow,body.lang-ar .hero-sub{font-fam
 .loc-wrap.open{max-height:600px}
 .loc-inner{padding:16px 0 4px;position:relative}
 .loc-hint{font-size:11.5px;color:var(--muted-2);font-weight:600;margin-bottom:10px}
+.no-pref-toggle{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--line-2);border-radius:14px;background:#fbfcfa;margin-bottom:12px;cursor:pointer;font-size:12.5px;font-weight:700;color:var(--ink)}
+.no-pref-toggle input{width:16px;height:16px;accent-color:var(--forest);flex-shrink:0;cursor:pointer}
+.search-box.disabled{opacity:.45;pointer-events:none}
 .search-box{position:relative}
 .search-input{width:100%;padding:14px 16px 14px 42px;border:1.5px solid var(--line-2);border-radius:16px;font-size:14px;font-family:"Manrope",sans-serif;color:var(--ink);background:#fbfcfa;outline:none}
 .search-input:focus{border-color:var(--forest);background:#fff}
@@ -280,14 +283,18 @@ body.lang-ar .hero-h1,body.lang-ar .hero-eyebrow,body.lang-ar .hero-sub{font-fam
 
       <div class="loc-wrap" id="loc-wrap">
         <div class="loc-inner">
-          <div class="loc-hint" data-en="Search and choose up to 3 areas you can deliver to, in order of preference" data-ar="ابحث واختر حتى ٣ مناطق يمكنك التوصيل إليها">Search and choose up to 3 areas you can deliver to, in order of preference</div>
-          <div class="search-box">
+          <div class="loc-hint" data-en="Search and choose the areas you can deliver to, in order of preference" data-ar="ابحث واختر المناطق التي يمكنك التوصيل إليها">Search and choose the areas you can deliver to, in order of preference</div>
+          <label class="no-pref-toggle" id="no-pref-toggle">
+            <input type="checkbox" id="no-pref-checkbox" onchange="toggleNoPreference(this.checked)">
+            <span data-en="No preference — any area is fine" data-ar="لا يوجد تفضيل معيّن — أي منطقة تناسب">No preference — any area is fine</span>
+          </label>
+          <div class="search-box" id="loc-search-box">
             <span class="search-icon">🔍</span>
             <input class="search-input" id="loc-search" type="text" placeholder="Search a district or area in Qatar…" autocomplete="off">
             <div class="search-results" id="search-results"></div>
           </div>
           <div class="selected-areas" id="selected-areas"></div>
-          <div class="loc-count" id="loc-count">0 of 3 selected</div>
+          <div class="loc-count" id="loc-count">0 selected</div>
           <div class="prior-note" id="prior-note" style="display:none"></div>
         </div>
       </div>
@@ -308,7 +315,7 @@ body.lang-ar .hero-h1,body.lang-ar .hero-eyebrow,body.lang-ar .hero-sub{font-fam
 </div>
 
 <script>
-var QATAR_DISTRICTS = [{"name": "Al Jasrah", "muni": "Doha"}, {"name": "Al Bidda", "muni": "Doha"}, {"name": "Fereej Mohamed Bin Jasim", "muni": "Doha"}, {"name": "Mushayrib", "muni": "Doha"}, {"name": "Al Najada", "muni": "Doha"}, {"name": "Barahat Al Jufairi", "muni": "Doha"}, {"name": "Fereej Al Asmakh", "muni": "Doha"}, {"name": "Old Al Ghanim", "muni": "Doha"}, {"name": "Al Souq", "muni": "Doha"}, {"name": "Wadi Al Sail", "muni": "Doha"}, {"name": "Rumeilah", "muni": "Doha"}, {"name": "Fereej Abdel Aziz", "muni": "Doha"}, {"name": "Ad Dawhah al Jadidah", "muni": "Doha"}, {"name": "Al Rufaa", "muni": "Doha"}, {"name": "Old Al Hitmi", "muni": "Doha"}, {"name": "As Salatah", "muni": "Doha"}, {"name": "Al Mirqab", "muni": "Doha"}, {"name": "Doha Port", "muni": "Doha"}, {"name": "Fereej Bin Mahmoud", "muni": "Doha"}, {"name": "Rawdat Al Khail", "muni": "Doha"}, {"name": "Fereej Bin Durham", "muni": "Doha"}, {"name": "Al Mansoura", "muni": "Doha"}, {"name": "Najma", "muni": "Doha"}, {"name": "Umm Ghuwailina", "muni": "Doha"}, {"name": "Al Khulaifat", "muni": "Doha"}, {"name": "Ras Abu Aboud", "muni": "Doha"}, {"name": "Duhail", "muni": "Doha"}, {"name": "Umm Lekhba", "muni": "Doha"}, {"name": "Madinat Khalifa North", "muni": "Doha"}, {"name": "Dahl Al Hamam", "muni": "Doha"}, {"name": "Al Markhiya", "muni": "Doha"}, {"name": "Madinat Khalifa South", "muni": "Doha"}, {"name": "Fereej Kulaib", "muni": "Doha"}, {"name": "Al Messila", "muni": "Doha"}, {"name": "Fereej Bin Omran", "muni": "Doha"}, {"name": "New Al Hitmi", "muni": "Doha"}, {"name": "Hamad Medical City", "muni": "Doha"}, {"name": "Al Sadd", "muni": "Doha"}, {"name": "New Al Mirqab", "muni": "Doha"}, {"name": "Fereej Al Nasr", "muni": "Doha"}, {"name": "New Salatah", "muni": "Doha"}, {"name": "Nuaija", "muni": "Doha"}, {"name": "Al Hilal", "muni": "Doha"}, {"name": "Old Airport", "muni": "Doha"}, {"name": "Al Thumama", "muni": "Doha"}, {"name": "Doha International Airport", "muni": "Doha"}, {"name": "Ras Abu Fontas", "muni": "Doha"}, {"name": "Industrial Area", "muni": "Doha"}, {"name": "Wholesale Market", "muni": "Doha"}, {"name": "Al Dafna", "muni": "Doha"}, {"name": "Al Qassar", "muni": "Doha"}, {"name": "Onaiza", "muni": "Doha"}, {"name": "Lejbailat", "muni": "Doha"}, {"name": "Leqtaifiya", "muni": "Doha"}, {"name": "Hazm Al Markhiya", "muni": "Doha"}, {"name": "Jelaiah", "muni": "Doha"}, {"name": "Al Tarfa", "muni": "Doha"}, {"name": "Jeryan Nejaima", "muni": "Doha"}, {"name": "West Bay", "muni": "Doha"}, {"name": "Al Waab", "muni": "Doha"}, {"name": "The Pearl", "muni": "Doha"}, {"name": "Al Gharrafa", "muni": "Al Rayyan"}, {"name": "Gharrafat Al Rayyan", "muni": "Al Rayyan"}, {"name": "Izghawa", "muni": "Al Rayyan"}, {"name": "Bani Hajer", "muni": "Al Rayyan"}, {"name": "Al Seej", "muni": "Al Rayyan"}, {"name": "Rawdat Egdaim", "muni": "Al Rayyan"}, {"name": "Al Luqta", "muni": "Al Rayyan"}, {"name": "Lebday", "muni": "Al Rayyan"}, {"name": "Old Al Rayyan", "muni": "Al Rayyan"}, {"name": "Al Shagub", "muni": "Al Rayyan"}, {"name": "Fereej Al Zaeem", "muni": "Al Rayyan"}, {"name": "New Al Rayyan", "muni": "Al Rayyan"}, {"name": "Al Wajbah", "muni": "Al Rayyan"}, {"name": "Muaither", "muni": "Al Rayyan"}, {"name": "Fereej Al Amir", "muni": "Al Rayyan"}, {"name": "Luaib", "muni": "Al Rayyan"}, {"name": "Muraikh", "muni": "Al Rayyan"}, {"name": "Baaya", "muni": "Al Rayyan"}, {"name": "Mehairja", "muni": "Al Rayyan"}, {"name": "Fereej Al Soudan", "muni": "Al Rayyan"}, {"name": "Al Aziziya", "muni": "Al Rayyan"}, {"name": "New Fereej Al Ghanim", "muni": "Al Rayyan"}, {"name": "Fereej Al Murra", "muni": "Al Rayyan"}, {"name": "Fereej Al Asiri", "muni": "Al Rayyan"}, {"name": "New Fereej Al Khulaifat", "muni": "Al Rayyan"}, {"name": "Bu Samra", "muni": "Al Rayyan"}, {"name": "Al Mamoura", "muni": "Al Rayyan"}, {"name": "Abu Hamour", "muni": "Al Rayyan"}, {"name": "Mesaimeer", "muni": "Al Rayyan"}, {"name": "Mebaireek", "muni": "Al Rayyan"}, {"name": "Al Karaana", "muni": "Al Rayyan"}, {"name": "Abu Samra", "muni": "Al Rayyan"}, {"name": "Sawda Natheel", "muni": "Al Rayyan"}, {"name": "Jabal Thuaileb", "muni": "Al Daayen"}, {"name": "Al Kharayej", "muni": "Al Daayen"}, {"name": "Lusail", "muni": "Al Daayen"}, {"name": "Al Egla", "muni": "Al Daayen"}, {"name": "Wadi Al Banat", "muni": "Al Daayen"}, {"name": "Leabaib", "muni": "Al Daayen"}, {"name": "Al Ebb", "muni": "Al Daayen"}, {"name": "Jeryan Jenaihat", "muni": "Al Daayen"}, {"name": "Al Kheesa", "muni": "Al Daayen"}, {"name": "Rawdat Al Hamama", "muni": "Al Daayen"}, {"name": "Wadi Al Wasaah", "muni": "Al Daayen"}, {"name": "Al Sakhama", "muni": "Al Daayen"}, {"name": "Bu Fasseela", "muni": "Umm Salal"}, {"name": "Izghawa (Umm Salal)", "muni": "Umm Salal"}, {"name": "Al Kharaitiyat", "muni": "Umm Salal"}, {"name": "Umm Salal Ali", "muni": "Umm Salal"}, {"name": "Umm Salal Mohammed", "muni": "Umm Salal"}, {"name": "Saina Al-Husain", "muni": "Umm Salal"}, {"name": "Simaisma", "muni": "Al Khor"}, {"name": "Al Jeryan", "muni": "Al Khor"}, {"name": "Al Khor City", "muni": "Al Khor"}, {"name": "Al Thakhira", "muni": "Al Khor"}, {"name": "Ras Laffan", "muni": "Al Khor"}, {"name": "Umm Birka", "muni": "Al Khor"}, {"name": "Al Ghuwariyah", "muni": "Al Khor"}, {"name": "Ain Sinan", "muni": "Al Shamal"}, {"name": "Madinat Al Kaaban", "muni": "Al Shamal"}, {"name": "Fuwayrit", "muni": "Al Shamal"}, {"name": "Abu Dhalouf", "muni": "Al Shamal"}, {"name": "Zubarah", "muni": "Al Shamal"}, {"name": "Madinat ash Shamal", "muni": "Al Shamal"}, {"name": "Ar Ru'ays", "muni": "Al Shamal"}, {"name": "Al Utouriya", "muni": "Al-Shahaniya"}, {"name": "Al Jemailiya", "muni": "Al-Shahaniya"}, {"name": "Al-Shahaniya City", "muni": "Al-Shahaniya"}, {"name": "Rawdat Rashed", "muni": "Al-Shahaniya"}, {"name": "Umm Bab", "muni": "Al-Shahaniya"}, {"name": "Al Nasraniya", "muni": "Al-Shahaniya"}, {"name": "Dukhan", "muni": "Al-Shahaniya"}, {"name": "Al Wakrah", "muni": "Al Wakrah"}, {"name": "Al Wukair", "muni": "Al Wakrah"}, {"name": "Al Mashaf", "muni": "Al Wakrah"}, {"name": "Mesaieed", "muni": "Al Wakrah"}, {"name": "Mesaieed Industrial Area", "muni": "Al Wakrah"}, {"name": "Shagra", "muni": "Al Wakrah"}, {"name": "Al Kharrara", "muni": "Al Wakrah"}, {"name": "Khor Al Adaid", "muni": "Al Wakrah"}];
+var QATAR_DISTRICTS = [{"name": "Al Jasrah", "muni": "Doha"}, {"name": "Al Bidda", "muni": "Doha"}, {"name": "Fereej Mohamed Bin Jasim", "muni": "Doha"}, {"name": "Mushayrib", "muni": "Doha"}, {"name": "Al Najada", "muni": "Doha"}, {"name": "Barahat Al Jufairi", "muni": "Doha"}, {"name": "Fereej Al Asmakh", "muni": "Doha"}, {"name": "Old Al Ghanim", "muni": "Doha"}, {"name": "Al Souq", "muni": "Doha"}, {"name": "Wadi Al Sail", "muni": "Doha"}, {"name": "Rumeilah", "muni": "Doha"}, {"name": "Fereej Abdel Aziz", "muni": "Doha"}, {"name": "Ad Dawhah al Jadidah", "muni": "Doha"}, {"name": "Al Rufaa", "muni": "Doha"}, {"name": "Old Al Hitmi", "muni": "Doha"}, {"name": "As Salatah", "muni": "Doha"}, {"name": "Al Mirqab", "muni": "Doha"}, {"name": "Doha Port", "muni": "Doha"}, {"name": "Fereej Bin Mahmoud", "muni": "Doha"}, {"name": "Rawdat Al Khail", "muni": "Doha"}, {"name": "Fereej Bin Durham", "muni": "Doha"}, {"name": "Al Mansoura", "muni": "Doha"}, {"name": "Najma", "muni": "Doha"}, {"name": "Umm Ghuwailina", "muni": "Doha"}, {"name": "Al Khulaifat", "muni": "Doha"}, {"name": "Ras Abu Aboud", "muni": "Doha"}, {"name": "Duhail", "muni": "Doha"}, {"name": "Umm Lekhba", "muni": "Doha"}, {"name": "Madinat Khalifa North", "muni": "Doha"}, {"name": "Dahl Al Hamam", "muni": "Doha"}, {"name": "Al Markhiya", "muni": "Doha"}, {"name": "Madinat Khalifa South", "muni": "Doha"}, {"name": "Fereej Kulaib", "muni": "Doha"}, {"name": "Al Messila", "muni": "Doha"}, {"name": "Fereej Bin Omran", "muni": "Doha"}, {"name": "New Al Hitmi", "muni": "Doha"}, {"name": "Hamad Medical City", "muni": "Doha"}, {"name": "Al Sadd", "muni": "Doha"}, {"name": "New Al Mirqab", "muni": "Doha"}, {"name": "Fereej Al Nasr", "muni": "Doha"}, {"name": "New Salatah", "muni": "Doha"}, {"name": "Nuaija", "muni": "Doha"}, {"name": "Al Hilal", "muni": "Doha"}, {"name": "Old Airport", "muni": "Doha"}, {"name": "Al Thumama", "muni": "Doha"}, {"name": "Doha International Airport", "muni": "Doha"}, {"name": "Ras Abu Fontas", "muni": "Doha"}, {"name": "Industrial Area", "muni": "Doha"}, {"name": "Wholesale Market", "muni": "Doha"}, {"name": "Al Dafna", "muni": "Doha"}, {"name": "Al Qassar", "muni": "Doha"}, {"name": "Onaiza", "muni": "Doha"}, {"name": "Lejbailat", "muni": "Doha"}, {"name": "Leqtaifiya", "muni": "Doha"}, {"name": "Hazm Al Markhiya", "muni": "Doha"}, {"name": "Jelaiah", "muni": "Doha"}, {"name": "Al Tarfa", "muni": "Doha"}, {"name": "Jeryan Nejaima", "muni": "Doha"}, {"name": "West Bay", "muni": "Doha"}, {"name": "Al Waab", "muni": "Doha"}, {"name": "The Pearl", "muni": "Doha"}, {"name": "Al Gharrafa", "muni": "Al Rayyan"}, {"name": "Gharrafat Al Rayyan", "muni": "Al Rayyan"}, {"name": "Izghawa", "muni": "Al Rayyan"}, {"name": "Bani Hajer", "muni": "Al Rayyan"}, {"name": "Al Seej", "muni": "Al Rayyan"}, {"name": "Rawdat Egdaim", "muni": "Al Rayyan"}, {"name": "Al Luqta", "muni": "Al Rayyan"}, {"name": "Lebday", "muni": "Al Rayyan"}, {"name": "Old Al Rayyan", "muni": "Al Rayyan"}, {"name": "Al Shagub", "muni": "Al Rayyan"}, {"name": "Fereej Al Zaeem", "muni": "Al Rayyan"}, {"name": "New Al Rayyan", "muni": "Al Rayyan"}, {"name": "Al Wajbah", "muni": "Al Rayyan"}, {"name": "Muaither", "muni": "Al Rayyan"}, {"name": "Fereej Al Amir", "muni": "Al Rayyan"}, {"name": "Luaib", "muni": "Al Rayyan"}, {"name": "Muraikh", "muni": "Al Rayyan"}, {"name": "Baaya", "muni": "Al Rayyan"}, {"name": "Mehairja", "muni": "Al Rayyan"}, {"name": "Fereej Al Soudan", "muni": "Al Rayyan"}, {"name": "Al Aziziya", "muni": "Al Rayyan"}, {"name": "New Fereej Al Ghanim", "muni": "Al Rayyan"}, {"name": "Fereej Al Murra", "muni": "Al Rayyan"}, {"name": "Fereej Al Asiri", "muni": "Al Rayyan"}, {"name": "New Fereej Al Khulaifat", "muni": "Al Rayyan"}, {"name": "Bu Samra", "muni": "Al Rayyan"}, {"name": "Al Mamoura", "muni": "Al Rayyan"}, {"name": "Abu Hamour", "muni": "Al Rayyan"}, {"name": "Mesaimeer", "muni": "Al Rayyan"}, {"name": "Mebaireek", "muni": "Al Rayyan"}, {"name": "Al Karaana", "muni": "Al Rayyan"}, {"name": "Abu Samra", "muni": "Al Rayyan"}, {"name": "Sawda Natheel", "muni": "Al Rayyan"}, {"name": "Jabal Thuaileb", "muni": "Al Daayen"}, {"name": "Al Kharayej", "muni": "Al Daayen"}, {"name": "Lusail", "muni": "Al Daayen"}, {"name": "Al Egla", "muni": "Al Daayen"}, {"name": "Wadi Al Banat", "muni": "Al Daayen"}, {"name": "Leabaib", "muni": "Al Daayen"}, {"name": "Al Ebb", "muni": "Al Daayen"}, {"name": "Jeryan Jenaihat", "muni": "Al Daayen"}, {"name": "Al Kheesa", "muni": "Al Daayen"}, {"name": "Rawdat Al Hamama", "muni": "Al Daayen"}, {"name": "Wadi Al Wasaah", "muni": "Al Daayen"}, {"name": "Al Sakhama", "muni": "Al Daayen"}, {"name": "Bu Fasseela", "muni": "Umm Salal"}, {"name": "Izghawa (Umm Salal)", "muni": "Umm Salal"}, {"name": "Al Kharaitiyat", "muni": "Umm Salal"}, {"name": "Umm Salal Ali", "muni": "Umm Salal"}, {"name": "Umm Salal Mohammed", "muni": "Umm Salal"}, {"name": "Saina Al-Husain", "muni": "Umm Salal"}, {"name": "Simaisma", "muni": "Al Khor"}, {"name": "Al Jeryan", "muni": "Al Khor"}, {"name": "Al Khor City", "muni": "Al Khor"}, {"name": "Al Thakhira", "muni": "Al Khor"}, {"name": "Ras Laffan", "muni": "Al Khor"}, {"name": "Umm Birka", "muni": "Al Khor"}, {"name": "Al Ghuwariyah", "muni": "Al Khor"}, {"name": "Ain Sinan", "muni": "Al Shamal"}, {"name": "Madinat Al Kaaban", "muni": "Al Shamal"}, {"name": "Fuwayrit", "muni": "Al Shamal"}, {"name": "Abu Dhalouf", "muni": "Al Shamal"}, {"name": "Zubarah", "muni": "Al Shamal"}, {"name": "Madinat ash Shamal", "muni": "Al Shamal"}, {"name": "Ar Ru'ays", "muni": "Al Shamal"}, {"name": "Al Utouriya", "muni": "Al-Shahaniya"}, {"name": "Al Jemailiya", "muni": "Al-Shahaniya"}, {"name": "Al-Shahaniya City", "muni": "Al-Shahaniya"}, {"name": "Rawdat Rashed", "muni": "Al-Shahaniya"}, {"name": "Umm Bab", "muni": "Al-Shahaniya"}, {"name": "Al Nasraniya", "muni": "Al-Shahaniya"}, {"name": "Dukhan", "muni": "Al-Shahaniya"}, {"name": "Al Wakrah", "muni": "Al Wakrah"}, {"name": "Al Wukair", "muni": "Al Wakrah"}, {"name": "Al Mashaf", "muni": "Al Wakrah"}, {"name": "Mesaieed", "muni": "Al Wakrah"}, {"name": "Mesaieed Industrial Area", "muni": "Al Wakrah"}, {"name": "Shagra", "muni": "Al Wakrah"}, {"name": "Al Kharrara", "muni": "Al Wakrah"}, {"name": "Khor Al Adaid", "muni": "Al Wakrah"}, {"name": "Ain Khaled", "muni": "Al Rayyan"}, {"name": "Al Murra", "muni": "Al Rayyan"}, {"name": "Al Sailiya", "muni": "Al Rayyan"}, {"name": "Bu Sidra", "muni": "Al Rayyan"}, {"name": "Bin Omran", "muni": "Doha"}, {"name": "Al Nasr", "muni": "Doha"}, {"name": "Al Mearad", "muni": "Al Rayyan"}, {"name": "Al Muntazah", "muni": "Doha"}, {"name": "Al Hitmi", "muni": "Doha"}, {"name": "Al Ruwais", "muni": "Al Shamal"}, {"name": "Abu Nakhla", "muni": "Al Rayyan"}, {"name": "Al Mukainis", "muni": "Al Rayyan"}, {"name": "Old Salata", "muni": "Doha"}, {"name": "Al Daayen", "muni": "Al Daayen"}, {"name": "Doha Al Jadeeda", "muni": "Doha"}, {"name": "Mushaireb", "muni": "Doha"}];
 var ROSTER = [{"name": "Zahra Al Ouer", "phone": "33031098", "boxes": 10, "delivery": "vol", "prefs": ""}, {"name": "Nada al Meejan", "phone": "31145146", "boxes": 5, "delivery": "vol", "prefs": "Al Waab"}, {"name": "Zareena Rizwana", "phone": "66249338", "boxes": 2, "delivery": "self", "prefs": "Would prefer Muslim family"}, {"name": "Hamda Al Thani", "phone": "77642266", "boxes": 10, "delivery": "self", "prefs": "Arabic-speaking family; Al Rayyan preferred but flexible"}, {"name": "Ryad", "phone": "55848279", "boxes": 9, "delivery": "vol", "prefs": ""}, {"name": "Eni", "phone": "66996772", "boxes": 3, "delivery": "vol", "prefs": ""}, {"name": "Nasrin", "phone": "77261003", "boxes": 4, "delivery": "vol", "prefs": ""}, {"name": "Mega Sukma", "phone": "71171729", "boxes": 6, "delivery": "open", "prefs": ""}, {"name": "Clara Dasika", "phone": "66332736", "boxes": 4, "delivery": "vol", "prefs": ""}, {"name": "Roxy", "phone": "7581086270", "boxes": 2, "delivery": "vol", "prefs": "Muraikh"}, {"name": "Dilraz", "phone": "66862030", "boxes": 5, "delivery": "vol", "prefs": "Al Waab, Muaither, Al Rayyan"}, {"name": "Mubasheer", "phone": "50295735", "boxes": 10, "delivery": "vol", "prefs": ""}, {"name": "Vitri Armila", "phone": "55933036", "boxes": 9, "delivery": "self", "prefs": "Ain Khalid, Al Waab, Aziziya"}, {"name": "Asiya Shabbir", "phone": "55989668", "boxes": 1, "delivery": "vol", "prefs": "Family"}, {"name": "Anissah Ramtoolah", "phone": "66149228", "boxes": 3, "delivery": "vol", "prefs": ""}, {"name": "Mahdiyya Khan", "phone": "70424195", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Haifa Shaikh", "phone": "66632508", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Niha Hashim", "phone": "55609738", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Amer Zahid", "phone": "33208628", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Maria Tahir", "phone": "33137838", "boxes": 10, "delivery": "vol", "prefs": ""}, {"name": "Jamilah Sherally", "phone": "31650874", "boxes": 1, "delivery": "self", "prefs": ""}, {"name": "Exi Idrus", "phone": "51100417", "boxes": 4, "delivery": "self", "prefs": "Any location"}, {"name": "Sarah elSabbagh", "phone": "55443127", "boxes": 2, "delivery": "self", "prefs": ""}, {"name": "Ksenia", "phone": "71714440", "boxes": 4, "delivery": "self", "prefs": ""}, {"name": "Kirsty Henderson", "phone": "50592919", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Yahia Hali", "phone": "30179846", "boxes": 1, "delivery": "self", "prefs": "Old Airport, Nuaija"}, {"name": "Aliza Noor", "phone": "33033261", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Saima Ali", "phone": "30165551", "boxes": 1, "delivery": "open", "prefs": ""}, {"name": "Sara Hussein", "phone": "33413377", "boxes": 3, "delivery": "vol", "prefs": ""}, {"name": "Doaa Ahmed", "phone": "447754096749", "boxes": 2, "delivery": "open", "prefs": ""}, {"name": "Aysha Salim Patel", "phone": "447468602888", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Anshu", "phone": "33032835", "boxes": 2, "delivery": "vol", "prefs": ""}, {"name": "Morag", "phone": "66067628", "boxes": 2, "delivery": "self", "prefs": "Around Al Waab"}, {"name": "Samira Shaikh", "phone": "33053762", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Helen", "phone": "447585688926", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Diane Lennard", "phone": "55287766", "boxes": 5, "delivery": "vol", "prefs": ""}, {"name": "Nada Anvar", "phone": "66696821", "boxes": 2, "delivery": "vol", "prefs": ""}, {"name": "Ruhul Chowdhury", "phone": "66488957", "boxes": 1, "delivery": "vol", "prefs": ""}, {"name": "Alliyah Choudhury", "phone": "30867777", "boxes": 1, "delivery": "self", "prefs": ""}];
 
 var SUPABASE_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
@@ -319,7 +326,7 @@ var checkedEmail = "";
 var checkedPhone = "";
 var currentAuthMode = "email";
 var currentUser = null, currentSession = null, currentPledge = null;
-var deliveryMethod = null, selectedAreas = [];
+var deliveryMethod = null, selectedAreas = [], noPreference = false;
 var rosterMatch = null;
 
 // ── Box-count stepper ──
@@ -614,15 +621,33 @@ function hideResults(){
   document.getElementById("search-results").classList.remove("show");
   currentResults = []; highlightedIdx = -1;
 }
+function toggleNoPreference(checked){
+  noPreference = checked;
+  var box = document.getElementById("loc-search-box");
+  if(checked){
+    selectedAreas = [];
+    renderSelectedAreas();
+    document.getElementById("loc-search").value = "";
+    hideResults();
+    box.classList.add("disabled");
+  } else {
+    box.classList.remove("disabled");
+  }
+  checkPledgeReady();
+}
 function pickDistrict(name){
-  if(selectedAreas.length >= 3) return;
   if(selectedAreas.indexOf(name) > -1) return;
+  if(noPreference){
+    noPreference = false;
+    document.getElementById("no-pref-checkbox").checked = false;
+    document.getElementById("loc-search-box").classList.remove("disabled");
+  }
   selectedAreas.push(name);
   renderSelectedAreas();
   document.getElementById("loc-search").value = "";
   hideResults();
   checkPledgeReady();
-  if(selectedAreas.length < 3) document.getElementById("loc-search").focus();
+  document.getElementById("loc-search").focus();
 }
 function removeDistrict(name){
   var idx = selectedAreas.indexOf(name);
@@ -640,11 +665,14 @@ function renderSelectedAreas(){
   var isAr = document.body.classList.contains("lang-ar");
   var countEl = document.getElementById("loc-count");
   if(countEl){
-    countEl.innerHTML = isAr ? selectedAreas.length + " من 3 محدد" : selectedAreas.length + " of 3 selected";
+    if(noPreference){
+      countEl.innerHTML = isAr ? "لا يوجد تفضيل معيّن" : "No preference selected";
+    } else {
+      countEl.innerHTML = isAr ? selectedAreas.length + " محدد" : selectedAreas.length + " selected";
+    }
   }
 }
 document.getElementById("loc-search").addEventListener("input", function(e){
-  if(selectedAreas.length >= 3){ e.target.value = ""; return; }
   var results = searchDistricts(e.target.value);
   if(e.target.value.trim() === "") hideResults(); else renderResults(results);
 });
@@ -665,7 +693,7 @@ document.addEventListener("click", function(e){
 function checkPledgeReady(){
   var btn = document.getElementById("pledge-continue-btn");
   var hint = document.getElementById("pledge-cta-hint");
-  var locOk = deliveryMethod === "vol" || (deliveryMethod === "self" && selectedAreas.length > 0);
+  var locOk = deliveryMethod === "vol" || (deliveryMethod === "self" && (selectedAreas.length > 0 || noPreference));
   var ready = deliveryMethod && locOk;
   btn.disabled = !ready;
   btn.classList.toggle("is-ready", ready);
@@ -675,7 +703,7 @@ function checkPledgeReady(){
   } else if(!deliveryMethod){
     hint.textContent = isAr ? "اختر طريقة التوصيل للمتابعة" : "Select a delivery method to continue";
   } else {
-    hint.textContent = isAr ? "ابحث واختر منطقة واحدة على الأقل للتوصيل" : "Search and pick at least 1 area you can deliver to";
+    hint.textContent = isAr ? "ابحث واختر منطقة واحدة على الأقل، أو اختر لا يوجد تفضيل معيّن" : "Pick at least 1 area, or choose “No preference”";
   }
 }
 
