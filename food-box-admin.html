@@ -61,6 +61,20 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 .stat-card .num{font-size:28px;font-weight:900;color:white;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,0.15);}
 .stat-card .lbl{font-size:12px;color:rgba(255,255,255,0.88);font-weight:700;margin-top:4px;}
 
+/* Live tab */
+.live-hero{display:flex;gap:24px;align-items:center;background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 14px rgba(0,0,0,0.06);padding:20px 24px;margin-bottom:16px;flex-wrap:wrap;}
+.live-ring-wrap{position:relative;width:132px;height:132px;flex:0 0 auto;}
+.live-ring-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.live-ring-num b{font-size:26px;font-weight:900;color:var(--green-dark);line-height:1;}
+.live-ring-num span{font-size:10px;color:var(--muted);font-weight:700;margin-top:2px;max-width:80px;}
+.live-tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;flex:1;min-width:280px;}
+.live-tile{background:var(--off-white);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;}
+.live-tile b{display:block;font-size:24px;font-weight:900;color:var(--text);line-height:1;font-variant-numeric:tabular-nums;}
+.live-tile span{font-size:11px;color:var(--muted);font-weight:700;margin-top:4px;display:block;}
+.live-tile.lt-sponsored b{color:var(--green-dark);}
+.live-tile.lt-pending b{color:var(--orange-dark);}
+.live-tile.lt-waiting b{color:var(--red);}
+
 .filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
 .view-switcher{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
 .filter-btn{padding:7px 16px;border:1.5px solid var(--border);border-radius:20px;background:white;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.15s;}
@@ -377,24 +391,40 @@ select.edit-field{cursor:pointer;}
         <div class="welcome-scope" id="live-updated">Loading…</div>
       </div>
 
+      <div class="live-hero">
+        <div class="live-ring-wrap">
+          <svg viewBox="0 0 132 132" width="132" height="132">
+            <circle cx="66" cy="66" r="56" fill="none" stroke="var(--border)" stroke-width="14"/>
+            <circle id="live-ring-fill" cx="66" cy="66" r="56" fill="none" stroke="var(--green)" stroke-width="14" stroke-linecap="round" stroke-dasharray="351.86" stroke-dashoffset="351.86" transform="rotate(-90 66 66)" style="transition:stroke-dashoffset .5s;"/>
+          </svg>
+          <div class="live-ring-num"><b id="live-ring-pct">–</b><span>boxes covered</span></div>
+        </div>
+        <div class="live-tiles">
+          <div class="live-tile lt-target"><b id="live-box-target">–</b><span>📦 Boxes required</span></div>
+          <div class="live-tile lt-sponsored"><b id="live-box-sponsored">–</b><span>✅ Boxes sponsored</span></div>
+          <div class="live-tile lt-pending"><b id="live-box-pending">–</b><span>⏳ Boxes pending</span></div>
+          <div class="live-tile lt-waiting"><b id="live-friends-waiting">–</b><span>👪 Friends with no sponsor</span></div>
+        </div>
+      </div>
+
       <div class="table-wrap">
         <div class="accordion-section" id="acc-live-sponsored">
           <div class="accordion-head" onclick="toggleAccordion('live-sponsored')">
-            <div class="accordion-head-left"><h3>✅ Sponsored — fully confirmed</h3><span class="accordion-count" id="live-count-sponsored">–</span></div>
+            <div class="accordion-head-left"><h3>✅ Sponsored</h3><span class="accordion-count" id="live-count-sponsored">–</span></div>
             <div class="accordion-chevron">▾</div>
           </div>
           <div class="accordion-content"><div id="live-sponsored-list">Loading…</div></div>
         </div>
-        <div class="accordion-section" id="acc-live-progress">
-          <div class="accordion-head" onclick="toggleAccordion('live-progress')">
-            <div class="accordion-head-left"><h3>⏳ In progress — a sponsor has claimed them, not yet confirmed to the end</h3><span class="accordion-count" id="live-count-progress">–</span></div>
+        <div class="accordion-section" id="acc-live-pending">
+          <div class="accordion-head" onclick="toggleAccordion('live-pending')">
+            <div class="accordion-head-left"><h3>⏳ Pending — selected, checkout not finished</h3><span class="accordion-count" id="live-count-pending">–</span></div>
             <div class="accordion-chevron">▾</div>
           </div>
-          <div class="accordion-content"><div id="live-progress-list">Loading…</div></div>
+          <div class="accordion-content"><div id="live-pending-list">Loading…</div></div>
         </div>
         <div class="accordion-section" id="acc-live-waiting">
           <div class="accordion-head" onclick="toggleAccordion('live-waiting')">
-            <div class="accordion-head-left"><h3>⭕ Not yet sponsored</h3><span class="accordion-count" id="live-count-waiting">–</span></div>
+            <div class="accordion-head-left"><h3>⭕ Friends with no sponsor</h3><span class="accordion-count" id="live-count-waiting">–</span></div>
             <div class="accordion-chevron">▾</div>
           </div>
           <div class="accordion-content"><div id="live-waiting-list">Loading…</div></div>
@@ -902,7 +932,18 @@ async function handleAdminSession(session) {
   // Case handlers only ever see their own cases; super admins see
   // everything by default but can flip a toggle to check their own queue.
   document.getElementById('my-cases-toggle').style.display = (myRole === 'super_admin') ? 'inline-block' : 'none';
-  document.getElementById('view-switcher').style.display = (myRole === 'super_admin') ? 'flex' : 'none';
+  // The Live tab (sponsored / in progress / not yet sponsored) is a
+  // read-only summary every food box admin should be able to check, not
+  // just super admins -- so the switcher itself is now shown to any
+  // logged-in staff member. The other tabs here (Distributions, Sponsors,
+  // Payments, Approvals, Messages) carry sponsor/payment/driver detail and
+  // stay super-admin only, same as before.
+  document.getElementById('view-switcher').style.display = 'flex';
+  document.getElementById('view-btn-live').style.display = 'inline-block';
+  ['view-btn-distributions','view-btn-sponsorships','view-btn-payments','view-btn-approvals','view-btn-messages'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = (myRole === 'super_admin') ? 'inline-block' : 'none';
+  });
   myCasesOnly = (myRole !== 'super_admin');
 
   loadCurrentDistribution();
@@ -2685,42 +2726,56 @@ function showView(view) {
 
 // ── Live sign-up dashboard ──
 // Reuses the same allApps/allSponsorships/sponsorProfileMap data already
-// fetched for the Sponsors/Payments tabs -- no extra queries. "Target" is
-// deliberately just the count of confirmed families (real schema data,
-// not a typed-in goal), so this never shows a number that isn't backed by
-// an actual case. Auto-refreshes quietly while this tab is open.
-// Three buckets, all scoped to confirmed families only (an unconfirmed
-// application isn't sponsorable yet, so it doesn't belong on this tab at
-// all). No payment wording anywhere here -- "in progress" is about whether
-// the sponsorship itself has been carried through to the end, not about
-// money:
-//  - sponsored: is_sponsored = true -- the whole thing has been confirmed
-//    through to completion
-//  - in progress: sponsorship_id is set (a sponsor has claimed this
-//    family) but is_sponsored is still false -- someone is in the middle
-//    of sponsoring them, just hasn't been finalised yet
-//  - not yet sponsored: no sponsorship_id at all -- nobody has claimed
-//    them yet
-// Each section is a click-to-expand drill-down (shared accordion CSS/JS
-// with the case detail modal) with the count shown on the closed header.
+// fetched for the Sponsors/Payments tabs -- no extra queries.
+// Every confirmed family sits in exactly one of three states:
+//  - sponsored: sponsorship_id is set -- someone has selected them and
+//    finished the process. Payment/confirmation status plays no part in
+//    this (see the Payments tab for that).
+//  - pending: not yet sponsored, but reserved_until/reserved_by_sponsorship_id
+//    (set by the reserve_families() hold in ChooseFamily.html) is still in
+//    the future -- someone is mid-checkout right now and the family
+//    releases automatically if they don't finish within the 10-minute hold.
+//  - no sponsor: everything else -- nobody has them at all right now.
+// "Boxes required" is the sum of boxes across every confirmed family
+// (real schema data, not a typed-in goal), so the tab never shows a
+// number that isn't backed by an actual case. Auto-refreshes quietly
+// while this tab is open.
 function renderLiveView() {
   var confirmedApps = allApps.filter(function(a){ return a.status === 'confirmed'; });
-  var sponsored = confirmedApps.filter(function(a){ return a.is_sponsored; });
-  var inProgress = confirmedApps.filter(function(a){ return a.sponsorship_id && !a.is_sponsored; });
-  var waiting = confirmedApps.filter(function(a){ return !a.sponsorship_id; });
+  var now = Date.now();
+  var isHeld = function(a){ return !!a.reserved_until && new Date(a.reserved_until).getTime() > now; };
+
+  var sponsored = confirmedApps.filter(function(a){ return !!a.sponsorship_id; });
+  var pending = confirmedApps.filter(function(a){ return !a.sponsorship_id && isHeld(a); });
+  var waiting = confirmedApps.filter(function(a){ return !a.sponsorship_id && !isHeld(a); });
 
   var sponsorshipById = {};
   allSponsorships.forEach(function(sp){ sponsorshipById[sp.id] = sp; });
 
+  var boxesOf = function(a){ return Math.ceil((a.household_size || 1) / 4); };
+  var sumBoxes = function(apps){ return apps.reduce(function(s,a){ return s + boxesOf(a); }, 0); };
+  var targetBoxes = sumBoxes(confirmedApps);
+  var sponsoredBoxes = sumBoxes(sponsored);
+  var pendingBoxes = sumBoxes(pending);
+  var pct = targetBoxes ? Math.round((sponsoredBoxes / targetBoxes) * 100) : 0;
+
   document.getElementById('live-updated').textContent = CURRENT_DISTRIBUTION + ' · updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
 
+  document.getElementById('live-box-target').textContent = targetBoxes;
+  document.getElementById('live-box-sponsored').textContent = sponsoredBoxes;
+  document.getElementById('live-box-pending').textContent = pendingBoxes;
+  document.getElementById('live-friends-waiting').textContent = waiting.length;
+  document.getElementById('live-ring-pct').textContent = pct + '%';
+  var ring = document.getElementById('live-ring-fill');
+  var circumference = 351.86;
+  ring.style.strokeDashoffset = circumference - (circumference * pct / 100);
+
   document.getElementById('live-count-sponsored').textContent = sponsored.length;
-  document.getElementById('live-count-progress').textContent = inProgress.length;
+  document.getElementById('live-count-pending').textContent = pending.length;
   document.getElementById('live-count-waiting').textContent = waiting.length;
 
   var nameOf = function(a){ return a.full_name_en || a.full_name || ('Case ' + a.id.slice(0,8)); };
   var areaOf = function(a){ return a.area_en || a.area; };
-  var boxesOf = function(a){ return Math.ceil((a.household_size || 1) / 4); };
 
   var listHtml = function(apps, kind) {
     if (!apps.length) return '<div style="color:var(--muted);font-size:13px;padding:6px 0;">None right now.</div>';
@@ -2729,20 +2784,23 @@ function renderLiveView() {
       var line = '<a onclick="viewApp(\'' + a.id + '\');showView(\'cases\')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;font-weight:700;">' + nameOf(a) + '</a>' +
         (areaOf(a) ? ' <span style="color:var(--muted);font-size:12px;">· ' + areaOf(a) + '</span>' : '') +
         ' <span style="color:var(--muted);font-size:12px;">(' + b + ' box' + (b === 1 ? '' : 'es') + ')</span>';
-      if ((kind === 'sponsored' || kind === 'progress') && a.sponsorship_id) {
+      if (kind === 'sponsored' && a.sponsorship_id) {
         var sp = sponsorshipById[a.sponsorship_id];
         if (sp) {
           var info = getSponsorInfo(sp);
-          line += '<br><span style="font-size:12px;color:var(--muted);">Sponsor: ' + (info.name || 'Not on file') + '</span>' +
-            (kind === 'progress' ? ' <span style="color:var(--orange-dark);font-size:12px;font-weight:700;">· not yet confirmed</span>' : '');
+          line += '<br><span style="font-size:12px;color:var(--muted);">Sponsor: ' + (info.name || 'Not on file') + '</span>';
         }
+      }
+      if (kind === 'pending') {
+        var minsLeft = Math.max(0, Math.round((new Date(a.reserved_until).getTime() - now) / 60000));
+        line += ' <span style="color:var(--orange-dark);font-size:12px;font-weight:700;">· releases in ' + minsLeft + ' min if not completed</span>';
       }
       return '<div style="padding:8px 0;border-bottom:1px solid #f0f4f0;">' + line + '</div>';
     }).join('');
   };
 
   document.getElementById('live-sponsored-list').innerHTML = listHtml(sponsored, 'sponsored');
-  document.getElementById('live-progress-list').innerHTML = listHtml(inProgress, 'progress');
+  document.getElementById('live-pending-list').innerHTML = listHtml(pending, 'pending');
   document.getElementById('live-waiting-list').innerHTML = listHtml(waiting, 'waiting');
 }
 
