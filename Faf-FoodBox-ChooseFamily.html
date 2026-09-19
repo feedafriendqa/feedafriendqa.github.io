@@ -130,13 +130,13 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .fam-id,body.lang-ar .surp
 
   <div class="header">
     <div class="h1" data-en="Who would you like to <em>feed?</em>" data-ar="من تريد أن <em>تغذّي؟</em>">Who would you like to <em>feed?</em></div>
-    <div class="sub" data-en="Every box goes to a real household in Doha." data-ar="كل صندوق يذهب لأسرة حقيقية في الدوحة.">Every box goes to a real household in Doha.</div>
+    <div class="sub" data-en="Every box goes to a real household in Qatar." data-ar="كل صندوق يذهب لأسرة حقيقية في قطر.">Every box goes to a real household in Qatar.</div>
   </div>
 
   <div class="dignity-banner">
     <span class="ic">🤍</span>
     <div>
-      <div class="t" data-en="Real families. Anonymous because dignity matters." data-ar="عائلات حقيقية. بلا أسماء لأن الكرامة مهمة.">Real families. Anonymous because dignity matters.</div>
+      <div class="t" data-en="Real friends. Anonymous because dignity matters." data-ar="أصدقاء حقيقيون. بلا أسماء لأن الكرامة مهمة.">Real friends. Anonymous because dignity matters.</div>
       <div class="d" data-en="No names or photos are shared — just enough to know who you're helping." data-ar="لا أسماء أو صور — فقط ما يكفي لتعرف من تساعد.">No names or photos are shared — just enough to know who you're helping.</div>
     </div>
   </div>
@@ -155,7 +155,7 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .fam-id,body.lang-ar .surp
   <div class="section">
     <div class="section-h">
       <span data-en="Matched to your preferences" data-ar="مطابقة لتفضيلاتك">Matched to your preferences</span>
-      <span class="match-count" id="match-count">10 families</span>
+      <span class="match-count" id="match-count">10 friends</span>
     </div>
   </div>
 
@@ -164,13 +164,13 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .fam-id,body.lang-ar .surp
   <div class="surprise-card">
     <div class="ic">🎲</div>
     <div class="t" data-en="Not sure? Let us choose for you" data-ar="غير متأكد؟ اتركنا نختار لك">Not sure? Let us choose for you</div>
-    <div class="d" data-en="We'll auto-fill your box count with families who need it most" data-ar="سنختار تلقائياً العائلات الأكثر حاجة لتغطية عدد صناديقك">We'll auto-fill your box count with families who need it most</div>
+    <div class="d" data-en="We'll auto-fill your box count with friends who need it most" data-ar="سنختار تلقائياً الأصدقاء الأكثر حاجة لتغطية عدد صناديقك">We'll auto-fill your box count with friends who need it most</div>
     <button onclick="surpriseMe()" data-en="Surprise me" data-ar="فاجئني">Surprise me</button>
   </div>
 
   <div class="cta-bar">
     <button class="cta-btn" id="continue-btn" disabled onclick="confirmChoice()" data-en="Confirm and Continue →" data-ar="تأكيد واستمرار ←">Confirm and Continue →</button>
-    <div class="cta-hint" id="cta-hint" data-en="Select families to cover your box count" data-ar="اختر عائلات لتغطية عدد صناديقك">Select families to cover your box count</div>
+    <div class="cta-hint" id="cta-hint" data-en="Select friends to cover your box count" data-ar="اختر أصدقاء لتغطية عدد صناديقك">Select friends to cover your box count</div>
   </div>
 
 </div>
@@ -449,20 +449,20 @@ function renderFamilies(){
 
   if(poolState === "loading"){
     document.getElementById("match-count").textContent = "";
-    grid.innerHTML = '<div class="pool-state-msg">' + (isAr ? "⏳ جاري تحميل العائلات…" : "⏳ Loading families…") + '</div>';
+    grid.innerHTML = '<div class="pool-state-msg">' + (isAr ? "⏳ جاري تحميل الأصدقاء…" : "⏳ Loading friends…") + '</div>';
     return;
   }
   if(poolState === "error"){
     document.getElementById("match-count").textContent = "";
     grid.innerHTML = '<div class="pool-state-msg">'
-      + (isAr ? "تعذّر تحميل العائلات. يرجى المحاولة مرة أخرى." : "Couldn't load families right now. Please try again.")
+      + (isAr ? "تعذّر تحميل الأصدقاء. يرجى المحاولة مرة أخرى." : "Couldn't load friends right now. Please try again.")
       + '<br><button class="pool-retry-btn" onclick="loadFamilyPool()">' + (isAr ? "إعادة المحاولة" : "Retry") + '</button></div>';
     return;
   }
   if(FRIENDS.length === 0){
-    document.getElementById("match-count").textContent = isAr ? "٠ عائلة" : "0 families";
+    document.getElementById("match-count").textContent = isAr ? "٠ صديق" : "0 friends";
     grid.innerHTML = '<div class="pool-state-msg">'
-      + (isAr ? "🎉 كل العائلات مكفولة حالياً! يرجى التحقق مرة أخرى قريباً." : "🎉 Every family is sponsored right now — please check back soon!")
+      + (isAr ? "🎉 كل الأصدقاء مكفولون حالياً! يرجى التحقق مرة أخرى قريباً." : "🎉 Every friend is sponsored right now — please check back soon!")
       + '</div>';
     return;
   }
@@ -473,8 +473,8 @@ function renderFamilies(){
   var list = visibleFamilies;
 
   document.getElementById("match-count").textContent = isAr
-    ? list.length + " عائلة"
-    : list.length + " families";
+    ? list.length + " صديق"
+    : list.length + " friends";
 
   grid.innerHTML = list.map(function(f, idx){
     var displayNum = idx + 1; // f.id is now a real uuid — never shown directly
@@ -484,7 +484,10 @@ function renderFamilies(){
     var householdType = isAr ? f.householdTypeAr : f.householdType;
     var areaName = isAr ? (AREA_AR[f.area] || f.area) : f.area;
     var preferredLabel = isAr ? " · مفضّل" : " · Preferred";
-    var familyLabel = isAr ? "عائلة " : "Family ";
+    // Generic per-card label — deliberately NOT "Family N", since the pool is
+    // a mix of real families and bachelor/roommate households (f.householdType
+    // right below already states which, correctly, per row.is_family).
+    var familyLabel = isAr ? "صديق " : "Friend ";
     var peopleLabel = isAr ? " أشخاص في الأسرة" : " people in the household";
     var boxLabel = isAr
       ? "📦 " + f.boxesNeeded + " صندوق مطلوب"
@@ -663,15 +666,15 @@ function checkReady(){
   void btn.offsetWidth; // force reflow — works around iOS Safari disabled-state repaint bug
   var isAr = document.body.classList.contains("lang-ar");
   if(selectedIds.length === 0){
-    hint.textContent = isAr ? "اختر عائلات لتغطية عدد صناديقك" : "Select families to cover your box count";
+    hint.textContent = isAr ? "اختر أصدقاء لتغطية عدد صناديقك" : "Select friends to cover your box count";
   } else if(picked < targetBoxes){
     hint.textContent = isAr
-      ? (targetBoxes - picked) + " صندوق آخر للتغطية — اختر عائلة أخرى"
-      : (targetBoxes - picked) + " more box" + ((targetBoxes - picked) === 1 ? "" : "es") + " to cover — pick another family";
+      ? (targetBoxes - picked) + " صندوق آخر للتغطية — اختر صديقاً آخر"
+      : (targetBoxes - picked) + " more box" + ((targetBoxes - picked) === 1 ? "" : "es") + " to cover — pick another friend";
   } else {
     hint.textContent = isAr
-      ? selectedIds.length + " عائلة محددة — جاهز للتأكيد"
-      : selectedIds.length + " famil" + (selectedIds.length === 1 ? "y" : "ies") + " selected — ready to confirm";
+      ? selectedIds.length + " صديق محدد — جاهز للتأكيد"
+      : selectedIds.length + " friend" + (selectedIds.length === 1 ? "" : "s") + " selected — ready to confirm";
   }
 }
 

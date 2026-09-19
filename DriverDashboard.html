@@ -347,7 +347,7 @@ body.lang-ar .alt-contact-actions{text-align:left}
       <div class="banner-t" data-en="Can you help deliver more boxes?" data-ar="هل يمكنك المساعدة في توصيل صناديق أخرى؟">Can you help deliver more boxes?</div>
       <div class="banner-s" data-en="They have sponsors, we just need help with the delivery." data-ar="لديها متكفّلون، نحتاج فقط للمساعدة في التوصيل.">They have sponsors, we just need help with the delivery.</div>
       <div style="display:flex;gap:10px;margin-top:12px">
-        <button class="tb-out" onclick="dismissHelpDeliverBanner()" data-en="No" data-ar="لا">No</button>
+        <button class="tb-out" id="help-deliver-no-btn" onclick="viewOwnBoxesOnly(this)" data-en="No" data-ar="لا">No</button>
         <button class="tb-grn" onclick="dismissHelpDeliverBanner();anotherTrip();" data-en="Yes →" data-ar="نعم ←">Yes →</button>
       </div>
     </div>
@@ -604,6 +604,8 @@ var TR={
   formula:{en:"Formula",ar:"حليب أطفال"},
   matched_last_time:{en:"Matched with you last time",ar:"طابقناك بهم آخر مرة"},
   your_own_sponsorship:{en:"🎁 Your own sponsorship",ar:"🎁 تكفّلك الخاص"},
+  loading_ellipsis:{en:"Loading…",ar:"جارٍ التحميل…"},
+  no_own_boxes_found:{en:"We couldn't find your sponsored boxes right now — please try again in a moment.",ar:"لم نتمكن من العثور على صناديقك المتكفّل بها الآن — يرجى المحاولة مرة أخرى بعد قليل."},
   same_household_suffix:{en:" deliveries, same household",ar:" توصيلات، نفس الأسرة"},
   outside_chosen_areas:{en:"Outside your chosen areas",ar:"خارج مناطقك المختارة"},
   household_of:{en:"Household of ",ar:"أسرة من "},
@@ -1315,6 +1317,50 @@ function anotherTrip(){
   document.getElementById("pnl-none").style.display="none";
   document.getElementById("pnl-active").style.display="none";
   showAreasStep();
+}
+
+// "No" on the "Can you help deliver more boxes?" nudge means "I'm not
+// taking on any new matches right now" — NOT "cancel everything". If this
+// driver already has self-sponsored boxes sitting in their boot, "No"
+// should take them straight to those friends' delivery details/contacts,
+// not into the area-picking/matching flow (that flow is for taking on
+// *additional* families, which is exactly what they just said no to).
+// Confirms a trip containing only their own already-sponsored boxes (via
+// capacity_override:0, so get_driver_boxes fills nothing beyond the
+// self-sponsored rows it always includes) then jumps to the family list.
+async function viewOwnBoxesOnly(btn){
+  if(!SELFBOXES||SELFBOXES<=0){
+    // Nothing of their own to show — banner dismissal is all there is to do.
+    dismissHelpDeliverBanner();
+    return;
+  }
+  var origLabel=btn?btn.textContent:"";
+  if(btn){btn.disabled=true;btn.textContent=t("loading_ellipsis");}
+  try{
+    var boxesRes=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_boxes",driver_email:CU.email,areas:(DP&&DP.location_preferences)||[],capacity_override:0})});
+    var boxesData=await boxesRes.json();
+    if(!boxesRes.ok||boxesData.error)throw new Error(boxesData.error||t("something_went_wrong_generic"));
+    var ownIds=(boxesData.families||[]).map(function(f){return f.id;});
+    if(ownIds.length===0){
+      alert(t("no_own_boxes_found"));
+      dismissHelpDeliverBanner();
+      return;
+    }
+    var tripRes=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"confirm_driver_trip",driver_email:CU.email,family_ids:ownIds,areas:[]})});
+    var tripData=await tripRes.json();
+    if(!tripRes.ok||tripData.error)throw new Error(tripData.error||t("something_went_wrong_generic"));
+    dismissHelpDeliverBanner();
+    AT={id:tripData.trip_id,boxes_count:tripData.boxes,status:"confirmed",trip_date:tripData.trip_date};
+    document.getElementById("pnl-none").style.display="none";
+    renderActiveTrip(AT);
+    document.getElementById("pnl-active").style.display="block";
+    await showFamilies();
+  }catch(e){
+    console.error("viewOwnBoxesOnly failed:",e);
+    alert(t("something_went_wrong_generic"));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=origLabel;}
+  }
 }
 
 // "Can you help deliver more boxes?" nudge on the no-active-trip screen —
