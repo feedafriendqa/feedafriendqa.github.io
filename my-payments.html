@@ -557,16 +557,11 @@ function renderList(rows){
     // the sponsor to act on, just a plain label.
     var deliveryTag = "";
     if(r.delivery_method === "self"){
-      var isRegisteredDistributor = !!(window.selfDeliveryDistributor && window.selfDeliveryDistributor.id);
-      var selfLabel = isRegisteredDistributor
-        ? (isAr ? "\uD83D\uDE9A توصيل ذاتي \u2014 عرض مجموعتك \u2190" : "\uD83D\uDE9A Self-delivery — see your group →")
-        : (isAr ? "\uD83D\uDE9A توصيل ذاتي \u2014 سجّل كموزّع لعرض توصيلاتك \u2190" : "\uD83D\uDE9A Self-delivery — register to see your group →");
-      var selfHref = isRegisteredDistributor
-        ? "https://connect.feedafriend.org/DriverDashboard.html"
-        : "https://connect.feedafriend.org/Faf-FoodBox-DriverReg.html";
-      deliveryTag = '<a class="deliv-tag self-link" href="' + selfHref + '" target="_blank" rel="noopener">' + selfLabel + '</a>';
+      var selfLabel = isAr ? "\uD83D\uDE9A توصيل ذاتي" : "\uD83D\uDE9A Self-delivery";
+      deliveryTag = '<a class="deliv-tag self-link" href="javascript:void(0)" onclick="showSelfDeliveryInfo()">' + selfLabel + '</a>';
     } else if(r.delivery_method === "vol"){
-      deliveryTag = '<span class="deliv-tag">' + (isAr ? "\uD83E\uDD1D توصيل بواسطة متطوع" : "\uD83E\uDD1D Volunteer delivery") + '</span>';
+      var volLabel = isAr ? "\uD83E\uDD1D توصيل بواسطة متطوع" : "\uD83E\uDD1D Volunteer delivery";
+      deliveryTag = '<a class="deliv-tag" href="javascript:void(0)" onclick="showVolDeliveryInfo()">' + volLabel + '</a>';
     }
     var distTag = r.distribution_event
       ? '<span class="dist-tag">\uD83D\uDCE6 ' + r.distribution_event + '</span>'
@@ -587,6 +582,19 @@ function renderList(rows){
       '</div>' +
     '</div>';
   }).join("");
+}
+
+function showSelfDeliveryInfo(){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  alert(isAr
+    ? "التكفّل مكتمل. سنُعلمك فور التوصيل."
+    : "Your sponsorship is complete. We'll notify you once it's delivered.");
+}
+function showVolDeliveryInfo(){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  alert(isAr
+    ? "سيتم إرسال تفاصيل التوصيل في ٢١ من الشهر."
+    : "Delivery details will be released on the 21st.");
 }
 
 var proofUploadTargetId = null;
