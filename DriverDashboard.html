@@ -189,9 +189,11 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 
 /* NO TRIP */
 .no-trip{background:#fff;border-radius:20px;margin:0 16px;text-align:center;padding:26px 24px 24px;box-shadow:0 2px 6px rgba(10,46,30,.08),0 12px 30px rgba(10,46,30,.14)}
-.box-row{display:flex;justify-content:center;align-items:flex-end;gap:6px;flex-wrap:wrap;margin:2px auto 16px;max-width:280px}
+.box-row{display:flex;justify-content:center;align-items:flex-end;gap:6px;flex-wrap:wrap;margin:2px auto 8px;max-width:280px}
+.box-ic.claimed svg path{fill:#d9a441}
 .nt-t{font-family:"League Spartan",sans-serif;font-size:19px;font-weight:900;color:var(--ink);margin-bottom:7px;letter-spacing:-.2px}
 .nt-d{font-size:13px;color:var(--muted);font-weight:600;line-height:1.6;margin-bottom:26px}
+.boot-note{font-size:12px;color:#a3781f;font-weight:800;margin-bottom:16px}
 
 /* DELIVERED TOAST */
 .delivered-toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;background:var(--forest-deep);color:#fff;font-family:"Manrope",sans-serif;font-weight:700;font-size:14px;padding:12px 22px;border-radius:30px;box-shadow:0 10px 30px rgba(0,0,0,.32);transition:opacity .3s ease,transform .3s ease;z-index:99999;white-space:nowrap;pointer-events:none}
@@ -289,6 +291,7 @@ body.lang-ar .alt-contact-actions{text-align:left}
         <button class="tb-out" style="flex:0 0 auto;width:42px;padding:10px 0" onclick="adjCap(1)">+</button>
       </div>
       <div style="font-size:11px;color:var(--muted-2);text-align:center;margin-top:6px" data-en="boxes — adjust if your actual capacity is different" data-ar="صندوق — عدّل إن كانت سعتك الفعلية مختلفة">boxes — adjust if your actual capacity is different</div>
+      <div id="cap-hint" style="display:none;font-size:11px;color:#a3781f;font-weight:800;text-align:center;margin-top:4px"></div>
       <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--muted);font-weight:500">
         <input type="checkbox" id="cap-save" checked style="width:16px;height:16px"> <span data-en="Save this as my new capacity" data-ar="احفظها كسعتي الجديدة">Save this as my new capacity</span>
       </label>
@@ -329,6 +332,7 @@ body.lang-ar .alt-contact-actions{text-align:left}
     </div>
     <div class="no-trip">
       <div class="box-row" id="cap-box-row"></div>
+      <div class="boot-note" id="boot-note" style="display:none"></div>
       <div class="nt-t" id="cap-remind"></div>
       <div class="nt-d" data-en="We'll match you with friends in your preferred areas." data-ar="سنطابقك مع أصدقاء في المناطق التي تفضّلها.">We'll match you with friends in your preferred areas.</div>
       <button onclick="anotherTrip()" class="cta" style="display:block;max-width:280px;margin:0 auto" data-en="Sign up for a trip →" data-ar="سجّل لرحلة ←">Sign up for a trip →</button>
@@ -463,7 +467,7 @@ var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5c
 // entirely instead of waiting on a fix upstream.
 function noOpLock(name,acquireTimeout,fn){return fn();}
 var sb=window.supabase?window.supabase.createClient(SB,KEY,{auth:{lock:noOpLock}}):null;
-var CU=null,DP=null,AT=null,ALLOC=null,ALLOC_META=null,SELAREAS=[],KEPT={},REMOVED=[],TRIPCAP=null,ALL_AREAS=[],AVAILABILITY={},DESELECTED={},HOLD_TIMER=null,EXPAND_AREAS=false,CURRENT_FAMS=[],DELIVERED_COUNT=0,PHOTO_DATA={};
+var CU=null,DP=null,AT=null,ALLOC=null,ALLOC_META=null,SELAREAS=[],KEPT={},REMOVED=[],TRIPCAP=null,ALL_AREAS=[],AVAILABILITY={},DESELECTED={},HOLD_TIMER=null,EXPAND_AREAS=false,CURRENT_FAMS=[],DELIVERED_COUNT=0,PHOTO_DATA={},SELFBOXES=0;
 
 // ── LANGUAGE (EN/AR) ─────────────────────────────────────────────────────
 // Static markup carries data-en/data-ar (and data-en-placeholder/
@@ -604,6 +608,8 @@ var TR={
   cap_line_fits:{en:" fits ",ar:" تتسع لـ "},
   cap_line_boxes:{en:" boxes.",ar:" صندوق."},
   cap_line_your:{en:"Your ",ar:"سيارتك "},
+  boot_note_one:{en:"1 gold box is already in your boot — from your own sponsorship.",ar:"صندوق ذهبي واحد موجود بالفعل في سيارتك — من تكفّلك الخاص."},
+  boot_note_many:{en:" gold boxes are already in your boot — from your own sponsorship.",ar:" صناديق ذهبية موجودة بالفعل في سيارتك — من تكفّلك الخاص."},
   rel_spouse:{en:"Spouse",ar:"زوج/زوجة"},
   rel_husband:{en:"Husband",ar:"زوج"},
   rel_wife:{en:"Wife",ar:"زوجة"},
@@ -855,7 +861,8 @@ async function loadDriver(){
     if(DP.status==="pending"){setHero("pending");showV("v-pending");return;}
     setHero("dash");
     document.getElementById("cap-remind").textContent=capRemindText(DP);
-    buildCapBoxRow(DP.boxes_capacity);
+    SELFBOXES=await loadSelfBoxCount();
+    buildCapBoxRow(DP.boxes_capacity,SELFBOXES);
     await loadTrips();
     loadDriverStats();
     showV("v-dash");
@@ -1277,8 +1284,19 @@ function showAreasStep(){
   document.getElementById("pnl-areas").style.display="block";
   EXPAND_AREAS=false;
   if(!SELAREAS.length)SELAREAS=((DP&&DP.location_preferences)||[]).slice();
-  TRIPCAP=(DP&&DP.boxes_capacity)?DP.boxes_capacity:5;
+  // Start the trip capacity at what's actually free — boxes this driver
+  // already committed to their own boot (self-delivery sponsorship) for
+  // this round shouldn't be offered again as room for matched families.
+  var fullCap=(DP&&DP.boxes_capacity)?DP.boxes_capacity:5;
+  TRIPCAP=Math.max(1,fullCap-(SELFBOXES||0));
   document.getElementById("cap-val").textContent=TRIPCAP;
+  var capHint=document.getElementById("cap-hint");
+  if(capHint){
+    capHint.style.display=SELFBOXES>0?"block":"none";
+    if(SELFBOXES>0)capHint.textContent=(document.documentElement.getAttribute("lang")==="ar"
+      ? ("تم خصم "+SELFBOXES+" لأنها بالفعل في سيارتك من تكفّلك الخاص")
+      : (SELFBOXES+" already set aside for your own boxes in the boot"));
+  }
   document.getElementById("cap-save").checked=true;
   document.getElementById("areas-save").checked=false;
   document.getElementById("trip-agrid").innerHTML='<div class="loading" style="padding:10px"><div class="spin"></div></div>';
@@ -1605,14 +1623,44 @@ function setHero(mode){
   });
 })();
 
-function buildCapBoxRow(n){
+function buildCapBoxRow(n,claimed){
   var el=document.getElementById("cap-box-row");
   if(!el)return;
   n=Math.max(1,n||0);
+  claimed=Math.max(0,Math.min(claimed||0,n));
   var svg='<svg viewBox="0 0 24 24" width="26" height="26" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-2 .9-2 2v3.01c0 .72.39 1.34.97 1.69V20c0 1.1 1.1 2 2.03 2h14c.93 0 2-.9 2-2V8.7c.58-.35.97-.97.97-1.69V4c0-1.1-.9-2-2-2zm-1 18H5V9h14v11zM15 12H9v2h6v-2zm5-6H4V4h16v2z" fill="#146c43"/></svg>';
   var html="";
-  for(var i=0;i<n;i++)html+='<span class="box-ic">'+svg+'</span>';
+  for(var i=0;i<n;i++)html+='<span class="box-ic'+(i<claimed?" claimed":"")+'">'+svg+'</span>';
   el.innerHTML=html;
+  var note=document.getElementById("boot-note");
+  if(note){
+    if(claimed>0){
+      note.style.display="block";
+      note.textContent=claimed===1?t("boot_note_one"):(claimed+t("boot_note_many"));
+    } else {
+      note.style.display="none";
+    }
+  }
+}
+
+// How many boxes this distributor already has "in their boot" for the
+// current round — boxes they sponsored themselves with self-delivery.
+// Matched by email against sponsorships (same email-match pattern used to
+// find their `distributors` row), scoped to the currently open round so a
+// past round's self-delivery boxes don't linger here forever.
+async function loadSelfBoxCount(){
+  try{
+    var roundRes=await sb.from("current_distribution_public").select("name").maybeSingle();
+    var roundName=roundRes&&roundRes.data?roundRes.data.name:null;
+    if(!roundName)return 0;
+    var q=sb.from("sponsorships").select("box_count").ilike("email",CU.email).eq("delivery_method","self").eq("distribution_event",roundName).neq("payment_status","cancelled");
+    var r=await q;
+    if(r.error||!r.data)return 0;
+    return r.data.reduce(function(sum,row){return sum+(row.box_count||0);},0);
+  }catch(e){
+    console.warn("Could not load self-delivery box count (non-fatal):",e);
+    return 0;
+  }
 }
 
 // Small celebration when a delivery is marked done — vanilla canvas confetti,
