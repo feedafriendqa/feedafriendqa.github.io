@@ -358,7 +358,7 @@ body.lang-ar .pass-perks li::before{left:auto;right:0}
     </div>
     <div class="success-stat">
       <div class="success-stat-num" id="stat-my-friends">—</div>
-      <div class="success-stat-lbl" data-en="Friends you've helped" data-ar="الأصدقاء الذين ساعدتهم">Friends you've helped</div>
+      <div class="success-stat-lbl" data-en="People you've helped" data-ar="الأشخاص الذين ساعدتهم">People you've helped</div>
     </div>
   </div>
 
@@ -572,12 +572,24 @@ async function submitSponsorship(){
           showTimeoutBanner();
           return;
         }
-        var claimedIds = (claimRes.data || []).map(function(r){ return r.claimed_id; });
+        var claimedRows = claimRes.data || [];
+        var claimedIds = claimedRows.map(function(r){ return r.claimed_id; });
         var unclaimed = matchedIds.filter(function(id){ return claimedIds.indexOf(id) === -1; });
         if(unclaimed.length > 0){
           showTimeoutBanner();
           return;
         }
+        // The claim RPC runs with elevated privileges and can see
+        // household_size even though a sponsor's own RLS can't read other
+        // families' rows directly — save the total here so the success
+        // screen (and any sponsor's cumulative "people helped" stat) can
+        // show real headcount instead of just a family count.
+        var householdTotal = claimedRows.reduce(function(sum, r){ return sum + (r.claimed_household_size || 1); }, 0);
+        var{error: householdTotalErr} = await window.sbClient
+          .from("sponsorships")
+          .update({ matched_household_total: householdTotal })
+          .eq("id", sponsorshipId);
+        if(householdTotalErr) console.warn("Could not save matched_household_total (non-fatal):", householdTotalErr);
       }
 
       // Trigger confirmation email via the existing clever-responder Edge Function.
@@ -658,24 +670,28 @@ async function submitSponsorship(){
   }
 
   // Show this sponsor's own cumulative totals (not charity-wide) — every
-  // sponsorship row they've ever submitted, boxes summed and distinct
-  // families they've been matched to counted once each even if they
-  // sponsor the same family again across separate rounds.
+  // sponsorship row they've ever submitted. "People helped" is the total
+  // household size across the families they've been matched to (saved on
+  // each sponsorship row as matched_household_total at claim time, since a
+  // sponsor's own RLS can't read other families' household_size directly),
+  // not just a family/box count — so 3 boxes matched to 3 large households
+  // shows the real number of people fed. Older sponsorship rows saved
+  // before this column existed fall back to counting matched families
+  // (1 "person" per family) rather than showing nothing.
   if(window.sbClient && currentUserId){
     window.sbClient
       .from("sponsorships")
-      .select("box_count, matched_family_ids")
+      .select("box_count, matched_family_ids, matched_household_total")
       .eq("sponsor_id", currentUserId)
       .then(function(res){
         if(res.error || !res.data) return;
         var totalBoxes = res.data.reduce(function(sum, r){ return sum + (r.box_count || 0); }, 0);
-        var familySet = {};
-        res.data.forEach(function(r){
-          (r.matched_family_ids || []).forEach(function(id){ familySet[id] = true; });
-        });
-        var totalFriends = Object.keys(familySet).length;
+        var totalPeople = res.data.reduce(function(sum, r){
+          if(r.matched_household_total != null) return sum + r.matched_household_total;
+          return sum + (r.matched_family_ids || []).length;
+        }, 0);
         document.getElementById("stat-my-boxes").textContent = totalBoxes.toLocaleString();
-        document.getElementById("stat-my-friends").textContent = totalFriends.toLocaleString();
+        document.getElementById("stat-my-friends").textContent = totalPeople.toLocaleString();
         document.getElementById("success-stats").style.display = "flex";
       })
       .catch(function(e){ console.warn("Could not load sponsor totals for success screen", e); });
