@@ -363,7 +363,6 @@ body.lang-ar .pass-perks li::before{left:auto;right:0}
   </div>
 
   <button class="success-btn" id="success-account-btn" onclick="window.location.href='my-payments.html'" style="margin-bottom:10px" data-en="Go to My Payments — transfer now →" data-ar="الذهاب إلى مدفوعاتي — حوّل الآن ←">Go to My Payments — transfer now →</button>
-  <button class="success-btn success-btn-sec" id="self-deliver-btn" style="margin-bottom:10px;display:none"></button>
   <button class="success-btn success-btn-sec" onclick="window.location.href='foodbox.html'" data-en="Back to home" data-ar="العودة للرئيسية">Back to home</button>
 </div>
 
@@ -682,39 +681,9 @@ async function submitSponsorship(){
       .catch(function(e){ console.warn("Could not load sponsor totals for success screen", e); });
   }
 
-  // Self-delivery sponsors need a next step beyond "you're a sponsor" --
-  // otherwise the only way they'd ever find the distributor link is by
-  // clicking through to My Payments and noticing it there. Surface it
-  // directly on the success screen instead, with the same registered-vs-not
-  // check my-payments.html uses (email match against `distributors`), so
-  // this button always points to the right next step: registration first
-  // if they haven't signed up as a distributor yet, or straight to their
-  // delivery dashboard if they have.
-  if(prefs.delivery === "self" && window.sbClient){
-    (async function(){
-      var isArBtn = isArSubmit;
-      var btn = document.getElementById("self-deliver-btn");
-      try{
-        var lookupEmail = email || (currentUserId ? null : null);
-        var distRes = lookupEmail
-          ? await window.sbClient.from("distributors").select("id").ilike("email", lookupEmail).maybeSingle()
-          : { data: null, error: null };
-        var isRegistered = !!(distRes && distRes.data && distRes.data.id);
-        btn.textContent = isRegistered
-          ? (isArBtn ? "🚚 عرض مجموعة توصيلي ←" : "🚚 View my delivery group →")
-          : (isArBtn ? "🚚 سجّل كموزّع لتوصيل صندوقك ←" : "🚚 Register to deliver your box →");
-        btn.onclick = function(){
-          window.location.href = isRegistered ? "DriverDashboard.html" : "Faf-FoodBox-DriverReg.html";
-        };
-        btn.style.display = "block";
-      } catch(e){
-        console.warn("Could not check distributor registration for success screen (non-fatal):", e);
-        btn.textContent = isArBtn ? "🚚 سجّل كموزّع لتوصيل صندوقك ←" : "🚚 Register to deliver your box →";
-        btn.onclick = function(){ window.location.href = "Faf-FoodBox-DriverReg.html"; };
-        btn.style.display = "block";
-      }
-    })();
-  }
+  // Self-delivery sponsors' next step (register as distributor / view their
+  // delivery group) is surfaced on My Payments, which they land on via the
+  // primary button above — no separate button needed here.
 
   sessionStorage.removeItem("faf_sponsorship_id");
   sessionStorage.removeItem("faf_ref_no");
