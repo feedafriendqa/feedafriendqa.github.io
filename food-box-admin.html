@@ -3838,6 +3838,24 @@ function saveSection(id, fieldMap) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
     if (btn) { btn.textContent = '✓ Saved'; btn.classList.add('saved'); btn.disabled = false; setTimeout(function(){btn.textContent=t;btn.classList.remove('saved');},2500); }
     filterApps();
+    // If this save touched the blue-plate address fields, also ping the
+    // backend so it can re-geocode via QNAS and keep the map pin current
+    // on both this application and the friend's profile. Best-effort —
+    // this direct PATCH above is already the save of record, so a failure
+    // here (network hiccup, QNAS down, etc.) must never surface as an
+    // error to the person saving the address.
+    if ('zone' in payload || 'street' in payload || 'building' in payload) {
+      fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ANON_KEY },
+        body: JSON.stringify({
+          type: 'update_application_address',
+          application_id: id,
+          zone: payload.zone, street: payload.street, building: payload.building,
+          unit: payload.unit, area: payload.area, flat: payload.flat
+        })
+      }).catch(function(e) { console.error('QNAS re-geocode ping failed (non-fatal):', e); });
+    }
   }).catch(function(e){ if (btn){btn.textContent=t;btn.disabled=false;} alert('Save failed: ' + e.message); });
 }
 
