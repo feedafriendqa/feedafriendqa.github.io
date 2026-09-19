@@ -740,6 +740,12 @@ function displayAge(dob) {
 const sb = supabase.createClient(SUPABASE_URL, ANON_KEY);
 
 var allApps = [];
+// Separate from allApps: the Live tab is meant to be the same shared
+// status board for every admin, not scoped to "my cases" the way the
+// Cases tab's query is (loadApps() restricts non-super-admins to their
+// assigned language(s)/own cases server-side). This is a dedicated,
+// unscoped fetch of just the confirmed cases the Live tab needs.
+var liveApps = [];
 var membersByApp = {}; // application_id -> [members], used so search can match household members too, not just the main applicant
 var currentFilter = 'new_pending';
 var currentAppId = null;
@@ -2720,7 +2726,8 @@ function showView(view) {
   document.getElementById('view-btn-payments').classList.toggle('active', view === 'payments');
   document.getElementById('view-btn-approvals').classList.toggle('active', view === 'approvals');
   document.getElementById('view-btn-messages').classList.toggle('active', view === 'messages');
-  if (view === 'live' || view === 'distributions' || view === 'sponsorships' || view === 'payments') loadSponsorshipsView();
+  if (view === 'live') { loadLiveApps(); loadSponsorshipsView(); }
+  else if (view === 'distributions' || view === 'sponsorships' || view === 'payments') loadSponsorshipsView();
   if (view === 'approvals') loadApprovalsView();
   if (view === 'messages') loadMessagesView();
 }
@@ -2742,7 +2749,7 @@ function showView(view) {
 // number that isn't backed by an actual case. Auto-refreshes quietly
 // while this tab is open.
 function renderLiveView() {
-  var confirmedApps = allApps.filter(function(a){ return a.status === 'confirmed'; });
+  var confirmedApps = liveApps.filter(function(a){ return a.status === 'confirmed'; });
   var now = Date.now();
   var isHeld = function(a){ return !!a.reserved_until && new Date(a.reserved_until).getTime() > now; };
 
@@ -2819,7 +2826,7 @@ function renderLiveView() {
     if (!apps.length) return '<div style="color:var(--muted);font-size:13px;padding:6px 0;">None right now.</div>';
     return apps.map(function(a) {
       var b = boxesOf(a);
-      var line = '<a onclick="viewApp(\'' + a.id + '\');showView(\'cases\')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;font-weight:700;">' + nameOf(a) + '</a>' +
+      var line = '<a onclick="viewLiveApp(\'' + a.id + '\')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;font-weight:700;">' + nameOf(a) + '</a>' +
         (areaOf(a) ? ' <span style="color:var(--muted);font-size:12px;">· ' + areaOf(a) + '</span>' : '') +
         ' <span style="color:var(--muted);font-size:12px;">(' + b + ' box' + (b === 1 ? '' : 'es') + ')</span>';
       if (kind === 'sponsored' && a.sponsorship_id) {
@@ -2842,11 +2849,51 @@ function renderLiveView() {
   document.getElementById('live-waiting-list').innerHTML = listHtml(waiting, 'waiting');
 }
 
+// The Live tab now shows every admin the full org-wide list (liveApps),
+// but the Cases tab a non-super-admin can actually open is still scoped
+// to their own language(s)/assigned cases (allApps) -- that queue
+// scoping is intentional and untouched. So a name here may belong to a
+// case this admin isn't assigned to; open it only when it's actually in
+// their own case list, and say plainly why otherwise rather than the
+// click silently doing nothing.
+function viewLiveApp(id) {
+  var inScope = allApps.some(function(a){ return a.id === id; });
+  if (!inScope) {
+    alert('This case is outside your assigned cases, so it can\'t be opened from here.');
+    return;
+  }
+  viewApp(id);
+  showView('cases');
+}
+
+// Org-wide confirmed cases for the Live tab, unscoped by language/assignee
+// -- every admin should see the same shared status board here, unlike the
+// Cases tab where loadApps() deliberately narrows non-super-admins to
+// their own language(s)/assigned cases. Falls back to this admin's own
+// scoped cases only if the unscoped query itself fails (e.g. an RLS
+// policy that hasn't been opened up yet for non-super-admin roles) so the
+// tab still shows something rather than nothing.
+function loadLiveApps() {
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=id,full_name,full_name_en,area,area_en,household_size,max_boxes,sponsorship_id,reserved_until,status&status=eq.confirmed&limit=5000', { headers: headers });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('status ' + r.status);
+    return r.json();
+  }).then(function(apps) {
+    liveApps = Array.isArray(apps) ? apps : [];
+    renderLiveView();
+  }).catch(function(e) {
+    console.warn('Could not load the org-wide Live tab dataset (falling back to this admin\'s own scoped cases -- numbers may be incomplete):', e);
+    liveApps = allApps.filter(function(a){ return a.status === 'confirmed'; });
+    renderLiveView();
+  });
+}
+
 // Quiet auto-refresh so the Live tab stays current if left open on a
 // screen/TV -- only fetches while that tab is actually the one showing.
 setInterval(function() {
   var btn = document.getElementById('view-btn-live');
-  if (btn && btn.classList.contains('active')) loadSponsorshipsView();
+  if (btn && btn.classList.contains('active')) { loadLiveApps(); loadSponsorshipsView(); }
 }, 45000);
 
 // ── Thank-you moderation queue ──
