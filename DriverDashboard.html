@@ -110,7 +110,7 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 .fam-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .fam-head-left{display:flex;align-items:center;gap:10px}
 .fam-circle{width:34px;height:34px;background:var(--amber);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:"League Spartan",sans-serif;font-size:14px;font-weight:900;color:var(--forest-deep);flex-shrink:0}
-.fam-box-badge{display:inline-flex;align-items:center;gap:6px;background:#2255aa;color:#fff;font-family:"League Spartan",sans-serif;font-size:15px;font-weight:900;padding:6px 14px 6px 10px;border-radius:20px;box-shadow:0 2px 5px rgba(34,85,170,.25)}
+.fam-box-badge{display:inline-flex;align-items:center;gap:6px;background:#146c43;color:#fff;font-family:"League Spartan",sans-serif;font-size:15px;font-weight:900;padding:6px 14px 6px 10px;border-radius:20px;box-shadow:0 2px 5px rgba(20,108,67,.25)}
 .fam-box-badge .fam-box-ic{font-size:17px;line-height:1}
 .fam-st{font-size:11px;font-weight:900;padding:4px 10px;border-radius:20px}
 .fam-st.pending{background:#FFFBF0;color:#a07800}
@@ -475,12 +475,41 @@ var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5c
 // is ever left held — e.g. by a previous tab/load that didn't unwind
 // cleanly — every future auth call queues behind it and hangs FOREVER,
 // with literally zero network requests ever fired (which is exactly what
-// "supabase.co" showing nothing in the Network tab confirmed). This
-// dashboard only ever runs in one tab at a time, so it doesn't need that
-// cross-tab coordination — swapping in a no-op lock sidesteps the bug
-// entirely instead of waiting on a fix upstream.
-function noOpLock(name,acquireTimeout,fn){return fn();}
-var sb=window.supabase?window.supabase.createClient(SB,KEY,{auth:{lock:noOpLock}}):null;
+// "supabase.co" showing nothing in the Network tab confirmed).
+//
+// An earlier fix skipped navigator.locks entirely (a no-op lock). That
+// removed the deadlock risk, but it also removed the ONE thing that lock
+// is for: making sure two auth calls racing at the same time (e.g. this
+// page's own getSession() on load overlapping a still-in-flight token
+// refresh from the previous page, or two tabs/screens open on the same
+// account) don't both try to use/rotate the same refresh token at once.
+// Supabase refresh tokens are single-use — lose that race and the loser
+// gets logged out — which is exactly the "switch screens or go back and
+// I have to sign in again" symptom reported. So: use the real lock, but
+// with a timeout fallback, so a call proceeds without the lock (old
+// behaviour) only if the lock itself is stuck, instead of always.
+function timeoutLock(name,acquireTimeout,fn){
+  if(!(window.navigator&&navigator.locks&&navigator.locks.request))return fn();
+  var ran=false;
+  function runOnce(){if(ran)return undefined;ran=true;return fn();}
+  return new Promise(function(resolve,reject){
+    var fallbackMs=Math.min(acquireTimeout||4000,4000);
+    var fallbackTimer=setTimeout(function(){
+      Promise.resolve().then(runOnce).then(resolve,reject);
+    },fallbackMs);
+    navigator.locks.request(name,function(){
+      return Promise.resolve().then(function(){
+        clearTimeout(fallbackTimer);
+        return runOnce();
+      });
+    }).catch(function(e){
+      clearTimeout(fallbackTimer);
+      if(!ran)Promise.resolve().then(runOnce).then(resolve,reject);
+      else reject(e);
+    });
+  });
+}
+var sb=window.supabase?window.supabase.createClient(SB,KEY,{auth:{lock:timeoutLock}}):null;
 var CU=null,DP=null,AT=null,ALLOC=null,ALLOC_META=null,SELAREAS=[],KEPT={},REMOVED=[],TRIPCAP=null,ALL_AREAS=[],AVAILABILITY={},DESELECTED={},HOLD_TIMER=null,EXPAND_AREAS=false,CURRENT_FAMS=[],DELIVERED_COUNT=0,PHOTO_DATA={},SELFBOXES=0;
 
 // ── LANGUAGE (EN/AR) ─────────────────────────────────────────────────────
