@@ -2753,37 +2753,64 @@ function renderLiveView() {
   var sponsorshipById = {};
   allSponsorships.forEach(function(sp){ sponsorshipById[sp.id] = sp; });
 
-  // Use the case's real max_boxes (3 for a bachelor case, 6 for a family
-  // case, editable per case -- see the case detail modal) rather than
-  // estimating from household_size/4. That estimate is what the older
-  // Sponsors-tab panels below still use for their own box counts, and it
-  // doesn't always match max_boxes, which is why this tab's box totals
-  // could read differently from the live counter on foodbox.html (that
-  // public counter is built from the real max_boxes field via a
-  // server-side view).
   var boxesOf = function(a){ return a.max_boxes || Math.ceil((a.household_size || 1) / 4); };
   var sumBoxes = function(apps){ return apps.reduce(function(s,a){ return s + boxesOf(a); }, 0); };
-  var targetBoxes = sumBoxes(confirmedApps);
-  var sponsoredBoxes = sumBoxes(sponsored);
   var pendingBoxes = sumBoxes(pending);
-  var waitingBoxes = sumBoxes(waiting);
-  var pct = targetBoxes ? Math.round((sponsoredBoxes / targetBoxes) * 100) : 0;
 
   document.getElementById('live-updated').textContent = CURRENT_DISTRIBUTION + ' · updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-
-  document.getElementById('live-box-target').textContent = targetBoxes;
-  document.getElementById('live-box-sponsored').textContent = sponsoredBoxes;
   document.getElementById('live-box-pending').textContent = pendingBoxes;
-  document.getElementById('live-box-waiting').textContent = waitingBoxes;
   document.getElementById('live-friends-waiting').textContent = waiting.length;
-  document.getElementById('live-ring-pct').textContent = pct + '%';
-  var ring = document.getElementById('live-ring-fill');
-  var circumference = 351.86;
-  ring.style.strokeDashoffset = circumference - (circumference * pct / 100);
-
   document.getElementById('live-count-sponsored').textContent = sponsored.length;
   document.getElementById('live-count-pending').textContent = pending.length;
   document.getElementById('live-count-waiting').textContent = waiting.length;
+
+  // "Boxes required" / "Boxes sponsored" / "Boxes needing a sponsor" are
+  // pulled from the exact same public views foodbox.html reads
+  // (food_box_landing_stats, food_box_pledged_public) rather than being
+  // recomputed here from raw case rows -- an earlier attempt to
+  // reconstruct "boxes needed" from allApps counted every confirmed case
+  // ever (including long-term recurring beneficiaries already covered by
+  // standing monthly pledges), which is why it didn't match this round's
+  // real target. Reading the same views the public counter uses is the
+  // only way to guarantee the two pages agree, since the exact scoping
+  // logic lives in those views' SQL, which this admin session can't
+  // inspect directly. Falls back to a local estimate (all confirmed
+  // cases' max_boxes) only if these views can't be reached, and flags
+  // that it's a fallback so it's never mistaken for the real figure.
+  apiHeadersAsync().then(function(headers) {
+    return Promise.all([
+      fetch(SUPABASE_URL + '/rest/v1/food_box_landing_stats?select=boxes_needed,friends_need_food', { headers: headers }),
+      fetch(SUPABASE_URL + '/rest/v1/food_box_pledged_public?select=boxes_pledged', { headers: headers })
+    ]);
+  }).then(function(results) {
+    return Promise.all(results.map(function(r){ return r.ok ? r.json() : null; }));
+  }).then(function(jsons) {
+    var stats = jsons[0] && jsons[0][0];
+    var pledgedRow = jsons[1] && jsons[1][0];
+    if (!stats || !pledgedRow || stats.boxes_needed == null || pledgedRow.boxes_pledged == null) throw new Error('view data missing');
+    var targetBoxes = stats.boxes_needed;
+    var sponsoredBoxes = pledgedRow.boxes_pledged;
+    var remainingBoxes = Math.max(targetBoxes - sponsoredBoxes, 0);
+    var pct = targetBoxes ? Math.round((sponsoredBoxes / targetBoxes) * 100) : 0;
+    document.getElementById('live-box-target').textContent = targetBoxes;
+    document.getElementById('live-box-sponsored').textContent = sponsoredBoxes;
+    document.getElementById('live-box-waiting').textContent = remainingBoxes;
+    document.getElementById('live-ring-pct').textContent = pct + '%';
+    var ring = document.getElementById('live-ring-fill');
+    ring.style.strokeDashoffset = 351.86 - (351.86 * pct / 100);
+  }).catch(function(e) {
+    console.warn('Could not load food_box_landing_stats/food_box_pledged_public, falling back to a local estimate (may not match foodbox.html):', e);
+    var targetBoxes = sumBoxes(confirmedApps);
+    var sponsoredBoxes = sumBoxes(sponsored);
+    var waitingBoxes = sumBoxes(waiting);
+    var pct = targetBoxes ? Math.round((sponsoredBoxes / targetBoxes) * 100) : 0;
+    document.getElementById('live-box-target').textContent = targetBoxes + '*';
+    document.getElementById('live-box-sponsored').textContent = sponsoredBoxes + '*';
+    document.getElementById('live-box-waiting').textContent = waitingBoxes + '*';
+    document.getElementById('live-ring-pct').textContent = pct + '%*';
+    var ring = document.getElementById('live-ring-fill');
+    ring.style.strokeDashoffset = 351.86 - (351.86 * pct / 100);
+  });
 
   var nameOf = function(a){ return a.full_name_en || a.full_name || ('Case ' + a.id.slice(0,8)); };
   var areaOf = function(a){ return a.area_en || a.area; };
