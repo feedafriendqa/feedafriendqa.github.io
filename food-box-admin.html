@@ -2753,7 +2753,15 @@ function renderLiveView() {
   var sponsorshipById = {};
   allSponsorships.forEach(function(sp){ sponsorshipById[sp.id] = sp; });
 
-  var boxesOf = function(a){ return Math.ceil((a.household_size || 1) / 4); };
+  // Use the case's real max_boxes (3 for a bachelor case, 6 for a family
+  // case, editable per case -- see the case detail modal) rather than
+  // estimating from household_size/4. That estimate is what the older
+  // Sponsors-tab panels below still use for their own box counts, and it
+  // doesn't always match max_boxes, which is why this tab's box totals
+  // could read differently from the live counter on foodbox.html (that
+  // public counter is built from the real max_boxes field via a
+  // server-side view).
+  var boxesOf = function(a){ return a.max_boxes || Math.ceil((a.household_size || 1) / 4); };
   var sumBoxes = function(apps){ return apps.reduce(function(s,a){ return s + boxesOf(a); }, 0); };
   var targetBoxes = sumBoxes(confirmedApps);
   var sponsoredBoxes = sumBoxes(sponsored);
