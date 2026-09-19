@@ -403,6 +403,7 @@ select.edit-field{cursor:pointer;}
           <div class="live-tile lt-target"><b id="live-box-target">–</b><span>📦 Boxes required</span></div>
           <div class="live-tile lt-sponsored"><b id="live-box-sponsored">–</b><span>✅ Boxes sponsored</span></div>
           <div class="live-tile lt-pending"><b id="live-box-pending">–</b><span>⏳ Boxes pending</span></div>
+          <div class="live-tile lt-waiting"><b id="live-box-waiting">–</b><span>📦 Boxes needing a sponsor</span></div>
           <div class="live-tile lt-waiting"><b id="live-friends-waiting">–</b><span>👪 Friends with no sponsor</span></div>
         </div>
       </div>
@@ -2757,6 +2758,7 @@ function renderLiveView() {
   var targetBoxes = sumBoxes(confirmedApps);
   var sponsoredBoxes = sumBoxes(sponsored);
   var pendingBoxes = sumBoxes(pending);
+  var waitingBoxes = sumBoxes(waiting);
   var pct = targetBoxes ? Math.round((sponsoredBoxes / targetBoxes) * 100) : 0;
 
   document.getElementById('live-updated').textContent = CURRENT_DISTRIBUTION + ' · updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
@@ -2764,6 +2766,7 @@ function renderLiveView() {
   document.getElementById('live-box-target').textContent = targetBoxes;
   document.getElementById('live-box-sponsored').textContent = sponsoredBoxes;
   document.getElementById('live-box-pending').textContent = pendingBoxes;
+  document.getElementById('live-box-waiting').textContent = waitingBoxes;
   document.getElementById('live-friends-waiting').textContent = waiting.length;
   document.getElementById('live-ring-pct').textContent = pct + '%';
   var ring = document.getElementById('live-ring-fill');
