@@ -252,8 +252,7 @@ button,input{font:inherit}
 .cta-hint a{color:var(--lime);font-weight:700;text-decoration:none}
 
 /* ── STATS ── */
-.stats{
-  display:grid;grid-template-columns:repeat(3,1fr);
+.stats-card{
   margin:0 20px 18px;
   border:1px solid var(--line);
   border-radius:18px;
@@ -262,10 +261,23 @@ button,input{font:inherit}
   -webkit-backdrop-filter:blur(20px);
   overflow:hidden;
 }
+.stats{
+  display:grid;grid-template-columns:repeat(3,1fr);
+}
 .stat{padding:16px 8px;text-align:center;border-right:1px solid var(--line)}
 .stat:last-child{border-right:none}
 .stat .n{font-family:"League Spartan",sans-serif;font-size:22px;font-weight:700;color:var(--lime)}
 .stat .l{font-size:9px;font-weight:700;color:var(--muted-2);text-transform:uppercase;letter-spacing:.06em;line-height:1.4;margin-top:4px}
+
+/* ── PLEDGE PROGRESS BAR (under stats) ── */
+.progress-wrap{padding:14px 18px 16px;border-top:1px solid var(--line)}
+.progress-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px;gap:10px}
+.progress-top .big{font-family:"Manrope",sans-serif;font-size:13px;font-weight:700;color:var(--ink)}
+.progress-top .big b{font-family:"League Spartan",sans-serif;color:var(--lime);font-size:15px}
+.progress-top .small{font-size:10px;color:var(--amber);font-weight:800;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.bar-track{height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden}
+.bar-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--green),var(--lime));width:0%;transition:width .6s ease}
+body.lang-ar .progress-top{flex-direction:row-reverse}
 
 /* ── DISTRIBUTION DATE ── */
 .dist-date{
@@ -421,10 +433,19 @@ button,input{font:inherit}
     <div class="cta-hint" id="giveHint" data-en="In partnership with Together for Good Events W.L.L CR 229085, who help provide the boxes" data-ar="بالشراكة مع Together for Good Events W.L.L CR 229085، الذين يساعدون في توفير الصناديق">In partnership with Together for Good Events W.L.L CR 229085, who help provide the boxes</div>
   </div>
 
-  <div class="stats">
-    <div class="stat"><div class="n" id="stat-boxes">8</div><div class="l" data-en="Boxes<br>needed" data-ar="صناديق<br>مطلوبة">Boxes<br>needed</div></div>
-    <div class="stat"><div class="n">QAR 100</div><div class="l" data-en="Per box<br>monthly" data-ar="للصندوق<br>شهرياً">Per box<br>monthly</div></div>
-    <div class="stat"><div class="n" id="stat-friends">22</div><div class="l" data-en="Friends<br>need food" data-ar="أصدقاء<br>يحتاجون طعام">Friends<br>need food</div></div>
+  <div class="stats-card">
+    <div class="stats">
+      <div class="stat"><div class="n" id="stat-boxes">8</div><div class="l" data-en="Boxes<br>needed" data-ar="صناديق<br>مطلوبة">Boxes<br>needed</div></div>
+      <div class="stat"><div class="n">QAR 100</div><div class="l" data-en="Per box<br>monthly" data-ar="للصندوق<br>شهرياً">Per box<br>monthly</div></div>
+      <div class="stat"><div class="n" id="stat-friends">22</div><div class="l" data-en="Friends<br>need food" data-ar="أصدقاء<br>يحتاجون طعام">Friends<br>need food</div></div>
+    </div>
+    <div class="progress-wrap" id="progress-wrap" style="display:none">
+      <div class="progress-top">
+        <div class="big"><b id="progress-pledged">0</b> <span data-en="of" data-ar="من">of</span> <span id="progress-needed-1">0</span> <span data-en="boxes pledged" data-ar="صندوقاً تم التعهد بها">boxes pledged</span></div>
+        <div class="small"><span id="progress-remaining">0</span> <span data-en="to go" data-ar="متبقي">to go</span></div>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="progress-bar-fill" style="width:0%"></div></div>
+    </div>
   </div>
 
   <div class="dist-date">
@@ -694,12 +715,43 @@ function loadLandingStats(){
       if(res.error || !res.data) throw res.error || new Error("no data");
       document.getElementById("stat-boxes").textContent = res.data.boxes_needed.toLocaleString();
       document.getElementById("stat-friends").textContent = res.data.friends_need_food.toLocaleString();
+      loadPledgeProgress(res.data.boxes_needed);
     })
     .catch(function(e){
       console.warn("Could not load live landing stats, keeping placeholder numbers", e);
     });
 }
 loadLandingStats();
+
+// Pledge progress bar — shows how many of the "boxes needed" figure above
+// have actually been pledged so far, computed live from confirmed (non-
+// cancelled) sponsorships against the currently open distribution round.
+// Uses a dedicated public view (food_box_pledged_public) rather than
+// querying `sponsorships` directly, since that table's RLS only lets an
+// anonymous visitor see their own or unclaimed rows -- the view is owned
+// by postgres (same pattern as current_distribution_public) so it can
+// return the aggregate total without exposing individual sponsor rows.
+function loadPledgeProgress(boxesNeeded){
+  if(!window.sbClient || !boxesNeeded) return;
+  window.sbClient
+    .from("food_box_pledged_public")
+    .select("boxes_pledged")
+    .single()
+    .then(function(res){
+      if(res.error || !res.data) throw res.error || new Error("no data");
+      var pledged = res.data.boxes_pledged || 0;
+      var remaining = Math.max(boxesNeeded - pledged, 0);
+      var pct = Math.min(Math.round((pledged / boxesNeeded) * 100), 100);
+      document.getElementById("progress-pledged").textContent = pledged.toLocaleString();
+      document.getElementById("progress-needed-1").textContent = boxesNeeded.toLocaleString();
+      document.getElementById("progress-remaining").textContent = remaining.toLocaleString();
+      document.getElementById("progress-bar-fill").style.width = pct + "%";
+      document.getElementById("progress-wrap").style.display = "block";
+    })
+    .catch(function(e){
+      console.warn("Could not load pledge progress bar, leaving it hidden", e);
+    });
+}
 
 // "Next distribution day" banner — was a hardcoded date that went stale.
 // Pulls the real date from distribution_rounds via the same public view
