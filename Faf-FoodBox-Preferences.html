@@ -183,14 +183,14 @@ body.lang-ar .hero-h1,body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .sub
 
     <div class="loc-wrap" id="loc-wrap">
       <div class="loc-inner">
-        <div class="loc-hint" data-en="Search and choose up to 3 areas you can deliver to, in order of preference" data-ar="ابحث واختر حتى ٣ مناطق يمكنك التوصيل إليها، بحسب الأولوية">Search and choose up to 3 areas you can deliver to, in order of preference</div>
+        <div class="loc-hint" data-en="Search and choose the areas you can deliver to, in order of preference" data-ar="ابحث واختر المناطق التي يمكنك التوصيل إليها، بحسب الأولوية">Search and choose the areas you can deliver to, in order of preference</div>
         <div class="search-box">
           <span class="search-icon">🔍</span>
           <input class="search-input" id="loc-search" type="text" data-en-placeholder="Search a district or area in Qatar…" data-ar-placeholder="ابحث عن منطقة أو حي في قطر…" placeholder="Search a district or area in Qatar…" autocomplete="off">
           <div class="search-results" id="search-results"></div>
         </div>
         <div class="selected-areas" id="selected-areas"></div>
-        <div class="loc-count" id="loc-count" data-en="0 of 3 selected" data-ar="0 من 3 محدد">0 of 3 selected</div>
+        <div class="loc-count" id="loc-count" data-en="0 selected" data-ar="0 محدد">0 selected</div>
       </div>
     </div>
   </div>
@@ -290,16 +290,13 @@ function hideResults(){
 }
 
 function pickDistrict(name){
-  if(selectedAreas.length >= 3) return;
   if(selectedAreas.indexOf(name) > -1) return;
   selectedAreas.push(name);
   renderSelectedAreas();
   document.getElementById("loc-search").value = "";
   hideResults();
   checkReady();
-  if(selectedAreas.length < 3){
-    document.getElementById("loc-search").focus();
-  }
+  document.getElementById("loc-search").focus();
 }
 
 function removeDistrict(name){
@@ -317,15 +314,11 @@ function renderSelectedAreas(){
   }).join("");
   var isArLoc = document.body.classList.contains("lang-ar");
   document.getElementById("loc-count").innerHTML = isArLoc
-    ? selectedAreas.length + " من 3 محدد"
-    : selectedAreas.length + " of 3 selected";
+    ? selectedAreas.length + " محدد"
+    : selectedAreas.length + " selected";
 }
 
 document.getElementById("loc-search").addEventListener("input", function(e){
-  if(selectedAreas.length >= 3){
-    e.target.value = "";
-    return;
-  }
   var results = searchDistricts(e.target.value);
   if(e.target.value.trim() === ""){
     hideResults();
