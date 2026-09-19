@@ -183,14 +183,14 @@ body.lang-ar .hero-h1,body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .sub
 
     <div class="loc-wrap" id="loc-wrap">
       <div class="loc-inner">
-        <div class="loc-hint" data-en="Search and choose the areas you can deliver to, in order of preference" data-ar="ابحث واختر المناطق التي يمكنك التوصيل إليها، بحسب الأولوية">Search and choose the areas you can deliver to, in order of preference</div>
+        <div class="loc-hint" data-en="Search and choose at least 3 areas you can deliver to, in order of preference" data-ar="ابحث واختر 3 مناطق على الأقل يمكنك التوصيل إليها، بحسب الأولوية">Search and choose at least 3 areas you can deliver to, in order of preference</div>
         <div class="search-box">
           <span class="search-icon">🔍</span>
           <input class="search-input" id="loc-search" type="text" data-en-placeholder="Search a district or area in Qatar…" data-ar-placeholder="ابحث عن منطقة أو حي في قطر…" placeholder="Search a district or area in Qatar…" autocomplete="off">
           <div class="search-results" id="search-results"></div>
         </div>
         <div class="selected-areas" id="selected-areas"></div>
-        <div class="loc-count" id="loc-count" data-en="0 selected" data-ar="0 محدد">0 selected</div>
+        <div class="loc-count" id="loc-count" data-en="0 of 3 selected" data-ar="0 من 3 محددة">0 of 3 selected</div>
       </div>
     </div>
   </div>
@@ -314,8 +314,8 @@ function renderSelectedAreas(){
   }).join("");
   var isArLoc = document.body.classList.contains("lang-ar");
   document.getElementById("loc-count").innerHTML = isArLoc
-    ? selectedAreas.length + " محدد"
-    : selectedAreas.length + " selected";
+    ? selectedAreas.length + " من 3 محددة"
+    : selectedAreas.length + " of 3 selected";
 }
 
 document.getElementById("loc-search").addEventListener("input", function(e){
@@ -364,7 +364,7 @@ document.addEventListener("click", function(e){
 function checkReady(){
   var btn = document.getElementById("continue-btn");
   var hint = document.getElementById("cta-hint");
-  var locOk = deliveryMethod === "vol" || (deliveryMethod === "self" && selectedAreas.length > 0);
+  var locOk = deliveryMethod === "vol" || (deliveryMethod === "self" && selectedAreas.length >= 3);
   var ready = deliveryMethod && locOk;
   btn.disabled = !ready;
   btn.classList.toggle("is-ready", ready);
@@ -374,8 +374,11 @@ function checkReady(){
     hint.textContent = isAr ? "كل شيء جاهز — لنجد عائلة" : "You're all set — let's find a family";
   } else if(!deliveryMethod){
     hint.textContent = isAr ? "اختر طريقة التوصيل للمتابعة" : "Select a delivery method to continue";
-  } else if(deliveryMethod === "self" && selectedAreas.length === 0){
-    hint.textContent = isAr ? "ابحث واختر منطقة واحدة على الأقل للتوصيل" : "Search and pick at least 1 area you can deliver to";
+  } else if(deliveryMethod === "self" && selectedAreas.length < 3){
+    var remaining = 3 - selectedAreas.length;
+    hint.textContent = isAr
+      ? "ابحث واختر " + remaining + (remaining === 1 ? " منطقة أخرى على الأقل" : " مناطق أخرى على الأقل") + " للتوصيل"
+      : "Search and pick at least " + remaining + " more area" + (remaining === 1 ? "" : "s") + " you can deliver to";
   }
 }
 
