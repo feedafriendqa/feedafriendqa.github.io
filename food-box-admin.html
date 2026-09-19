@@ -377,48 +377,27 @@ select.edit-field{cursor:pointer;}
         <div class="welcome-scope" id="live-updated">Loading…</div>
       </div>
 
-      <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;background:#fff;">
-        <div id="live-progress-label" style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:8px;">Loading…</div>
-        <div style="background:var(--off-white);border-radius:20px;height:16px;overflow:hidden;border:1px solid var(--border);">
-          <div id="live-progress-fill" style="background:linear-gradient(135deg,#2d7a3a,#4a9e58);height:100%;width:0%;transition:width 0.4s;"></div>
+      <div class="table-wrap">
+        <div class="accordion-section" id="acc-live-sponsored">
+          <div class="accordion-head" onclick="toggleAccordion('live-sponsored')">
+            <div class="accordion-head-left"><h3>✅ Sponsored — fully confirmed</h3><span class="accordion-count" id="live-count-sponsored">–</span></div>
+            <div class="accordion-chevron">▾</div>
+          </div>
+          <div class="accordion-content"><div id="live-sponsored-list">Loading…</div></div>
         </div>
-      </div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
-        <div style="flex:1;min-width:130px;background:linear-gradient(135deg,#2d7a3a,#4a9e58);border-radius:var(--radius);padding:14px 16px;">
-          <div style="font-size:26px;font-weight:900;color:#fff;line-height:1;" id="live-stat-target">–</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.9);font-weight:700;margin-top:4px;">Target (confirmed families)</div>
+        <div class="accordion-section" id="acc-live-progress">
+          <div class="accordion-head" onclick="toggleAccordion('live-progress')">
+            <div class="accordion-head-left"><h3>⏳ In progress — a sponsor has claimed them, not yet confirmed to the end</h3><span class="accordion-count" id="live-count-progress">–</span></div>
+            <div class="accordion-chevron">▾</div>
+          </div>
+          <div class="accordion-content"><div id="live-progress-list">Loading…</div></div>
         </div>
-        <div style="flex:1;min-width:130px;background:linear-gradient(135deg,#00a896,#00c9b5);border-radius:var(--radius);padding:14px 16px;">
-          <div style="font-size:26px;font-weight:900;color:#fff;line-height:1;" id="live-stat-sponsored">–</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.9);font-weight:700;margin-top:4px;">✅ Sponsored</div>
-        </div>
-        <div style="flex:1;min-width:130px;background:linear-gradient(135deg,#e88c1a,#f5b942);border-radius:var(--radius);padding:14px 16px;">
-          <div style="font-size:26px;font-weight:900;color:#fff;line-height:1;" id="live-stat-progress">–</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.9);font-weight:700;margin-top:4px;">⏳ In progress</div>
-        </div>
-        <div style="flex:1;min-width:130px;background:linear-gradient(135deg,#c0392b,#e07360);border-radius:var(--radius);padding:14px 16px;">
-          <div style="font-size:26px;font-weight:900;color:#fff;line-height:1;" id="live-stat-waiting">–</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.9);font-weight:700;margin-top:4px;">⭕ Not yet sponsored</div>
-        </div>
-        <div style="flex:1;min-width:130px;background:linear-gradient(135deg,#7c5cbf,#a78bdb);border-radius:var(--radius);padding:14px 16px;">
-          <div style="font-size:26px;font-weight:900;color:#fff;line-height:1;" id="live-stat-boxes">–</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.9);font-weight:700;margin-top:4px;">Boxes sponsored / needed</div>
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr;gap:16px;">
-        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;background:#fff;">
-          <div style="font-size:14px;font-weight:800;color:var(--green-dark);margin-bottom:8px;">✅ Sponsored</div>
-          <div id="live-sponsored-list">Loading…</div>
-        </div>
-        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;background:#fff;">
-          <div style="font-size:14px;font-weight:800;color:var(--orange-dark);margin-bottom:8px;">⏳ In progress (matched, payment not confirmed)</div>
-          <div id="live-progress-list">Loading…</div>
-        </div>
-        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;background:#fff;">
-          <div style="font-size:14px;font-weight:800;color:var(--red);margin-bottom:8px;">⭕ Not yet sponsored</div>
-          <div id="live-waiting-list">Loading…</div>
+        <div class="accordion-section" id="acc-live-waiting">
+          <div class="accordion-head" onclick="toggleAccordion('live-waiting')">
+            <div class="accordion-head-left"><h3>⭕ Not yet sponsored</h3><span class="accordion-count" id="live-count-waiting">–</span></div>
+            <div class="accordion-chevron">▾</div>
+          </div>
+          <div class="accordion-content"><div id="live-waiting-list">Loading…</div></div>
         </div>
       </div>
     </div>
@@ -2710,37 +2689,38 @@ function showView(view) {
 // deliberately just the count of confirmed families (real schema data,
 // not a typed-in goal), so this never shows a number that isn't backed by
 // an actual case. Auto-refreshes quietly while this tab is open.
+// Three buckets, all scoped to confirmed families only (an unconfirmed
+// application isn't sponsorable yet, so it doesn't belong on this tab at
+// all). No payment wording anywhere here -- "in progress" is about whether
+// the sponsorship itself has been carried through to the end, not about
+// money:
+//  - sponsored: is_sponsored = true -- the whole thing has been confirmed
+//    through to completion
+//  - in progress: sponsorship_id is set (a sponsor has claimed this
+//    family) but is_sponsored is still false -- someone is in the middle
+//    of sponsoring them, just hasn't been finalised yet
+//  - not yet sponsored: no sponsorship_id at all -- nobody has claimed
+//    them yet
+// Each section is a click-to-expand drill-down (shared accordion CSS/JS
+// with the case detail modal) with the count shown on the closed header.
 function renderLiveView() {
   var confirmedApps = allApps.filter(function(a){ return a.status === 'confirmed'; });
+  var sponsored = confirmedApps.filter(function(a){ return a.is_sponsored; });
+  var inProgress = confirmedApps.filter(function(a){ return a.sponsorship_id && !a.is_sponsored; });
+  var waiting = confirmedApps.filter(function(a){ return !a.sponsorship_id; });
+
   var sponsorshipById = {};
   allSponsorships.forEach(function(sp){ sponsorshipById[sp.id] = sp; });
 
-  var sponsored = [], inProgress = [], waiting = [];
-  confirmedApps.forEach(function(a) {
-    if (a.is_sponsored) sponsored.push(a);
-    else if (a.sponsorship_id) inProgress.push(a);
-    else waiting.push(a);
-  });
-
-  var boxesOf = function(a){ return Math.ceil((a.household_size || 1) / 4); };
-  var target = confirmedApps.length;
-  var targetBoxes = confirmedApps.reduce(function(s,a){ return s + boxesOf(a); }, 0);
-  var sponsoredBoxes = sponsored.reduce(function(s,a){ return s + boxesOf(a); }, 0);
-
   document.getElementById('live-updated').textContent = CURRENT_DISTRIBUTION + ' · updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
 
-  var pct = target ? Math.round((sponsored.length / target) * 100) : 0;
-  document.getElementById('live-progress-fill').style.width = pct + '%';
-  document.getElementById('live-progress-label').textContent = sponsored.length + ' of ' + target + ' confirmed families fully sponsored (' + pct + '%)';
-
-  document.getElementById('live-stat-target').textContent = target;
-  document.getElementById('live-stat-sponsored').textContent = sponsored.length;
-  document.getElementById('live-stat-progress').textContent = inProgress.length;
-  document.getElementById('live-stat-waiting').textContent = waiting.length;
-  document.getElementById('live-stat-boxes').textContent = sponsoredBoxes + ' / ' + targetBoxes;
+  document.getElementById('live-count-sponsored').textContent = sponsored.length;
+  document.getElementById('live-count-progress').textContent = inProgress.length;
+  document.getElementById('live-count-waiting').textContent = waiting.length;
 
   var nameOf = function(a){ return a.full_name_en || a.full_name || ('Case ' + a.id.slice(0,8)); };
   var areaOf = function(a){ return a.area_en || a.area; };
+  var boxesOf = function(a){ return Math.ceil((a.household_size || 1) / 4); };
 
   var listHtml = function(apps, kind) {
     if (!apps.length) return '<div style="color:var(--muted);font-size:13px;padding:6px 0;">None right now.</div>';
@@ -2749,12 +2729,12 @@ function renderLiveView() {
       var line = '<a onclick="viewApp(\'' + a.id + '\');showView(\'cases\')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;font-weight:700;">' + nameOf(a) + '</a>' +
         (areaOf(a) ? ' <span style="color:var(--muted);font-size:12px;">· ' + areaOf(a) + '</span>' : '') +
         ' <span style="color:var(--muted);font-size:12px;">(' + b + ' box' + (b === 1 ? '' : 'es') + ')</span>';
-      if (kind !== 'waiting' && a.sponsorship_id) {
+      if ((kind === 'sponsored' || kind === 'progress') && a.sponsorship_id) {
         var sp = sponsorshipById[a.sponsorship_id];
         if (sp) {
           var info = getSponsorInfo(sp);
-          var statusTxt = kind === 'progress' ? (' · ' + (sp.payment_status ? sp.payment_status.replace(/_/g,' ') : 'pending payment')) : '';
-          line += '<br><span style="font-size:12px;color:var(--muted);">Sponsor: ' + (info.name || 'Not on file') + statusTxt + '</span>';
+          line += '<br><span style="font-size:12px;color:var(--muted);">Sponsor: ' + (info.name || 'Not on file') + '</span>' +
+            (kind === 'progress' ? ' <span style="color:var(--orange-dark);font-size:12px;font-weight:700;">· not yet confirmed</span>' : '');
         }
       }
       return '<div style="padding:8px 0;border-bottom:1px solid #f0f4f0;">' + line + '</div>';
