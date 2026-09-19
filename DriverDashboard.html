@@ -108,7 +108,10 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 /* FAMILY CARDS */
 .fam-card{background:var(--card);border:1.5px solid var(--line-2);border-radius:18px;margin:0 16px 16px;padding:18px 20px;box-shadow:0 2px 6px rgba(10,46,30,.08),0 12px 30px rgba(10,46,30,.14)}
 .fam-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.fam-head-left{display:flex;align-items:center;gap:10px}
 .fam-circle{width:34px;height:34px;background:var(--amber);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:"League Spartan",sans-serif;font-size:14px;font-weight:900;color:var(--forest-deep);flex-shrink:0}
+.fam-box-badge{display:inline-flex;align-items:center;gap:6px;background:#2255aa;color:#fff;font-family:"League Spartan",sans-serif;font-size:15px;font-weight:900;padding:6px 14px 6px 10px;border-radius:20px;box-shadow:0 2px 5px rgba(34,85,170,.25)}
+.fam-box-badge .fam-box-ic{font-size:17px;line-height:1}
 .fam-st{font-size:11px;font-weight:900;padding:4px 10px;border-radius:20px}
 .fam-st.pending{background:#FFFBF0;color:#a07800}
 .fam-st.done{background:#F0FDF5;color:var(--forest)}
@@ -213,6 +216,8 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 body.lang-ar .back-row{flex-direction:row-reverse}
 body.lang-ar .fam-row{flex-direction:row-reverse;text-align:right}
 body.lang-ar .fam-head{flex-direction:row-reverse}
+body.lang-ar .fam-head-left{flex-direction:row-reverse}
+body.lang-ar .fam-box-badge{flex-direction:row-reverse}
 body.lang-ar .trip-head{flex-direction:row-reverse}
 body.lang-ar .tr{flex-direction:row-reverse}
 body.lang-ar .need-badge{flex-direction:row-reverse}
@@ -598,6 +603,7 @@ var TR={
   nappies:{en:"Nappies",ar:"حفاضات"},
   formula:{en:"Formula",ar:"حليب أطفال"},
   matched_last_time:{en:"Matched with you last time",ar:"طابقناك بهم آخر مرة"},
+  your_own_sponsorship:{en:"🎁 Your own sponsorship",ar:"🎁 تكفّلك الخاص"},
   same_household_suffix:{en:" deliveries, same household",ar:" توصيلات، نفس الأسرة"},
   outside_chosen_areas:{en:"Outside your chosen areas",ar:"خارج مناطقك المختارة"},
   household_of:{en:"Household of ",ar:"أسرة من "},
@@ -1148,11 +1154,10 @@ function renderFamCard(row,num){
   var tags="";
   if(app.diaper_size&&app.diaper_size!=="Not needed")tags+='<span class="need-badge diaper"><span class="need-ic">🧷</span>'+app.diaper_size+'</span>';
   if(app.formula&&app.formula!=="Not needed")tags+='<span class="need-badge formula"><span class="need-ic">🍼</span>'+app.formula+'</span>';
-  if(app.household_size)tags+='<span class="need-badge boxes"><span class="need-ic">📦</span>'+boxCount+'</span>';
   if(app.household_size)tags+='<span class="need-badge people"><span class="need-ic">🧍</span>'+app.household_size+'</span>';
   var notesVal=app.driver_notes?app.driver_notes.replace(/</g,"&lt;"):"";
   return '<div class="fam-card" id="fc-'+row.id+'" data-boxes="'+boxCount+'">'
-    +'<div class="fam-head"><div class="fam-circle">'+num+'</div><span class="fam-st '+(done?"done":"pending")+'">'+(done?t("badge_delivered"):t("badge_pending"))+'</span></div>'
+    +'<div class="fam-head"><div class="fam-head-left"><div class="fam-circle">'+num+'</div><span class="fam-box-badge"><span class="fam-box-ic">📦</span>'+boxCount+'</span></div><span class="fam-st '+(done?"done":"pending")+'">'+(done?t("badge_delivered"):t("badge_pending"))+'</span></div>'
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4.42 0-8 2.24-8 5v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1c0-2.76-3.58-5-8-5z" fill="#146c43"/></svg></span><div><div class="fam-lbl">'+t("fam_name")+'</div><div class="fam-val">'+name+(app.nationality?' <span style="color:var(--muted);font-weight:600">· '+app.nationality+'</span>':"")+'</div></div></div>'
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="#146c43"/></svg></span><div><div class="fam-lbl">'+t("fam_address")+'</div><div class="fam-val">'+addr+mapsHtml+'</div></div></div>'
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z" fill="#146c43"/></svg></span><div><div class="fam-lbl">'+t("fam_contact")+'</div><div class="fam-val">'+phoneTxt+(wa?' · ':"")+waHtml+'</div><a href="javascript:void(0)" class="alt-num-link" data-app="'+(row.application_id||"")+'" data-name="'+name.replace(/"/g,"&quot;")+'" onclick="openAltNumberFlow(this)">'+t("alt_num_link")+'</a></div></div>'
@@ -1563,8 +1568,12 @@ function renderAlloc(){
     :fams.map(function(f){
         var bx=f.boxes_needed||1;
         var off=!!DESELECTED[f.id];
-        var tags=[bx+(bx===1?t("box_singular"):t("box_plural")),f.diaper_size&&f.diaper_size!=="Not needed"?t("nappies"):"",f.formula&&f.formula!=="Not needed"?t("formula"):"",f.is_sticky?t("matched_last_time"):"",f.family_group_size>1?f.family_group_size+t("same_household_suffix"):"",f.outside_selected_areas?t("outside_chosen_areas"):""].filter(Boolean).join(" · ");
-        return '<div class="alloc-fam'+(off?" af-off":"")+'" id="af-'+f.id+'" onclick="toggleDeselect(\''+f.id+'\')"><button class="af-x" onclick="event.stopPropagation();removeAllocFam(\''+f.id+'\')" title="'+t("remove_and_match_again")+'">✕</button>'
+        var self=!!f.self_sponsored;
+        var tags=[bx+(bx===1?t("box_singular"):t("box_plural")),f.diaper_size&&f.diaper_size!=="Not needed"?t("nappies"):"",f.formula&&f.formula!=="Not needed"?t("formula"):"",self?t("your_own_sponsorship"):(f.is_sticky?t("matched_last_time"):""),f.family_group_size>1?f.family_group_size+t("same_household_suffix"):"",f.outside_selected_areas?t("outside_chosen_areas"):""].filter(Boolean).join(" · ");
+        // Self-sponsored cards are the driver's own committed sponsorship for
+        // this round, not a rotation pick — no ✕ to swap them out and no tap
+        // to leave them out, since there's no "someone else" to reshuffle in.
+        return '<div class="alloc-fam'+(off?" af-off":"")+'" id="af-'+f.id+'"'+(self?"":' onclick="toggleDeselect(\''+f.id+'\')"')+'>'+(self?"":'<button class="af-x" onclick="event.stopPropagation();removeAllocFam(\''+f.id+'\')" title="'+t("remove_and_match_again")+'">✕</button>')
           +'<div class="af-area"><svg viewBox="0 0 24 24" width="12" height="12" style="vertical-align:-1px;margin-right:3px" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="#146c43"/></svg>'+(f.area||t("unknown_area"))+'</div>'
           +'<div class="af-sub">'+(f.household_size?t("household_of")+f.household_size+" · ":"")+tags+'</div>'
           +(off?'<div class="af-off-lbl">'+t("not_confirming_tap_back")+'</div>':'')
