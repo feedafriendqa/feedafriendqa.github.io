@@ -3438,6 +3438,16 @@ function updateApprovalsBadge() {
   else { badge.style.display = 'none'; }
 }
 
+// A licence is expired once its expiry date is strictly in the past —
+// matches the same day-granularity check driverreg.html uses at signup.
+function isLicenceExpiredAdmin(expiry) {
+  if (!expiry) return false;
+  var d = new Date(expiry);
+  if (isNaN(d.getTime())) return false;
+  var today = new Date(); today.setHours(0,0,0,0);
+  return d.getTime() < today.getTime();
+}
+
 function renderApprovalsTable() {
   document.getElementById('approvals-loading').style.display = 'none';
   var tbody = document.getElementById('approvals-tbody');
@@ -3483,7 +3493,7 @@ function renderApprovalsTable() {
       '<td>' + ((d.car_make||'') + ' ' + (d.car_model||'')).trim() + '</td>' +
       '<td>' + (d.boxes_capacity != null ? d.boxes_capacity + ' boxes' : '–') + '</td>' +
       '<td>' + areasTxt + '</td>' +
-      '<td>' + (d.licence_number || '–') + (d.licence_expiry ? ('<br><span style="font-size:11px;color:var(--muted);">exp. ' + d.licence_expiry + '</span>') : '') + '</td>' +
+      '<td>' + (d.licence_number || '–') + (d.licence_expiry ? ('<br><span style="font-size:11px;' + (isLicenceExpiredAdmin(d.licence_expiry) ? 'color:var(--red);font-weight:700;' : 'color:var(--muted);') + '">' + (isLicenceExpiredAdmin(d.licence_expiry) ? 'EXPIRED ' : 'exp. ') + d.licence_expiry + '</span>') : '') + (d.licence_photo_path ? '<br><span style="font-size:11px;color:var(--muted);">📷 photo on file</span>' : '') + '</td>' +
       '<td>' + (d.created_at ? new Date(d.created_at).toLocaleDateString('en-GB') : '–') + '</td>' +
       '<td>' + badge + '</td>' +
       '<td>' + actions + '</td>' +
@@ -3502,8 +3512,11 @@ function viewDistributor(id) {
   if (d.driver_mode === 'them') body += di('Registered by', (d.contact_name||'') + (d.contact_phone ? (' · ' + d.contact_phone) : ''));
   body += di('QID', d.qid_number);
   body += di('Licence number', d.licence_number);
-  body += di('Licence expiry', d.licence_expiry);
+  body += di('Licence expiry', d.licence_expiry ? (d.licence_expiry + (isLicenceExpiredAdmin(d.licence_expiry) ? ' <span style="color:var(--red);font-weight:700;">— EXPIRED</span>' : '')) : null);
   body += di('Licence holder name', d.licence_name);
+  if (d.licence_photo_path) {
+    body += '<div class="detail-item" style="margin-bottom:10px;"><div class="lbl">Driving licence photo</div><div id="dist-licence-photo-' + d.id + '" style="font-size:12px;color:var(--muted);">Loading…</div></div>';
+  }
   body += di('Vehicle', ((d.car_make||'') + ' ' + (d.car_model||'')).trim());
   body += di('Boot capacity', d.boot_litres ? (d.boot_litres + ' L') : null);
   body += di('Uses back seats', d.uses_back_seats ? ('Yes (+' + (d.back_litres||0) + ' L)') : 'No');
@@ -3547,6 +3560,33 @@ function viewDistributor(id) {
   body += '</div>';
   document.getElementById('dist-detail-body').innerHTML = body;
   document.getElementById('dist-detail-modal').classList.add('visible');
+  if (d.licence_photo_path) loadDistributorLicencePhoto(d.id);
+}
+
+// Fetches a short-lived signed URL for the stored licence photo (the bucket
+// is private) and drops it into the placeholder viewDistributor() left in
+// the modal. Non-fatal on failure — the rest of the detail view still works.
+function loadDistributorLicencePhoto(id) {
+  var el = document.getElementById('dist-licence-photo-' + id);
+  if (!el) return;
+  sb.auth.getSession().then(function(res) {
+    var session = res && res.data ? res.data.session : null;
+    var token = session ? session.access_token : ANON_KEY;
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ type: 'get_distributor_document_url', distributor_id: id })
+    });
+  }).then(function(r) { return r.json(); }).then(function(res) {
+    if (res.error) throw new Error(res.error);
+    var elNow = document.getElementById('dist-licence-photo-' + id);
+    if (!elNow) return;
+    if (!res.url) { elNow.textContent = 'No photo on file.'; return; }
+    elNow.innerHTML = '<a href="' + res.url + '" target="_blank" rel="noopener"><img src="' + res.url + '" style="max-width:260px;max-height:180px;border-radius:8px;border:1px solid var(--border);cursor:zoom-in;" /></a>';
+  }).catch(function(e) {
+    var elNow = document.getElementById('dist-licence-photo-' + id);
+    if (elNow) elNow.textContent = 'Could not load photo: ' + e.message;
+  });
 }
 
 function closeDistDetailModal() {
@@ -3585,21 +3625,33 @@ function approveDistributor(id) {
   });
 }
 
+// Shared helper for the distributor-detail writes that aren't already
+// routed through their own edge function action (approve_distributor is).
+// distributors.status/approved_at/admin_notes are locked down to the
+// service role only (see scope_distributors_update_policy), so a direct
+// client-side PATCH 403s — this goes through the admin-role-gated
+// admin_update_distributor action instead.
+function callAdminUpdateDistributor(updates) {
+  return sb.auth.getSession().then(function(res) {
+    var session = res && res.data ? res.data.session : null;
+    var token = session ? session.access_token : ANON_KEY;
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(Object.assign({ type: 'admin_update_distributor' }, updates))
+    });
+  }).then(function(r) { return r.json(); }).then(function(res) {
+    if (res.error) throw new Error(res.error);
+    return res.distributor;
+  });
+}
+
 function rejectDistributor(id) {
   if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
   var d = allDistributors.find(function(x){ return x.id === id; });
   if (!d) return;
   if (!confirm('Reject this distributor application? They will not be notified automatically.')) return;
-  apiHeadersAsync().then(function(headers) {
-    return fetch(SUPABASE_URL + '/rest/v1/distributors?id=eq.' + id, {
-      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
-      body: JSON.stringify({ status: 'rejected' })
-    });
-  }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
-    return r.json();
-  }).then(function(rows) {
-    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
+  callAdminUpdateDistributor({ distributor_id: id, status: 'rejected' }).then(function() {
     d.status = 'rejected';
     renderApprovalsTable();
     updateApprovalsBadge();
@@ -3612,16 +3664,7 @@ function resetDistributorStatus(id) {
   var d = allDistributors.find(function(x){ return x.id === id; });
   if (!d) return;
   if (!confirm('Reset this distributor back to pending?')) return;
-  apiHeadersAsync().then(function(headers) {
-    return fetch(SUPABASE_URL + '/rest/v1/distributors?id=eq.' + id, {
-      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
-      body: JSON.stringify({ status: 'pending', approved_at: null })
-    });
-  }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
-    return r.json();
-  }).then(function(rows) {
-    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
+  callAdminUpdateDistributor({ distributor_id: id, status: 'pending', approved_at: null }).then(function() {
     d.status = 'pending'; d.approved_at = null;
     renderApprovalsTable();
     updateApprovalsBadge();
@@ -3644,16 +3687,7 @@ function addDistributorComment(id) {
   try { comments = JSON.parse(d.admin_notes || '[]'); if (!Array.isArray(comments)) throw 0; } catch(e) { comments = []; }
   comments.push({ type: typeEl.value, text: text, ts: new Date().toISOString(), author: myName || 'Admin' });
   var notesJson = JSON.stringify(comments);
-  apiHeadersAsync().then(function(headers) {
-    return fetch(SUPABASE_URL + '/rest/v1/distributors?id=eq.' + id, {
-      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
-      body: JSON.stringify({ admin_notes: notesJson })
-    });
-  }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
-    return r.json();
-  }).then(function(rows) {
-    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
+  callAdminUpdateDistributor({ distributor_id: id, admin_notes: notesJson }).then(function() {
     d.admin_notes = notesJson;
     viewDistributor(id);
   }).catch(function(e){ alert('Save failed: ' + e.message); });
