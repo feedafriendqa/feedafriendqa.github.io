@@ -2760,7 +2760,14 @@ function renderLiveView() {
   var sponsorshipById = {};
   allSponsorships.forEach(function(sp){ sponsorshipById[sp.id] = sp; });
 
-  var boxesOf = function(a){ return a.max_boxes || Math.ceil((a.household_size || 1) / 4); };
+  // max_boxes is a static per-application eligibility CAP set once at
+  // import (3 for bachelors, 6 for families) -- it is not the actual
+  // per-distribution need, and using it here made every family-type case
+  // show "6 boxes" regardless of real household size (Faf-FoodBox-ChooseFamily.html
+  // hit and fixed this exact issue -- see its mapPoolRowToFamily comment).
+  // Match the same 1-box-per-4-people rule used everywhere else in this
+  // file (CRM dashboard tile, CSV export, sponsor-matching panel).
+  var boxesOf = function(a){ return Math.ceil((a.household_size || 1) / 4); };
   var sumBoxes = function(apps){ return apps.reduce(function(s,a){ return s + boxesOf(a); }, 0); };
   var pendingBoxes = sumBoxes(pending);
 
