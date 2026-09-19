@@ -410,6 +410,23 @@ body.lang-ar .alt-contact-actions{text-align:left}
 </div>
 
 <!-- ── PENDING ── -->
+<div class="v" id="v-notreg">
+  <div class="login-stack">
+    <div style="display:flex;justify-content:center;margin-bottom:14px"><div class="lang-toggle"><button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button><button class="lang-btn" data-lang="ar" onclick="setLang('ar')">AR</button></div></div>
+    <img class="login-logo" id="notreg-logo" alt="Feed a Friend">
+    <div class="login-title" data-en="Distributor dashboard" data-ar="لوحة تحكم الموزّع">Distributor dashboard</div>
+    <div class="login-sub" data-en="No registration on file" data-ar="لا يوجد تسجيل على هذا الحساب">No registration on file</div>
+    <div class="card" style="text-align:center;padding:32px 24px">
+      <div style="margin-bottom:14px"><svg viewBox="0 0 24 24" width="44" height="44" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16C5.67 16 5 15.33 5 14.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" fill="#146c43"/></svg></div>
+      <div style="font-family:League Spartan,sans-serif;font-size:16px;font-weight:900;color:var(--ink);margin-bottom:6px" data-en="You're not registered as a distributor yet" data-ar="لم تسجّل بعد كموزّع">You're not registered as a distributor yet</div>
+      <div style="font-size:13px;color:var(--muted);font-weight:600;line-height:1.6;margin-bottom:20px" data-en="This account is signed in, but we don't have a distributor application on file for it. Register below to get your delivery group." data-ar="هذا الحساب مسجّل الدخول، لكن لا يوجد لدينا طلب موزّع مسجّل عليه. سجّل أدناه للحصول على مجموعة توصيلك.">This account is signed in, but we don't have a distributor application on file for it. Register below to get your delivery group.</div>
+      <a class="act-btn" style="display:block;text-decoration:none;box-sizing:border-box" href="https://connect.feedafriend.org/Faf-FoodBox-DriverReg.html" data-en="Register as a distributor →" data-ar="سجّل كموزّع ←">Register as a distributor →</a>
+      <div class="divider" style="margin-top:22px"></div>
+      <button class="forgot" onclick="signOut()" style="margin-top:0" data-en="Sign out" data-ar="تسجيل الخروج">Sign out</button>
+    </div>
+  </div>
+</div>
+
 <div class="v" id="v-pending">
   <div class="login-stack">
     <div style="display:flex;justify-content:center;margin-bottom:14px"><div class="lang-toggle"><button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button><button class="lang-btn" data-lang="ar" onclick="setLang('ar')">AR</button></div></div>
@@ -679,7 +696,7 @@ function setLang(lang){
 
 var STUCK_TIMER=null;
 function showV(id){
-  ["v-loading","v-login","v-reset","v-pending","v-dash"].forEach(function(v){
+  ["v-loading","v-login","v-reset","v-pending","v-notreg","v-dash"].forEach(function(v){
     document.getElementById(v).className="v"+(v===id?" on":"");
   });
   document.getElementById("l-btn")&&(document.getElementById("l-btn").parentElement.style.display=id==="v-login"?"block":"none");
@@ -687,8 +704,8 @@ function showV(id){
   document.getElementById("pf-btn").style.display=(id==="v-dash")?"block":"none";
   // Full-bleed gradient + centered fading card only on the sign-in screen —
   // every other view keeps the ordinary green nav + page-header layout.
-  document.body.classList.toggle("login-mode",id==="v-login"||id==="v-pending"||id==="v-reset");
-  if(id==="v-login"||id==="v-pending"||id==="v-reset"){
+  document.body.classList.toggle("login-mode",id==="v-login"||id==="v-pending"||id==="v-notreg"||id==="v-reset");
+  if(id==="v-login"||id==="v-pending"||id==="v-notreg"||id==="v-reset"){
     var lgId=id==="v-login"?"login-logo":(id==="v-pending"?"pending-logo":"reset-logo");
     var lg=document.getElementById(lgId);
     if(lg&&!lg.src)lg.src=document.querySelector(".nav-logo").src;
@@ -834,7 +851,7 @@ async function loadDriver(){
     var r=await sb.from("distributors").select("*").ilike("email",CU.email).maybeSingle();
     if(r.error)throw new Error(t("lookup_failed_prefix")+r.error.message);
     DP=r.data;
-    if(!DP){setHero("pending");showV("v-pending");return;}
+    if(!DP){showV("v-notreg");return;}
     if(DP.status==="pending"){setHero("pending");showV("v-pending");return;}
     setHero("dash");
     document.getElementById("cap-remind").textContent=capRemindText(DP);

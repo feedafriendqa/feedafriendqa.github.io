@@ -108,6 +108,15 @@ header{
 .auth-back{display:block;text-align:center;font-size:13px;font-weight:700;color:var(--green);margin-top:16px;cursor:pointer;}
 .auth-note{font-size:13px;color:var(--muted);margin-top:18px;line-height:1.5;text-align:center;}
 
+.qty-stepper{display:inline-flex;align-items:center;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;height:44px;}
+.qty-btn{width:38px;height:100%;border:none;background:var(--panel);color:var(--green);font-size:20px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;user-select:none;padding:0;}
+.qty-btn:hover{background:#e7ece6;}
+.qty-btn:active{background:#dde5db;}
+.qty-btn:disabled{opacity:.35;cursor:not-allowed;}
+.qty-input{width:52px;height:100%;text-align:center;border:none;border-left:1.5px solid var(--line);border-right:1.5px solid var(--line);background:transparent;font-family:'League Spartan',sans-serif;font-weight:800;font-size:17px;color:var(--charcoal);padding:0;-moz-appearance:textfield;}
+.qty-input::-webkit-inner-spin-button,.qty-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+.qty-input:focus{outline:none;background:var(--panel);}
+
 html[lang="ar"] body, html[lang="ar"] h1, html[lang="ar"] h2, html[lang="ar"] h3, html[lang="ar"] p,
 html[lang="ar"] a, html[lang="ar"] span, html[lang="ar"] div, html[lang="ar"] button, html[lang="ar"] label{
   font-family:Cairo,'Nunito Sans',sans-serif;
@@ -224,7 +233,11 @@ html[dir="rtl"] .event-time{text-align:left;}
         <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
           <div>
             <label class="lbl" data-en="Boxes per month" data-ar="عدد الصناديق شهرياً">Boxes per month</label>
-            <input class="inp" type="number" min="1" value="1" id="pledge-box-count" style="width:100px;">
+            <div class="qty-stepper">
+              <button type="button" class="qty-btn" data-dir="-1" data-for="pledge-box-count" aria-label="Decrease">−</button>
+              <input class="qty-input" type="number" min="1" max="50" value="1" id="pledge-box-count">
+              <button type="button" class="qty-btn" data-dir="1" data-for="pledge-box-count" aria-label="Increase">+</button>
+            </div>
           </div>
           <div>
             <label class="lbl" data-en="Delivery" data-ar="التوصيل">Delivery</label>
@@ -252,7 +265,11 @@ html[dir="rtl"] .event-time{text-align:left;}
           <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
             <div>
               <label class="lbl" data-en="Boxes per month" data-ar="عدد الصناديق شهرياً">Boxes per month</label>
-              <input class="inp" type="number" min="1" id="pledge-edit-box-count" style="width:100px;">
+              <div class="qty-stepper">
+                <button type="button" class="qty-btn" data-dir="-1" data-for="pledge-edit-box-count" aria-label="Decrease">−</button>
+                <input class="qty-input" type="number" min="1" max="50" id="pledge-edit-box-count">
+                <button type="button" class="qty-btn" data-dir="1" data-for="pledge-edit-box-count" aria-label="Increase">+</button>
+              </div>
             </div>
             <div>
               <label class="lbl" data-en="Delivery" data-ar="التوصيل">Delivery</label>
@@ -323,6 +340,22 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 var EDGE_FUNCTION_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder";
 var sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 var checkedEmail = "";
+
+// ── Box-count stepper (+/-) — delegated so it also works on the
+// per-round inputs that renderPledgeRounds() injects dynamically. ──
+document.addEventListener("click", function(e){
+  var btn = e.target.closest(".qty-btn");
+  if(!btn) return;
+  var input = document.getElementById(btn.getAttribute("data-for"));
+  if(!input) return;
+  var min = parseInt(input.min, 10); if(isNaN(min)) min = 1;
+  var max = parseInt(input.max, 10); if(isNaN(max)) max = 50;
+  var cur = parseInt(input.value, 10); if(isNaN(cur)) cur = min;
+  var next = cur + parseInt(btn.getAttribute("data-dir"), 10);
+  if(next < min) next = min;
+  if(next > max) next = max;
+  input.value = next;
+});
 
 function setLang(lang){
   var isAr = lang === "ar";
@@ -414,10 +447,18 @@ function renderList(rows){
   var cardEl = document.getElementById("spon-card");
   document.getElementById("spon-loading").style.display = "none";
 
+  // Always DERIVE the QAR amount from box_count (100 QAR/box) rather than
+  // trusting the stored `amount` column directly. `amount` is only written
+  // once a sponsor reaches the final Payment page — until then (or if a
+  // record was edited by hand, e.g. an admin merge) it can sit at a stale
+  // placeholder value that no longer matches box_count. Showing the wrong,
+  // too-low figure here risks a sponsor genuinely underpaying.
+  var PRICE_PER_BOX = 100;
   var totalBoxes = 0, totalAmount = 0, activeCount = 0;
   rows.forEach(function(r){
-    totalBoxes += (r.box_count || 1);
-    if(r.payment_status === "payment_received") totalAmount += (r.amount || 0);
+    var boxes = r.box_count || 1;
+    totalBoxes += boxes;
+    if(r.payment_status === "payment_received") totalAmount += boxes * PRICE_PER_BOX;
     if(r.payment_status === "payment_received" || r.payment_status === "pending_payment" || r.payment_status === "proof_uploaded") activeCount += 1;
   });
   document.getElementById("stat-boxes").textContent = totalBoxes;
@@ -447,14 +488,25 @@ function renderList(rows){
       : '';
 
     // Delivery-method label. "self" = the sponsor picks up and delivers the
-    // box themselves (chosen on the Preferences page) — link them straight
-    // to the distributor dashboard so they can see their delivery group,
-    // box count, and location. "vol" = one of FaF's own drivers handles
-    // it, so there's nothing for the sponsor to act on, just a plain label.
+    // box themselves (chosen on the Preferences page). Where we send them
+    // depends on whether they've already registered as a distributor
+    // (checked once in loadSponsorships, via the same email-match lookup
+    // DriverDashboard.html itself uses): already registered -> straight to
+    // their delivery dashboard; not registered yet -> registration first,
+    // since landing an unregistered sponsor on the dashboard just shows a
+    // confusing "pending" screen with no way to actually register from there.
+    // "vol" = one of FaF's own drivers handles it, so there's nothing for
+    // the sponsor to act on, just a plain label.
     var deliveryTag = "";
     if(r.delivery_method === "self"){
-      var selfLabel = isAr ? "\uD83D\uDE9A توصيل ذاتي \u2014 عرض مجموعتك \u2190" : "\uD83D\uDE9A Self-delivery — see your group →";
-      deliveryTag = '<a class="deliv-tag self-link" href="https://connect.feedafriend.org/DriverDashboard.html" target="_blank" rel="noopener">' + selfLabel + '</a>';
+      var isRegisteredDistributor = !!(window.selfDeliveryDistributor && window.selfDeliveryDistributor.id);
+      var selfLabel = isRegisteredDistributor
+        ? (isAr ? "\uD83D\uDE9A توصيل ذاتي \u2014 عرض مجموعتك \u2190" : "\uD83D\uDE9A Self-delivery — see your group →")
+        : (isAr ? "\uD83D\uDE9A توصيل ذاتي \u2014 سجّل كموزّع لعرض توصيلاتك \u2190" : "\uD83D\uDE9A Self-delivery — register to see your group →");
+      var selfHref = isRegisteredDistributor
+        ? "https://connect.feedafriend.org/DriverDashboard.html"
+        : "https://connect.feedafriend.org/Faf-FoodBox-DriverReg.html";
+      deliveryTag = '<a class="deliv-tag self-link" href="' + selfHref + '" target="_blank" rel="noopener">' + selfLabel + '</a>';
     } else if(r.delivery_method === "vol"){
       deliveryTag = '<span class="deliv-tag">' + (isAr ? "\uD83E\uDD1D توصيل بواسطة متطوع" : "\uD83E\uDD1D Volunteer delivery") + '</span>';
     }
@@ -472,7 +524,7 @@ function renderList(rows){
         uploadBtn +
       '</div>' +
       '<div class="event-time">' +
-        '<div class="amt">QAR ' + (r.amount || 0) + '</div>' +
+        '<div class="amt">QAR ' + ((r.box_count || 1) * PRICE_PER_BOX) + '</div>' +
         '<span class="badge ' + pay.cls + '">' + payLabel + '</span>' +
       '</div>' +
     '</div>';
@@ -539,7 +591,30 @@ async function loadSponsorships(userId){
     .select("*")
     .eq("sponsor_id", userId)
     .order("created_at", { ascending: false });
-  renderList(result.data || []);
+  var rows = result.data || [];
+
+  // If any sponsorship is self-delivery, find out whether this sponsor has
+  // already registered as a distributor (matched by email, case-insensitive,
+  // same lookup DriverDashboard.html itself uses) so renderList can point
+  // them at the right next step: straight into their delivery dashboard if
+  // they're already registered, or into registration first if they're not.
+  // Without this check the link always pointed at the dashboard, which just
+  // shows a confusing "pending" screen for anyone who never registered.
+  window.selfDeliveryDistributor = null;
+  var selfRow = rows.find(function(r){ return r.delivery_method === "self"; });
+  if(selfRow){
+    var lookupEmail = selfRow.email || (window.currentAuthUser && window.currentAuthUser.email);
+    if(lookupEmail){
+      try{
+        var distRes = await sbClient.from("distributors").select("id,status").ilike("email", lookupEmail).maybeSingle();
+        if(!distRes.error) window.selfDeliveryDistributor = distRes.data || null;
+      }catch(e){
+        console.warn("Could not check distributor registration status (non-fatal):", e);
+      }
+    }
+  }
+
+  renderList(rows);
 }
 
 function revealPaymentsContent(user, session){
@@ -694,7 +769,11 @@ function renderPledgeRounds(rows){
     if(editable){
       body = '<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:10px;">' +
         '<div><label class="lbl">' + (isAr ? "الصناديق" : "Boxes") + '</label>' +
-        '<input class="inp" type="number" min="1" value="' + r.box_count + '" id="round-box-' + r.id + '" style="width:90px;"></div>' +
+        '<div class="qty-stepper">' +
+          '<button type="button" class="qty-btn" data-dir="-1" data-for="round-box-' + r.id + '" aria-label="Decrease">−</button>' +
+          '<input class="qty-input" type="number" min="1" max="50" value="' + r.box_count + '" id="round-box-' + r.id + '">' +
+          '<button type="button" class="qty-btn" data-dir="1" data-for="round-box-' + r.id + '" aria-label="Increase">+</button>' +
+        '</div></div>' +
         '<button class="auth-btn" style="margin:0;width:auto;padding:10px 16px;font-size:13px;" onclick="saveRoundBoxCount(\'' + r.id + '\')">' + (isAr ? "حفظ" : "Save") + '</button>' +
         '<button style="border:1.5px solid #c0392b;background:#fff;color:#c0392b;font-size:12px;font-weight:800;padding:10px 14px;border-radius:8px;cursor:pointer;" onclick="cancelRoundClick(\'' + r.id + '\')">' + (isAr ? "إلغاء لهذا الشهر" : "Skip this round") + '</button>' +
         '</div>' +
