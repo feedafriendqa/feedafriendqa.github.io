@@ -256,7 +256,8 @@ body.lang-ar .alt-contact-actions{text-align:left}
   <div class="dash-stack" id="pnl-fams" style="display:none;padding-bottom:24px">
     <div class="back-row"><button class="back-btn" onclick="showDashMain()" data-en="← Back" data-ar="→ رجوع">← Back</button></div>
     <div class="dash-hero"><img class="login-logo" alt="Feed a Friend"><div class="login-title" id="fam-count-lbl" data-en="Your deliveries" data-ar="توصيلاتك">Your deliveries</div><div class="login-sub" data-en="Tap a card once it's dropped off" data-ar="اضغط على البطاقة بعد التوصيل">Tap a card once it's dropped off</div></div>
-    <div class="card" id="route-card">
+    <!-- Hidden for now (route planning needs fixing before it goes back live) -->
+    <div class="card" id="route-card" style="display:none">
       <div class="lbl" style="margin-bottom:8px" data-en="Plan your route" data-ar="خطّط مسارك">Plan your route</div>
       <select id="route-start-sel" class="inp" style="margin-bottom:10px"><option value="" data-en="Choose a starting point…" data-ar="اختر نقطة البداية…">Choose a starting point…</option></select>
       <button class="tb-grn" style="width:100%" onclick="planRoute()" data-en="Plan route →" data-ar="خطّط المسار ←">Plan route →</button>
@@ -548,6 +549,9 @@ var TR={
   fam_photo_label:{en:"Photo for the donor (optional)",ar:"صورة للمتبرع (اختياري)"},
   mark_delivered:{en:"Mark as delivered",ar:"تسجيل كتم التوصيل"},
   marked_delivered:{en:"✓ Marked as delivered",ar:"✓ تم التوصيل"},
+  not_yet_deliverable:{en:"Available on distribution day",ar:"متاح في يوم التوزيع"},
+  cannot_mark_yet_pre:{en:"You can mark deliveries starting on your distribution day (",ar:"يمكنك تسجيل التوصيلات ابتداءً من يوم التوزيع ("},
+  cannot_mark_yet_post:{en:").",ar:")."},
   alt_no_app:{en:"No application on file for this delivery — can't look up alternative contacts.",ar:"لا يوجد طلب مسجّل لهذه التوصيلة — لا يمكن البحث عن جهات اتصال بديلة."},
   alt_before_title:{en:"Before requesting an alternative number",ar:"قبل طلب رقم بديل"},
   alt_before_body_pre:{en:"Please allow up to <strong>12 hours</strong> for ",ar:"يرجى الانتظار حتى <strong>12 ساعة</strong> لكي يستجيب "},
@@ -1105,6 +1109,27 @@ function buildMapsUrl(app){
   return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(parts.join(", "));
 }
 
+// Deliveries can only be marked done from distribution day onward — a
+// driver tapping through their card list the night before shouldn't be
+// able to mark drop-offs that haven't happened yet. Compares calendar
+// dates only (not time-of-day), and defaults to "allowed" if the trip
+// has no date set rather than blocking on missing data.
+function canMarkDeliveredNow(){
+  if(!AT||!AT.trip_date)return true;
+  var tripDate=new Date(AT.trip_date+"T00:00:00");
+  if(isNaN(tripDate.getTime()))return true;
+  var today=new Date();
+  today.setHours(0,0,0,0);
+  tripDate.setHours(0,0,0,0);
+  return today.getTime()>=tripDate.getTime();
+}
+function formattedTripDate(){
+  if(!AT||!AT.trip_date)return "";
+  var d=new Date(AT.trip_date+"T00:00:00");
+  if(isNaN(d.getTime()))return "";
+  return d.toLocaleDateString(LANG==="ar"?"ar-QA":"en-GB",{weekday:"long",day:"numeric",month:"long"});
+}
+
 function renderFamCard(row,num){
   var app=row.food_box_applications||{};
   var addrParts=[app.zone?t("addr_zone")+app.zone:"",app.street?t("addr_street")+app.street:"",app.building?t("addr_building")+app.building:"",app.unit?t("addr_unit")+app.unit:""].filter(Boolean);
@@ -1118,6 +1143,7 @@ function renderFamCard(row,num){
   var qidLast4=app.qid_number?String(app.qid_number).replace(/\D/g,"").slice(-4):"";
   var language=app.submission_lang==="ar"?t("lang_arabic"):(app.submission_lang?t("lang_english"):t("dash"));
   var done=row.status==="delivered";
+  var canMark=canMarkDeliveredNow();
   var boxCount=app.household_size?Math.ceil(app.household_size/4):1;
   var tags="";
   if(app.diaper_size&&app.diaper_size!=="Not needed")tags+='<span class="need-badge diaper"><span class="need-ic">🧷</span>'+app.diaper_size+'</span>';
@@ -1135,7 +1161,7 @@ function renderFamCard(row,num){
     +(tags?'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M7 4H5L4 6H2v2h2l3.6 7.59-1.35 2.44A2 2 0 0 0 8 21h11v-2H8l1.1-2h7.45a2 2 0 0 0 1.79-1.11L21.9 8H6.21l-.94-2H7V4zM9 19a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm9 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" fill="#146c43"/></svg></span><div><div class="fam-lbl">'+t("fam_needs")+'</div><div style="margin-top:4px">'+tags+'</div></div></div>':"")
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#146c43"/></svg></span><div style="flex:1"><div class="fam-lbl">'+t("fam_note_label")+'</div><textarea class="fam-notes-inp" id="notes-'+row.id+'" placeholder="'+t("fam_note_placeholder")+'" '+(done?"disabled":"")+'>'+notesVal+'</textarea></div></div>'
     +'<div class="fam-row"><span class="fam-ic">📷</span><div style="flex:1"><div class="fam-lbl">'+t("fam_photo_label")+'</div><input type="file" accept="image/*" capture="environment" class="fam-photo-inp" id="photo-'+row.id+'" onchange="previewPhoto(\''+row.id+'\')" '+(done?"disabled":"")+'><div class="fam-photo-preview" id="photo-preview-'+row.id+'"></div></div></div>'
-    +'<button class="del-btn'+(done?" done":"")+'" id="db-'+row.id+'" data-app="'+(row.application_id||"")+'" onclick="markDel(\''+row.id+'\')" '+(done?"disabled":"")+'>'+(done?t("marked_delivered"):t("mark_delivered"))+'</button>'
+    +'<button class="del-btn'+(done?" done":"")+'" id="db-'+row.id+'" data-app="'+(row.application_id||"")+'" onclick="markDel(\''+row.id+'\')" '+((done||!canMark)?"disabled":"")+'>'+(done?t("marked_delivered"):(canMark?t("mark_delivered"):t("not_yet_deliverable")))+'</button>'
     +'</div>';
 }
 
@@ -1207,6 +1233,10 @@ function previewPhoto(id){
 async function markDel(id){
   var btn=document.getElementById("db-"+id);
   if(!btn||btn.disabled)return;
+  if(!canMarkDeliveredNow()){
+    alert(t("cannot_mark_yet_pre")+formattedTripDate()+t("cannot_mark_yet_post"));
+    return;
+  }
   var notesEl=document.getElementById("notes-"+id);
   var notesVal=notesEl?notesEl.value.trim():"";
   var photoEl=document.getElementById("photo-"+id);
