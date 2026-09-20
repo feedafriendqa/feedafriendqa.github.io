@@ -839,19 +839,28 @@ async function startSponsorFlow(){
   }
 })();
 
-// Live hero stats — boxes still needing a sponsor and how many families
+// Live hero stats — boxes still needing a sponsor and how many friends
 // that represents. Pulled from a single-row aggregate view that exposes
 // no per-family data at all. Falls back to the static placeholder numbers
 // already in the HTML if the fetch fails, rather than showing a blank.
+//
+// food_box_landing_stats now returns three numbers on ONE shared basis
+// (real boxesNeeded = ceil(household_size/4) for confirmed friends):
+//   boxes_needed    = fixed target for the whole distribution
+//   boxes_remaining = still needs a sponsor right now (the headline CTA number)
+//   friends_need_food = headcount of people in those still-waiting friends
+// The progress bar below is pledged-out-of-TARGET, so it passes boxes_needed
+// (not boxes_remaining) through to loadPledgeProgress.
 function loadLandingStats(){
   if(!window.sbClient) return;
   window.sbClient
     .from("food_box_landing_stats")
-    .select("boxes_needed,friends_need_food")
+    .select("boxes_needed,boxes_remaining,friends_need_food")
     .single()
     .then(function(res){
       if(res.error || !res.data) throw res.error || new Error("no data");
-      document.getElementById("stat-boxes").textContent = res.data.boxes_needed.toLocaleString();
+      var remaining = res.data.boxes_remaining != null ? res.data.boxes_remaining : res.data.boxes_needed;
+      document.getElementById("stat-boxes").textContent = remaining.toLocaleString();
       document.getElementById("stat-friends").textContent = res.data.friends_need_food.toLocaleString();
       loadPledgeProgress(res.data.boxes_needed);
     })
