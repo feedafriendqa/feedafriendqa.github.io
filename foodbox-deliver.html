@@ -127,6 +127,24 @@ button,input{font:inherit}
 .stat .n{font-family:"League Spartan",sans-serif;font-size:22px;font-weight:700;color:var(--lime)}
 .stat .l{font-size:9px;font-weight:700;color:var(--muted-2);text-transform:uppercase;letter-spacing:.06em;line-height:1.4;margin-top:4px}
 
+/* ── DELIVERY PROGRESS BAR (this round) ── */
+.progress-wrap{
+  margin:0 20px 18px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:var(--glass-2);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  padding:14px 18px 16px;
+}
+.progress-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px;gap:10px}
+.progress-top .big{font-family:"Manrope",sans-serif;font-size:13px;font-weight:700;color:#fff}
+.progress-top .big b{font-family:"League Spartan",sans-serif;color:var(--lime);font-size:15px}
+.progress-top .small{font-size:10px;color:var(--amber);font-weight:800;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.bar-track{height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden}
+.bar-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--green,#1D7A47),var(--lime));width:0%;transition:width .6s ease}
+body.lang-ar .progress-top{flex-direction:row-reverse}
+
 /* ── DISTRIBUTION DATE ── */
 .dist-date{
   margin:0 20px 24px;
@@ -223,6 +241,14 @@ body.lang-ar .icon-card{text-align:right;flex-direction:row-reverse}
     <div class="stat"><div class="n" id="stat-friends">—</div><div class="l" data-en="Friends<br>need food" data-ar="أصدقاء<br>يحتاجون طعام">Friends<br>need food</div></div>
     <div class="stat"><div class="n" id="stat-boxes-delivered">—</div><div class="l" data-en="Boxes delivered<br>to date" data-ar="صناديق تم توصيلها<br>حتى الآن">Boxes delivered<br>to date</div></div>
     <div class="stat"><div class="n" id="stat-friends-supported">—</div><div class="l" data-en="Friends supported<br>to date" data-ar="أصدقاء تم دعمهم<br>حتى الآن">Friends supported<br>to date</div></div>
+  </div>
+
+  <div class="progress-wrap" id="progress-wrap" style="display:none">
+    <div class="progress-top">
+      <div class="big"><b id="progress-delivered">0</b> <span data-en="of" data-ar="من">of</span> <span id="progress-needed-1">0</span> <span data-en="boxes delivered" data-ar="صندوقاً تم توصيلها">boxes delivered</span></div>
+      <div class="small"><span id="progress-remaining">0</span> <span data-en="to go" data-ar="متبقي">to go</span></div>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="progress-bar-fill" style="width:0%"></div></div>
   </div>
 
   <div class="dist-date">
@@ -329,17 +355,47 @@ function loadDriverStats(){
     });
   window.sbClient
     .from("food_box_landing_stats")
-    .select("friends_need_food")
+    .select("boxes_needed,friends_need_food")
     .single()
     .then(function(res){
       if(res.error || !res.data) throw res.error || new Error("no data");
       setStatValue("stat-friends", res.data.friends_need_food);
+      loadDeliveryProgress(res.data.boxes_needed);
     })
     .catch(function(e){
       console.warn("Could not load friends-need-food stat, keeping placeholder", e);
     });
 }
 loadDriverStats();
+
+// Delivery progress bar — of the fixed "boxes needed" target for the whole
+// distribution (same 235-style number used on the sponsor page's pledge
+// bar), how many have actually been delivered so far vs. still outstanding.
+// boxesNeeded is the fixed round target (food_box_landing_stats.boxes_needed);
+// delivered comes from food_box_delivered_public, a dedicated postgres-owned
+// aggregate view (same pattern as food_box_pledged_public) so an anonymous
+// visitor can read the total without exposing individual family rows.
+function loadDeliveryProgress(boxesNeeded){
+  if(!window.sbClient || !boxesNeeded) return;
+  window.sbClient
+    .from("food_box_delivered_public")
+    .select("boxes_delivered")
+    .single()
+    .then(function(res){
+      if(res.error || !res.data) throw res.error || new Error("no data");
+      var delivered = res.data.boxes_delivered || 0;
+      var remaining = Math.max(boxesNeeded - delivered, 0);
+      var pct = Math.min(Math.round((delivered / boxesNeeded) * 100), 100);
+      document.getElementById("progress-delivered").textContent = delivered.toLocaleString();
+      document.getElementById("progress-needed-1").textContent = boxesNeeded.toLocaleString();
+      document.getElementById("progress-remaining").textContent = remaining.toLocaleString();
+      document.getElementById("progress-bar-fill").style.width = pct + "%";
+      document.getElementById("progress-wrap").style.display = "block";
+    })
+    .catch(function(e){
+      console.warn("Could not load delivery progress bar, leaving it hidden", e);
+    });
+}
 
 // "Next distribution day" — same single distribution_rounds list used
 // across the whole site (sponsors, pledges, admin). Updates both
