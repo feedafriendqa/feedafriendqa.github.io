@@ -3518,19 +3518,22 @@ function saveSponsorshipEdits(spId) {
   }).catch(function(e){ alert('Update failed: ' + e.message); });
 }
 
-// Signed URL — bucket is private, but any authenticated session (i.e. any
-// logged-in admin) can request one directly, no edge function needed.
-// FIX: this used to point at a "sponsorship-proofs" bucket that has never
-// actually held a single file. Every real proof a sponsor has ever
-// uploaded was written by the clever-responder edge function into
-// "food-box-private-docs" (same bucket used for QID/salary/rent docs),
-// under a "payment-proofs/<sponsorship id>/..." path -- that's the bucket
-// this needs to read from too, or every proof looks "missing" even though
-// nothing was ever actually lost.
+// Signed URL for a payment proof.
+// FIX (part 2): this used to call storage.createSignedUrl() directly from
+// the browser, which only works for a bucket the admin's own session has
+// an RLS SELECT policy for. "food-box-private-docs" (where every real
+// proof actually lives -- see fetchDocumentUrls() above) has NO such
+// policy for a logged-in admin; only the clever-responder edge function,
+// running with the service-role key, is allowed to sign URLs for it. That
+// silent RLS refusal is exactly why this kept saying "not found" even
+// after pointing at the right bucket. Routed through the same
+// fetchDocumentUrls() helper the QID/salary/rent document viewer already
+// uses, since it already does this correctly.
 function viewSponsorshipProof(path) {
-  sb.storage.from('food-box-private-docs').createSignedUrl(path, 3600).then(function(res) {
-    if (res.error || !res.data) { alert('Could not open proof: ' + (res.error ? res.error.message : 'unknown error')); return; }
-    window.open(res.data.signedUrl, '_blank');
+  fetchDocumentUrls([path]).then(function(urlMap) {
+    var url = urlMap[path];
+    if (!url) { alert('Could not open proof: no signed URL returned (check that this admin account has an entry in faf_user_roles).'); return; }
+    window.open(url, '_blank');
   });
 }
 
