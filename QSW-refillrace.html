@@ -84,7 +84,7 @@
     <div id="page-board" class="page">
       <div style="display:inline-block; background:#f4a832; color:#0e3d24; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; padding:5px 12px; border-radius:99px; transform:rotate(-2deg)">FRIDGE REFILL RACE</div>
       <div style="font-family:'Outfit',sans-serif; font-weight:800; font-size:clamp(34px,8.5vw,54px); line-height:1.18; color:#ffffff; letter-spacing:-0.035em; margin:14px 0 12px; text-shadow:4px 4px 0 rgba(0,0,0,0.18)">Refill it.<br><span style="color:#c6f24a">Clean it.</span><br><span style="color:#ff6f59">Climb the board.</span></div>
-      <div style="font-size:14.5px; color:#dff0e4; max-width:480px; line-height:1.55">Build a team of up to 6, keep Qatar's community fridges stocked, and log every refill for points. National leaderboard updates live.</div>
+      <div style="font-size:14.5px; color:#dff0e4; max-width:480px; line-height:1.55">Build a team of up to 6, keep Qatar's community fridges stocked, and log every refill for points. National leaderboard updates live — chase the 🏆 top team and 🏆 top organisation trophies.</div>
 
       <div id="needsMostStat" style="display:none; margin-top:14px; background:#fff8e6; border:1.5px solid #f4a832; border-radius:99px; padding:8px 16px; font-size:12.5px; color:#7a5200; font-weight:700; width:fit-content"><span id="needsMostStatCount">0</span> fridges need you most right now</div>
 
@@ -99,7 +99,30 @@
         <button class="btn-outline" onclick="location.hash='#/log'" style="border:3px solid #c6f24a; background:transparent; color:#c6f24a; font-family:'Outfit',sans-serif; font-weight:800; font-size:14px; padding:11px 22px; border-radius:99px; cursor:pointer; min-height:48px">Log a refill</button>
       </div>
 
-      <div style="display:flex; gap:8px; margin-top:36px">
+      <div id="trophyRow" style="display:none; gap:14px; flex-wrap:wrap; margin-top:32px">
+        <div style="flex:1; min-width:220px; background:#ffffff; border:3px solid #14261a; border-radius:16px; padding:16px 18px; box-shadow:5px 5px 0 rgba(0,0,0,0.28); transform:rotate(-0.6deg)">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.1em; color:#7c8177">TOP TEAM</div>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:6px">
+            <div style="font-size:26px; line-height:1">🏆</div>
+            <div style="min-width:0">
+              <div id="trophyTeamName" style="font-family:'Outfit',sans-serif; font-weight:800; font-size:16px; color:#14261a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">—</div>
+              <div id="trophyTeamPoints" style="font-size:12px; color:#5d6359"></div>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1; min-width:220px; background:#ffffff; border:3px solid #14261a; border-radius:16px; padding:16px 18px; box-shadow:5px 5px 0 rgba(0,0,0,0.28); transform:rotate(0.6deg)">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.1em; color:#7c8177">TOP ORGANISATION</div>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:6px">
+            <div style="font-size:26px; line-height:1">🏆</div>
+            <div style="min-width:0">
+              <div id="trophyBizName" style="font-family:'Outfit',sans-serif; font-weight:800; font-size:16px; color:#14261a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">—</div>
+              <div id="trophyBizPoints" style="font-size:12px; color:#5d6359"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:20px">
         <button id="tabTeamsBtn" onclick="setBoardTab('teams')" style="border:2.5px solid #14261a; font-weight:800; font-size:13px; padding:10px 18px; border-radius:99px; cursor:pointer">Teams</button>
         <button id="tabBizBtn" onclick="setBoardTab('business')" style="border:2.5px solid #14261a; font-weight:800; font-size:13px; padding:10px 18px; border-radius:99px; cursor:pointer">Businesses</button>
       </div>
@@ -139,7 +162,7 @@
           <label style="display:block">
             <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">CAPTAIN EMAIL</span>
             <input id="ntCaptainEmail" placeholder="captain@company.qa" style="width:100%; margin-top:5px; border:1.5px solid #d9ded6; border-radius:10px; padding:11px 12px; font-size:14px; color:#14261a; outline:none">
-            <span id="ntCaptainEmailErr" style="font-size:11.5px; color:#c0392b; display:none">Please add a valid email</span>
+            <span id="ntCaptainEmailErr" data-default-msg="Please add a valid email" style="font-size:11.5px; color:#c0392b; display:none">Please add a valid email</span>
           </label>
           <label style="display:block">
             <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">CAPTAIN WHATSAPP</span>
@@ -154,6 +177,11 @@
               <button class="stepper-btn" onclick="ntChangeCount(1)" style="width:44px; height:44px; border:1.5px solid #d9ded6; background:#fff; border-radius:10px; font-size:19px; color:#14261a; cursor:pointer">+</button>
               <div style="font-size:12px; color:#7c8177">including the captain</div>
             </div>
+          </div>
+          <div>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">TEAM MEMBER FULL NAMES</span>
+            <div id="ntMembersWrap" style="display:flex; flex-direction:column; gap:8px; margin-top:6px"></div>
+            <span id="ntMembersErr" style="font-size:11.5px; color:#c0392b; display:none">Add a full name for every team member</span>
           </div>
           <button id="ntSubmitBtn" class="save-btn" onclick="submitTeam()" style="border:none; background:#1b7a43; color:#ffffff; font-family:'Outfit',sans-serif; font-weight:700; font-size:15px; padding:15px; border-radius:12px; cursor:pointer; margin-top:4px; min-height:48px">Register team</button>
           <div id="ntPostFailed" style="font-size:12px; color:#c0392b; display:none">Could not save your team — please try again, or email <a href="mailto:salaam@feedafriend.org" style="color:#1b7a43; font-weight:700">salaam@feedafriend.org</a>.</div>
@@ -466,6 +494,20 @@ function renderBoard() {
     name: b.name, points: b.points, sub: b.teamCount + ' team' + (b.teamCount === 1 ? '' : 's') + ' · ' + b.logs + ' refills'
   })));
 
+  // Trophy callouts — top team and top organisation (an organisation's
+  // points are the sum of every team it fields), always visible above the
+  // tabs regardless of which board the person is looking at.
+  const trophyRow = document.getElementById('trophyRow');
+  trophyRow.style.display = (showBoard && state.teams.length) ? 'flex' : 'none';
+  if (showBoard && state.teams.length) {
+    const topTeam = teamRows[0];
+    document.getElementById('trophyTeamName').textContent = topTeam ? topTeam.name : '—';
+    document.getElementById('trophyTeamPoints').textContent = topTeam ? topTeam.points + ' pts' : '';
+    const topBiz = bizRows[0];
+    document.getElementById('trophyBizName').textContent = topBiz ? topBiz.name : '—';
+    document.getElementById('trophyBizPoints').textContent = topBiz ? topBiz.points + ' pts' : '';
+  }
+
   const rows = state.tab === 'teams' ? teamRows : bizRows;
   document.getElementById('noRowsNotice').style.display = (showBoard && rows.length === 0) ? 'block' : 'none';
 
@@ -670,12 +712,55 @@ function onFridgePicked() {
 function ntChangeCount(delta) {
   state.nt.memberCount = Math.max(2, Math.min(6, (state.nt.memberCount || 4) + delta));
   document.getElementById('ntCount').textContent = state.nt.memberCount;
+  renderMemberInputs();
+}
+
+// Renders one full-name input per team member beyond the captain (who
+// already has their own name field above). Re-rendering on every stepper
+// change preserves whatever names were already typed.
+function renderMemberInputs() {
+  const wrap = document.getElementById('ntMembersWrap');
+  if (!wrap) return;
+  const count = state.nt.memberCount || 4;
+  const existing = {};
+  wrap.querySelectorAll('input').forEach(inp => { existing[inp.dataset.idx] = inp.value; });
+  wrap.innerHTML = '';
+  for (let i = 2; i <= count; i++) {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'ntMember' + i;
+    input.dataset.idx = String(i);
+    input.placeholder = 'Team member ' + i + ' — full name';
+    input.value = existing[i] || '';
+    input.autocomplete = 'off';
+    input.style.cssText = 'width:100%; border:1.5px solid #d9ded6; border-radius:10px; padding:11px 12px; font-size:14px; color:#14261a; outline:none';
+    wrap.appendChild(input);
+  }
+}
+
+function collectMemberNames() {
+  const captainName = document.getElementById('ntCaptainName').value.trim();
+  const names = [captainName];
+  const count = state.nt.memberCount || 4;
+  for (let i = 2; i <= count; i++) {
+    const el = document.getElementById('ntMember' + i);
+    names.push(el ? el.value.trim() : '');
+  }
+  return names;
 }
 
 function clearNtErrors() {
-  ['ntNameErr', 'ntCaptainNameErr', 'ntCaptainEmailErr', 'ntCaptainPhoneErr'].forEach(id => {
-    document.getElementById(id).style.display = 'none';
+  ['ntNameErr', 'ntCaptainNameErr', 'ntCaptainEmailErr', 'ntCaptainPhoneErr', 'ntMembersErr'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.display = 'none';
+    if (el.dataset.defaultMsg) el.textContent = el.dataset.defaultMsg;
   });
+}
+
+function showNtEmailTaken() {
+  const el = document.getElementById('ntCaptainEmailErr');
+  el.textContent = 'This email is already registered to a team — please use a different one';
+  el.style.display = 'inline';
 }
 
 function submitTeam() {
@@ -686,12 +771,14 @@ function submitTeam() {
   const captainName = document.getElementById('ntCaptainName').value.trim();
   const captainEmail = document.getElementById('ntCaptainEmail').value.trim();
   const captainPhone = document.getElementById('ntCaptainPhone').value.trim();
+  const memberNames = collectMemberNames();
 
   let hasErr = false;
   if (!name) { document.getElementById('ntNameErr').style.display = 'inline'; hasErr = true; }
   if (!captainName) { document.getElementById('ntCaptainNameErr').style.display = 'inline'; hasErr = true; }
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(captainEmail)) { document.getElementById('ntCaptainEmailErr').style.display = 'inline'; hasErr = true; }
   if (captainPhone.length < 6) { document.getElementById('ntCaptainPhoneErr').style.display = 'inline'; hasErr = true; }
+  if (memberNames.some(n => !n)) { document.getElementById('ntMembersErr').style.display = 'inline'; hasErr = true; }
   if (hasErr) return;
 
   const btn = document.getElementById('ntSubmitBtn');
@@ -710,18 +797,30 @@ function submitTeam() {
     return;
   }
 
-  const record = { name: name, business: business || null, captain_name: captainName, captain_email: captainEmail, captain_phone: captainPhone, member_count: state.nt.memberCount };
-  fetch(c.url + '/rest/v1/' + c.teamsTable, {
-    method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, headers()), body: JSON.stringify(record)
-  }).then(r => {
-    if (!r.ok) throw new Error();
-    finishTeam(name);
-    notifyMailer({ type: 'team', team: {
-      name: name, business: business || null, captainName: captainName,
-      captainEmail: captainEmail, captainPhone: captainPhone, memberCount: state.nt.memberCount
-    }});
+  const resetBtn = () => { btn.textContent = 'Register team'; btn.style.background = '#1b7a43'; };
+
+  fetch(c.url + '/rest/v1/rpc/fridge_team_email_taken', {
+    method: 'POST', headers: headers(), body: JSON.stringify({ p_email: captainEmail })
+  }).then(r => r.ok ? r.json() : false).then(taken => {
+    if (taken === true) { resetBtn(); showNtEmailTaken(); return; }
+
+    const record = { name: name, business: business || null, captain_name: captainName, captain_email: captainEmail, captain_phone: captainPhone, member_count: state.nt.memberCount, member_names: memberNames };
+    fetch(c.url + '/rest/v1/' + c.teamsTable, {
+      method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, headers()), body: JSON.stringify(record)
+    }).then(r => {
+      if (!r.ok) throw new Error();
+      finishTeam(name);
+      notifyMailer({ type: 'team', team: {
+        name: name, business: business || null, captainName: captainName,
+        captainEmail: captainEmail, captainPhone: captainPhone, memberCount: state.nt.memberCount,
+        memberNames: memberNames
+      }});
+    }).catch(() => {
+      resetBtn();
+      document.getElementById('ntPostFailed').style.display = 'block';
+    });
   }).catch(() => {
-    btn.textContent = 'Register team'; btn.style.background = '#1b7a43';
+    resetBtn();
     document.getElementById('ntPostFailed').style.display = 'block';
   });
 }
@@ -861,6 +960,7 @@ function submitLog() {
 navigate();
 renderBoard();
 populateTeamSelect();
+renderMemberInputs();
 loadData();
 loadFridgeList();
 </script>
