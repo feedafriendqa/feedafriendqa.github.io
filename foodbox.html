@@ -248,6 +248,23 @@ button,input{font:inherit}
   transition:transform .25s ease,box-shadow .25s ease;
 }
 .cta-btn:hover{transform:translateY(-2px);box-shadow:0 20px 48px rgba(169,223,73,.32)}
+.cta-btn:disabled,.cta-btn.sold-out{background:#d8d8cc;color:#777;box-shadow:none;cursor:not-allowed;transform:none}
+.cta-btn:disabled:hover,.cta-btn.sold-out:hover{transform:none;box-shadow:none}
+
+/* ── SOLD OUT / WAITLIST ── */
+.sold-out-card{text-align:center;padding:6px 4px 2px}
+.sold-out-card .ic{font-size:30px;margin-bottom:10px}
+.sold-out-card h3{font-family:"League Spartan",sans-serif;font-size:19px;font-weight:800;color:var(--ink);margin-bottom:8px}
+.sold-out-card p{font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:18px}
+.waitlist-row{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.waitlist-row input{
+  width:100%;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.22);
+  color:var(--ink);padding:13px 16px;font-size:13px;font-weight:600;outline:none;
+}
+.waitlist-row input::placeholder{color:var(--muted-2);font-weight:600}
+.waitlist-row input:focus{border-color:rgba(169,223,73,.55);background:rgba(169,223,73,.06)}
+body.lang-ar .waitlist-row input{text-align:right}
+.waitlist-success{font-size:13px;font-weight:700;color:var(--lime);padding:10px 0}
 .cta-hint{text-align:center;font-size:11.5px;color:var(--muted-2);font-weight:600;margin-top:12px}
 .cta-hint a{color:var(--lime);font-weight:700;text-decoration:none}
 
@@ -397,40 +414,58 @@ body.lang-ar .progress-top{flex-direction:row-reverse}
 
   <!-- ════ GIVE NOW ════ -->
   <div class="give-card">
-    <div class="freq-toggle">
-      <button class="freq-btn on" id="freq-monthly" onclick="setFreq('monthly')">
-        <span data-en="Monthly · most give" data-ar="شهرياً · الأكثر عطاءً">Monthly · most give</span>
+    <div id="givePicker">
+      <div class="freq-toggle">
+        <button class="freq-btn on" id="freq-monthly" onclick="setFreq('monthly')">
+          <span data-en="Monthly · most give" data-ar="شهرياً · الأكثر عطاءً">Monthly · most give</span>
+        </button>
+        <button class="freq-btn" id="freq-onetime" onclick="setFreq('onetime')">
+          <span data-en="One time" data-ar="مرة واحدة">One time</span>
+        </button>
+      </div>
+
+      <div class="give-label" id="boxLabel" data-en="Boxes per month" data-ar="عدد الصناديق شهرياً">Boxes per month</div>
+      <div class="box-grid" id="boxGrid">
+        <button class="box-btn" data-n="1" onclick="setBoxes(1)"><span class="num">1</span><span class="price">100</span></button>
+        <button class="box-btn on" data-n="3" onclick="setBoxes(3)"><span class="num">3</span><span class="price">300</span></button>
+        <button class="box-btn" data-n="5" onclick="setBoxes(5)"><span class="num">5</span><span class="price">500</span></button>
+        <button class="box-btn" data-n="10" onclick="setBoxes(10)"><span class="num">10</span><span class="price">1,000</span></button>
+      </div>
+      <div class="custom-row" id="customRow">
+        <span class="custom-ic">✎</span>
+        <input type="number" id="customInput" min="1" step="1" inputmode="numeric"
+          data-en-ph="Other amount…" data-ar-ph="مبلغ آخر…"
+          placeholder="Other amount…"
+          oninput="setCustomBoxes(this.value)">
+        <span class="custom-suffix" id="customSuffix" data-en="boxes" data-ar="صندوق">boxes</span>
+      </div>
+
+      <div class="give-row">
+        <span class="feeds" id="feedsText">Feeds about 10 people</span>
+        <span class="price-out" id="priceText">QAR 300</span>
+      </div>
+
+      <button class="cta-btn" id="giveCta1" onclick="startSponsorFlow()">
+        <span id="giveBtnText">Give QAR 300 monthly →</span>
       </button>
-      <button class="freq-btn" id="freq-onetime" onclick="setFreq('onetime')">
-        <span data-en="One time" data-ar="مرة واحدة">One time</span>
-      </button>
+      <div class="cta-hint" id="giveHint" data-en="In partnership with Together for Good Events W.L.L CR 229085, who help provide the boxes" data-ar="بالشراكة مع Together for Good Events W.L.L CR 229085، الذين يساعدون في توفير الصناديق">In partnership with Together for Good Events W.L.L CR 229085, who help provide the boxes</div>
     </div>
 
-    <div class="give-label" id="boxLabel" data-en="Boxes per month" data-ar="عدد الصناديق شهرياً">Boxes per month</div>
-    <div class="box-grid" id="boxGrid">
-      <button class="box-btn" data-n="1" onclick="setBoxes(1)"><span class="num">1</span><span class="price">100</span></button>
-      <button class="box-btn on" data-n="3" onclick="setBoxes(3)"><span class="num">3</span><span class="price">300</span></button>
-      <button class="box-btn" data-n="5" onclick="setBoxes(5)"><span class="num">5</span><span class="price">500</span></button>
-      <button class="box-btn" data-n="10" onclick="setBoxes(10)"><span class="num">10</span><span class="price">1,000</span></button>
+    <div id="giveSoldOut" class="sold-out-card" style="display:none">
+      <div class="ic">🎉</div>
+      <h3 data-en="All boxes are sold out!" data-ar="جميع الصناديق نفدت!">All boxes are sold out!</h3>
+      <p data-en="Every friend for this distribution now has a sponsor — thank you! Leave your details and we'll message you the moment the next distribution opens for sign-ups." data-ar="كل صديق في هذا التوزيع لديه الآن كفيل — شكراً لكم! اترك بياناتك وسنراسلك فور فتح التسجيل للتوزيع القادم.">Every friend for this distribution now has a sponsor — thank you! Leave your details and we'll message you the moment the next distribution opens for sign-ups.</p>
+      <div id="waitlistForm">
+        <div class="waitlist-row">
+          <input type="text" id="waitlistName" data-en-ph="Your name" data-ar-ph="اسمك" placeholder="Your name">
+          <input type="tel" id="waitlistWhatsapp" data-en-ph="WhatsApp number" data-ar-ph="رقم واتساب" placeholder="WhatsApp number">
+        </div>
+        <button class="cta-btn" id="waitlistBtn" onclick="joinWaitlist()">
+          <span data-en="Notify me for the next distribution →" data-ar="أعلمني بالتوزيع القادم ←">Notify me for the next distribution →</span>
+        </button>
+      </div>
+      <div id="waitlistSuccess" class="waitlist-success" style="display:none" data-en="✅ Thanks! We'll message you as soon as the next distribution opens." data-ar="✅ شكراً لك! سنراسلك فور فتح التوزيع القادم.">✅ Thanks! We'll message you as soon as the next distribution opens.</div>
     </div>
-    <div class="custom-row" id="customRow">
-      <span class="custom-ic">✎</span>
-      <input type="number" id="customInput" min="1" step="1" inputmode="numeric"
-        data-en-ph="Other amount…" data-ar-ph="مبلغ آخر…"
-        placeholder="Other amount…"
-        oninput="setCustomBoxes(this.value)">
-      <span class="custom-suffix" id="customSuffix" data-en="boxes" data-ar="صندوق">boxes</span>
-    </div>
-
-    <div class="give-row">
-      <span class="feeds" id="feedsText">Feeds about 10 people</span>
-      <span class="price-out" id="priceText">QAR 300</span>
-    </div>
-
-    <button class="cta-btn" onclick="startSponsorFlow()">
-      <span id="giveBtnText">Give QAR 300 monthly →</span>
-    </button>
-    <div class="cta-hint" id="giveHint" data-en="In partnership with Together for Good Events W.L.L CR 229085, who help provide the boxes" data-ar="بالشراكة مع Together for Good Events W.L.L CR 229085، الذين يساعدون في توفير الصناديق">In partnership with Together for Good Events W.L.L CR 229085, who help provide the boxes</div>
   </div>
 
   <div class="stats-card">
@@ -481,11 +516,11 @@ body.lang-ar .progress-top{flex-direction:row-reverse}
     </div>
   </div>
 
-  <div class="footer-cta">
-    <button class="cta-btn" onclick="startSponsorFlow()">
+  <div class="footer-cta" id="footerCta">
+    <button class="cta-btn" id="giveCta2" onclick="startSponsorFlow()">
       <span id="giveBtnText2">Give QAR 300 monthly →</span>
     </button>
-    <div class="cta-hint" data-en="You'll create a free account to confirm your payment — takes about a minute" data-ar="ستنشئ حساباً مجانياً لتأكيد دفعتك — يستغرق حوالي دقيقة واحدة">You'll create a free account to confirm your payment — takes about a minute</div>
+    <div class="cta-hint" id="giveHint2" data-en="You'll create a free account to confirm your payment — takes about a minute" data-ar="ستنشئ حساباً مجانياً لتأكيد دفعتك — يستغرق حوالي دقيقة واحدة">You'll create a free account to confirm your payment — takes about a minute</div>
   </div>
 
 </div>
@@ -562,6 +597,13 @@ function toEasternArabicDigits(n){
 }
 var giveState = { boxes: 3, freq: "monthly", custom: false };
 
+// Whether there's currently at least one confirmed family still needing a
+// sponsor (food_box_public_pool already nets out families whose need is
+// already covered by pending, not-yet-matched sponsor pledges -- see
+// checkFamilyAvailability() below). Starts false (not sold out) so the
+// button behaves normally before the check resolves or if it fails.
+var faf_soldOut = false;
+
 function setFreq(f){
   giveState.freq = f;
   document.getElementById("freq-monthly").classList.toggle("on", f === "monthly");
@@ -602,6 +644,11 @@ function renderGiveCard(){
   customInput.placeholder = lang === "ar" ? "مبلغ آخر…" : "Other amount…";
   document.getElementById("customSuffix").textContent = lang === "ar" ? "صندوق" : "boxes";
 
+  var waitlistNameEl = document.getElementById("waitlistName");
+  var waitlistWaEl = document.getElementById("waitlistWhatsapp");
+  if(waitlistNameEl) waitlistNameEl.placeholder = lang === "ar" ? "اسمك" : "Your name";
+  if(waitlistWaEl) waitlistWaEl.placeholder = lang === "ar" ? "رقم واتساب" : "WhatsApp number";
+
   var boxLabelEl = document.getElementById("boxLabel");
   boxLabelEl.innerHTML = freq === "monthly"
     ? (lang === "ar" ? "عدد الصناديق شهرياً" : "Boxes per month")
@@ -634,7 +681,91 @@ function renderGiveCard(){
     ? "بالشراكة مع Together for Good Events W.L.L CR 229085، الذين يساعدون في توفير الصناديق"
     : "In partnership with Together for Good Events W.L.L CR 229085, who help provide the boxes";
   document.getElementById("giveHint").textContent = hint;
+
+  // Swaps the whole picker for a "sold out, join the waitlist" card once
+  // every confirmed family this round already has a sponsor (or enough
+  // pending, unmatched pledges to cover them) -- see
+  // checkFamilyAvailability(). Re-applied on every render so switching box
+  // count/frequency/language can't bring the picker back.
+  var picker = document.getElementById("givePicker");
+  var soldOut = document.getElementById("giveSoldOut");
+  var footerCta = document.getElementById("footerCta");
+  if(faf_soldOut){
+    if(picker) picker.style.display = "none";
+    if(soldOut) soldOut.style.display = "block";
+    if(footerCta) footerCta.style.display = "none";
+  } else {
+    if(picker) picker.style.display = "";
+    if(soldOut) soldOut.style.display = "none";
+    if(footerCta) footerCta.style.display = "";
+  }
 }
+
+// Captures a "notify me for the next distribution" waitlist entry once
+// giving is sold out. Reuses the existing sponsorships table (no schema
+// change needed) with a distinct funnel_step so it's easy to tell apart
+// from real pledges in the admin tool, and never touches matched_family_ids
+// or payment fields -- this is a contact-me request, not a sponsorship.
+function joinWaitlist(){
+  var isAr = document.body.classList.contains("lang-ar");
+  var nameEl = document.getElementById("waitlistName");
+  var waEl = document.getElementById("waitlistWhatsapp");
+  var name = (nameEl.value || "").trim();
+  var wa = (waEl.value || "").trim();
+  if(!name || wa.replace(/[^0-9]/g, "").length < 7){
+    alert(isAr ? "الرجاء إدخال الاسم ورقم واتساب صحيح" : "Please enter your name and a valid WhatsApp number");
+    return;
+  }
+  if(!window.sbClient){
+    alert(isAr ? "تعذّر الإرسال الآن. يرجى المحاولة لاحقاً." : "Couldn't submit right now. Please try again later.");
+    return;
+  }
+  var btn = document.getElementById("waitlistBtn");
+  btn.disabled = true;
+  window.sbClient
+    .from("sponsorships")
+    .insert({
+      sponsor_name: name,
+      whatsapp: wa,
+      funnel_step: "waitlist_next_round",
+      source: "web_sold_out"
+    })
+    .then(function(res){
+      if(res.error) throw res.error;
+      document.getElementById("waitlistForm").style.display = "none";
+      document.getElementById("waitlistSuccess").style.display = "block";
+    })
+    .catch(function(e){
+      console.warn("Could not save waitlist entry", e);
+      btn.disabled = false;
+      alert(isAr ? "تعذّر الإرسال الآن. يرجى المحاولة لاحقاً." : "Couldn't submit right now. Please try again later.");
+    });
+}
+
+// Checks whether any confirmed family still needs a sponsor this round.
+// food_box_public_pool (the same view the family-picker page reads from)
+// already nets out families whose need is fully covered by pending,
+// not-yet-matched sponsor pledges -- so an empty pool here means the
+// picker page would show nobody to choose, and there's no point letting
+// someone start the funnel just to hit that wall three steps later.
+// Fails open (leaves giving enabled) if the check itself can't run, same
+// as the other best-effort stats loaders on this page.
+function checkFamilyAvailability(){
+  if(!window.sbClient) return;
+  window.sbClient
+    .from("food_box_public_pool")
+    .select("id", { count: "exact", head: true })
+    .then(function(res){
+      if(res.error) throw res.error;
+      faf_soldOut = (res.count || 0) === 0;
+      renderGiveCard();
+    })
+    .catch(function(e){
+      console.warn("Could not check family availability, leaving giving enabled", e);
+    });
+}
+// Called after sbClient is created below (see loadLandingStats()) --
+// window.sbClient doesn't exist yet at this point in the file.
 
 // Restore saved language choice (defaults to English if none set) — must
 // come after renderGiveCard/giveState are defined above, since setLang()
@@ -645,6 +776,13 @@ function renderGiveCard(){
 })();
 
 async function startSponsorFlow(){
+  if(faf_soldOut){
+    var isArNow = document.body.classList.contains("lang-ar");
+    alert(isArNow
+      ? "جميع الصناديق نفدت لهذا التوزيع. يرجى التمرير لأعلى للتسجيل في قائمة الانتظار."
+      : "All boxes are sold out for this distribution. Please scroll up to join the waitlist.");
+    return;
+  }
   // Persist the chosen box count / frequency so the next step in the
   // funnel (Preferences page) can pick up where the picker left off,
   // without changing the sponsorships insert schema below.
@@ -722,6 +860,7 @@ function loadLandingStats(){
     });
 }
 loadLandingStats();
+checkFamilyAvailability();
 
 // Pledge progress bar — shows how many of the "boxes needed" figure above
 // have actually been pledged so far, computed live from confirmed (non-
