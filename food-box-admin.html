@@ -3201,9 +3201,15 @@ function getStatusBadge(sp, linkedApps) {
 
 function visibleSponsorships(filterSelId) {
   var filterVal = document.getElementById(filterSelId).value;
+  // Cancelled sponsorships (mostly abandoned-checkout "phantom" rows that
+  // never got a real sponsor name/email attached) are noise here -- they're
+  // kept in the database for the record, but shouldn't clutter the
+  // Sponsorships/Payments tabs. Filtered out regardless of the
+  // distribution filter, including "All distributions".
+  var notCancelled = allSponsorships.filter(function(sp){ return sp.payment_status !== 'cancelled'; });
   return filterVal === '__all__'
-    ? allSponsorships
-    : allSponsorships.filter(function(sp){ return (sp.distribution_event || CURRENT_DISTRIBUTION) === filterVal; });
+    ? notCancelled
+    : notCancelled.filter(function(sp){ return (sp.distribution_event || CURRENT_DISTRIBUTION) === filterVal; });
 }
 
 // ── Sponsorships tab: who's matched to whom (no money detail here) ──
