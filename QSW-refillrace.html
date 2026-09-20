@@ -808,6 +808,7 @@ function submitTeam() {
     fetch(c.url + '/rest/v1/' + c.teamsTable, {
       method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, headers()), body: JSON.stringify(record)
     }).then(r => {
+      if (r.status === 409) { resetBtn(); showNtEmailTaken(); return; }
       if (!r.ok) throw new Error();
       finishTeam(name);
       notifyMailer({ type: 'team', team: {

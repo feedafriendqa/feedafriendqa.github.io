@@ -142,7 +142,7 @@
           <label style="display:block">
             <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">CAPTAIN EMAIL</span>
             <input id="ntCaptainEmail" placeholder="captain@company.qa" style="width:100%; margin-top:5px; border:1.5px solid #d9ded6; border-radius:10px; padding:11px 12px; font-size:14px; color:#14261a; outline:none">
-            <span id="ntCaptainEmailErr" style="font-size:11.5px; color:#c0392b; display:none">Please add a valid email</span>
+            <span id="ntCaptainEmailErr" data-default-msg="Please add a valid email" style="font-size:11.5px; color:#c0392b; display:none">Please add a valid email</span>
           </label>
           <label style="display:block">
             <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">CAPTAIN WHATSAPP</span>
@@ -363,8 +363,16 @@ function collectMemberNames() {
 
 function clearNtErrors() {
   ['ntNameErr', 'ntCaptainNameErr', 'ntCaptainEmailErr', 'ntCaptainPhoneErr', 'ntMembersErr'].forEach(id => {
-    document.getElementById(id).style.display = 'none';
+    const el = document.getElementById(id);
+    el.style.display = 'none';
+    if (el.dataset.defaultMsg) el.textContent = el.dataset.defaultMsg;
   });
+}
+
+function showNtEmailTaken() {
+  const el = document.getElementById('ntCaptainEmailErr');
+  el.textContent = 'This email is already registered to a team — please use a different one';
+  el.style.display = 'inline';
 }
 
 function submitTeam() {
@@ -401,19 +409,31 @@ function submitTeam() {
     return;
   }
 
-  const record = { name: name, business: business || null, captain_name: captainName, captain_email: captainEmail, captain_phone: captainPhone, member_count: state.nt.memberCount, member_names: memberNames };
-  fetch(c.url + '/rest/v1/' + c.teamsTable, {
-    method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, headers()), body: JSON.stringify(record)
-  }).then(r => {
-    if (!r.ok) throw new Error();
-    finishTeam(name);
-    notifyMailer({ type: 'team', team: {
-      name: name, business: business || null, captainName: captainName,
-      captainEmail: captainEmail, captainPhone: captainPhone, memberCount: state.nt.memberCount,
-      memberNames: memberNames
-    }});
+  const resetBtn = () => { btn.textContent = 'Register team'; btn.style.background = '#1b7a43'; };
+
+  fetch(c.url + '/rest/v1/rpc/fridge_team_email_taken', {
+    method: 'POST', headers: headers(), body: JSON.stringify({ p_email: captainEmail })
+  }).then(r => r.ok ? r.json() : false).then(taken => {
+    if (taken === true) { resetBtn(); showNtEmailTaken(); return; }
+
+    const record = { name: name, business: business || null, captain_name: captainName, captain_email: captainEmail, captain_phone: captainPhone, member_count: state.nt.memberCount, member_names: memberNames };
+    fetch(c.url + '/rest/v1/' + c.teamsTable, {
+      method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, headers()), body: JSON.stringify(record)
+    }).then(r => {
+      if (r.status === 409) { resetBtn(); showNtEmailTaken(); return; }
+      if (!r.ok) throw new Error();
+      finishTeam(name);
+      notifyMailer({ type: 'team', team: {
+        name: name, business: business || null, captainName: captainName,
+        captainEmail: captainEmail, captainPhone: captainPhone, memberCount: state.nt.memberCount,
+        memberNames: memberNames
+      }});
+    }).catch(() => {
+      resetBtn();
+      document.getElementById('ntPostFailed').style.display = 'block';
+    });
   }).catch(() => {
-    btn.textContent = 'Register team'; btn.style.background = '#1b7a43';
+    resetBtn();
     document.getElementById('ntPostFailed').style.display = 'block';
   });
 }
