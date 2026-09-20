@@ -3454,8 +3454,15 @@ function saveSponsorshipEdits(spId) {
 
   var uploadProof = function() {
     if (!file) return Promise.resolve(null);
-    var path = spId + '/' + Date.now() + '_' + file.name;
-    return sb.storage.from('sponsorship-proofs').upload(path, file, { upsert: true }).then(function(res) {
+    // Bucket + path convention matched to the clever-responder edge
+    // function's submit_sponsorship_proof handler, which is what actually
+    // writes sponsor-submitted proofs -- they were never in the same
+    // bucket this admin code used to write/read from ("sponsorship-proofs",
+    // which sat empty), so every proof looked "missing" here even though
+    // every file was safe in "food-box-private-docs" under a
+    // "payment-proofs/<sponsorship id>/..." path the whole time.
+    var path = 'payment-proofs/' + spId + '/' + Date.now() + '_' + file.name;
+    return sb.storage.from('food-box-private-docs').upload(path, file, { upsert: true }).then(function(res) {
       if (res.error) throw new Error('Proof upload failed: ' + res.error.message);
       return path;
     });
@@ -3513,8 +3520,15 @@ function saveSponsorshipEdits(spId) {
 
 // Signed URL — bucket is private, but any authenticated session (i.e. any
 // logged-in admin) can request one directly, no edge function needed.
+// FIX: this used to point at a "sponsorship-proofs" bucket that has never
+// actually held a single file. Every real proof a sponsor has ever
+// uploaded was written by the clever-responder edge function into
+// "food-box-private-docs" (same bucket used for QID/salary/rent docs),
+// under a "payment-proofs/<sponsorship id>/..." path -- that's the bucket
+// this needs to read from too, or every proof looks "missing" even though
+// nothing was ever actually lost.
 function viewSponsorshipProof(path) {
-  sb.storage.from('sponsorship-proofs').createSignedUrl(path, 3600).then(function(res) {
+  sb.storage.from('food-box-private-docs').createSignedUrl(path, 3600).then(function(res) {
     if (res.error || !res.data) { alert('Could not open proof: ' + (res.error ? res.error.message : 'unknown error')); return; }
     window.open(res.data.signedUrl, '_blank');
   });
