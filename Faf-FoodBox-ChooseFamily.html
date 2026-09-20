@@ -103,6 +103,21 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .fam-id,body.lang-ar .surp
 .cta-btn:disabled{background:#e8e8e0;color:#bbb;cursor:not-allowed}
 .cta-hint{text-align:center;font-size:11px;color:#bbb;font-weight:700;margin-top:8px}
 
+/* ── COVER-THE-EXTRA MODAL ── */
+.cover-modal-backdrop{position:fixed;inset:0;background:rgba(11,47,32,.55);z-index:100;display:none;align-items:flex-end;justify-content:center}
+@media(min-width:640px){.cover-modal-backdrop{align-items:center}}
+.cover-modal-backdrop.show{display:flex}
+.cover-modal{width:100%;max-width:440px;background:#fff;border-radius:22px 22px 0 0;padding:24px 22px 22px;box-shadow:0 -12px 40px rgba(0,0,0,.2)}
+@media(min-width:640px){.cover-modal{border-radius:22px}}
+.cover-modal .ic{font-size:26px;margin-bottom:8px}
+.cover-modal h3{font-family:"League Spartan",sans-serif;font-size:18px;font-weight:900;color:#111;margin-bottom:8px}
+.cover-modal p{font-size:13px;color:#666;font-weight:600;line-height:1.6;margin-bottom:18px}
+.cover-modal p b{color:#1D7A47}
+.cover-modal .row{display:flex;gap:10px}
+.cover-modal button{flex:1;padding:14px 10px;border-radius:30px;border:none;font-family:"League Spartan",sans-serif;font-size:13px;font-weight:900;cursor:pointer}
+.cover-modal .btn-yes{background:#a9df49;color:#0b2f20}
+.cover-modal .btn-no{background:#f0f0ea;color:#555}
+
 </style>
 </head>
 <body>
@@ -173,6 +188,24 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .fam-id,body.lang-ar .surp
     <div class="cta-hint" id="cta-hint" data-en="Select friends to cover your box count" data-ar="اختر أصدقاء لتغطية عدد صناديقك">Select friends to cover your box count</div>
   </div>
 
+</div>
+
+<!-- Shown whenever the selected friends need more boxes than the sponsor
+     is currently giving for -- covers both a sponsor manually picking more
+     friends than they're paying for, and "Surprise me" being unable to find
+     an exact-fit combination. Never lets a friend get matched to less
+     funding than they need without the sponsor explicitly agreeing to it;
+     declining rounds the selection back down instead of overshooting. -->
+<div class="cover-modal-backdrop" id="coverModalBackdrop">
+  <div class="cover-modal">
+    <div class="ic">💛</div>
+    <h3 data-en="Cover the extra boxes?" data-ar="تغطية الصناديق الإضافية؟">Cover the extra boxes?</h3>
+    <p id="coverModalText">You've selected friends needing more boxes than you're currently giving for.</p>
+    <div class="row">
+      <button class="btn-no" onclick="resolveCoverModal(false)" data-en="No, keep my amount" data-ar="لا، أبقِ على مبلغي">No, keep my amount</button>
+      <button class="btn-yes" onclick="resolveCoverModal(true)" id="coverModalYesBtn" data-en="Yes, cover it" data-ar="نعم، سأغطيها">Yes, cover it</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -574,17 +607,17 @@ function updateCounter(){
 }
 
 // 0/1 subset-sum search: finds a combination of families whose boxesNeeded
-// add up to the smallest total >= target (an exact match if one exists),
-// instead of greedily stopping the first time a random shuffle order crosses
-// the target — which is how you'd end up with e.g. a 3-box family picked
-// over a 2-box family that would've landed on target exactly.
+// add up to the LARGEST total that does not exceed target (an exact match
+// when one exists) — never a friend matched to more boxes than the sponsor
+// is actually paying for. Only when nothing at all fits within target
+// (every available friend needs more boxes than the sponsor is giving)
+// does it fall back to the smallest possible overshoot, flagged via
+// `overshoot: true` so the caller can ask the sponsor whether they'd like
+// to cover the extra rather than silently under-funding that friend.
 function pickBestCombo(pool, target){
-  if(pool.length === 0) return [];
+  if(pool.length === 0) return { friends: [], overshoot: false };
   var maxNeeded = 0;
   for(var i = 0; i < pool.length; i++){ if(pool[i].boxesNeeded > maxNeeded) maxNeeded = pool[i].boxesNeeded; }
-  // No combo's minimal overshoot can exceed (maxNeeded - 1) above target,
-  // as long as at least one family fits — cap the search a little above that
-  // so we always have room to find an exact or near-exact total.
   var cap = target + maxNeeded;
 
   var dp = new Array(cap + 1).fill(false);
@@ -600,27 +633,33 @@ function pickBestCombo(pool, target){
     }
   }
 
-  var bestSum = -1;
-  for(var s2 = target; s2 <= cap; s2++){
-    if(dp[s2]){ bestSum = s2; break; }
-  }
-  if(bestSum === -1){
-    // Not enough total boxes in the visible pool to reach target at all —
-    // just take everything available rather than leave the sponsor short.
-    return pool.slice();
+  function buildResult(sum){
+    var result = [];
+    var s = sum;
+    while(s > 0 && parent[s]){
+      var p = parent[s];
+      result.push(pool[p.idx]);
+      s = p.prevSum;
+    }
+    return result;
   }
 
-  var result = [];
-  var s3 = bestSum;
-  while(s3 > 0 && parent[s3]){
-    var p = parent[s3];
-    result.push(pool[p.idx]);
-    s3 = p.prevSum;
+  for(var sDown = target; sDown >= 1; sDown--){
+    if(dp[sDown]) return { friends: buildResult(sDown), overshoot: false };
   }
-  return result;
+  // Nothing reachable within target at all -- smallest possible overshoot.
+  for(var sUp = target + 1; sUp <= cap; sUp++){
+    if(dp[sUp]) return { friends: buildResult(sUp), overshoot: true };
+  }
+  // Pool itself is smaller than target -- take everything, still flagged
+  // as overshoot only if it's actually more than target (it usually won't
+  // be, and this just means the visible pool ran short).
+  var all = pool.slice();
+  var allSum = all.reduce(function(s,f){ return s + f.boxesNeeded; }, 0);
+  return { friends: all, overshoot: allSum > target };
 }
 
-function surpriseMe(){
+async function surpriseMe(){
   if(poolState !== "ready" || FRIENDS.length === 0) return;
   // Clear current selection, then pick the tightest-fitting combination
   // toward targetBoxes (exact match when the pool allows one).
@@ -643,14 +682,20 @@ function surpriseMe(){
   matching.sort(function(){ return Math.random() - 0.5; });
   other.sort(function(){ return Math.random() - 0.5; });
   var pool = matching.concat(other);
-  var picks = pickBestCombo(pool, targetBoxes);
-  picks.forEach(function(f){
+  var combo = pickBestCombo(pool, targetBoxes);
+  combo.friends.forEach(function(f){
     selectedIds.push(f.id);
     document.getElementById("fam-" + f.id).classList.add("sel");
   });
   window.lastMatchWasSurprise = true;
   updateCounter();
   checkReady();
+  // Only the exact-fit/undershoot path can land here without asking --
+  // an overshoot combo means the smallest available friend(s) still need
+  // more than the pledge covers, so ask before locking them in.
+  if(combo.overshoot){
+    await resolveOverage();
+  }
   if(selectedIds.length){
     document.getElementById("fam-" + selectedIds[0]).scrollIntoView({behavior:"smooth", block:"center"});
   }
@@ -671,15 +716,73 @@ function checkReady(){
     hint.textContent = isAr
       ? (targetBoxes - picked) + " صندوق آخر للتغطية — اختر صديقاً آخر"
       : (targetBoxes - picked) + " more box" + ((targetBoxes - picked) === 1 ? "" : "es") + " to cover — pick another friend";
-  } else {
+  } else if(picked === targetBoxes){
     hint.textContent = isAr
       ? selectedIds.length + " صديق محدد — جاهز للتأكيد"
       : selectedIds.length + " friend" + (selectedIds.length === 1 ? "" : "s") + " selected — ready to confirm";
+  } else {
+    hint.textContent = isAr
+      ? "اخترت أكثر مما تعطيه — اضغط تأكيد للاختيار"
+      : "You've selected more than you're giving for — tap Confirm to decide";
   }
+}
+
+// Shows the "cover the extra?" modal and resolves once the sponsor picks
+// an answer. Returns true when it's fine to proceed as-is (no overage, or
+// the sponsor agreed to raise their gift to match); false when the
+// sponsor declined and the selection has been trimmed back down to fit
+// their original amount instead.
+var coverModalResolver = null;
+function showCoverModal(neededBoxes){
+  var isAr = document.body.classList.contains("lang-ar");
+  var extra = neededBoxes - targetBoxes;
+  var extraPrice = extra * 100;
+  var text = isAr
+    ? ("لتغطية من اخترتهم بالكامل تحتاج إلى " + neededBoxes + " صندوقاً بدلاً من " + targetBoxes + ". هل تود زيادة عطائك بـ " + extra + " صندوق إضافي (" + extraPrice + " ريال أكثر)؟")
+    : ("Fully covering the friends you've picked needs " + neededBoxes + " box" + (neededBoxes === 1 ? "" : "es") + " instead of " + targetBoxes + ". Would you like to increase your gift by " + extra + " box" + (extra === 1 ? "" : "es") + " (QAR " + extraPrice + " more)?");
+  document.getElementById("coverModalText").textContent = text;
+  document.getElementById("coverModalBackdrop").classList.add("show");
+  return new Promise(function(resolve){ coverModalResolver = resolve; });
+}
+function resolveCoverModal(yes){
+  document.getElementById("coverModalBackdrop").classList.remove("show");
+  if(coverModalResolver){
+    var r = coverModalResolver;
+    coverModalResolver = null;
+    r(yes);
+  }
+}
+async function resolveOverage(){
+  var picked = totalPicked();
+  if(picked <= targetBoxes) return true;
+  var wantsToCover = await showCoverModal(picked);
+  if(wantsToCover){
+    targetBoxes = picked;
+    prefs = Object.assign({}, prefs, { boxCount: targetBoxes });
+    sessionStorage.setItem("faf_prefs", JSON.stringify(prefs));
+    renderRecap();
+    updateCounter();
+    checkReady();
+    return true;
+  }
+  // Declined -- round down, not up: drop the most recently added friends
+  // until the total no longer exceeds what they're actually paying for,
+  // rather than leaving anyone matched to more than their sponsor covers.
+  while(selectedIds.length && totalPicked() > targetBoxes){
+    var droppedId = selectedIds.pop();
+    var card = document.getElementById("fam-" + droppedId);
+    if(card) card.classList.remove("sel");
+  }
+  updateCounter();
+  checkReady();
+  return false;
 }
 
 async function confirmChoice(){
   if(selectedIds.length === 0) return;
+
+  var proceed = await resolveOverage();
+  if(!proceed) return; // trimmed back down after declining to cover the extra -- let them review and confirm again
 
   var btn = document.getElementById("continue-btn");
   var hint = document.getElementById("cta-hint");
@@ -743,7 +846,12 @@ async function confirmChoice(){
         .update({
           matched_family_ids: selectedIds,
           match_method: matchMethod,
-          funnel_step: "family_chosen"
+          funnel_step: "family_chosen",
+          // box_count may have gone up if the sponsor agreed to cover the
+          // extra via the "cover the extra?" prompt (see resolveOverage())
+          // -- keep the payment amount in sync with what they're actually
+          // now committing to.
+          box_count: targetBoxes
         })
         .eq("id", sponsorshipId);
     }
