@@ -490,7 +490,16 @@ select.edit-field{cursor:pointer;}
       <div class="filters">
         <label style="font-size:13px;font-weight:700;color:var(--muted);">Distribution:</label>
         <select id="distribution-filter" class="filter-btn" style="padding:8px 12px;" onchange="renderPaymentCards()"></select>
-        <button class="btn-comment" style="background:white;color:var(--red);border:1.5px solid var(--red);" onclick="clearDistribution()">🗑 Clear this distribution</button>
+        <label style="font-size:13px;font-weight:700;color:var(--muted);margin-left:8px;">Status:</label>
+        <select id="payment-status-filter" class="filter-btn" style="padding:8px 12px;" onchange="renderPaymentCards()">
+          <option value="__all__">All</option>
+          <option value="pending_payment">⏳ Pending payment</option>
+          <option value="proof_uploaded">⏳ Proof uploaded</option>
+          <option value="payment_received">✅ Payment received (awaiting confirm)</option>
+          <option value="confirmed">✅ Confirmed</option>
+          <option value="discrepancy">⚠️ Discrepancy</option>
+          <option value="rejected">✖ Rejected</option>
+        </select>
       </div>
       <div id="payments-loading" class="loading"><div class="spinner-lg"></div>Loading payments…</div>
       <div id="payments-cards"></div>
@@ -1614,11 +1623,14 @@ function renderModal(app, members, urlMap) {
       if (app.is_sponsored) {
         body += '<div style="font-size:12px;color:var(--green-dark);font-weight:800;margin-top:10px;">✅ Confirmed sponsored on ' + (app.sponsored_at ? new Date(app.sponsored_at).toLocaleDateString('en-GB') : '–') + '</div>';
         body += '<button class="btn-comment" style="margin-top:8px;background:white;color:var(--orange);border:1.5px solid var(--orange);" onclick="undoSponsorshipConfirmation(\''+app.id+'\')">↩ Undo confirmation</button>';
-      } else {
+      } else if (sp.payment_status === 'payment_received') {
         body += '<div style="display:flex;gap:8px;margin-top:12px;">';
-        body += '<button class="btn-comment" style="flex:1;background:var(--green);color:white;" onclick="confirmSponsorshipPayment(\''+app.id+'\')">✅ Confirm payment received</button>';
+        body += '<button class="btn-comment" style="flex:1;background:var(--green);color:white;" onclick="confirmSponsorshipPayment(\''+app.id+'\')">✅ Confirm sponsorship</button>';
         body += '<button class="btn-comment" style="flex:1;background:white;color:var(--red);border:1.5px solid var(--red);" onclick="releaseSponsorship(\''+app.id+'\')">✖ Release / reject</button>';
         body += '</div>';
+      } else {
+        body += '<div style="font-size:12px;color:var(--orange);background:#FFF8E6;border:1px solid #F5C330;border-radius:8px;padding:10px 12px;margin-top:10px;">⏳ Payment not yet matched in the Payments CRM (currently "' + (sp.payment_status ? sp.payment_status.replace(/_/g,' ') : '–') + '"). Match it against the bank statement there first — this only becomes confirmable here once it shows Payment Received.</div>';
+        body += '<button class="btn-comment" style="margin-top:8px;background:white;color:var(--red);border:1.5px solid var(--red);" onclick="releaseSponsorship(\''+app.id+'\')">✖ Release / reject</button>';
       }
     }
     body += accEnd;
@@ -3190,16 +3202,32 @@ function getFamilyHtml(sp) {
   return { linkedApps: linkedApps, html: html, boxesAllocated: boxesAllocated };
 }
 
-function getStatusBadge(sp, linkedApps) {
-  if (linkedApps.some(function(a){ return a.is_sponsored; })) {
-    return '<span class="accordion-count" style="background:var(--green);color:white;">✅ Confirmed</span>';
-  } else if (sp.payment_status === 'rejected') {
-    return '<span class="accordion-count" style="background:var(--red);color:white;">✖ Rejected</span>';
-  }
-  return '<span class="accordion-count" style="background:var(--orange);color:white;">⏳ ' + (sp.payment_status ? sp.payment_status.replace(/_/g,' ') : 'pending payment') + '</span>';
+// Single source of truth for "where does this sponsorship actually stand" --
+// used by both the status badge and the Payments tab's status filter, so the
+// two can never disagree with each other.
+function statusOf(sp, linkedApps) {
+  if (linkedApps.some(function(a){ return a.is_sponsored; })) return 'confirmed';
+  if (sp.payment_status === 'rejected') return 'rejected';
+  if (sp.payment_status === 'payment_received') return 'payment_received';
+  return sp.payment_status || 'pending_payment';
 }
 
-function visibleSponsorships(filterSelId) {
+function getStatusBadge(sp, linkedApps) {
+  var status = statusOf(sp, linkedApps);
+  if (status === 'confirmed') {
+    return '<span class="accordion-count" style="background:var(--green);color:white;">✅ Confirmed</span>';
+  } else if (status === 'rejected') {
+    return '<span class="accordion-count" style="background:var(--red);color:white;">✖ Rejected</span>';
+  } else if (status === 'payment_received') {
+    // Matched to a real bank transaction in the Payments CRM already -- this
+    // is good news (money's in), just waiting on the family-match confirm
+    // here, so it gets the green tick, not the orange "still waiting" look.
+    return '<span class="accordion-count" style="background:var(--green);color:white;">✅ Payment received</span>';
+  }
+  return '<span class="accordion-count" style="background:var(--orange);color:white;">⏳ ' + status.replace(/_/g,' ') + '</span>';
+}
+
+function visibleSponsorships(filterSelId, statusFilterSelId) {
   var filterVal = document.getElementById(filterSelId).value;
   // Cancelled sponsorships (mostly abandoned-checkout "phantom" rows that
   // never got a real sponsor name/email attached) are noise here -- they're
@@ -3207,9 +3235,17 @@ function visibleSponsorships(filterSelId) {
   // Sponsorships/Payments tabs. Filtered out regardless of the
   // distribution filter, including "All distributions".
   var notCancelled = allSponsorships.filter(function(sp){ return sp.payment_status !== 'cancelled'; });
-  return filterVal === '__all__'
+  var byDistribution = filterVal === '__all__'
     ? notCancelled
     : notCancelled.filter(function(sp){ return (sp.distribution_event || CURRENT_DISTRIBUTION) === filterVal; });
+
+  var statusEl = statusFilterSelId ? document.getElementById(statusFilterSelId) : null;
+  var statusVal = statusEl ? statusEl.value : '__all__';
+  if (!statusEl || statusVal === '__all__') return byDistribution;
+  return byDistribution.filter(function(sp) {
+    var linkedApps = allApps.filter(function(a){ return a.sponsorship_id === sp.id; });
+    return statusOf(sp, linkedApps) === statusVal;
+  });
 }
 
 // ── Sponsorships tab: who's matched to whom (no money detail here) ──
@@ -3340,10 +3376,14 @@ function renderSponsorshipCards() {
 // ── Payments tab: money detail, proof review, and confirm/release actions ──
 function renderPaymentCards() {
   document.getElementById('payments-loading').style.display = 'none';
-  var visible = visibleSponsorships('distribution-filter');
+  var visible = visibleSponsorships('distribution-filter', 'payment-status-filter');
   var wrap = document.getElementById('payments-cards');
   if (!visible.length) {
     wrap.innerHTML = '';
+    var statusFilterVal = document.getElementById('payment-status-filter').value;
+    document.getElementById('payments-empty').textContent = statusFilterVal === '__all__'
+      ? 'No sponsorships yet.'
+      : 'No sponsorships match this status for the selected distribution.';
     document.getElementById('payments-empty').style.display = '';
     renderPaymentSummary();
     return;
@@ -3358,8 +3398,11 @@ function renderPaymentCards() {
     if (primaryApp) {
       if (primaryApp.is_sponsored) {
         actionsHtml += '<button class="btn-comment" style="background:white;color:var(--orange);border:1.5px solid var(--orange);padding:6px 10px;font-size:12px;" onclick="undoSponsorshipConfirmation(\'' + primaryApp.id + '\')">↩ Undo</button>';
-      } else {
+      } else if (sp.payment_status === 'payment_received') {
         actionsHtml += '<button class="btn-comment" style="background:var(--green);color:white;padding:6px 10px;font-size:12px;" onclick="confirmSponsorshipPayment(\'' + primaryApp.id + '\')">✅ Confirm</button>' +
+          '<button class="btn-comment" style="background:white;color:var(--red);border:1.5px solid var(--red);padding:6px 10px;font-size:12px;" onclick="releaseSponsorship(\'' + primaryApp.id + '\')">✖ Release</button>';
+      } else {
+        actionsHtml += '<span style="font-size:11px;color:var(--orange);font-weight:700;">⏳ Not yet matched in Payments CRM</span> ' +
           '<button class="btn-comment" style="background:white;color:var(--red);border:1.5px solid var(--red);padding:6px 10px;font-size:12px;" onclick="releaseSponsorship(\'' + primaryApp.id + '\')">✖ Release</button>';
       }
     }
@@ -3390,12 +3433,15 @@ function renderPaymentCards() {
 }
 
 // ── SPONSORSHIP EDIT MODAL ──
-// Lets the admin change ANY field, including payment_status directly
-// (not just via the Confirm/Release/Undo shortcuts), upload a payment
-// proof, and re-tag which distribution this sponsorship belongs to.
-// Changing payment_status here keeps the linked case's is_sponsored flag
-// in sync, exactly like the three dedicated functions below do, so the
-// public pool and CRM stats never fall out of step with this modal.
+// Lets the admin change most fields directly -- ref number, sponsor
+// details, amount, distribution, proof -- without going through the
+// Confirm/Release/Undo shortcuts. Payment status is the one field this
+// modal does NOT let staff set to "payment received": that value is owned
+// entirely by the Payments CRM, which only sets it once a sponsor's proof
+// is matched to a real bank transaction (see confirmSponsorshipPayment's
+// comment for why). Staff can still correct a mis-set status among the
+// other four values (e.g. rolling a wrong "discrepancy" back to "proof
+// uploaded"), just not manufacture "payment received" from here.
 function openSpEditModal(spId) {
   var sp = allSponsorships.find(function(s){ return s.id === spId; });
   if (!sp) return;
@@ -3403,9 +3449,24 @@ function openSpEditModal(spId) {
   var sf = function(id,v){ return '<input class="edit-field" id="'+id+'" value="'+(v||'').toString().replace(/"/g,'&quot;')+'">'; };
   var sn = function(id,v){ return '<input class="edit-field" type="number" id="'+id+'" value="'+(v!=null&&v!==''?v:'')+'">'; };
   var di = function(lbl,html){ return '<div class="detail-item" style="margin-bottom:10px;"><div class="lbl">'+lbl+'</div>'+html+'</div>'; };
-  var statusOptions = ['pending_payment','proof_uploaded','payment_received','discrepancy','rejected'].map(function(s){
-    return '<option value="'+s+'"'+(sp.payment_status===s?' selected':'')+'>'+s.replace(/_/g,' ')+'</option>';
-  }).join('');
+  var alreadyReceived = sp.payment_status === 'payment_received';
+  var editableStatuses = ['pending_payment','proof_uploaded','discrepancy','rejected'];
+  var paymentStatusField;
+  if (alreadyReceived) {
+    // Don't offer a dropdown that could silently downgrade a real bank
+    // match just because someone hit Save on an unrelated field edit --
+    // show it as read-only instead, with the actual value still submitted.
+    paymentStatusField = '<input class="edit-field" value="payment received (matched in Payments CRM)" disabled style="background:#F0FDF4;color:var(--green-dark);font-weight:700;">' +
+      '<input type="hidden" id="spe-payment_status" value="payment_received">' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:4px;">To un-match this, use the Payments CRM — not this form.</div>';
+  } else {
+    var statusOptions = editableStatuses.map(function(s){
+      return '<option value="'+s+'"'+(sp.payment_status===s?' selected':'')+'>'+s.replace(/_/g,' ')+'</option>';
+    }).join('');
+    paymentStatusField = '<select class="edit-field" id="spe-payment_status">' + statusOptions + '</select>' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:4px;">"Payment received" isn\'t settable here — it\'s set automatically once the Payments CRM matches this sponsor\'s proof to a real bank transaction.' +
+      (!linkedApp ? ' No case is currently matched either.' : '') + '</div>';
+  }
   var proofRow = sp.proof_path
     ? '<a onclick="viewSponsorshipProof(\''+sp.proof_path.replace(/'/g,"\\'")+'\')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;">📎 View current proof</a> &nbsp;'
     : '<span style="color:var(--muted);font-size:12px;">No proof uploaded yet</span>';
@@ -3418,8 +3479,7 @@ function openSpEditModal(spId) {
   body += di('Boxes pledged', sn('spe-box_count', sp.box_count));
   body += di('Amount (QAR)', sn('spe-amount', sp.amount));
   body += di('Payment method', sf('spe-payment_method', sp.payment_method));
-  body += di('Payment status', '<select class="edit-field" id="spe-payment_status">' + statusOptions + '</select>' +
-    (!linkedApp ? '<div style="font-size:11px;color:var(--muted);margin-top:4px;">No case currently matched — status will be saved here only.</div>' : ''));
+  body += di('Payment status', paymentStatusField);
   body += di('Payment proof', proofRow + '<input type="file" id="spe-proof-file" accept="image/*,application/pdf" style="margin-top:8px;display:block;">');
   body += '<div style="display:flex;gap:8px;margin-top:16px;">';
   body += '<button class="btn-comment" style="flex:1;background:var(--green);color:white;" onclick="saveSponsorshipEdits(\''+sp.id+'\')">💾 Save changes</button>';
@@ -3543,54 +3603,35 @@ function viewSponsorshipProof(path) {
 // otherwise those cases would stay invisible to the public pool forever
 // (sponsorship_id would point at a row that no longer exists). Scoped to
 // whichever event is selected in the dropdown, never "everything ever".
-function clearDistribution() {
-  var sel = document.getElementById('distribution-filter');
-  var target = sel.value;
-  if (target === '__all__') { alert('Pick a specific distribution first — this won\'t clear "All distributions" at once.'); return; }
-  var toDelete = allSponsorships.filter(function(sp){ return (sp.distribution_event || CURRENT_DISTRIBUTION) === target; });
-  if (!toDelete.length) { alert('Nothing to clear for "' + target + '".'); return; }
-  var typed = prompt('This permanently deletes all ' + toDelete.length + ' sponsorship record(s) for "' + target + '" and frees their matched families back into the public pool. This cannot be undone.\n\nType CLEAR to confirm:');
-  if (typed !== 'CLEAR') return;
-
-  var ids = toDelete.map(function(sp){ return sp.id; });
-  var linkedAppIds = allApps.filter(function(a){ return ids.indexOf(a.sponsorship_id) !== -1; }).map(function(a){ return a.id; });
-
-  apiHeadersAsync().then(function(headers) {
-    var resetPromise = linkedAppIds.length
-      ? fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=in.(' + linkedAppIds.join(',') + ')', {
-          method: 'PATCH', headers: headers,
-          body: JSON.stringify({ is_sponsored: false, sponsored_at: null, sponsorship_id: null, reserved_until: null, reserved_by_sponsorship_id: null })
-        })
-      : Promise.resolve({ ok: true });
-    return resetPromise.then(function(r) {
-      if (!r.ok) throw new Error('Could not reset linked cases (status ' + r.status + ')');
-      return fetch(SUPABASE_URL + '/rest/v1/sponsorships?id=in.(' + ids.join(',') + ')', {
-        method: 'DELETE', headers: headers
-      });
-    });
-  }).then(function(r) {
-    if (!r.ok) throw new Error('Delete failed (status ' + r.status + ')');
-    linkedAppIds.forEach(function(id) {
-      var a = allApps.find(function(x){ return x.id === id; });
-      if (a) { a.is_sponsored = false; a.sponsored_at = null; a.sponsorship_id = null; }
-    });
-    allSponsorships = allSponsorships.filter(function(sp){ return ids.indexOf(sp.id) === -1; });
-    populateDistributionFilter();
-    refreshSponsorshipViews();
-    alert('Cleared "' + target + '".');
-  }).catch(function(e){ alert('Clear failed: ' + e.message); });
-}
-
 // ── SPONSORSHIP CONFIRMATION (super admin only) ──
-// These three only ever touch food_box_applications.is_sponsored/sponsored_at
-// and the matching sponsorships.payment_status — never the funnel's claim
-// itself (sponsorship_id), except releaseSponsorship which intentionally
-// frees the family back into the public pool.
+// confirmSponsorshipPayment only ever touches
+// food_box_applications.is_sponsored/sponsored_at -- it does NOT set
+// sponsorships.payment_status any more. "Payment received" is now owned
+// entirely by the Payments CRM (accounts-admin.html), which only sets it
+// once a sponsor's proof is actually matched to a real line in a bank
+// statement. This button used to be able to mark a sponsorship "paid" on
+// its own, purely on a staff member's say-so here in Food Box, with no bank
+// match behind it at all -- money that would then never show up in the
+// Payments CRM's income/P&L. So it now requires payment_status to already
+// be 'payment_received' (i.e. matched in the Payments CRM) before it will
+// do anything; it only confirms the family<->sponsor match at that point.
+// releaseSponsorship still intentionally frees the family back into the
+// public pool and marks the sponsorship 'rejected' on cancellation -- that
+// direction never creates phantom income, so it's unchanged.
 function confirmSponsorshipPayment(id) {
   if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
   var app = allApps.find(function(a){return a.id===id;});
   if (!app || !app.sponsorship_id) return;
-  if (!confirm('Confirm payment received for this sponsorship? This marks the family as sponsored.')) return;
+  var sp = currentSponsorship && currentSponsorship.id === app.sponsorship_id
+    ? currentSponsorship
+    : allSponsorships.find(function(s){ return s.id === app.sponsorship_id; });
+  if (!sp || sp.payment_status !== 'payment_received') {
+    alert('This sponsorship hasn\'t been matched to a bank transaction in the Payments CRM yet (currently "' +
+      (sp && sp.payment_status ? sp.payment_status.replace(/_/g,' ') : 'unknown') +
+      '"). Go match it against the bank statement in accounts-admin.html first -- once it shows Payment Received there, it can be confirmed here.');
+    return;
+  }
+  if (!confirm('Payment for this sponsorship is confirmed in the Payments CRM. Mark the family as sponsored?')) return;
   apiHeadersAsync().then(function(headers) {
     return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
       method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
@@ -3603,15 +3644,6 @@ function confirmSponsorshipPayment(id) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
     app.is_sponsored = true;
     app.sponsored_at = rows[0].sponsored_at;
-    // Best-effort — the family-side flag above is what actually matters for
-    // the public pool; if this second write fails we don't want to block on it.
-    apiHeadersAsync().then(function(headers2) {
-      return fetch(SUPABASE_URL + '/rest/v1/sponsorships?id=eq.' + app.sponsorship_id, {
-        method: 'PATCH', headers: headers2,
-        body: JSON.stringify({ payment_status: 'payment_received' })
-      });
-    }).catch(function(){});
-    if (currentSponsorship) currentSponsorship.payment_status = 'payment_received';
     renderModal(app, currentMembers, currentDocUrlMap);
     refreshSponsorshipViews();
   }).catch(function(e){ alert('Update failed: ' + e.message); });
@@ -3652,7 +3684,7 @@ function undoSponsorshipConfirmation(id) {
   if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
   var app = allApps.find(function(a){return a.id===id;});
   if (!app) return;
-  if (!confirm('Undo the sponsorship confirmation? The family stays matched to this sponsor but goes back to "pending payment".')) return;
+  if (!confirm('Undo the sponsorship confirmation? The family stays matched to this sponsor; the sponsor\'s payment status is untouched (that\'s owned by the Payments CRM).')) return;
   apiHeadersAsync().then(function(headers) {
     return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
       method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers),
@@ -3664,15 +3696,10 @@ function undoSponsorshipConfirmation(id) {
   }).then(function(rows) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
     app.is_sponsored = false; app.sponsored_at = null;
-    if (app.sponsorship_id) {
-      apiHeadersAsync().then(function(headers2) {
-        return fetch(SUPABASE_URL + '/rest/v1/sponsorships?id=eq.' + app.sponsorship_id, {
-          method: 'PATCH', headers: headers2,
-          body: JSON.stringify({ payment_status: 'pending_payment' })
-        });
-      }).catch(function(){});
-      if (currentSponsorship) currentSponsorship.payment_status = 'pending_payment';
-    }
+    // Deliberately does NOT touch sponsorships.payment_status -- undoing the
+    // family-match confirmation here has no bearing on whether the money
+    // actually arrived, which is what payment_status records. If the payment
+    // needs to be un-matched too, that's done from the Payments CRM.
     renderModal(app, currentMembers, currentDocUrlMap);
     refreshSponsorshipViews();
   }).catch(function(e){ alert('Update failed: ' + e.message); });
