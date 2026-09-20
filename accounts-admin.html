@@ -92,7 +92,7 @@ tr:hover td{background:#fafcfa;}
 .amt.in{color:var(--forest);}
 .amt.out{color:var(--red);}
 .badge{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:4px 9px;border-radius:20px;white-space:nowrap;}
-.badge-unmatched{background:#FFFBF0;color:#a07800;}
+.badge-unmatched{background:var(--red);color:#fff;}
 .badge-needs_review{background:#fde8e8;color:#a83232;}
 .badge-matched{background:#F0FDF5;color:var(--forest);}
 .badge-categorized{background:#e5eefc;color:#2c5aa8;}
@@ -510,35 +510,55 @@ async function loadTransactions(){
   }
 }
 
+var STATUS_LABELS = {
+  matched: "✓ Matched",
+  unmatched: "Unmatched",
+  needs_review: "Needs review",
+  categorized: "Categorized",
+  unknown: "Unknown"
+};
 function renderRow(r){
   var amt = fmtAmt(r.amount);
   var isIncome = Number(r.amount) > 0;
-  var badge = '<span class="badge badge-' + r.match_status + '">' + r.match_status.replace("_"," ") + '</span>';
+  var badge = '<span class="badge badge-' + r.match_status + '">' + (STATUS_LABELS[r.match_status] || r.match_status.replace("_"," ")) + '</span>';
 
+  // A sponsor-matched line and an event tag aren't mutually exclusive — show
+  // both when present, since a matched sponsor payment should also carry the
+  // distribution event it belongs to.
   var matchCell = "";
   if(r.accounts_events){
     var ev = r.accounts_events;
-    matchCell = '<div class="matched-to">' + escapeHtml(ev.name) +
+    matchCell += '<div class="matched-to">' + escapeHtml(ev.name) +
       '<br><span style="font-weight:400;color:var(--muted-2)">' + (ev.project ? escapeHtml(ev.project) : "") + (ev.event_date ? " · " + ev.event_date : "") + '</span></div>';
   } else if(r.project){
-    matchCell = '<div class="matched-to">' + escapeHtml(r.project) + (r.event ? '<br><span style="font-weight:400;color:var(--muted-2)">' + escapeHtml(r.event) + '</span>' : '') + '</div>';
-  } else if(r.sponsorships){
-    matchCell = '<div class="matched-to">Sponsor: <b>' + (r.sponsorships.sponsor_name||"") + '</b><br>' + (r.sponsorships.ref_no||"") + '</div>';
-  } else if(r.category){
+    matchCell += '<div class="matched-to">' + escapeHtml(r.project) + (r.event ? '<br><span style="font-weight:400;color:var(--muted-2)">' + escapeHtml(r.event) + '</span>' : '') + '</div>';
+  }
+  if(r.sponsorships){
+    matchCell += '<div class="matched-to" style="margin-top:' + (matchCell ? '4px' : '0') + '">Sponsor: <b>' + escapeHtml(r.sponsorships.sponsor_name||"") + '</b><br>' + escapeHtml(r.sponsorships.ref_no||"") + '</div>';
+  } else if(!matchCell && r.category){
     var cat = CATEGORY_LABELS[r.category];
     matchCell = '<div class="matched-to">' + (cat ? cat.label : r.category) + '</div>';
-  } else {
-    matchCell = '<span style="color:var(--muted-2);font-size:12px">—</span>';
   }
+  if(!matchCell){ matchCell = '<span style="color:var(--muted-2);font-size:12px">—</span>'; }
   if(r.notes){ matchCell += '<div class="notes-badge">' + escapeHtml(r.notes) + '</div>'; }
 
-  var receiptCell = r.receipt_path
-    ? '<a href="javascript:void(0)" class="receipt-link" onclick="viewReceipt(\'' + r.receipt_path + '\')">View</a>'
-    : '<label class="receipt-link" style="cursor:pointer">Upload<input type="file" style="display:none" onchange="handleReceiptUpload(this,\'' + r.id + '\')"></label>';
+  // A matched sponsor payment already has the sponsor's own proof-of-payment
+  // screenshot on file (sponsorships.proof_path) — show that instead of
+  // asking staff to upload a duplicate receipt for money that's already
+  // evidenced. A manual receipt upload still applies to everything else
+  // (expenses, unmatched/categorized income with no sponsor proof).
+  var receiptCell;
+  if(r.receipt_path){
+    receiptCell = '<a href="javascript:void(0)" class="receipt-link" onclick="viewReceipt(\'' + r.receipt_path + '\')">View</a>';
+  } else if(r.sponsorships && r.sponsorships.proof_path){
+    receiptCell = '<a href="javascript:void(0)" class="receipt-link" onclick="viewReceipt(\'' + r.sponsorships.proof_path + '\')">View proof</a>';
+  } else {
+    receiptCell = '<label class="receipt-link" style="cursor:pointer">Upload<input type="file" style="display:none" onchange="handleReceiptUpload(this,\'' + r.id + '\')"></label>';
+  }
 
   var actions = '<div class="row-actions">';
   actions += '<button class="btn ghost small" onclick="openEventModal(\'' + r.id + '\')">' + (r.accounts_events ? "Edit event" : "Assign event") + '</button>';
-  if(isIncome){
+  if(isIncome && !r.sponsorships){
     actions += '<button class="btn ghost small" onclick="openSponsorMatch(\'' + r.id + '\')">Match sponsor</button>';
   }
   actions += '<select onchange="if(this.value) categorize(\'' + r.id + '\', this.value)"><option value="">Categorize…</option>' +
@@ -546,6 +566,7 @@ function renderRow(r){
   if(r.match_status !== "unknown"){
     actions += '<button class="btn ghost small" onclick="flagUnknown(\'' + r.id + '\')">Flag unknown</button>';
   }
+  actions += '<button class="btn ghost small" title="Add or edit a note on this transaction" onclick="editNote(\'' + r.id + '\', ' + JSON.stringify(r.notes || "") + ')">📝 Note</button>';
   actions += '</div>';
 
   return '<tr>' +
@@ -627,6 +648,16 @@ async function createAndAssignEvent(){
 async function flagUnknown(lineId){
   var notes = prompt("Optional note about why this is unknown:");
   try { await callFn(ADMIN_FN_URL, { type: "flag_unknown", line_id: lineId, notes: notes || null }); loadTransactions(); loadSummary(); }
+  catch(e){ alert("Failed: " + e.message); }
+}
+// A plain comment on a line, separate from "Flag unknown" — Flag unknown
+// changes the row's status to say we don't know what this transaction is;
+// this is just a note (e.g. "waiting on Alliyah to confirm", "second box
+// sponsorship") that doesn't touch match_status, category or event.
+async function editNote(lineId, existingNote){
+  var notes = prompt("Note for this transaction:", existingNote || "");
+  if(notes === null) return;
+  try { await callFn(ADMIN_FN_URL, { type: "set_notes", line_id: lineId, notes: notes }); loadTransactions(); }
   catch(e){ alert("Failed: " + e.message); }
 }
 async function openSponsorMatch(lineId){
