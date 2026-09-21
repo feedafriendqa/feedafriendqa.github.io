@@ -874,7 +874,21 @@ async function saveProfile(){
 async function init(){
   if(!sb){setHero("login");showV("v-login");return;}
   sb.auth.onAuthStateChange(async function(ev,sess){
-    if(ev==="SIGNED_IN"&&sess){CU=sess.user;await loadDriver();}
+    if(ev==="SIGNED_IN"&&sess){
+      // supabase-js can re-fire "SIGNED_IN" for a session we already have
+      // fully loaded and on-screen — most commonly right after a tab
+      // resumes from background (e.g. coming back from the Maps/WhatsApp
+      // links below), as part of its own internal token-refresh check.
+      // loadDriver() starts with showV("v-loading"), which used to yank
+      // the driver back to a full loading screen — and re-run every
+      // network call it makes — over whatever they were actually looking
+      // at, every single time this fired. If it's the same driver we've
+      // already loaded, there's nothing to do; just keep the reference to
+      // the (possibly refreshed) session and leave the current screen alone.
+      var already=CU&&DP&&CU.id===sess.user.id;
+      CU=sess.user;
+      if(!already)await loadDriver();
+    }
     else if(ev==="SIGNED_OUT"){
       if(INTENTIONAL_SIGNOUT){
         INTENTIONAL_SIGNOUT=false;
