@@ -245,8 +245,8 @@ body.lang-ar .icon-card{text-align:right;flex-direction:row-reverse}
 
   <div class="progress-wrap" id="progress-wrap" style="display:none">
     <div class="progress-top">
-      <div class="big"><b id="progress-delivered">0</b> <span data-en="of" data-ar="من">of</span> <span id="progress-needed-1">0</span> <span data-en="boxes delivered" data-ar="صندوقاً تم توصيلها">boxes delivered</span></div>
-      <div class="small"><span id="progress-remaining">0</span> <span data-en="to go" data-ar="متبقي">to go</span></div>
+      <div class="big"><b id="progress-signedup">0</b> <span data-en="of" data-ar="من">of</span> <span id="progress-needed-1">0</span> <span data-en="boxes have a distributor" data-ar="صندوقاً لديها موزّع">boxes have a distributor</span></div>
+      <div class="small"><span id="progress-remaining">0</span> <span data-en="slots left" data-ar="مقاعد متبقية">slots left</span></div>
     </div>
     <div class="bar-track"><div class="bar-fill" id="progress-bar-fill" style="width:0%"></div></div>
   </div>
@@ -342,58 +342,68 @@ function loadDriverStats(){
   if(!window.sbClient) return;
   window.sbClient
     .from("driver_landing_stats")
-    .select("boxes_to_deliver,boxes_delivered,friends_supported")
+    .select("boxes_delivered,friends_supported")
     .single()
     .then(function(res){
       if(res.error || !res.data) throw res.error || new Error("no data");
-      setStatValue("stat-boxes-deliver", res.data.boxes_to_deliver);
       setStatValue("stat-boxes-delivered", res.data.boxes_delivered);
       setStatValue("stat-friends-supported", res.data.friends_supported);
     })
     .catch(function(e){
       console.warn("Could not load driver stats, keeping placeholder", e);
     });
+  // "Boxes to deliver" / "Friends need food" tiles show the FIXED whole-
+  // distribution round target (boxes_needed / friends_total from
+  // food_box_landing_stats) — the same 235/732-style numbers used as the
+  // target on the sponsor page's pledge bar — not the narrower "already
+  // matched to a volunteer, not yet delivered" slice driver_landing_stats
+  // used to supply here.
   window.sbClient
     .from("food_box_landing_stats")
-    .select("boxes_needed,friends_need_food")
+    .select("boxes_needed,friends_total")
     .single()
     .then(function(res){
       if(res.error || !res.data) throw res.error || new Error("no data");
-      setStatValue("stat-friends", res.data.friends_need_food);
-      loadDeliveryProgress(res.data.boxes_needed);
+      setStatValue("stat-boxes-deliver", res.data.boxes_needed);
+      setStatValue("stat-friends", res.data.friends_total);
     })
     .catch(function(e){
-      console.warn("Could not load friends-need-food stat, keeping placeholder", e);
+      console.warn("Could not load round-total stats, keeping placeholder", e);
     });
+  loadDistributorProgress();
 }
 loadDriverStats();
 
-// Delivery progress bar — of the fixed "boxes needed" target for the whole
-// distribution (same 235-style number used on the sponsor page's pledge
-// bar), how many have actually been delivered so far vs. still outstanding.
-// boxesNeeded is the fixed round target (food_box_landing_stats.boxes_needed);
-// delivered comes from food_box_delivered_public, a dedicated postgres-owned
-// aggregate view (same pattern as food_box_pledged_public) so an anonymous
-// visitor can read the total without exposing individual family rows.
-function loadDeliveryProgress(boxesNeeded){
-  if(!window.sbClient || !boxesNeeded) return;
+// Distributor progress bar — NOT about sponsorship. Self-delivery sponsors
+// deliver their own box and never need a distributor; only boxes whose
+// sponsor chose volunteer delivery (sponsorships.delivery_method = 'vol')
+// need one. Of that volunteer-delivery pool for this round, how many boxes
+// already have a distributor lined up (a trip_assignments row exists) vs.
+// how many still have no one assigned. Backed by food_box_distributor_needed_public,
+// a dedicated postgres-owned aggregate view (same pattern as the other
+// *_public views) so an anonymous visitor can read the total without
+// exposing individual family/sponsor rows.
+function loadDistributorProgress(){
+  if(!window.sbClient) return;
   window.sbClient
-    .from("food_box_delivered_public")
-    .select("boxes_delivered")
+    .from("food_box_distributor_needed_public")
+    .select("boxes_needing_distributor,boxes_assigned")
     .single()
     .then(function(res){
       if(res.error || !res.data) throw res.error || new Error("no data");
-      var delivered = res.data.boxes_delivered || 0;
-      var remaining = Math.max(boxesNeeded - delivered, 0);
-      var pct = Math.min(Math.round((delivered / boxesNeeded) * 100), 100);
-      document.getElementById("progress-delivered").textContent = delivered.toLocaleString();
-      document.getElementById("progress-needed-1").textContent = boxesNeeded.toLocaleString();
+      var needed = res.data.boxes_needing_distributor || 0;
+      var assigned = res.data.boxes_assigned || 0;
+      if(!needed) return;
+      var remaining = Math.max(needed - assigned, 0);
+      var pct = Math.min(Math.round((assigned / needed) * 100), 100);
+      document.getElementById("progress-signedup").textContent = assigned.toLocaleString();
+      document.getElementById("progress-needed-1").textContent = needed.toLocaleString();
       document.getElementById("progress-remaining").textContent = remaining.toLocaleString();
       document.getElementById("progress-bar-fill").style.width = pct + "%";
       document.getElementById("progress-wrap").style.display = "block";
     })
     .catch(function(e){
-      console.warn("Could not load delivery progress bar, leaving it hidden", e);
+      console.warn("Could not load distributor progress bar, leaving it hidden", e);
     });
 }
 
