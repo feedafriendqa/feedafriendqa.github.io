@@ -137,7 +137,8 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 .fam-val{font-size:13px;color:var(--ink);font-weight:700;line-height:1.4}
 .fam-val a{color:var(--forest);font-weight:800;text-decoration:none}
 .need-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;padding:5px 12px 5px 9px;border-radius:20px;font-family:"Manrope",sans-serif;margin:2px 5px 0 0}
-.need-ic{font-size:14px;line-height:1}
+.need-ic{font-size:14px;line-height:1;display:inline-flex;align-items:center}
+.need-ic svg{display:block;color:inherit}
 .need-badge.diaper{background:#FFFBF0;color:#a07800}
 .need-badge.formula{background:#F0FDF5;color:var(--forest)}
 .need-badge.boxes{background:#F0F4FD;color:#2255aa}
@@ -150,7 +151,7 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 .fam-photo-inp:disabled{background:var(--line);color:var(--muted);border-color:var(--line)}
 .fam-photo-preview{margin-top:8px}
 .fam-photo-preview img{max-width:120px;max-height:120px;border-radius:10px;display:block;box-shadow:0 1px 4px rgba(0,0,0,.12)}
-.alt-num-link{display:inline-block;margin-top:5px;font-size:11px;font-weight:700;color:var(--forest);text-decoration:none}
+.alt-num-link{display:inline-block;margin-top:12px;font-size:11px;font-weight:700;color:var(--forest);text-decoration:none}
 .alt-num-link:hover{text-decoration:underline}
 .del-btn{width:100%;margin-top:14px;padding:13px;border-radius:30px;border:none;font-family:"Manrope",sans-serif;font-size:13px;font-weight:700;cursor:pointer;background:var(--amber);color:var(--forest-deep)}
 .del-btn.done{background:var(--line);color:var(--muted-2);cursor:default}
@@ -651,6 +652,8 @@ var TR={
   box_plural:{en:" boxes",ar:" صناديق"},
   nappies:{en:"Nappies",ar:"حفاضات"},
   formula:{en:"Formula",ar:"حليب أطفال"},
+  diaper_size_prefix:{en:"Size ",ar:"مقاس "},
+  yes:{en:"Yes",ar:"نعم"},
   matched_last_time:{en:"Matched with you last time",ar:"طابقناك بهم آخر مرة"},
   your_own_sponsorship:{en:"🎁 Your own sponsorship",ar:"🎁 تكفّلك الخاص"},
   loading_ellipsis:{en:"Loading…",ar:"جارٍ التحميل…"},
@@ -1034,7 +1037,7 @@ async function showFamilies(){
   var listEl=document.getElementById("fams-list");
   listEl.innerHTML='<div class="loading"><div class="spin"></div></div>';
   var r=await sb.from("trip_assignments")
-    .select("*,food_box_applications(full_name_en,full_name,whatsapp,zone,street,building,unit,area,diaper_size,formula,household_size,nationality,submission_lang,driver_notes,qid_number)")
+    .select("*,food_box_applications(full_name_en,full_name,whatsapp,zone,street,building,unit,area,diaper_size,formula,household_size,nationality,submission_lang,driver_notes,qid_number,food_box_members(diaper_size,needs_formula))")
     .eq("trip_id",AT.id);
   // r.data can come back [] either because the trip genuinely has no rows,
   // or because RLS quietly filtered everything out (Postgres returns an
@@ -1229,17 +1232,33 @@ function renderFamCard(row,num){
   var mapsHtml=mapsUrl?' · <a href="'+mapsUrl+'" target="_blank">'+t("open_in_maps")+'</a>':"";
   var name=app.full_name_en||app.full_name||t("dash");
   var wa=(app.whatsapp||"").replace(/[^0-9+]/g,"");
-  var waHtml=wa?'<a href="https://wa.me/'+wa+'" target="_blank">'+t("open_whatsapp")+'</a>':t("dash");
+  var waIcon='<svg viewBox="0 0 24 24" width="13" height="13" style="vertical-align:-2px;margin-'+(LANG==="ar"?"left":"right")+':3px" xmlns="http://www.w3.org/2000/svg"><path d="M12.04 2c-5.5 0-9.96 4.46-9.96 9.96 0 1.76.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.5 0 9.96-4.46 9.96-9.96S17.54 2 12.04 2zm5.81 14.13c-.24.68-1.4 1.3-1.93 1.35-.5.05-1.03.24-3.45-.72-2.92-1.16-4.77-4.13-4.92-4.32-.14-.2-1.17-1.56-1.17-2.98s.75-2.11 1.02-2.4c.27-.28.58-.35.78-.35h.55c.18 0 .41-.03.64.49.24.55.8 1.9.87 2.04.07.14.12.3.02.49-.1.19-.15.3-.29.46-.14.16-.3.36-.43.48-.14.14-.29.29-.12.57.17.28.75 1.25 1.62 2.02 1.11 1 2.05 1.31 2.33 1.46.28.14.44.12.6-.07.17-.19.71-.83.9-1.11.19-.28.38-.24.64-.14.27.09 1.7.8 1.99.95.29.14.48.21.55.33.07.12.07.68-.17 1.35z" fill="#25D366"/></svg>';
+  var waHtml=wa?'<a href="https://wa.me/'+wa+'" target="_blank">'+waIcon+t("open_whatsapp")+'</a>':t("dash");
   var phoneTxt=app.whatsapp||t("dash");
   var qidLast4=app.qid_number?String(app.qid_number).replace(/\D/g,"").slice(-4):"";
   var language=app.submission_lang==="ar"?t("lang_arabic"):(app.submission_lang?t("lang_english"):t("dash"));
   var done=row.status==="delivered";
   var canMark=canMarkDeliveredNow();
   var boxCount=app.household_size?Math.ceil(app.household_size/4):1;
+  // Diaper size and formula are recorded per household member (a family can
+  // have more than one child in diapers), not on the application itself —
+  // pull every non-empty diaper size across the members, and treat formula
+  // as needed if ANY member's needs_formula reads truthy. Values in the
+  // data are inconsistently free-text ("true"/"false"/"yes"/"no"), so this
+  // checks loosely rather than for one exact string. Falls back to the two
+  // application-level fields for the rare older record that only has those.
+  var members=app.food_box_members||[];
+  var diaperSizes=members.map(function(m){return (m.diaper_size||"").trim();}).filter(function(v){return v&&v!=="Not needed";});
+  if(app.diaper_size&&app.diaper_size!=="Not needed"&&diaperSizes.indexOf(app.diaper_size)===-1)diaperSizes.push(app.diaper_size);
+  diaperSizes=diaperSizes.filter(function(v,i,arr){return arr.indexOf(v)===i;}); // de-dupe (twins, same size)
+  var needsFormula=members.some(function(m){return /^(true|yes)$/i.test((m.needs_formula||"").trim());})
+    ||(app.formula&&app.formula!=="Not needed");
+  var diaperIcon='💩';
   var tags="";
-  if(app.diaper_size&&app.diaper_size!=="Not needed")tags+='<span class="need-badge diaper"><span class="need-ic">🧷</span>'+app.diaper_size+'</span>';
-  if(app.formula&&app.formula!=="Not needed")tags+='<span class="need-badge formula"><span class="need-ic">🍼</span>'+app.formula+'</span>';
-  if(app.household_size)tags+='<span class="need-badge people"><span class="need-ic">🧍</span>'+app.household_size+'</span>';
+  diaperSizes.forEach(function(size){
+    tags+='<span class="need-badge diaper"><span class="need-ic">'+diaperIcon+'</span>'+(t("diaper_size_prefix")||"Size ")+size+'</span>';
+  });
+  if(needsFormula)tags+='<span class="need-badge formula"><span class="need-ic">🍼</span>'+(t("yes")||"Yes")+'</span>';
   var notesVal=app.driver_notes?app.driver_notes.replace(/</g,"&lt;"):"";
   return '<div class="fam-card" id="fc-'+row.id+'" data-boxes="'+boxCount+'">'
     +'<div class="fam-head"><div class="fam-head-left"><div class="fam-circle">'+num+'</div><span class="fam-box-badge"><span class="fam-box-ic">📦</span>'+boxCount+'</span></div><span class="fam-st '+(done?"done":"pending")+'">'+(done?t("badge_delivered"):t("badge_pending"))+'</span></div>'
