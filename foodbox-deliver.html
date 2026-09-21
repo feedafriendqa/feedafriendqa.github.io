@@ -245,8 +245,8 @@ body.lang-ar .icon-card{text-align:right;flex-direction:row-reverse}
 
   <div class="progress-wrap" id="progress-wrap" style="display:none">
     <div class="progress-top">
-      <div class="big"><b id="progress-signedup">0</b> <span data-en="of" data-ar="من">of</span> <span id="progress-needed-1">0</span> <span data-en="boxes have a distributor" data-ar="صندوقاً لديها موزّع">boxes have a distributor</span></div>
-      <div class="small"><span id="progress-remaining">0</span> <span data-en="slots left" data-ar="مقاعد متبقية">slots left</span></div>
+      <div class="big"><b id="progress-signedup">0</b> <span data-en="of" data-ar="من">of</span> <span id="progress-needed-1">0</span> <span data-en="boxes covered" data-ar="صندوقاً مكتملة">boxes covered</span></div>
+      <div class="small"><span id="progress-remaining">0</span> <span data-en="need a distributor" data-ar="بحاجة إلى موزّع">need a distributor</span></div>
     </div>
     <div class="bar-track"><div class="bar-fill" id="progress-bar-fill" style="width:0%"></div></div>
   </div>
@@ -374,30 +374,34 @@ function loadDriverStats(){
 }
 loadDriverStats();
 
-// Distributor progress bar — NOT about sponsorship. Self-delivery sponsors
-// deliver their own box and never need a distributor; only boxes whose
-// sponsor chose volunteer delivery (sponsorships.delivery_method = 'vol')
-// need one. Of that volunteer-delivery pool for this round, how many boxes
-// already have a distributor lined up (a trip_assignments row exists) vs.
-// how many still have no one assigned. Backed by food_box_distributor_needed_public,
-// a dedicated postgres-owned aggregate view (same pattern as the other
-// *_public views) so an anonymous visitor can read the total without
-// exposing individual family/sponsor rows.
+// Distributor progress bar — bar runs up to the FULL round target (the same
+// 235-style boxes_needed number shown in the "Boxes to deliver" tile above),
+// not just the volunteer-delivery slice. A box counts as "covered" once
+// someone can actually get it there:
+//   - self-delivery box: covered once its sponsor is an approved distributor
+//     (matched by phone/email against the distributors table)
+//   - volunteer-delivery box: covered once a trip_assignments row exists
+//     (a distributor has signed up to deliver it)
+//   - everything else (no distributor match yet, no trip assignment yet,
+//     or not even sponsored yet) counts as "still needs a distributor"
+// Backed by food_box_distributor_progress_public, a dedicated postgres-owned
+// aggregate view (same pattern as the other *_public views) so an anonymous
+// visitor can read the totals without exposing individual family/sponsor rows.
 function loadDistributorProgress(){
   if(!window.sbClient) return;
   window.sbClient
-    .from("food_box_distributor_needed_public")
-    .select("boxes_needing_distributor,boxes_assigned")
+    .from("food_box_distributor_progress_public")
+    .select("total_boxes,complete_boxes,needs_distributor_boxes")
     .single()
     .then(function(res){
       if(res.error || !res.data) throw res.error || new Error("no data");
-      var needed = res.data.boxes_needing_distributor || 0;
-      var assigned = res.data.boxes_assigned || 0;
-      if(!needed) return;
-      var remaining = Math.max(needed - assigned, 0);
-      var pct = Math.min(Math.round((assigned / needed) * 100), 100);
-      document.getElementById("progress-signedup").textContent = assigned.toLocaleString();
-      document.getElementById("progress-needed-1").textContent = needed.toLocaleString();
+      var total = res.data.total_boxes || 0;
+      var complete = res.data.complete_boxes || 0;
+      var remaining = res.data.needs_distributor_boxes != null ? res.data.needs_distributor_boxes : Math.max(total - complete, 0);
+      if(!total) return;
+      var pct = Math.min(Math.round((complete / total) * 100), 100);
+      document.getElementById("progress-signedup").textContent = complete.toLocaleString();
+      document.getElementById("progress-needed-1").textContent = total.toLocaleString();
       document.getElementById("progress-remaining").textContent = remaining.toLocaleString();
       document.getElementById("progress-bar-fill").style.width = pct + "%";
       document.getElementById("progress-wrap").style.display = "block";
