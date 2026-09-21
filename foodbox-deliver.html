@@ -201,6 +201,12 @@ body.lang-ar .icon-card{text-align:right;flex-direction:row-reverse}
 .cta-btn:hover{transform:translateY(-2px);box-shadow:0 20px 48px rgba(217,164,65,.32)}
 .cta-hint{text-align:center;font-size:11.5px;color:var(--muted-2);font-weight:600;margin-top:12px}
 .cta-hint a{color:var(--amber);font-weight:700;text-decoration:none}
+.cta-btn-green{
+  background:var(--green,#1D7A47);color:#fff;
+  box-shadow:0 16px 40px rgba(29,122,71,.28);
+  margin-top:10px;
+}
+.cta-btn-green:hover{transform:translateY(-2px);box-shadow:0 20px 48px rgba(29,122,71,.4)}
 
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}
@@ -261,7 +267,8 @@ body.lang-ar .icon-card{text-align:right;flex-direction:row-reverse}
 
   <div class="cta-bar">
     <button class="cta-btn" onclick="window.location.href='driverreg.html?lang='+(sessionStorage.getItem('faf_lang')||'en')" data-en="Register as a driver →" data-ar="سجّل كسائق متطوع ←">Register as a driver →</button>
-    <div class="cta-hint" data-en="Already registered? <a href='DriverDashboard.html' onclick=&quot;this.href='DriverDashboard.html?lang='+(sessionStorage.getItem('faf_lang')||'en')&quot;>Sign in to your dashboard →</a>" data-ar="مسجّل بالفعل؟ <a href='DriverDashboard.html' onclick=&quot;this.href='DriverDashboard.html?lang='+(sessionStorage.getItem('faf_lang')||'en')&quot;>تسجيل الدخول إلى لوحة التحكم ←</a>">Already registered? <a href="DriverDashboard.html" onclick="this.href='DriverDashboard.html?lang='+(sessionStorage.getItem('faf_lang')||'en')">Sign in to your dashboard →</a></div>
+    <div class="cta-hint" data-en="Already registered?" data-ar="مسجّل بالفعل؟">Already registered?</div>
+    <button class="cta-btn cta-btn-green" onclick="window.location.href='DriverDashboard.html?lang='+(sessionStorage.getItem('faf_lang')||'en')" data-en="Sign in to your dashboard →" data-ar="تسجيل الدخول إلى لوحة التحكم ←">Sign in to your dashboard →</button>
   </div>
 
   <div class="section">
