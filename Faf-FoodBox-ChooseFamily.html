@@ -20,6 +20,7 @@ body.lang-ar .section-h{flex-direction:row-reverse}
 body.lang-ar .fam-top{flex-direction:row-reverse}
 body.lang-ar .fam-id-wrap{flex-direction:row-reverse}
 body.lang-ar .fam-tags{direction:rtl}
+body.lang-ar .fam-delivery{flex-direction:row-reverse}
 body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .fam-id,body.lang-ar .surprise-card .t{font-family:"Cairo",sans-serif}
 
 .lang-toggle{display:flex;border:1px solid rgba(255,255,255,.35);border-radius:8px;overflow:hidden;flex-shrink:0}
@@ -90,6 +91,13 @@ body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .fam-id,body.lang-ar .surp
 .fam-area-tag{font-size:10px;font-weight:800;letter-spacing:.03em;color:#a37a00;background:#fff;border:1.5px solid #f5e2ad;padding:4px 10px;border-radius:30px}
 .fam-box-tag{font-size:10px;font-weight:900;letter-spacing:.03em;color:#fff;background:#1D7A47;padding:4px 10px;border-radius:30px}
 .fam-lang-tag{font-size:10px;font-weight:800;letter-spacing:.03em;color:#3a6ea5;background:#fff;border:1.5px solid #cfe0f0;padding:4px 10px;border-radius:30px}
+.fam-delivery{display:none;margin-top:10px;padding-top:10px;border-top:1px solid #d8ecdf;align-items:center;gap:8px;flex-wrap:wrap}
+.fam-card.sel .fam-delivery{display:flex}
+.fam-delivery-label{font-size:10px;font-weight:800;letter-spacing:.02em;color:#5a8a6e;text-transform:uppercase}
+.fam-delivery-toggle{display:flex;border:1.5px solid #cdebd9;border-radius:30px;overflow:hidden}
+.fam-delivery-btn{font-size:10px;font-weight:800;letter-spacing:.02em;padding:6px 12px;border:none;background:#fff;color:#1D7A47;cursor:pointer;font-family:"Manrope",sans-serif}
+body.lang-ar .fam-delivery-btn{font-family:"Cairo","Manrope",sans-serif}
+.fam-delivery-btn.active{background:#1D7A47;color:#F5C330}
 
 .surprise-card{border:2px dashed #d8d8cc;border-radius:18px;padding:18px 16px;text-align:center;margin:4px 20px 8px;background:#fcfcfa}
 .surprise-card .ic{font-size:24px;margin-bottom:6px}
@@ -216,6 +224,10 @@ var poolState = "loading"; // "loading" | "ready" | "error"
 var prefs = JSON.parse(sessionStorage.getItem("faf_prefs") || "{}");
 var targetBoxes = prefs.boxCount || 1;
 var selectedIds = []; // array of family ids, order = pick order
+// Per-family delivery preference override, keyed by family id: "self" or "vol".
+// Falls back to prefs.delivery (the account-level choice from Preferences.html)
+// when a family has no explicit override — see setFamilyDelivery() below.
+var deliveryPrefs = {};
 
 // ── Anonymized caption generator ──
 // There is no hand-written "note" column in food_box_applications, by
@@ -530,6 +542,19 @@ function renderFamilies(){
     var boxTag = '<span class="fam-box-tag">' + boxLabel + '</span>';
     var langLabel = isAr ? f.languageAr : f.languageEn;
     var langTag = langLabel ? '<span class="fam-lang-tag">🗣️ ' + langLabel + '</span>' : "";
+    // Default a not-yet-overridden family to the sponsor's account-level
+    // delivery choice (prefs.delivery) -- actual precedence is applied again
+    // at confirm time in confirmChoice(), this is just the initial UI state.
+    var curDelivery = deliveryPrefs[f.id] || (prefs.delivery === "self" ? "self" : "vol");
+    var delivLabel = isAr ? "التوصيل" : "Delivery";
+    var selfLabel = isAr ? "أوصّلها بنفسي" : "I'll deliver";
+    var volLabel = isAr ? "متطوّع" : "Volunteer";
+    var deliveryHtml = '<div class="fam-delivery">'
+      + '<span class="fam-delivery-label">' + delivLabel + '</span>'
+      + '<div class="fam-delivery-toggle">'
+      + '<button type="button" id="famdel-self-' + f.id + '" class="fam-delivery-btn' + (curDelivery === "self" ? " active" : "") + '" onclick="event.stopPropagation();setFamilyDelivery(\'' + f.id + '\',\'self\')">' + selfLabel + '</button>'
+      + '<button type="button" id="famdel-vol-' + f.id + '" class="fam-delivery-btn' + (curDelivery === "vol" ? " active" : "") + '" onclick="event.stopPropagation();setFamilyDelivery(\'' + f.id + '\',\'vol\')">' + volLabel + '</button>'
+      + '</div></div>';
     return '<div class="fam-card" id="fam-' + f.id + '" onclick="toggleFamily(\'' + f.id + '\')">'
       + '<div class="fam-top">'
       + '<div class="fam-id-wrap">'
@@ -541,6 +566,7 @@ function renderFamilies(){
       + '</div>'
       + '<div class="fam-note">\u201c' + note + '\u201d</div>'
       + '<div class="fam-tags">' + boxTag + ' ' + areaTag + langTag + tagsHtml + '</div>'
+      + deliveryHtml
       + '</div>';
   }).join("");
 }
@@ -585,6 +611,18 @@ function toggleFamily(id){
   document.getElementById("fam-" + id).classList.toggle("sel", selectedIds.indexOf(id) > -1);
   updateCounter();
   checkReady();
+}
+
+// Per-family delivery override -- lets a sponsor deliver to one matched
+// friend themselves while another still goes up for volunteer pickup.
+// Deliberately does NOT re-render the grid (which would wipe "sel" classes
+// and any in-progress selection state) -- just flips the two button classes.
+function setFamilyDelivery(id, method){
+  deliveryPrefs[id] = method;
+  var selfBtn = document.getElementById("famdel-self-" + id);
+  var volBtn = document.getElementById("famdel-vol-" + id);
+  if(selfBtn) selfBtn.classList.toggle("active", method === "self");
+  if(volBtn) volBtn.classList.toggle("active", method === "vol");
 }
 
 function updateCounter(){
@@ -857,6 +895,33 @@ async function confirmChoice(){
     }
   } catch(e){
     console.warn("Could not save family match to Supabase", e);
+  }
+
+  // Per-family delivery preference: send whatever the sponsor set (or the
+  // account-level default for anything they never touched) to the
+  // clever-responder edge function, which is the only thing with a write
+  // path to food_box_applications.delivery_preference (no anon RLS policy
+  // allows this table to be updated directly from the client). Deliberately
+  // additive and non-fatal -- if this fails, the sponsorship-level
+  // delivery_method above still applies to every matched family as before.
+  try{
+    var familyPrefs = {};
+    selectedIds.forEach(function(id){
+      familyPrefs[id] = deliveryPrefs[id] || (prefs.delivery === "self" ? "self" : "vol");
+    });
+    if(sponsorshipId){
+      await fetch("https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "set_family_delivery_preferences",
+          sponsorship_id: sponsorshipId,
+          family_prefs: familyPrefs
+        })
+      });
+    }
+  } catch(e){
+    console.warn("Could not save per-family delivery preferences (non-fatal)", e);
   }
 
   window.location.href = "Faf-FoodBox-Payment.html";
