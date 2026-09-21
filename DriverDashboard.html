@@ -56,6 +56,8 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 .so-btn:hover{border-color:rgba(255,255,255,.6);color:#fff}
 .dash-stack{max-width:440px;margin:0 auto;animation:loginFadeIn .45s cubic-bezier(.16,1,.3,1)}
 .dash-hero{text-align:center;margin-bottom:18px}
+.hero-totals{font-size:12.5px;font-weight:800;color:rgba(255,255,255,.92);margin-top:10px;display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap}
+.hero-totals span.htot-sep{color:rgba(255,255,255,.4)}
 .dash-desc{font-size:13px;color:rgba(255,255,255,.8);font-weight:500;line-height:1.6;text-align:center;padding:0 14px 16px}
 .sec-lbl{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.65);padding:0 20px;margin:6px 0 12px;text-align:center}
 
@@ -276,7 +278,7 @@ body.lang-ar .alt-contact-actions{text-align:left}
   <!-- Family list -->
   <div class="dash-stack" id="pnl-fams" style="display:none;padding-bottom:24px">
     <div class="back-row"><button class="back-btn" onclick="showDashMain()" data-en="← Back" data-ar="→ رجوع">← Back</button></div>
-    <div class="dash-hero"><img class="login-logo" alt="Feed a Friend"><div class="login-title" id="fam-count-lbl" data-en="Your deliveries" data-ar="توصيلاتك">Your deliveries</div><div class="login-sub" data-en="Tap a card once it's dropped off" data-ar="اضغط على البطاقة بعد التوصيل">Tap a card once it's dropped off</div></div>
+    <div class="dash-hero"><img class="login-logo" alt="Feed a Friend"><div class="login-title" id="fam-count-lbl" data-en="Your deliveries" data-ar="توصيلاتك">Your deliveries</div><div class="login-sub" data-en="Tap a card once it's dropped off" data-ar="اضغط على البطاقة بعد التوصيل">Tap a card once it's dropped off</div><div class="hero-totals" id="hero-totals" style="display:none"></div></div>
     <!-- Hidden for now (route planning needs fixing before it goes back live) -->
     <div class="card" id="route-card" style="display:none">
       <div class="lbl" style="margin-bottom:8px" data-en="Plan your route" data-ar="خطّط مسارك">Plan your route</div>
@@ -1057,6 +1059,7 @@ async function showFamilies(){
     var hh=(row.food_box_applications||{}).household_size;
     return sum+(hh?Math.ceil(hh/4):1);
   },0);
+  renderHeroTotals(rows);
   if(rows.length===0){
     listEl.innerHTML='<div style="text-align:center;padding:20px 24px;font-size:13px;color:var(--muted);font-weight:600">'+t("no_deliveries_found_p1")+(AT.boxes_count||"?")+t("no_deliveries_found_p2")+'</div>';
     var rc=document.getElementById("route-card"); if(rc)rc.style.display="none";
@@ -1064,6 +1067,35 @@ async function showFamilies(){
   }
   listEl.innerHTML=rows.map(function(row,i){return renderFamCard(row,i+1);}).join("");
   renderRouteSelector();
+}
+
+// Small "at a glance" totals shown under the deliveries header — total boxes
+// across the whole trip, and how many of those stops need diapers / milk.
+// Uses the same per-member data (and the same loose truthy matching for
+// formula) as the badges on each family card, so the two always agree.
+function renderHeroTotals(rows){
+  var el=document.getElementById("hero-totals");
+  if(!el)return;
+  if(!rows.length){el.style.display="none";return;}
+  var totalBoxes=0,totalDiapers=0,totalMilk=0;
+  rows.forEach(function(row){
+    var app=row.food_box_applications||{};
+    totalBoxes+=app.household_size?Math.ceil(app.household_size/4):1;
+    var members=app.food_box_members||[];
+    // Count per-child, not per-family — a family with twins in diapers
+    // should add 2 to the total, not 1.
+    var diaperCount=members.filter(function(m){var v=(m.diaper_size||"").trim();return v&&v!=="Not needed";}).length;
+    if(diaperCount===0&&app.diaper_size&&app.diaper_size!=="Not needed")diaperCount=1;
+    totalDiapers+=diaperCount;
+    var milkCount=members.filter(function(m){return /^(true|yes)$/i.test((m.needs_formula||"").trim());}).length;
+    if(milkCount===0&&app.formula&&app.formula!=="Not needed")milkCount=1;
+    totalMilk+=milkCount;
+  });
+  var parts=['📦 '+totalBoxes+(totalBoxes===1?t("box_singular"):t("box_plural"))];
+  if(totalDiapers>0)parts.push('🩲 '+totalDiapers+' '+t("nappies"));
+  if(totalMilk>0)parts.push('🍼 '+totalMilk+' '+t("formula"));
+  el.innerHTML=parts.map(function(p,i){return (i>0?'<span class="htot-sep">·</span>':'')+'<span>'+p+'</span>';}).join("");
+  el.style.display="flex";
 }
 
 // ── ROUTE PLANNER ────────────────────────────────────────────────────────
