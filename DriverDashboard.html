@@ -1836,7 +1836,7 @@ function renderAlloc(){
         var bx=f.boxes_needed||1;
         var off=!!DESELECTED[f.id];
         var self=!!f.self_sponsored;
-        var tags=[bx+(bx===1?t("box_singular"):t("box_plural")),f.diaper_size&&f.diaper_size!=="Not needed"?t("nappies"):"",f.formula&&f.formula!=="Not needed"?t("formula"):"",self?t("your_own_sponsorship"):(f.is_sticky?t("matched_last_time"):""),f.family_group_size>1?f.family_group_size+t("same_household_suffix"):"",f.outside_selected_areas?t("outside_chosen_areas"):""].filter(Boolean).join(" · ");
+        var tags=[bx+(bx===1?t("box_singular"):t("box_plural")),f.language||"",f.diaper_size&&f.diaper_size!=="Not needed"?t("nappies"):"",f.formula&&f.formula!=="Not needed"?t("formula"):"",self?t("your_own_sponsorship"):(f.is_sticky?t("matched_last_time"):""),f.family_group_size>1?f.family_group_size+t("same_household_suffix"):"",f.outside_selected_areas?t("outside_chosen_areas"):""].filter(Boolean).join(" · ");
         // Self-sponsored cards are the driver's own committed sponsorship for
         // this round, not a rotation pick — no ✕ to swap them out and no tap
         // to leave them out, since there's no "someone else" to reshuffle in.
