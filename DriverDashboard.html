@@ -279,11 +279,11 @@ body.lang-ar .alt-contact-actions{text-align:left}
   <div class="dash-stack" id="pnl-fams" style="display:none;padding-bottom:24px">
     <div class="back-row"><button class="back-btn" onclick="showDashMain()" data-en="← Back" data-ar="→ رجوع">← Back</button></div>
     <div class="dash-hero"><img class="login-logo" alt="Feed a Friend"><div class="login-title" id="fam-count-lbl" data-en="Your deliveries" data-ar="توصيلاتك">Your deliveries</div><div class="login-sub" data-en="Tap a card once it's dropped off" data-ar="اضغط على البطاقة بعد التوصيل">Tap a card once it's dropped off</div><div class="hero-totals" id="hero-totals" style="display:none"></div></div>
-    <!-- Hidden for now (route planning needs fixing before it goes back live) -->
-    <div class="card" id="route-card" style="display:none">
+    <div class="card" id="route-card">
       <div class="lbl" style="margin-bottom:8px" data-en="Plan your route" data-ar="خطّط مسارك">Plan your route</div>
       <select id="route-start-sel" class="inp" style="margin-bottom:10px"><option value="" data-en="Choose a starting point…" data-ar="اختر نقطة البداية…">Choose a starting point…</option></select>
       <button class="tb-grn" style="width:100%" onclick="planRoute()" data-en="Plan route →" data-ar="خطّط المسار ←">Plan route →</button>
+      <button class="tb-out" style="width:100%;margin-top:8px" onclick="startNavigation()" data-en="🧭 Start navigation in Google Maps →" data-ar="🧭 ابدأ الملاحة في خرائط جوجل ←">🧭 Start navigation in Google Maps →</button>
       <div class="route-banner" id="route-banner"></div>
     </div>
     <div style="height:14px"></div>
@@ -575,6 +575,11 @@ var TR={
   route_disclaimer:{en:" (This groups by neighbourhood — it isn't live GPS routing yet.)",ar:" (هذا التجميع حسب الحي فقط — وليس توجيهاً مباشراً عبر GPS بعد.)"},
   route_pick_start_first:{en:"Pick a starting point first.",ar:"اختر نقطة البداية أولاً."},
   route_looking_up_dp:{en:"Looking up the distribution point's neighbourhood…",ar:"جارٍ تحديد حي نقطة التوزيع…"},
+  route_ordering:{en:"Ordering your deliveries by distance…",ar:"جارٍ ترتيب توصيلاتك حسب المسافة…"},
+  route_ordered_by_distance:{en:" Ordered by distance from here.",ar:" تم الترتيب حسب المسافة من هنا."},
+  route_unplaced_suffix:{en:" delivery could not be placed on the map and stayed at the end.",ar:" توصيلة تعذّر تحديد موقعها على الخريطة وبقيت في النهاية."},
+  route_distance_disclaimer:{en:" (Straight-line distance, not driving directions — road route may differ.)",ar:" (مسافة مباشرة (خط مستقيم) وليست مسار قيادة — قد يختلف الطريق الفعلي.)"},
+  route_no_navigable_stops:{en:"None of your deliveries have a location we can navigate to yet.",ar:"لا توجد أي توصيلة لديها موقع يمكن الملاحة إليه حتى الآن."},
   route_faf_point_label:{en:"the FAF Distribution Point (Al Ghalia Gardens)",ar:"نقطة توزيع فيد أ فريند (الغالية جاردنز)"},
   route_near_suffix:{en:" (near ",ar:" (قرب "},
   route_geo_unsupported:{en:"Your browser doesn't support location — pick a delivery to start from instead.",ar:"متصفحك لا يدعم تحديد الموقع — اختر توصيلة لتبدأ منها بدلاً من ذلك."},
@@ -1039,7 +1044,7 @@ async function showFamilies(){
   var listEl=document.getElementById("fams-list");
   listEl.innerHTML='<div class="loading"><div class="spin"></div></div>';
   var r=await sb.from("trip_assignments")
-    .select("*,food_box_applications(full_name_en,full_name,whatsapp,zone,street,building,unit,area,diaper_size,formula,household_size,nationality,submission_lang,driver_notes,qid_number,food_box_members(diaper_size,needs_formula))")
+    .select("*,food_box_applications(full_name_en,full_name,whatsapp,zone,street,building,unit,area,diaper_size,formula,household_size,nationality,submission_lang,driver_notes,qid_number,lat,lng,food_box_members(diaper_size,needs_formula))")
     .eq("trip_id",AT.id);
   // r.data can come back [] either because the trip genuinely has no rows,
   // or because RLS quietly filtered everything out (Postgres returns an
@@ -1099,10 +1104,14 @@ function renderHeroTotals(rows){
 }
 
 // ── ROUTE PLANNER ────────────────────────────────────────────────────────
-// A lightweight "start here, then nearby stops" helper — not real turn-by-
-// turn routing (these addresses don't carry map coordinates yet), just lets
-// the driver pick a starting delivery and clusters the rest by area so the
-// order roughly follows the neighbourhood.
+// Real straight-line routing. Most confirmed applications now carry a
+// QNAS-geocoded lat/lng (backfilled 2026-09-19), so instead of guessing a
+// neighbourhood name from free-text areas, this does a greedy nearest-
+// neighbour ordering by actual distance from the chosen starting point.
+// Still not turn-by-turn driving directions — no roads, no traffic, just
+// straight-line ("as the crow flies") distance — but a real improvement
+// over the old area-name heuristic, and good enough to meaningfully cut
+// down backtracking across town.
 function renderRouteSelector(){
   var sel=document.getElementById("route-start-sel");
   if(!sel)return;
@@ -1116,115 +1125,193 @@ function renderRouteSelector(){
     }).join("");
   var rb=document.getElementById("route-banner"); if(rb)rb.style.display="none";
 }
+// Straight-line (haversine) distance in km between two lat/lng points.
+function haversineKm(lat1,lon1,lat2,lon2){
+  var R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
 // Area names in food_box_applications are free-text and inconsistently
-// spelled (e.g. "Ain Khaled" vs "Ain Khalid", "Al Gharafa" vs "Al Gharrafa",
-// "Rawdat al Khail" vs "Rawdat Alkhail") while the neighbourhood name the
-// free Nominatim lookup guesses for a lat/lon uses its own spelling — a
-// strict equality check between the two rarely matched even when the
-// lookup found the right neighbourhood. This loosely normalizes both sides
-// (case/spacing/leading "Al"/doubled letters) before comparing so more of
-// those spelling variants line up. It won't catch every variant (e.g. a
-// genuine vowel swap like Khaled/Khalid), but it fixes the common ones.
+// spelled (e.g. "Ain Khaled" vs "Ain Khalid", "Al Gharafa" vs "Al Gharrafa").
+// Used only as a fallback for the handful of applications without their own
+// geocoded pin — matches against distribution_locations' area centre points.
 function normArea(s){
   return (s||"").toLowerCase()
     .replace(/[^a-z]/g,"")
     .replace(/^(al|el|fereej|old|new)/,"")
     .replace(/(.)\1+/g,"$1");
 }
-function sortByArea(list,area){
-  var copy=list.slice();
-  var target=normArea(area);
-  copy.sort(function(a,b){
-    var aSame=normArea((a.food_box_applications||{}).area)===target?0:1;
-    var bSame=normArea((b.food_box_applications||{}).area)===target?0:1;
-    return aSame-bSame;
-  });
-  return copy;
+// Cache of area-name → [lat,lng] centre points, fetched once and reused.
+var DIST_LOC_COORDS=null;
+async function getDistLocCoords(){
+  if(DIST_LOC_COORDS)return DIST_LOC_COORDS;
+  DIST_LOC_COORDS={};
+  try{
+    var r=await sb.from("distribution_locations").select("name,lat,lng").not("lat","is",null);
+    (r.data||[]).forEach(function(d){DIST_LOC_COORDS[normArea(d.name)]=[d.lat,d.lng];});
+  }catch(e){/* fall back to no coord below */}
+  return DIST_LOC_COORDS;
+}
+// Best-known coordinate for a family: its own QNAS pin if present,
+// otherwise its area's approximate centre point, otherwise null (can't be
+// placed on the map at all, so it stays un-sorted).
+async function famCoord(app){
+  if(app.lat!=null&&app.lng!=null)return [app.lat,app.lng];
+  var coords=await getDistLocCoords();
+  return coords[normArea(app.area)]||null;
 }
 function showRouteBanner(text){
   var rb=document.getElementById("route-banner");
   if(rb){rb.textContent=text;rb.style.display="block";}
-}
-function applyRouteOrder(areaGuess,label){
-  if(areaGuess)CURRENT_FAMS=sortByArea(CURRENT_FAMS,areaGuess);
-  document.getElementById("fams-list").innerHTML=CURRENT_FAMS.map(function(row,i){return renderFamCard(row,i+1);}).join("");
-  showRouteBanner(t("route_set_start")+label+"."
-    +(areaGuess?t("route_nearby_in")+areaGuess+t("route_come_next"):t("route_could_not_match"))
-    +t("route_disclaimer"));
 }
 // Real GPS coordinates for the FAF Distribution Point (Al Ghalia Gardens),
 // resolved from the Google Maps link Alliyah shared (25.2592198, 51.4719974).
 // If the distribution point ever moves, update these two numbers.
 var FAF_POINT_LAT=25.2592198, FAF_POINT_LON=51.4719974;
 
-// Shared by both "FAF Distribution Point" and "My location now": given a
-// lat/lon, ask OpenStreetMap's free Nominatim reverse-geocoder (no API key)
-// for the neighbourhood name, then cluster deliveries in that neighbourhood
-// first. Best-effort only — see the header comment on renderRouteSelector().
-function planFromCoords(lat,lon,label){
-  fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat="+lat+"&lon="+lon+"&zoom=16&addressdetails=1")
-    .then(function(r){return r.json();})
-    .then(function(j){
-      var a=(j&&j.address)||{};
-      var areaGuess=a.suburb||a.neighbourhood||a.city_district||a.town||a.village||"";
-      applyRouteOrder(areaGuess,label+(areaGuess?t("route_near_suffix")+areaGuess+")":""));
-    })
-    .catch(function(){
-      applyRouteOrder(null,label);
-    });
+// Greedy nearest-neighbour ordering: starting from (lat,lon), repeatedly
+// pick whichever remaining family is closest (straight-line) and add it
+// next, then continue from there. Families with no usable coordinate at
+// all are left in their original order at the end, since there's nothing
+// to sort them by.
+async function orderByDistance(lat,lon,list){
+  var withCoord=[],withoutCoord=[];
+  for(var i=0;i<list.length;i++){
+    var app=list[i].food_box_applications||{};
+    var c=await famCoord(app);
+    if(c)withCoord.push({fam:list[i],lat:c[0],lng:c[1]});
+    else withoutCoord.push(list[i]);
+  }
+  var ordered=[],cLat=lat,cLon=lon;
+  while(withCoord.length){
+    var bestIdx=0,bestDist=Infinity;
+    for(var j=0;j<withCoord.length;j++){
+      var d=haversineKm(cLat,cLon,withCoord[j].lat,withCoord[j].lng);
+      if(d<bestDist){bestDist=d;bestIdx=j;}
+    }
+    var picked=withCoord.splice(bestIdx,1)[0];
+    ordered.push(picked.fam);
+    cLat=picked.lat;cLon=picked.lng;
+  }
+  return {ordered:ordered.concat(withoutCoord),unplaced:withoutCoord.length};
 }
-function planRoute(){
+function renderRouteAndBanner(list,label,unplaced){
+  CURRENT_FAMS=list;
+  document.getElementById("fams-list").innerHTML=CURRENT_FAMS.map(function(row,i){return renderFamCard(row,i+1);}).join("");
+  showRouteBanner(t("route_set_start")+label+"."+t("route_ordered_by_distance")
+    +(unplaced?" "+unplaced+t("route_unplaced_suffix"):"")
+    +t("route_distance_disclaimer"));
+}
+
+// Shared by "Plan route" (preview only) and "Start navigation" (order +
+// launch in one tap): works out the distance-based delivery order from
+// whichever starting point is picked in the dropdown, and — for a start
+// point we have a real coordinate for — what that origin coordinate is,
+// so "Start navigation" can hand it straight to Google Maps without
+// re-asking for GPS a second time.
+// Returns null if the user needs to pick a start first (already alerted).
+// Throws "geo_unsupported" / "geo_denied" for the "my location" failure
+// cases, which callers catch and alert on themselves.
+async function computeRoute(startId){
+  if(startId==="__faf_point"){
+    var res=await orderByDistance(FAF_POINT_LAT,FAF_POINT_LON,CURRENT_FAMS);
+    return {ordered:res.ordered,unplaced:res.unplaced,label:t("route_faf_point_label"),originLat:FAF_POINT_LAT,originLon:FAF_POINT_LON,skipId:null};
+  }
+  if(startId==="__my_location"){
+    if(!navigator.geolocation)throw "geo_unsupported";
+    return new Promise(function(resolve,reject){
+      navigator.geolocation.getCurrentPosition(async function(pos){
+        var res=await orderByDistance(pos.coords.latitude,pos.coords.longitude,CURRENT_FAMS);
+        resolve({ordered:res.ordered,unplaced:res.unplaced,label:t("route_current_location"),originLat:pos.coords.latitude,originLon:pos.coords.longitude,skipId:null});
+      },function(){reject("geo_denied");},{timeout:8000});
+    });
+  }
+  var start=CURRENT_FAMS.find(function(f){return f.id===startId;});
+  if(!start)return null;
+  var startApp=start.food_box_applications||{};
+  var rest=CURRENT_FAMS.filter(function(f){return f.id!==startId;});
+  var name=startApp.full_name_en||t("route_your_pick");
+  var startCoord=await famCoord(startApp);
+  if(!startCoord){
+    // Genuinely no coordinate to start from — nothing to distance-sort by,
+    // so just move this stop to the front and leave the rest as-is.
+    return {ordered:[start].concat(rest),unplaced:0,label:name,originLat:null,originLon:null,skipId:startId};
+  }
+  var res=await orderByDistance(startCoord[0],startCoord[1],rest);
+  return {ordered:[start].concat(res.ordered),unplaced:res.unplaced,label:name,originLat:startCoord[0],originLon:startCoord[1],skipId:startId};
+}
+
+async function planRoute(){
   var sel=document.getElementById("route-start-sel");
   var startId=sel&&sel.value;
   if(!startId){alert(t("route_pick_start_first"));return;}
-
-  // Fixed FAF distribution point — we have real coordinates for this one
-  // (from the Google Maps link Alliyah shared), so it gets the same
-  // neighbourhood-clustering treatment as "My location now" below.
-  if(startId==="__faf_point"){
-    showRouteBanner(t("route_looking_up_dp"));
-    planFromCoords(FAF_POINT_LAT,FAF_POINT_LON,t("route_faf_point_label"));
+  showRouteBanner(startId==="__my_location"?t("route_finding_location"):t("route_ordering"));
+  var r;
+  try{ r=await computeRoute(startId); }
+  catch(e){
+    alert(e==="geo_denied"?t("route_geo_denied"):t("route_geo_unsupported"));
+    var rb=document.getElementById("route-banner"); if(rb)rb.style.display="none";
     return;
   }
-
-  // Driver's current location — ask the browser for GPS coordinates, then
-  // use a free reverse-geocoding lookup (OpenStreetMap Nominatim, no API key)
-  // to guess the neighbourhood name, and cluster deliveries in that
-  // neighbourhood first. Best-effort only, same as the rest of this planner.
-  if(startId==="__my_location"){
-    if(!navigator.geolocation){
-      alert(t("route_geo_unsupported"));
-      return;
-    }
-    showRouteBanner(t("route_finding_location"));
-    navigator.geolocation.getCurrentPosition(function(pos){
-      planFromCoords(pos.coords.latitude,pos.coords.longitude,t("route_current_location"));
-    },function(){
-      alert(t("route_geo_denied"));
-      var rb=document.getElementById("route-banner"); if(rb)rb.style.display="none";
-    },{timeout:8000});
-    return;
-  }
-
-  var start=CURRENT_FAMS.find(function(f){return f.id===startId;});
-  if(!start)return;
-  var startArea=(start.food_box_applications||{}).area||"";
-  var rest=sortByArea(CURRENT_FAMS.filter(function(f){return f.id!==startId;}),startArea);
-  CURRENT_FAMS=[start].concat(rest);
-  document.getElementById("fams-list").innerHTML=CURRENT_FAMS.map(function(row,i){return renderFamCard(row,i+1);}).join("");
-  var name=(start.food_box_applications||{}).full_name_en||t("route_your_pick");
-  showRouteBanner(t("route_set_start")+name+"."+t("route_nearby_in")+(startArea||t("route_same_area"))+t("route_come_next")+t("route_disclaimer"));
+  if(!r)return;
+  renderRouteAndBanner(r.ordered,r.label,r.unplaced);
 }
 
-// Builds a "best effort" Google Maps link from the Zone/Street/Building
-// address fields we store. This is a text search, not an exact pin — Qatar
-// doesn't put lat/lng on these applications, so Google is guessing from the
-// same zone/street/building/area text a driver would type in themselves.
-// TODO(maps upgrade): if/when QNAS (qnas.qa) approves API access, swap this
-// for a call to their /get_location/{zone}/{street}/{building} endpoint,
-// which returns exact coordinates — then build the link as
-// "https://www.google.com/maps/search/?api=1&query=<lat>,<lng>" instead.
+// One tap does both things Alliyah asked for: works out the most
+// efficient order (same distance logic as "Plan route" above — reuses
+// computeRoute so the two never disagree), updates the on-screen list to
+// match, then hands that exact order off to the phone's own Google Maps
+// app for real turn-by-turn navigation with live traffic. This app has no
+// paid routing/traffic API of its own, but the phone's Maps app already
+// does this for free once it has the stops in order.
+async function startNavigation(){
+  var sel=document.getElementById("route-start-sel");
+  var startId=sel&&sel.value;
+  if(!startId){alert(t("route_pick_start_first"));return;}
+  showRouteBanner(startId==="__my_location"?t("route_finding_location"):t("route_ordering"));
+  var r;
+  try{ r=await computeRoute(startId); }
+  catch(e){
+    alert(e==="geo_denied"?t("route_geo_denied"):t("route_geo_unsupported"));
+    var rb=document.getElementById("route-banner"); if(rb)rb.style.display="none";
+    return;
+  }
+  if(!r)return;
+  renderRouteAndBanner(r.ordered,r.label,r.unplaced);
+
+  var stops=[];
+  for(var i=0;i<r.ordered.length;i++){
+    if(r.skipId&&r.ordered[i].id===r.skipId)continue; // that one's the origin, not a stop
+    var c=await famCoord(r.ordered[i].food_box_applications||{});
+    if(c)stops.push(c);
+  }
+  if(!stops.length){alert(t("route_no_navigable_stops"));return;}
+  var originLat=r.originLat,originLon=r.originLon;
+  if(originLat==null){
+    // The chosen start had no coordinate of its own — fall back to the
+    // first navigable stop as the origin instead.
+    originLat=stops[0][0];originLon=stops[0][1];
+    stops=stops.slice(1);
+    if(!stops.length){alert(t("route_no_navigable_stops"));return;}
+  }
+  var dest=stops[stops.length-1];
+  var waypoints=stops.slice(0,-1);
+  var url="https://www.google.com/maps/dir/?api=1&travelmode=driving"
+    +"&origin="+originLat+","+originLon
+    +"&destination="+dest[0]+","+dest[1]
+    +(waypoints.length?"&waypoints="+waypoints.map(function(w){return w[0]+","+w[1];}).join("|"):"");
+  window.open(url,"_blank");
+}
+
+// Builds the Google Maps link for a delivery. Now that QNAS geocoding has
+// backfilled real lat/lng onto most confirmed applications, this links
+// straight to that exact pin whenever it's present — no more guessing.
+// Falls back to the old Zone/Street/Building text search for the handful
+// of applications that haven't been geocoded yet.
 function buildMapsUrl(app){
+  if(app.lat!=null&&app.lng!=null){
+    return "https://www.google.com/maps/search/?api=1&query="+app.lat+","+app.lng;
+  }
   var parts=[];
   if(app.zone)parts.push("Zone "+app.zone);
   if(app.street)parts.push("Street "+app.street);
