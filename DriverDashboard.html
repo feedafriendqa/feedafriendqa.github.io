@@ -504,6 +504,33 @@ var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5c
 function noOpLock(name,acquireTimeout,fn){return fn();}
 var sb=window.supabase?window.supabase.createClient(SB,KEY,{auth:{lock:noOpLock}}):null;
 var CU=null,DP=null,AT=null,ALLOC=null,ALLOC_META=null,SELAREAS=[],KEPT={},REMOVED=[],TRIPCAP=null,ALL_AREAS=[],AVAILABILITY={},DESELECTED={},HOLD_TIMER=null,EXPAND_AREAS=false,CURRENT_FAMS=[],DELIVERED_COUNT=0,PHOTO_DATA={},SELFBOXES=0;
+// Set true only inside an actual driver-requested sign-out (the "Sign out"
+// button, or the manual "taking too long" reset) so onAuthStateChange can
+// tell that apart from a SPURIOUS "SIGNED_OUT" event — which supabase-js
+// can fire on its own after a backgrounded tab resumes (e.g. coming back
+// from the Maps/WhatsApp links below) if its own internal token-refresh
+// check is slow to respond. Without this, that transient hiccup looked
+// identical to a real sign-out and bounced the driver back to the login
+// screen even though their session was perfectly fine.
+var INTENTIONAL_SIGNOUT=false;
+// Retries getSession() a couple of times with a generous timeout instead of
+// giving up after one slow attempt — used both at initial load and to
+// double-check a SIGNED_OUT event that wasn't driver-initiated.
+async function getSessionWithRetry(tries,timeoutMs){
+  var lastErr=null;
+  for(var i=0;i<tries;i++){
+    try{
+      return await Promise.race([
+        sb.auth.getSession(),
+        new Promise(function(_,rej){setTimeout(function(){rej(new Error(t?t("session_check_timed_out"):"timed out"));},timeoutMs);})
+      ]);
+    }catch(e){
+      lastErr=e;
+      if(i<tries-1)await new Promise(function(res){setTimeout(res,1500);});
+    }
+  }
+  throw lastErr;
+}
 
 // ── LANGUAGE (EN/AR) ─────────────────────────────────────────────────────
 // Static markup carries data-en/data-ar (and data-en-placeholder/
@@ -769,6 +796,7 @@ function showV(id){
   }
 }
 function resetSession(){
+  INTENTIONAL_SIGNOUT=true;
   // Clears the locally stored session directly via localStorage rather
   // than sb.auth.signOut() — signOut() goes through the same browser lock
   // that can deadlock getSession() in the first place, so it isn't a safe
@@ -847,26 +875,45 @@ async function init(){
   if(!sb){setHero("login");showV("v-login");return;}
   sb.auth.onAuthStateChange(async function(ev,sess){
     if(ev==="SIGNED_IN"&&sess){CU=sess.user;await loadDriver();}
-    else if(ev==="SIGNED_OUT"){CU=null;setHero("login");showV("v-login");}
+    else if(ev==="SIGNED_OUT"){
+      if(INTENTIONAL_SIGNOUT){
+        INTENTIONAL_SIGNOUT=false;
+        CU=null;setHero("login");showV("v-login");
+        return;
+      }
+      // The driver didn't tap "Sign out" or the reset button, so this is
+      // almost certainly the spurious case described above (tab resumed
+      // from background — e.g. back from Maps/WhatsApp — and supabase-js's
+      // own visibility-triggered refresh check was momentarily slow).
+      // Re-confirm before throwing away their current screen; only bounce
+      // to the login screen if a session genuinely isn't there.
+      try{
+        var rc=await getSessionWithRetry(2,8000);
+        if(rc&&rc.data&&rc.data.session){CU=rc.data.session.user;return;}
+      }catch(e){/* fall through — couldn't confirm, treat as signed out */}
+      CU=null;setHero("login");showV("v-login");
+    }
   });
   // getSession() can throw (not just return {error}) if the locally stored
   // refresh token is stale/invalid — without this try/catch, that exception
   // was uncaught and left the page stranded on the static "Loading…" markup
   // forever, with no way back to the login screen short of a manual
-  // localStorage wipe. A 10s timeout guards against the call hanging with
-  // no response at all (flaky network) doing the same thing.
+  // localStorage wipe. getSessionWithRetry() gives a slow/just-resumed
+  // network a couple of chances before we give up.
   try{
-    var r=await Promise.race([
-      sb.auth.getSession(),
-      new Promise(function(_,rej){setTimeout(function(){rej(new Error(t("session_check_timed_out")));},10000);})
-    ]);
+    var r=await getSessionWithRetry(2,8000);
     if(r.data&&r.data.session){CU=r.data.session.user;await loadDriver();}
     else{setHero("login");showV("v-login");}
   }catch(e){
-    console.error("getSession failed/timed out, clearing stored session directly:",e);
-    // Deliberately NOT calling sb.auth.signOut() here — it goes through the
-    // same lock mechanism that just deadlocked, so it would hang too.
-    try{localStorage.removeItem("sb-xbxagukdvgyaoqvbqoic-auth-token");}catch(e2){/* best effort */}
+    console.error("getSession failed after retrying:",e);
+    // Deliberately NOT wiping localStorage here (and not calling
+    // sb.auth.signOut(), which goes through the same lock mechanism that
+    // can deadlock). A retried timeout doesn't mean the stored session is
+    // actually invalid — just that we couldn't confirm it in time — and
+    // clearing it would force a full password re-login even when the
+    // refresh token on disk was fine. The manual "taking too long" reset
+    // button is still there as an explicit, driver-initiated way to wipe a
+    // genuinely stuck session.
     setHero("login");showV("v-login");
   }
 }
@@ -880,7 +927,7 @@ async function signIn(){
   var r=await sb.auth.signInWithPassword({email:em,password:pw});
   if(r.error){err.textContent=t("incorrect_credentials");btn.disabled=false;btn.textContent=t("sign_in_btn");}
 }
-async function signOut(){await sb.auth.signOut();}
+async function signOut(){INTENTIONAL_SIGNOUT=true;await sb.auth.signOut();}
 async function forgotPw(){
   var em=document.getElementById("l-em").value.trim();
   if(!em){document.getElementById("l-err").textContent=t("enter_email_first");return;}
