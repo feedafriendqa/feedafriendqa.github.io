@@ -568,6 +568,8 @@ var TR={
   no_deliveries_found_p1:{en:"No deliveries found for this trip — this trip has ",ar:"لم يتم العثور على توصيلات لهذه الرحلة — هذه الرحلة مسجّل لها "},
   no_deliveries_found_p2:{en:" boxes recorded, so if that number is non-zero this is likely a permissions issue, not an empty trip.",ar:" صندوق، فإذا كان هذا الرقم أكبر من صفر فالأرجح أن المشكلة في الصلاحيات وليست رحلة فارغة."},
   choose_start:{en:"Choose a starting point…",ar:"اختر نقطة البداية…"},
+  route_via_faf:{en:"My location → Al Ghalia Gardens (pickup) → deliveries — recommended",ar:"موقعي ← الغالية جاردنز (الاستلام) ← التوصيلات — الموصى به"},
+  route_via_faf_label:{en:"your location, via the FAF Distribution Point (Al Ghalia Gardens)",ar:"موقعك، عبر نقطة توزيع فيد أ فريند (الغالية جاردنز)"},
   route_faf_point:{en:"FAF Distribution Point: Al Ghalia Gardens",ar:"نقطة توزيع فيد أ فريند: الغالية جاردنز"},
   route_my_location:{en:"My location now",ar:"موقعي الحالي"},
   route_set_start:{en:"Route set — starting from ",ar:"تم تحديد المسار — بدءاً من "},
@@ -1129,6 +1131,7 @@ function renderRouteSelector(){
   var sel=document.getElementById("route-start-sel");
   if(!sel)return;
   sel.innerHTML='<option value="">'+t("choose_start")+'</option>'
+    +'<option value="__my_location_via_faf" selected>'+t("route_via_faf")+'</option>'
     +'<option value="__faf_point">'+t("route_faf_point")+'</option>'
     +'<option value="__my_location">'+t("route_my_location")+'</option>'
     +CURRENT_FAMS.map(function(f){
@@ -1226,6 +1229,24 @@ function renderRouteAndBanner(list,label,unplaced){
 // Throws "geo_unsupported" / "geo_denied" for the "my location" failure
 // cases, which callers catch and alert on themselves.
 async function computeRoute(startId){
+  if(startId==="__my_location_via_faf"){
+    // The recommended default: every trip actually starts with picking up
+    // boxes at Al Ghalia Gardens, so route from wherever the driver is
+    // right now to the FAF Distribution Point first, then order the
+    // deliveries themselves by distance from that pickup point (not from
+    // the driver's current location, since that's where they'll actually
+    // be standing once they're loaded up and setting off). startNavigation()
+    // inserts the FAF Distribution Point as the first stop after this
+    // origin; planRoute()'s card-order preview is the same delivery order
+    // either way, since the pickup itself isn't a delivery card.
+    if(!navigator.geolocation)throw "geo_unsupported";
+    return new Promise(function(resolve,reject){
+      navigator.geolocation.getCurrentPosition(async function(pos){
+        var res=await orderByDistance(FAF_POINT_LAT,FAF_POINT_LON,CURRENT_FAMS);
+        resolve({ordered:res.ordered,unplaced:res.unplaced,label:t("route_via_faf_label"),originLat:pos.coords.latitude,originLon:pos.coords.longitude,skipId:null,viaFaf:true});
+      },function(){reject("geo_denied");},{timeout:8000});
+    });
+  }
   if(startId==="__faf_point"){
     var res=await orderByDistance(FAF_POINT_LAT,FAF_POINT_LON,CURRENT_FAMS);
     return {ordered:res.ordered,unplaced:res.unplaced,label:t("route_faf_point_label"),originLat:FAF_POINT_LAT,originLon:FAF_POINT_LON,skipId:null};
@@ -1258,7 +1279,7 @@ async function planRoute(){
   var sel=document.getElementById("route-start-sel");
   var startId=sel&&sel.value;
   if(!startId){alert(t("route_pick_start_first"));return;}
-  showRouteBanner(startId==="__my_location"?t("route_finding_location"):t("route_ordering"));
+  showRouteBanner((startId==="__my_location"||startId==="__my_location_via_faf")?t("route_finding_location"):t("route_ordering"));
   var r;
   try{ r=await computeRoute(startId); }
   catch(e){
@@ -1281,7 +1302,7 @@ async function startNavigation(){
   var sel=document.getElementById("route-start-sel");
   var startId=sel&&sel.value;
   if(!startId){alert(t("route_pick_start_first"));return;}
-  showRouteBanner(startId==="__my_location"?t("route_finding_location"):t("route_ordering"));
+  showRouteBanner((startId==="__my_location"||startId==="__my_location_via_faf")?t("route_finding_location"):t("route_ordering"));
   var r;
   try{ r=await computeRoute(startId); }
   catch(e){
@@ -1299,6 +1320,7 @@ async function startNavigation(){
     if(c)stops.push(c);
   }
   if(!stops.length){alert(t("route_no_navigable_stops"));return;}
+  if(r.viaFaf)stops.unshift([FAF_POINT_LAT,FAF_POINT_LON]); // collect boxes before any delivery
   var originLat=r.originLat,originLon=r.originLon;
   if(originLat==null){
     // The chosen start had no coordinate of its own — fall back to the
