@@ -158,6 +158,8 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 .del-btn{width:100%;margin-top:14px;padding:13px;border-radius:30px;border:none;font-family:"Manrope",sans-serif;font-size:13px;font-weight:700;cursor:pointer;background:var(--amber);color:var(--forest-deep)}
 .del-btn.done{background:var(--line);color:var(--muted-2);cursor:default}
 .del-btn:disabled{opacity:.6;cursor:default}
+.remove-fam-btn{width:100%;margin-top:8px;padding:11px;border-radius:30px;border:1.5px solid #f1d4d0;background:#fff;font-family:"Manrope",sans-serif;font-size:12px;font-weight:700;color:#c0392b;cursor:pointer}
+.remove-fam-btn:disabled{opacity:.5;cursor:default}
 
 /* LIFETIME STATS (No-trip dashboard) */
 .stats-row{display:flex;gap:12px;margin:0 16px 10px}
@@ -612,6 +614,17 @@ var TR={
   mark_delivered:{en:"Mark as delivered",ar:"تسجيل كتم التوصيل"},
   marked_delivered:{en:"✓ Marked as delivered",ar:"✓ تم التوصيل"},
   not_yet_deliverable:{en:"Available on distribution day",ar:"متاح في يوم التوزيع"},
+  remove_family_btn:{en:"Remove from my deliveries",ar:"إزالة من توصيلاتي"},
+  remove_confirm_title:{en:"Remove this delivery?",ar:"إزالة هذا التوصيل؟"},
+  remove_confirm_body_pre:{en:"This will take ",ar:"سيؤدي هذا إلى إزالة "},
+  remove_confirm_body_post:{en:" off your trip and put them back in the pool for another driver to pick up. This can't be undone from here — you'd need to select them again if you change your mind.",ar:" من رحلتك وإعادتها إلى المجموعة ليتم توصيلها من قِبل سائق آخر. لا يمكن التراجع عن هذا من هنا — ستحتاج إلى اختيارها مرة أخرى إذا غيّرت رأيك."},
+  remove_confirm_btn:{en:"Yes, remove them",ar:"نعم، أزلها"},
+  remove_cancel:{en:"Cancel",ar:"إلغاء"},
+  removing_label:{en:"Removing…",ar:"جارٍ الإزالة…"},
+  remove_failed:{en:"Could not remove — please try again.",ar:"تعذّرت الإزالة — يرجى المحاولة مرة أخرى."},
+  remove_reason_label:{en:"Why are you removing this delivery?",ar:"لماذا تقوم بإزالة هذا التوصيل؟"},
+  remove_reason_placeholder:{en:"e.g. can't reach this area, picked too many…",ar:"مثال: لا يمكنني الوصول إلى هذه المنطقة، اخترت عددًا أكبر من اللازم…"},
+  remove_reason_required:{en:"Please give a reason before removing.",ar:"يرجى ذكر السبب قبل الإزالة."},
   cannot_mark_yet_pre:{en:"You can mark deliveries starting on your distribution day (",ar:"يمكنك تسجيل التوصيلات ابتداءً من يوم التوزيع ("},
   cannot_mark_yet_post:{en:").",ar:")."},
   alt_no_app:{en:"No application on file for this delivery — can't look up alternative contacts.",ar:"لا يوجد طلب مسجّل لهذه التوصيلة — لا يمكن البحث عن جهات اتصال بديلة."},
@@ -1390,6 +1403,7 @@ function renderFamCard(row,num){
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#146c43"/></svg></span><div style="flex:1"><div class="fam-lbl">'+t("fam_note_label")+'</div><textarea class="fam-notes-inp" id="notes-'+row.id+'" placeholder="'+t("fam_note_placeholder")+'" '+(done?"disabled":"")+'>'+notesVal+'</textarea></div></div>'
     +'<div class="fam-row"><span class="fam-ic">📷</span><div style="flex:1"><div class="fam-lbl">'+t("fam_photo_label")+'</div><input type="file" accept="image/*" capture="environment" class="fam-photo-inp" id="photo-'+row.id+'" onchange="previewPhoto(\''+row.id+'\')" '+(done?"disabled":"")+'><div class="fam-photo-preview" id="photo-preview-'+row.id+'"></div></div></div>'
     +'<button class="del-btn'+(done?" done":"")+'" id="db-'+row.id+'" data-app="'+(row.application_id||"")+'" onclick="markDel(\''+row.id+'\')" '+((done||!canMark)?"disabled":"")+'>'+(done?t("marked_delivered"):(canMark?t("mark_delivered"):t("not_yet_deliverable")))+'</button>'
+    +(done?"":'<button class="remove-fam-btn" id="rm-'+row.id+'" data-name="'+name.replace(/"/g,"&quot;")+'" data-boxes="'+boxCount+'" onclick="confirmRemoveFamily(\''+row.id+'\')">✕ '+t("remove_family_btn")+'</button>')
     +'</div>';
 }
 
@@ -1523,6 +1537,83 @@ function updateFamCountLbl(){
   var remaining=document.querySelectorAll("#fams-list .fam-card").length;
   var lbl=document.getElementById("fam-count-lbl");
   if(lbl)lbl.textContent=remaining+(remaining===1?t("delivery_left_singular"):t("delivery_left_plural"));
+}
+
+// ── REMOVE FROM TRIP ─────────────────────────────────────────────────────
+// Lets a driver take a family back off their own confirmed trip (e.g. they
+// realise they can't reach that area, or picked too many). Unlike markDel,
+// nothing is delivered here — the trip_assignment row is deleted server-side
+// and the family becomes available again for another driver to pick up on
+// their next get_driver_boxes call. Always gated behind an explicit confirm
+// step since it can't be undone from this screen.
+function confirmRemoveFamily(id){
+  var card=document.getElementById("fc-"+id);
+  var btn=document.getElementById("rm-"+id);
+  if(!card||!btn||btn.disabled)return;
+  var name=btn.dataset.name||t("dash");
+  var boxes=parseInt(btn.dataset.boxes||"1",10);
+  var body=document.getElementById("alt-num-modal-body");
+  body.innerHTML='<div class="modal-title">'+t("remove_confirm_title")+'</div>'
+    +'<div class="modal-body"><strong>'+name+'</strong>'+t("remove_confirm_body_pre")+'('+boxes+(boxes===1?t("box_singular"):t("box_plural"))+')'+t("remove_confirm_body_post")+'</div>'
+    +'<div class="modal-body" style="margin-top:14px"><label for="remove-reason-inp" style="display:block;font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px">'+t("remove_reason_label")+'</label>'
+    +'<textarea id="remove-reason-inp" class="fam-notes-inp" placeholder="'+t("remove_reason_placeholder")+'" style="width:100%"></textarea>'
+    +'<div id="remove-reason-err" style="display:none;color:#c0392b;font-size:11px;font-weight:700;margin-top:6px">'+t("remove_reason_required")+'</div></div>'
+    +'<div class="modal-btns"><button class="modal-btn modal-btn-secondary" onclick="closeAltNumberModal()">'+t("remove_cancel")+'</button><button class="modal-btn modal-btn-primary" style="background:#c0392b" onclick="performRemoveFamily(\''+id+'\')">'+t("remove_confirm_btn")+'</button></div>';
+  document.getElementById("alt-num-modal").classList.add("show");
+}
+async function performRemoveFamily(id){
+  var reasonEl=document.getElementById("remove-reason-inp");
+  var reason=reasonEl?reasonEl.value.trim():"";
+  if(!reason){
+    var errEl=document.getElementById("remove-reason-err");
+    if(errEl)errEl.style.display="block";
+    if(reasonEl)reasonEl.focus();
+    return;
+  }
+  var btn=document.getElementById("rm-"+id);
+  var modalBody=document.getElementById("alt-num-modal-body");
+  var btns=modalBody?modalBody.querySelectorAll("button"):[];
+  btns.forEach(function(b){b.disabled=true;});
+  if(reasonEl)reasonEl.disabled=true;
+  var lastBtn=btns[btns.length-1];
+  if(lastBtn)lastBtn.textContent=t("removing_label");
+  var j;
+  try{
+    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"remove_trip_family",trip_assignment_id:id,driver_email:CU.email,reason:reason})});
+    j=await r.json();
+    if(!r.ok||j.error)throw new Error(j.error||t("remove_failed"));
+  }catch(e){
+    closeAltNumberModal();
+    alert(t("remove_failed")+(e.message?" ("+e.message+")":""));
+    return;
+  }
+  closeAltNumberModal();
+  if(AT&&typeof j.boxes_count==="number")AT.boxes_count=j.boxes_count;
+  CURRENT_FAMS=(CURRENT_FAMS||[]).filter(function(row){return row.id!==id;});
+  fadeOutFamCard(id);
+}
+// Shared fade/collapse animation for a card leaving the list — used by both
+// the "removed" and (via removeFamCard) "delivered" paths, without the
+// delivered-only side effects (confetti, toast, DELIVERED_COUNT, prompting
+// to complete the trip).
+function fadeOutFamCard(id){
+  var card=document.getElementById("fc-"+id);
+  if(!card){updateFamCountLbl();return;}
+  card.style.maxHeight=card.offsetHeight+"px";
+  card.style.overflow="hidden";
+  card.style.transition="max-height .35s ease,opacity .3s ease,margin-bottom .35s ease,padding .35s ease";
+  requestAnimationFrame(function(){
+    card.style.maxHeight="0px";
+    card.style.opacity="0";
+    card.style.marginBottom="0px";
+    card.style.paddingTop="0px";
+    card.style.paddingBottom="0px";
+  });
+  setTimeout(function(){
+    card.remove();
+    updateFamCountLbl();
+    renderHeroTotals(CURRENT_FAMS||[]);
+  },380);
 }
 
 async function completeTrip(){
