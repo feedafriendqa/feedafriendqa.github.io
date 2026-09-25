@@ -1182,14 +1182,13 @@ async function submitThankyou() {
       payload.photo_base64 = await fileToBase64(thankyouPhotoFile);
       payload.photo_media_type = thankyouPhotoFile.type || 'image/jpeg';
     }
-    var res = await fetch(FEEDBACK_EDGE_URL, {
+    var res = await fetch(EDGE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
       body: JSON.stringify(payload)
     });
-    var raw = await res.json();
-    var d = raw.data || {};
-    if (d.error) {
+    var d = await res.json();
+    if (!d || d.error) {
       errEl.textContent = ar ? 'تعذّر الإرسال. حاول مرة أخرى.' : 'Could not send. Please try again.';
       errEl.classList.add('show');
       btn.disabled = false;
