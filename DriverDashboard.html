@@ -1091,7 +1091,7 @@ async function uploadLatePhoto(id){
   var path=(inp.dataset.app||"unknown")+"/"+id+"-"+Date.now()+"."+ext;
   inp.disabled=true;st.className="late-photo-status";st.textContent=t("uploading_photo");
   try{
-    var up=await sb.storage.from("donor-photos").upload(path,file,{contentType:mt,upsert:true});
+    var up=await sb.storage.from("donor-photos").upload(path,file,{contentType:mt,upsert:false});
     if(up.error)throw new Error(up.error.message);
     var url=sb.storage.from("donor-photos").getPublicUrl(path).data.publicUrl;
     var r=await sb.rpc("driver_set_delivery_photo",{p_assignment_id:id,p_photo_url:url});
