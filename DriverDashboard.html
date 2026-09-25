@@ -664,6 +664,8 @@ var TR={
   late_photo_failed:{en:"Couldn't save the photo: ",ar:"تعذر حفظ الصورة: "},
   past_add_photos:{en:"📷 Add delivery photos",ar:"📷 إضافة صور التوصيل"},
   past_hide_photos:{en:"Hide delivery photos",ar:"إخفاء صور التوصيل"},
+  late_note_saved:{en:"Note saved ✓",ar:"تم حفظ الملاحظة ✓"},
+  late_note_failed:{en:"Couldn't save the note: ",ar:"تعذر حفظ الملاحظة: "},
   delivered_section_show:{en:"✓ Delivered (",ar:"✓ تم التوصيل ("},
   delivered_section_suffix:{en:") — add or change photos",ar:") — إضافة أو تغيير الصور"},
   delivered_section_hide:{en:"Hide delivered families",ar:"إخفاء العائلات التي تم التوصيل لها"},
@@ -1086,10 +1088,30 @@ function renderPastTrip(trip){
 // Doesn't change the delivery itself or re-email the sponsor.
 function latePhotoBlock(row){
   var has=!!row.delivery_photo_path;
+  var noteVal=String((row.food_box_applications&&row.food_box_applications.driver_notes)||row.driver_notes||"").replace(/</g,"&lt;");
   return '<div class="fam-row"><span class="fam-ic">📷</span><div style="flex:1"><div class="fam-lbl" id="lp-lbl-'+row.id+'">'+t(has?"late_photo_replace_label":"late_photo_label")+'</div>'
     +'<input type="file" accept="image/*" class="fam-photo-inp" id="lp-inp-'+row.id+'" data-app="'+(row.application_id||"")+'" onchange="uploadLatePhoto(\''+row.id+'\')">'
     +'<div class="fam-photo-preview" id="lp-prev-'+row.id+'">'+(has?'<img src="'+row.delivery_photo_path+'" alt="'+t("delivery_photo_preview_alt")+'">':"")+'</div>'
-    +'<div class="late-photo-status" id="lp-st-'+row.id+'"></div></div></div>';
+    +'<div class="late-photo-status" id="lp-st-'+row.id+'"></div></div></div>'
+    +'<div class="fam-row"><span class="fam-ic">📝</span><div style="flex:1"><div class="fam-lbl">'+t("fam_note_label")+'</div>'
+    +'<textarea class="fam-notes-inp" id="lp-note-'+row.id+'" rows="2">'+noteVal+'</textarea>'
+    +'<button class="tb-out" style="margin-top:8px;padding:8px 14px;font-size:12px" onclick="saveLateNote(\''+row.id+'\')" data-en="Save note" data-ar="حفظ الملاحظة">Save note</button>'
+    +'<div class="late-photo-status" id="lp-note-st-'+row.id+'"></div></div></div>';
+}
+async function saveLateNote(id){
+  var ta=document.getElementById("lp-note-"+id),st=document.getElementById("lp-note-st-"+id);
+  if(!ta)return;
+  var val=ta.value.trim();
+  ta.disabled=true;st.className="late-photo-status";st.textContent=t("saving");
+  try{
+    var r=await sb.rpc("driver_set_delivery_note",{p_assignment_id:id,p_note:val});
+    if(r.error)throw new Error(r.error.message);
+    st.className="late-photo-status ok";st.textContent=t("late_note_saved");
+    CURRENT_FAMS.forEach(function(f){if(f.id===id){if(f.food_box_applications)f.food_box_applications.driver_notes=val;f.driver_notes=val;}});
+  }catch(e){
+    st.className="late-photo-status err";st.textContent=t("late_note_failed")+(e.message||t("please_try_again"));
+  }
+  ta.disabled=false;
 }
 async function uploadLatePhoto(id){
   var inp=document.getElementById("lp-inp-"+id),st=document.getElementById("lp-st-"+id),prev=document.getElementById("lp-prev-"+id),lbl=document.getElementById("lp-lbl-"+id);
@@ -1120,7 +1142,7 @@ async function togglePastPhotos(tripId){
   if(list.style.display!=="none"){list.style.display="none";btn.textContent=t("past_add_photos");return;}
   list.style.display="block";btn.textContent=t("past_hide_photos");
   list.innerHTML='<div class="loading"><div class="spin"></div></div>';
-  var r=await sb.from("trip_assignments").select("id,application_id,status,delivery_photo_path,food_box_applications(full_name_en,full_name)").eq("trip_id",tripId).eq("status","delivered");
+  var r=await sb.from("trip_assignments").select("id,application_id,status,delivery_photo_path,food_box_applications(full_name_en,full_name,driver_notes)").eq("trip_id",tripId).eq("status","delivered");
   if(r.error){list.innerHTML='<div class="late-photo-status err">'+t("could_not_load")+'</div>';return;}
   var rows=r.data||[];
   if(!rows.length){list.innerHTML='<div class="late-photo-status">'+t("past_no_delivered")+'</div>';return;}
