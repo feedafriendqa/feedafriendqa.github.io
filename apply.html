@@ -1179,8 +1179,9 @@ async function submitThankyou() {
   try {
     var payload = { type: 'submit_thankyou', application_id: currentApp.id, message: message || null };
     if (thankyouPhotoFile) {
-      payload.photo_base64 = await fileToBase64(thankyouPhotoFile);
-      payload.photo_media_type = thankyouPhotoFile.type || 'image/jpeg';
+      var tyCompressed = await compressUploadFile(thankyouPhotoFile);
+      payload.photo_base64 = await fileToBase64(tyCompressed);
+      payload.photo_media_type = tyCompressed.type || 'image/jpeg';
     }
     var res = await fetch(EDGE_URL, {
       method: 'POST',
