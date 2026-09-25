@@ -153,6 +153,13 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 .fam-photo-inp:disabled{background:var(--line);color:var(--muted);border-color:var(--line)}
 .fam-photo-preview{margin-top:8px}
 .fam-photo-preview img{max-width:120px;max-height:120px;border-radius:10px;display:block;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.late-photo-status{margin-top:6px;font-size:11px;font-weight:700;color:var(--muted)}
+.late-photo-status.ok{color:var(--forest)}
+.late-photo-status.err{color:#c0392b}
+.past-photos-btn{display:block;width:100%;margin-top:12px;padding:10px;border-radius:30px;border:1.5px solid var(--forest);background:#fff;color:var(--forest);font-family:"Manrope",sans-serif;font-size:12.5px;font-weight:700;cursor:pointer}
+.past-photos-list{margin-top:10px}
+.past-photo-row{padding:10px 0;border-top:1px solid var(--line)}
+.past-photo-name{font-size:13px;font-weight:700;color:var(--forest-deep);margin-bottom:6px}
 .alt-num-link{display:inline-block;margin-top:12px;font-size:11px;font-weight:700;color:var(--forest);text-decoration:none}
 .alt-num-link:hover{text-decoration:underline}
 .del-btn{width:100%;margin-top:14px;padding:13px;border-radius:30px;border:none;font-family:"Manrope",sans-serif;font-size:13px;font-weight:700;cursor:pointer;background:var(--amber);color:var(--forest-deep)}
@@ -647,6 +654,13 @@ var TR={
   please_try_again:{en:"Please try again.",ar:"يرجى المحاولة مرة أخرى."},
   photo_read_fail:{en:"Couldn't read that photo — please try picking it again.",ar:"تعذرت قراءة هذه الصورة — يرجى اختيارها مرة أخرى."},
   uploading_photo:{en:"Uploading photo…",ar:"جارٍ رفع الصورة…"},
+  late_photo_label:{en:"Add a photo for the donor (optional)",ar:"أضف صورة للمتبرع (اختياري)"},
+  late_photo_replace_label:{en:"Photo added — choose another to replace it",ar:"تمت إضافة الصورة — اختر صورة أخرى لاستبدالها"},
+  late_photo_saved:{en:"Photo saved ✓",ar:"تم حفظ الصورة ✓"},
+  late_photo_failed:{en:"Couldn't save the photo: ",ar:"تعذر حفظ الصورة: "},
+  past_add_photos:{en:"📷 Add delivery photos",ar:"📷 إضافة صور التوصيل"},
+  past_hide_photos:{en:"Hide delivery photos",ar:"إخفاء صور التوصيل"},
+  past_no_delivered:{en:"No delivered families on this trip.",ar:"لا توجد عائلات تم التوصيل لها في هذه الرحلة."},
   saving:{en:"Saving…",ar:"جارٍ الحفظ…"},
   could_not_mark_delivered:{en:"Could not mark as delivered — ",ar:"تعذر تسجيل التوصيل — "},
   all_delivered_confirm:{en:"All delivered! 🎉 Mark trip as complete?",ar:"تم توصيل الجميع! 🎉 هل تريد تعليم الرحلة كمكتملة؟"},
@@ -1050,7 +1064,62 @@ function renderPastTrip(trip){
   var date=trip.trip_date?new Date(trip.trip_date).toLocaleDateString(LANG==="ar"?"ar-QA":"en-GB",{day:"numeric",month:"short",year:"numeric"}):t("dash");
   return '<div class="trip-card" style="margin:0 16px 10px"><div class="trip-head"><span class="trip-ref">TRIP-'+trip.id.slice(0,6).toUpperCase()+'</span><span class="badge badge-done">'+t("badge_done")+'</span></div>'+
     '<div class="tr"><span class="tr-l">'+t("label_distribution_date")+'</span><span class="tr-v">'+date+'</span></div>'+
-    '<div class="tr"><span class="tr-l">'+t("label_deliveries")+'</span><span class="tr-v">'+trip.boxes_count+t("unit_locations")+'</span></div></div>';
+    '<div class="tr"><span class="tr-l">'+t("label_deliveries")+'</span><span class="tr-v">'+trip.boxes_count+t("unit_locations")+'</span></div>'+
+    '<button class="past-photos-btn" id="pp-btn-'+trip.id+'" onclick="togglePastPhotos(\''+trip.id+'\')">'+t("past_add_photos")+'</button>'+
+    '<div class="past-photos-list" id="pp-list-'+trip.id+'" style="display:none"></div></div>';
+}
+
+// Delivery photos after the fact. A stop that's already marked delivered
+// (on the active trip or a past one) gets its own photo picker: the image is
+// uploaded straight to the public donor-photos bucket, then the
+// driver_set_delivery_photo RPC saves the link on the trip_assignments row
+// (the RPC checks the stop is on this driver's trip and is delivered).
+// Doesn't change the delivery itself or re-email the sponsor.
+function latePhotoBlock(row){
+  var has=!!row.delivery_photo_path;
+  return '<div class="fam-row"><span class="fam-ic">📷</span><div style="flex:1"><div class="fam-lbl" id="lp-lbl-'+row.id+'">'+t(has?"late_photo_replace_label":"late_photo_label")+'</div>'
+    +'<input type="file" accept="image/*" class="fam-photo-inp" id="lp-inp-'+row.id+'" data-app="'+(row.application_id||"")+'" onchange="uploadLatePhoto(\''+row.id+'\')">'
+    +'<div class="fam-photo-preview" id="lp-prev-'+row.id+'">'+(has?'<img src="'+row.delivery_photo_path+'" alt="'+t("delivery_photo_preview_alt")+'">':"")+'</div>'
+    +'<div class="late-photo-status" id="lp-st-'+row.id+'"></div></div></div>';
+}
+async function uploadLatePhoto(id){
+  var inp=document.getElementById("lp-inp-"+id),st=document.getElementById("lp-st-"+id),prev=document.getElementById("lp-prev-"+id),lbl=document.getElementById("lp-lbl-"+id);
+  if(!inp||!inp.files||!inp.files[0])return;
+  var file=inp.files[0];
+  var mt=file.type||"image/jpeg";
+  var ext=((mt.split("/")[1]||"jpg").split("+")[0]);
+  var path=(inp.dataset.app||"unknown")+"/"+id+"-"+Date.now()+"."+ext;
+  inp.disabled=true;st.className="late-photo-status";st.textContent=t("uploading_photo");
+  try{
+    var up=await sb.storage.from("donor-photos").upload(path,file,{contentType:mt,upsert:true});
+    if(up.error)throw new Error(up.error.message);
+    var url=sb.storage.from("donor-photos").getPublicUrl(path).data.publicUrl;
+    var r=await sb.rpc("driver_set_delivery_photo",{p_assignment_id:id,p_photo_url:url});
+    if(r.error)throw new Error(r.error.message);
+    prev.innerHTML='<img src="'+url+'" alt="'+t("delivery_photo_preview_alt")+'">';
+    if(lbl)lbl.textContent=t("late_photo_replace_label");
+    st.className="late-photo-status ok";st.textContent=t("late_photo_saved");
+    CURRENT_FAMS.forEach(function(f){if(f.id===id)f.delivery_photo_path=url;});
+  }catch(e){
+    st.className="late-photo-status err";st.textContent=t("late_photo_failed")+(e.message||t("please_try_again"));
+  }
+  inp.disabled=false;inp.value="";
+}
+async function togglePastPhotos(tripId){
+  var list=document.getElementById("pp-list-"+tripId),btn=document.getElementById("pp-btn-"+tripId);
+  if(!list)return;
+  if(list.style.display!=="none"){list.style.display="none";btn.textContent=t("past_add_photos");return;}
+  list.style.display="block";btn.textContent=t("past_hide_photos");
+  list.innerHTML='<div class="loading"><div class="spin"></div></div>';
+  var r=await sb.from("trip_assignments").select("id,application_id,status,delivery_photo_path,food_box_applications(full_name_en,full_name)").eq("trip_id",tripId).eq("status","delivered");
+  if(r.error){list.innerHTML='<div class="late-photo-status err">'+t("could_not_load")+'</div>';return;}
+  var rows=r.data||[];
+  if(!rows.length){list.innerHTML='<div class="late-photo-status">'+t("past_no_delivered")+'</div>';return;}
+  list.innerHTML=rows.map(function(row){
+    var a=row.food_box_applications||{};
+    var nm=String(a.full_name_en||a.full_name||"—").replace(/</g,"&lt;");
+    return '<div class="past-photo-row"><div class="past-photo-name">'+nm+'</div>'+latePhotoBlock(row)+'</div>';
+  }).join("");
 }
 
 async function showFamilies(){
@@ -1423,7 +1492,7 @@ function renderFamCard(row,num){
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.94 9h-3.02a15.9 15.9 0 0 0-1.2-5.3A8.03 8.03 0 0 1 19.94 11zM12 4c.83 1.15 1.8 3.1 2.1 7H9.9c.3-3.9 1.27-5.85 2.1-7zM8.28 5.7A15.9 15.9 0 0 0 7.08 11H4.06a8.03 8.03 0 0 1 4.22-5.3zM4.06 13h3.02c.16 1.9.6 3.7 1.2 5.3A8.03 8.03 0 0 1 4.06 13zM12 20c-.83-1.15-1.8-3.1-2.1-7h4.2c-.3 3.9-1.27 5.85-2.1 7zm3.72-1.7c.6-1.6 1.04-3.4 1.2-5.3h3.02a8.03 8.03 0 0 1-4.22 5.3z" fill="#146c43"/></svg></span><div><div class="fam-lbl">'+t("fam_language")+'</div><div class="fam-val">'+language+'</div></div></div>'
     +(tags?'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M7 4H5L4 6H2v2h2l3.6 7.59-1.35 2.44A2 2 0 0 0 8 21h11v-2H8l1.1-2h7.45a2 2 0 0 0 1.79-1.11L21.9 8H6.21l-.94-2H7V4zM9 19a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm9 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" fill="#146c43"/></svg></span><div><div class="fam-lbl">'+t("fam_needs")+'</div><div style="margin-top:4px">'+tags+'</div></div></div>':"")
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#146c43"/></svg></span><div style="flex:1"><div class="fam-lbl">'+t("fam_note_label")+'</div><textarea class="fam-notes-inp" id="notes-'+row.id+'" placeholder="'+t("fam_note_placeholder")+'" '+(done?"disabled":"")+'>'+notesVal+'</textarea></div></div>'
-    +'<div class="fam-row"><span class="fam-ic">📷</span><div style="flex:1"><div class="fam-lbl">'+t("fam_photo_label")+'</div><input type="file" accept="image/*" class="fam-photo-inp" id="photo-'+row.id+'" onchange="previewPhoto(\''+row.id+'\')" '+(done?"disabled":"")+'><div class="fam-photo-preview" id="photo-preview-'+row.id+'"></div></div></div>'
+    +(done?latePhotoBlock(row):'<div class="fam-row"><span class="fam-ic">📷</span><div style="flex:1"><div class="fam-lbl">'+t("fam_photo_label")+'</div><input type="file" accept="image/*" class="fam-photo-inp" id="photo-'+row.id+'" onchange="previewPhoto(\''+row.id+'\')"><div class="fam-photo-preview" id="photo-preview-'+row.id+'"></div></div></div>')
     +'<button class="del-btn'+(done?" done":"")+'" id="db-'+row.id+'" data-app="'+(row.application_id||"")+'" onclick="markDel(\''+row.id+'\')" '+((done||!canMark)?"disabled":"")+'>'+(done?t("marked_delivered"):(canMark?t("mark_delivered"):t("not_yet_deliverable")))+'</button>'
     +(done?"":'<button class="remove-fam-btn" id="rm-'+row.id+'" data-name="'+name.replace(/"/g,"&quot;")+'" data-boxes="'+boxCount+'" onclick="confirmRemoveFamily(\''+row.id+'\')">✕ '+t("remove_family_btn")+'</button>')
     +'</div>';
