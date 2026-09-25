@@ -158,6 +158,9 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 .late-photo-status.err{color:#c0392b}
 .past-photos-btn{display:block;width:100%;margin-top:12px;padding:10px;border-radius:30px;border:1.5px solid var(--forest);background:#fff;color:var(--forest);font-family:"Manrope",sans-serif;font-size:12.5px;font-weight:700;cursor:pointer}
 .past-photos-list{margin-top:10px}
+.deliv-wrap{margin:14px 16px 0}
+.complete-trip-btn{display:block;width:100%;padding:14px;border-radius:30px;border:none;background:var(--forest);color:#fff;font-family:"Manrope",sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px}
+.all-done-msg{text-align:center;font-size:14px;font-weight:700;color:#fff;padding:6px 0 12px}
 .past-photo-row{padding:10px 0;border-top:1px solid var(--line)}
 .past-photo-name{font-size:13px;font-weight:700;color:var(--forest-deep);margin-bottom:6px}
 .alt-num-link{display:inline-block;margin-top:12px;font-size:11px;font-weight:700;color:var(--forest);text-decoration:none}
@@ -297,6 +300,7 @@ body.lang-ar .alt-contact-actions{text-align:left}
     </div>
     <div style="height:14px"></div>
     <div id="fams-list"></div>
+    <div id="fams-delivered"></div>
   </div>
 
   <!-- Areas for this trip -->
@@ -660,6 +664,11 @@ var TR={
   late_photo_failed:{en:"Couldn't save the photo: ",ar:"تعذر حفظ الصورة: "},
   past_add_photos:{en:"📷 Add delivery photos",ar:"📷 إضافة صور التوصيل"},
   past_hide_photos:{en:"Hide delivery photos",ar:"إخفاء صور التوصيل"},
+  delivered_section_show:{en:"✓ Delivered (",ar:"✓ تم التوصيل ("},
+  delivered_section_suffix:{en:") — add or change photos",ar:") — إضافة أو تغيير الصور"},
+  delivered_section_hide:{en:"Hide delivered families",ar:"إخفاء العائلات التي تم التوصيل لها"},
+  all_done_msg:{en:"All families delivered 🎉",ar:"تم التوصيل لجميع العائلات 🎉"},
+  complete_trip_btn:{en:"Mark trip as complete",ar:"تعليم الرحلة كمكتملة"},
   past_no_delivered:{en:"No delivered families on this trip.",ar:"لا توجد عائلات تم التوصيل لها في هذه الرحلة."},
   saving:{en:"Saving…",ar:"جارٍ الحفظ…"},
   could_not_mark_delivered:{en:"Could not mark as delivered — ",ar:"تعذر تسجيل التوصيل — "},
@@ -775,7 +784,7 @@ function setLang(lang){
   // navigation. Transient UI (an open alt-contacts modal) is left alone —
   // it'll be correct next time it's opened.
   if(document.getElementById("pnl-fams")&&document.getElementById("pnl-fams").style.display!=="none"&&CURRENT_FAMS.length){
-    document.getElementById("fams-list").innerHTML=CURRENT_FAMS.map(function(row,i){return renderFamCard(row,i+1);}).join("");
+    renderFamsList();
     renderRouteSelector();
   }
   if(document.getElementById("pnl-alloc")&&document.getElementById("pnl-alloc").style.display!=="none"&&KEPT&&Object.keys(KEPT).length){
@@ -1122,11 +1131,46 @@ async function togglePastPhotos(tripId){
   }).join("");
 }
 
+// Delivered families never sit in the main list (they used to come back
+// after a page reload looking unfinished, which also stopped the
+// "all delivered -> complete trip" prompt from ever firing). The main list
+// only shows families still to deliver; delivered ones live in a
+// collapsible section underneath where a photo can still be added.
+var DELIV_OPEN=false;
+function renderFamsList(){
+  var pending=(CURRENT_FAMS||[]).filter(function(r){return r.status!=="delivered";});
+  document.getElementById("fams-list").innerHTML=pending.map(function(row,i){return renderFamCard(row,i+1);}).join("");
+  updateFamCountLbl();
+  renderDeliveredSection();
+}
+function renderDeliveredSection(){
+  var el=document.getElementById("fams-delivered");
+  if(!el)return;
+  var delivered=(CURRENT_FAMS||[]).filter(function(r){return r.status==="delivered";});
+  var pendingLeft=document.querySelectorAll("#fams-list .fam-card").length;
+  var html="";
+  if(!pendingLeft&&delivered.length&&AT){
+    html+='<div class="all-done-msg">'+t("all_done_msg")+'</div><button class="complete-trip-btn" onclick="completeTrip()">'+t("complete_trip_btn")+'</button>';
+  }
+  if(delivered.length){
+    html+='<button class="past-photos-btn" onclick="DELIV_OPEN=!DELIV_OPEN;renderDeliveredSection()">'+(DELIV_OPEN?t("delivered_section_hide"):t("delivered_section_show")+delivered.length+t("delivered_section_suffix"))+'</button>';
+    if(DELIV_OPEN){
+      html+='<div class="trip-card" style="margin:10px 0 0">'+delivered.map(function(row){
+        var a=row.food_box_applications||{};
+        var nm=String(a.full_name_en||a.full_name||"—").replace(/</g,"&lt;");
+        return '<div class="past-photo-row"><div class="past-photo-name">'+nm+'</div>'+latePhotoBlock(row)+'</div>';
+      }).join("")+'</div>';
+    }
+  }
+  el.innerHTML=html?'<div class="deliv-wrap">'+html+'</div>':"";
+}
+
 async function showFamilies(){
   document.getElementById("pnl-active").style.display="none";
   document.getElementById("pnl-fams").style.display="block";
   var listEl=document.getElementById("fams-list");
   listEl.innerHTML='<div class="loading"><div class="spin"></div></div>';
+  var dvEl=document.getElementById("fams-delivered");if(dvEl)dvEl.innerHTML="";
   var r=await sb.from("trip_assignments")
     .select("*,food_box_applications(full_name_en,full_name,whatsapp,zone,street,building,unit,area,diaper_size,formula,household_size,nationality,submission_lang,driver_notes,qid_number,lat,lng,food_box_members(diaper_size,needs_formula))")
     .eq("trip_id",AT.id);
@@ -1154,7 +1198,7 @@ async function showFamilies(){
     var rc=document.getElementById("route-card"); if(rc)rc.style.display="none";
     return;
   }
-  listEl.innerHTML=rows.map(function(row,i){return renderFamCard(row,i+1);}).join("");
+  renderFamsList();
   renderRouteSelector();
 }
 
@@ -1282,7 +1326,7 @@ async function orderByDistance(lat,lon,list){
 }
 function renderRouteAndBanner(list,label,unplaced){
   CURRENT_FAMS=list;
-  document.getElementById("fams-list").innerHTML=CURRENT_FAMS.map(function(row,i){return renderFamCard(row,i+1);}).join("");
+  renderFamsList();
   showRouteBanner(t("route_set_start")+label+"."+t("route_ordered_by_distance")
     +(unplaced?" "+unplaced+t("route_unplaced_suffix"):"")
     +t("route_distance_disclaimer"));
@@ -1591,6 +1635,8 @@ async function markDel(id){
     alert(t("could_not_mark_delivered")+(e.message||t("please_try_again")));
     return;
   }
+  var shownPhoto=document.querySelector("#photo-preview-"+id+" img");
+  CURRENT_FAMS.forEach(function(f){if(f.id===id){f.status="delivered";if(shownPhoto)f.delivery_photo_path=shownPhoto.src;}});
   delete PHOTO_DATA[id];
   removeFamCard(id);
 }
@@ -1619,6 +1665,7 @@ function removeFamCard(id){
   setTimeout(function(){
     card.remove();
     updateFamCountLbl();
+    renderDeliveredSection();
     if(!document.querySelectorAll("#fams-list .fam-card").length){
       setTimeout(function(){if(confirm(t("all_delivered_confirm")))completeTrip();},200);
     }
@@ -1703,6 +1750,7 @@ function fadeOutFamCard(id){
   setTimeout(function(){
     card.remove();
     updateFamCountLbl();
+    renderDeliveredSection();
     renderHeroTotals(CURRENT_FAMS||[]);
   },380);
 }
