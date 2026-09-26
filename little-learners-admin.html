@@ -123,6 +123,8 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 .st-assessment_day{background:#FDEAEA;color:#8B2020;}
 .st-completed{background:#ECEFF1;color:#455A64;}
 .st-archived{background:#FDEAEA;color:#8B2020;}
+.st-referred{background:#F0EBF8;color:#5B3A8A;}
+.st-school_secured{background:#FEF3D6;color:#7A5000;}
 .st-graduated{background:var(--lime-soft);color:var(--forest);}
 .assigned-to{font-size:10.5px;font-weight:700;color:var(--muted);background:var(--cream);padding:2px 8px;border-radius:50px;white-space:nowrap;flex-shrink:0;}
 .dup-flag{font-size:10px;font-weight:700;background:#FEF3D6;color:#7A5000;padding:2px 7px;border-radius:50px;border:1.5px solid var(--gold);}
@@ -642,18 +644,25 @@ const PIPELINE_STAGES = [
   {key:'pack_sent', label:'Pack Sent', icon:'📦'},
   {key:'assessment_day', label:'Assessment Day', icon:'🏫'},
   {key:'completed', label:'Completed', icon:'🎓'},
+  {key:'referred', label:'Referred', icon:'🤝'},
+  {key:'school_secured', label:'School Secured', icon:'🏫'},
 ];
 
 const STATUS_LABELS = {
   new:'New',waiting_for_assessment:'Waiting for Assessment',pre_assessment_scheduled:'Call Scheduled',pre_assessed:'Call Completed',
   year_group_pending:'YG Pending Approval',year_group_confirmed:'YG Confirmed',
-  pack_sent:'Pack Sent',assessment_day:'Assessment Day',completed:'Completed'
+  pack_sent:'Pack Sent',assessment_day:'Assessment Day',completed:'Completed',
+  referred:'Referred',school_secured:'School Secured',archived:'Archived'
 };
 
 // A child becomes a "Little Learner" with their own profile once THEIR OWN case
 // (not the family's — siblings can be at different stages) has passed assessment
 // and a year group has been confirmed for them.
 const POST_ASSESS_STATUSES = new Set(['year_group_confirmed','pack_sent','assessment_day','completed']);
+// Year groups are only allocated AFTER assessment. Before that, a child has no year
+// group — no age-based suggestion is shown and no override can be set.
+const UNASSESSED_STATUSES = new Set(['new','waiting_for_assessment','pre_assessment_scheduled','pre_assessed','referred']);
+function isUnassessed(c) { return UNASSESSED_STATUSES.has(c.pipeline_status||'new'); }
 function isPostAssessChild(c) {
   return POST_ASSESS_STATUSES.has(c.pipeline_status) && !!(c.final_year_group || c.year_group_override);
 }
@@ -2238,7 +2247,7 @@ function renderPackTab(f, children) {
 
   el.innerHTML = children.map(c => {
     const status = c.pack_status || 'pending';
-    const defaultLevel = c.material_level || c.final_year_group || suggestYG(c).yg;
+    const defaultLevel = c.material_level || c.final_year_group || c.year_group_override || '';
     let body = '';
 
     if(status==='given') {
@@ -2929,8 +2938,10 @@ function renderChildren(children, f) {
     return;
   }
   document.getElementById('tp-children').innerHTML = children.map((c,i)=>{
-    const {yg,reason} = suggestYG(c);
-    const displayYG = c.final_year_group || c.year_group_override || yg;
+    const unassessed = isUnassessed(c);
+    const assignedYG = c.final_year_group || c.year_group_override;
+    const displayYG = unassessed ? 'Not yet assessed' : (assignedYG || 'Not set');
+    const reason = unassessed ? 'Year group is allocated after assessment' : (assignedYG ? '' : 'No year group allocated yet');
     const isOverride = !!c.year_group_override && !c.year_group_approved;
     const isApproved = !!c.year_group_approved;
     const gcClass = (c.gender||'').toLowerCase()==='girl'?'girl':(c.gender||'').toLowerCase()==='boy'?'boy':'';
@@ -2996,7 +3007,7 @@ function renderChildren(children, f) {
             ${isOverride&&currentUserRole==='admin'?`
               <button class="approve-btn btn-sm" onclick="approveYG('${c.id}')">Approve</button>
             `:''}
-            <button class="override-btn" onclick="toggleYGEdit('yge-${c.id}',this)">✏️ Override</button>
+            ${!unassessed?`<button class="override-btn" onclick="toggleYGEdit('yge-${c.id}',this)">✏️ Override</button>`:''}
           </div>
           ${c.year_group_justification?`<div style="margin-top:8px;font-size:12px;color:var(--muted);background:var(--cream);padding:8px 10px;border-radius:var(--rs);">📝 ${c.year_group_justification}</div>`:''}
         </div>
