@@ -123,6 +123,9 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 .st-assessment_day{background:#FDEAEA;color:#8B2020;}
 .st-completed{background:#ECEFF1;color:#455A64;}
 .st-archived{background:#FDEAEA;color:#8B2020;}
+.nd-band-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+.nd-band-chips label{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;background:var(--cream);border:1.5px solid #e5e7eb;border-radius:50px;padding:5px 11px;cursor:pointer;text-transform:none;letter-spacing:0;margin:0;}
+.nd-band-chips input{margin:0;width:auto;}
 .st-referred{background:#F0EBF8;color:#5B3A8A;}
 .st-school_secured{background:#FEF3D6;color:#7A5000;}
 .st-graduated{background:var(--lime-soft);color:var(--forest);}
@@ -455,10 +458,8 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
           <option value="social">Social / Other</option>
         </select>
       </div>
-      <div><label>Age Band</label>
-        <select id="nd-band" onchange="onAgeBandChange()">
-          <option value="">Select…</option>
-        </select>
+      <div><label>Age Band(s) — tick one or more</label>
+        <div id="nd-band" class="nd-band-chips"></div>
       </div>
       <div><label>Eligibility</label>
         <select id="nd-elig-type" onchange="onEligTypeChange()">
@@ -470,7 +471,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
       <div id="nd-elig-yg-wrap" style="display:none;"><label>Year group(s) — ctrl/cmd-click for multiple</label>
         <select id="nd-elig-yg" multiple size="4"></select>
       </div>
-      <div><label>Title</label><input id="nd-title" placeholder="e.g. Ages 6–7 Assessment Day"></div>
+      <div><label>Title</label><input id="nd-title" placeholder="e.g. Ages 6, 7 Assessment Day" oninput="this.dataset.auto=''"></div>
       <div><label>Date</label><input id="nd-date" type="date"></div>
       <div><label>Time</label><input id="nd-time" placeholder="e.g. 9:00 AM – 12:00 PM"></div>
       <div><label>Location</label><input id="nd-location" placeholder="e.g. Little Learners Centre, West Bay"></div>
@@ -623,13 +624,43 @@ let currentFamily = null, currentChildren = [], currentUser = null, currentUserR
 let profileFocusChildId = null;
 let allEvents = [], allEventAttendees = [], currentAssessDay = null;
 let allAssessors = [];
+// One band per completed year of age (e.g. Age 7 = 7y 0m – 7y 11m). Bands group
+// children by age only — packs/year groups are allocated by ability after assessment.
 const AGE_BANDS = [
-  {key:'3-4', label:'Ages 3–4 (FS1–FS2)', min:3, max:4},
-  {key:'5-6', label:'Ages 5–6 (Year 1–2)', min:5, max:6},
-  {key:'7-8', label:'Ages 7–8 (Year 3–4)', min:7, max:8},
-  {key:'9-10', label:'Ages 9–10 (Year 5–6)', min:9, max:10},
-  {key:'11-13', label:'Ages 11–13 (Special)', min:11, max:13},
+  {key:'3', label:'Age 3', min:3, max:3},
+  {key:'4', label:'Age 4', min:4, max:4},
+  {key:'5', label:'Age 5', min:5, max:5},
+  {key:'6', label:'Age 6', min:6, max:6},
+  {key:'7', label:'Age 7', min:7, max:7},
+  {key:'8', label:'Age 8', min:8, max:8},
+  {key:'9', label:'Age 9', min:9, max:9},
+  {key:'10', label:'Age 10', min:10, max:10},
+  {key:'11-13', label:'Ages 11–13', min:11, max:13},
 ];
+// Older two-year bands — kept only so assessment days created before the change
+// still look up their band correctly. Not offered in any dropdown.
+const LEGACY_AGE_BANDS = [
+  {key:'3-4', label:'Ages 3–4', min:3, max:4},
+  {key:'5-6', label:'Ages 5–6', min:5, max:6},
+  {key:'7-8', label:'Ages 7–8', min:7, max:8},
+  {key:'9-10', label:'Ages 9–10', min:9, max:10},
+];
+// An event's age_band can hold several band keys, comma-separated (e.g. '7,8').
+function eventBands(ev) {
+  return String(ev?.age_band||'').split(',').map(k=>findAgeBand(k.trim())).filter(Boolean);
+}
+function eventBandLabel(ev) {
+  const bands = eventBands(ev);
+  if(!bands.length) return ev?.age_band||'';
+  const parts = bands.map(b=>b.label.replace(/^Ages? /,''));
+  return (bands.length===1 && bands[0].min===bands[0].max ? 'Age ' : 'Ages ') + parts.join(', ');
+}
+function childInEventBands(child, ev) {
+  const age = childAgeYears(child);
+  if(age===null) return false;
+  return eventBands(ev).some(b => age>=b.min && age<=b.max);
+}
+function findAgeBand(key) { return AGE_BANDS.find(b=>b.key===key) || LEGACY_AGE_BANDS.find(b=>b.key===key) || null; }
 let activePipeline = 'all';
 let showDupOnly = false;
 
@@ -902,7 +933,8 @@ async function removeAssessorMgmt(id) {
 
 // ── TURNING 3 NOTIFICATIONS ──
 function daysUntil3rdBirthday(dob) {
-  const d = new Date(dob);
+  const d = parseDob(dob);
+  if(!d) return NaN;
   const today = new Date();
   const next3 = new Date(d.getFullYear()+3, d.getMonth(), d.getDate());
   return Math.round((next3 - today) / (1000*60*60*24));
@@ -1008,10 +1040,24 @@ function renderTurning3() {
 }
 
 // ── ASSESSMENT DAYS ──
+// DOBs are stored as either 'dd/mm/yyyy' (sheet imports / QID scans) or 'yyyy-mm-dd'.
+// new Date('22/09/2017') is invalid and new Date('09/03/2018') is read US-style
+// (3 Sept instead of 9 March), so always parse explicitly.
+function parseDob(v) {
+  if(!v) return null;
+  const s = String(v).trim();
+  let m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+  if(m) return new Date(+m[3], +m[2]-1, +m[1]);
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
 function childAgeYears(child) {
   if(!child.dob) return null;
   const today = new Date();
-  const dob = new Date(child.dob);
+  const dob = parseDob(child.dob);
+  if(!dob) return null;
   let years = today.getFullYear() - dob.getFullYear();
   const m = today.getMonth() - dob.getMonth();
   if(m<0 || (m===0 && today.getDate()<dob.getDate())) years--;
@@ -1019,13 +1065,10 @@ function childAgeYears(child) {
 }
 
 function populateAgeBandSelect() {
-  const sel = document.getElementById('nd-band');
-  if(!sel || sel.options.length>1) return;
-  AGE_BANDS.forEach(b => {
-    const opt = document.createElement('option');
-    opt.value = b.key; opt.textContent = b.label;
-    sel.appendChild(opt);
-  });
+  const wrap = document.getElementById('nd-band');
+  if(!wrap || wrap.children.length) return;
+  wrap.innerHTML = AGE_BANDS.map(b =>
+    `<label><input type="checkbox" value="${b.key}" onchange="onAgeBandChange()"> ${b.label}</label>`).join('');
 }
 
 // Pre-assessment children are categorized/filtered by AGE, not year group —
@@ -1047,9 +1090,17 @@ function ageBandForChild(child) {
 }
 
 function onAgeBandChange() {
-  const band = AGE_BANDS.find(b=>b.key===document.getElementById('nd-band').value);
   const titleEl = document.getElementById('nd-title');
-  if(band && !titleEl.value) titleEl.value = band.label.replace(/\s*\(.*\)/,'') + ' Assessment Day';
+  const keys = selectedNewDayBands();
+  const label = keys.length ? eventBandLabel({age_band: keys.join(',')}) : '';
+  // Keep the suggested title in step with the ticked bands, unless someone has typed their own
+  if(!titleEl.value || titleEl.dataset.auto==='1') {
+    titleEl.value = label ? label + ' Assessment Day' : '';
+    titleEl.dataset.auto = label ? '1' : '';
+  }
+}
+function selectedNewDayBands() {
+  return Array.from(document.querySelectorAll('#nd-band input:checked')).map(i=>i.value);
 }
 
 function toggleNewDayForm() {
@@ -1068,14 +1119,14 @@ function onEligTypeChange() {
 
 async function createAssessmentDay() {
   const event_type = document.getElementById('nd-type').value || 'assessment_day';
-  const age_band = document.getElementById('nd-band').value;
+  const age_band = selectedNewDayBands().join(',');
   const title = document.getElementById('nd-title').value.trim();
   const event_date = document.getElementById('nd-date').value;
   const event_time = document.getElementById('nd-time').value.trim();
   const location = document.getElementById('nd-location').value.trim();
   const eligType = document.getElementById('nd-elig-type').value;
   if(!title || !event_date) { showToast('Please fill in title and date'); return; }
-  if(event_type==='assessment_day' && !age_band) { showToast('Please select an age band'); return; }
+  if(event_type==='assessment_day' && !age_band) { showToast('Please tick at least one age band'); return; }
   let eligibility_criteria = {type:'age_band'};
   if(eligType==='year_group_pack') {
     const yg = Array.from(document.getElementById('nd-elig-yg').selectedOptions).map(o=>o.value);
@@ -1095,8 +1146,9 @@ async function createAssessmentDay() {
   document.getElementById('nd-type').value='assessment_day';
   document.getElementById('nd-elig-type').value='age_band';
   onEligTypeChange();
-  document.getElementById('nd-band').value='';
+  document.querySelectorAll('#nd-band input').forEach(i=>i.checked=false);
   document.getElementById('nd-title').value='';
+  document.getElementById('nd-title').dataset.auto='';
   document.getElementById('nd-date').value='';
   document.getElementById('nd-time').value='';
   document.getElementById('nd-location').value='';
@@ -1116,10 +1168,10 @@ function renderAssessDaysList() {
     const attendees = allEventAttendees.filter(a=>a.event_id===d.id);
     const confirmed = attendees.filter(a=>a.invite_status==='confirmed').length;
     const attended = attendees.filter(a=>a.day_status==='attended').length;
-    const band = AGE_BANDS.find(b=>b.key===d.age_band);
+    const bandLabel = eventBands(d).length ? eventBandLabel(d) : '';
     return `<div class="fam-card" style="cursor:pointer;" onclick="openAssessDay('${d.id}')">
       <div class="fam-info">
-        <div class="fam-name">${d.title} <span style="font-size:11px;color:var(--muted);">${EVENT_TYPE_LABELS[d.event_type]||d.event_type||''}${band?' · '+band.label:''}</span></div>
+        <div class="fam-name">${d.title} <span style="font-size:11px;color:var(--muted);">${EVENT_TYPE_LABELS[d.event_type]||d.event_type||''}${bandLabel?' · '+bandLabel:''}</span></div>
         <div class="fam-meta">
           <span>📆 ${d.event_date ? new Date(d.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'No date set'}</span>
           ${d.event_time?`<span>🕐 ${d.event_time}</span>`:''}
@@ -1148,9 +1200,8 @@ function openAssessDay(dayId) {
   currentAssessDay = allEvents.find(d=>d.id===dayId);
   if(!currentAssessDay) return;
   document.getElementById('ad-title').textContent = currentAssessDay.title;
-  const band = AGE_BANDS.find(b=>b.key===currentAssessDay.age_band);
   document.getElementById('ad-sub').innerHTML = `
-    <span>${band?band.label:(currentAssessDay.age_band||'')}</span>
+    <span>${eventBandLabel(currentAssessDay)}</span>
     <span>${currentAssessDay.event_date ? new Date(currentAssessDay.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : ''}</span>
     ${currentAssessDay.location?`<span>📍 ${currentAssessDay.location}</span>`:''}`;
 
@@ -1236,11 +1287,9 @@ function renderEligibleForDay() {
     eligible = allChildren.filter(c => !alreadyIn.has(c.id) && (c.learner_status||'active')==='active');
     emptyMsg = 'No children left to add — everyone active is already on this list.';
   } else {
-    const band = AGE_BANDS.find(b=>b.key===currentAssessDay.age_band);
-    if(!band) { el.innerHTML = ''; return; }
+    if(!eventBands(currentAssessDay).length) { el.innerHTML = ''; return; }
     eligible = allChildren.filter(c => {
-      const age = childAgeYears(c);
-      if(age===null || age<band.min || age>band.max) return false;
+      if(!childInEventBands(c, currentAssessDay)) return false;
       if(alreadyIn.has(c.id)) return false;
       const callDone = ['waiting_for_assessment','pre_assessed','pre_assessment_passed','pre_assessment_failed','year_group_pending','year_group_confirmed'].includes(c.pipeline_status);
       return callDone;
@@ -2809,7 +2858,8 @@ function studentCardHTML(f, c, isDup) {
 function suggestYG(child) {
   if(!child.dob) return {yg:'Unknown',reason:'No DOB'};
   const today = new Date();
-  const dob = new Date(child.dob);
+  const dob = parseDob(child.dob);
+  if(!dob) return {yg:'Unknown',reason:'DOB not recognised'};
   let months = (today.getFullYear()-dob.getFullYear())*12+(today.getMonth()-dob.getMonth());
   if(today.getDate()<dob.getDate()) months--;
   const years = Math.floor(months/12);
