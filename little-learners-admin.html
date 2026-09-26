@@ -510,6 +510,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
   </div>
   <div id="ad-edit-form" class="card" style="display:none;margin:0 16px 12px;">
     <div class="af">
+      <div><label>Age Band(s) — tick one or more</label><div id="ed-band" class="nd-band-chips"></div></div>
       <div><label>Title</label><input id="ed-title"></div>
       <div><label>Date</label><input id="ed-date" type="date"></div>
       <div><label>Time</label><input id="ed-time"></div>
@@ -1234,6 +1235,11 @@ function toggleEditEventForm() {
     document.getElementById('ed-date').value = currentAssessDay.event_date||'';
     document.getElementById('ed-time').value = currentAssessDay.event_time||'';
     document.getElementById('ed-location').value = currentAssessDay.location||'';
+    // Tick the event's current bands (older two-year bands are shown as their single years)
+    const ticked = new Set();
+    eventBands(currentAssessDay).forEach(b => AGE_BANDS.forEach(a => { if(a.min>=b.min && a.max<=b.max) ticked.add(a.key); }));
+    document.getElementById('ed-band').innerHTML = AGE_BANDS.map(b =>
+      `<label><input type="checkbox" value="${b.key}" ${ticked.has(b.key)?'checked':''}> ${b.label}</label>`).join('');
   }
 }
 
@@ -1242,12 +1248,18 @@ async function saveEventEdits() {
   const event_date = document.getElementById('ed-date').value;
   const event_time = document.getElementById('ed-time').value.trim();
   const location = document.getElementById('ed-location').value.trim();
+  const bandKeys = Array.from(document.querySelectorAll('#ed-band input:checked')).map(i=>i.value);
   if(!title || !event_date) { showToast('Title and date are required'); return; }
-  const {error} = await db.from('ll_events').update({title, event_date, event_time, location}).eq('id', currentAssessDay.id);
+  const isAssessDay = (currentAssessDay.event_type||'assessment_day')==='assessment_day';
+  if(isAssessDay && !bandKeys.length) { showToast('Please tick at least one age band'); return; }
+  // Only overwrite age_band if bands were ticked (keeps free-text bands on older workshop events)
+  const patch = {title, event_date, event_time, location};
+  if(bandKeys.length) patch.age_band = bandKeys.join(',');
+  const {error} = await db.from('ll_events').update(patch).eq('id', currentAssessDay.id);
   if(error) { showToast('Error: '+error.message); return; }
-  Object.assign(currentAssessDay, {title, event_date, event_time, location});
+  Object.assign(currentAssessDay, patch);
   const idx = allEvents.findIndex(d=>d.id===currentAssessDay.id);
-  if(idx>=0) Object.assign(allEvents[idx], {title, event_date, event_time, location});
+  if(idx>=0) Object.assign(allEvents[idx], patch);
   toggleEditEventForm();
   openAssessDay(currentAssessDay.id);
   renderAssessDaysList();
