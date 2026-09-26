@@ -127,6 +127,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 .nd-band-chips label{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;background:var(--cream);border:1.5px solid #e5e7eb;border-radius:50px;padding:5px 11px;cursor:pointer;text-transform:none;letter-spacing:0;margin:0;}
 .nd-band-chips input{margin:0;width:auto;}
 .st-referred{background:#F0EBF8;color:#5B3A8A;}
+.st-archived_arabic{background:#FDEAEA;color:#8B2020;}
 .st-school_secured{background:#FEF3D6;color:#7A5000;}
 .st-graduated{background:var(--lime-soft);color:var(--forest);}
 .assigned-to{font-size:10.5px;font-weight:700;color:var(--muted);background:var(--cream);padding:2px 8px;border-radius:50px;white-space:nowrap;flex-shrink:0;}
@@ -678,13 +679,14 @@ const PIPELINE_STAGES = [
   {key:'completed', label:'Completed', icon:'🎓'},
   {key:'referred', label:'Referred', icon:'🤝'},
   {key:'school_secured', label:'School Secured', icon:'🏫'},
+  {key:'archived_arabic', label:'Archived – Arabic', icon:'🗣️'},
 ];
 
 const STATUS_LABELS = {
   new:'New',waiting_for_assessment:'Waiting for Assessment',pre_assessment_scheduled:'Call Scheduled',pre_assessed:'Call Completed',
   year_group_pending:'YG Pending Approval',year_group_confirmed:'YG Confirmed',
   pack_sent:'Pack Sent',assessment_day:'Assessment Day',completed:'Completed',
-  referred:'Referred',school_secured:'School Secured',archived:'Archived'
+  referred:'Referred',school_secured:'School Secured',archived:'Archived',archived_arabic:'Archived – Arabic'
 };
 
 // A child becomes a "Little Learner" with their own profile once THEIR OWN case
@@ -693,7 +695,7 @@ const STATUS_LABELS = {
 const POST_ASSESS_STATUSES = new Set(['year_group_confirmed','pack_sent','assessment_day','completed']);
 // Year groups are only allocated AFTER assessment. Before that, a child has no year
 // group — no age-based suggestion is shown and no override can be set.
-const UNASSESSED_STATUSES = new Set(['new','waiting_for_assessment','pre_assessment_scheduled','pre_assessed','referred']);
+const UNASSESSED_STATUSES = new Set(['new','waiting_for_assessment','pre_assessment_scheduled','pre_assessed','referred','archived_arabic']);
 function isUnassessed(c) { return UNASSESSED_STATUSES.has(c.pipeline_status||'new'); }
 function isPostAssessChild(c) {
   return POST_ASSESS_STATUSES.has(c.pipeline_status) && !!(c.final_year_group || c.year_group_override);
