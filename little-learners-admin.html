@@ -1312,7 +1312,7 @@ function renderEligibleForDay() {
   }
 
   if(!eligible.length) {
-    el.innerHTML = `<div class="empty"><div class="eicon">✅</div><p>${emptyMsg}</p></div>`;
+    el.innerHTML = `<div class="empty"><div class="eicon">✅</div><p>${emptyMsg}</p></div>` + addOutsideCriteriaHTML();
     return;
   }
   el.innerHTML = `
@@ -1335,7 +1335,55 @@ function renderEligibleForDay() {
           <div class="fam-meta"><span>👪 ${fam?.father_name||fam?.mother_name||'—'}</span><span>📞 ${fam?.father_phone||fam?.mother_phone||'—'}</span></div>
         </div>
       </label>`;
-    }).join('')}`;
+    }).join('')}` + addOutsideCriteriaHTML();
+}
+
+// ── ADD A CHILD WHO DOESN'T MEET THE DAY'S CRITERIA (e.g. outside the age band) ──
+function addOutsideCriteriaHTML() {
+  return `<div class="card" style="margin-top:18px;padding:14px 16px;">
+    <div style="font-size:13px;font-weight:800;color:var(--forest);margin-bottom:4px;">➕ Add a child outside the criteria</div>
+    <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px;">For a child you want to invite even though they're not in this day's age band or stage. Search by name, URN or QID.</div>
+    <input id="elig-extra-search" placeholder="Start typing a name, URN or QID…" oninput="renderOutsideCriteriaResults()" style="width:100%;">
+    <div id="elig-extra-results" style="margin-top:8px;"></div>
+  </div>`;
+}
+
+function renderOutsideCriteriaResults() {
+  const q = (document.getElementById('elig-extra-search')?.value||'').trim().toLowerCase();
+  const out = document.getElementById('elig-extra-results');
+  if(!out) return;
+  if(q.length < 2) { out.innerHTML = ''; return; }
+  const alreadyIn = new Set(allEventAttendees.filter(a=>a.event_id===currentAssessDay.id).map(a=>a.child_id));
+  const matches = allChildren.filter(c => !alreadyIn.has(c.id) &&
+    ((c.full_name||'').toLowerCase().includes(q) || (c.urn||'').toLowerCase().includes(q) || (c.qid||'').includes(q))).slice(0, 8);
+  if(!matches.length) { out.innerHTML = '<div style="font-size:12px;color:var(--muted);font-weight:600;">No matching children (or they\'re already on this day).</div>'; return; }
+  out.innerHTML = matches.map(c => {
+    const fam = allFamilies.find(f=>f.id===c.family_id);
+    const age = childAgeYears(c);
+    const status = STATUS_LABELS[c.pipeline_status||'new'] || c.pipeline_status || 'New';
+    return `<div class="fam-card" style="display:flex;align-items:center;gap:10px;">
+      <div class="fam-info">
+        <div class="fam-name">${c.full_name||'Child'} <span style="font-size:11px;color:var(--muted);">(${age!==null?age+'y':'age unknown'})</span></div>
+        <div class="fam-meta"><span>${c.urn||'—'}</span><span>${status}</span><span>👪 ${fam?.father_name||fam?.mother_name||'—'}</span></div>
+      </div>
+      <button class="btn-teal btn-sm" onclick="addChildOutsideCriteria('${c.id}')">Add</button>
+    </div>`;
+  }).join('');
+}
+
+async function addChildOutsideCriteria(childId) {
+  const child = allChildren.find(c=>c.id===childId);
+  if(!child) return;
+  const {data, error} = await db.from('ll_event_attendees')
+    .insert({ event_id: currentAssessDay.id, family_id: child.family_id, child_id: childId, invite_status:'invited' }).select();
+  if(error) { showToast('Error: '+error.message); return; }
+  allEventAttendees.push(...(data||[]));
+  await addActivityLog(child.family_id, childId, 'note', `Added to "${currentAssessDay.title}" outside its eligibility criteria (manual exception).`, '');
+  renderEligibleForDay();
+  renderAttendeesForDay();
+  if((currentAssessDay.event_type||'assessment_day')==='assessment_day') { renderPreAssessmentList(); renderFinalAssessmentList(); }
+  renderAssessDaysList();
+  showToast(`✅ ${child.full_name||'Child'} added to this day`);
 }
 
 function updateEligibleSelectedCount() {
@@ -3924,6 +3972,19 @@ async function saveParentPreferredName(familyId, role, val) {
   showToast('✅ Preferred name saved');
 }
 
+async function saveParentEmail(familyId, role, val) {
+  const email = val.trim();
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('That email doesn\'t look right — please check it'); return; }
+  const field = role+'_email';
+  const fam = allFamilies.find(x=>x.id===familyId);
+  if((fam?.[field]||'') === email) return;
+  const {error} = await db.from('ll_families').update({[field]: email||null}).eq('id', familyId);
+  if(error) { showToast('Error: '+error.message); return; }
+  if(fam) fam[field] = email||null;
+  if(currentFamily && currentFamily.id===familyId) currentFamily[field] = email||null;
+  showToast(email ? '✅ Email saved' : '✅ Email removed');
+}
+
 async function setPrimaryContact(familyId, role) {
   const {error} = await db.from('ll_families').update({primary_contact: role}).eq('id', familyId);
   if(error) { showToast('Error: '+error.message); return; }
@@ -3936,9 +3997,10 @@ async function setPrimaryContact(familyId, role) {
   showToast('✅ Primary contact set');
 }
 
-function parentFullCardHTML(role, roleKey, name, preferredName, phone, qid, expiry, nationality, dob, scanType, familyId, isPrimary) {
+function parentFullCardHTML(role, roleKey, name, preferredName, phone, qid, expiry, nationality, dob, scanType, familyId, isPrimary, email) {
   const has = !!name;
-  const expiryPast = expiry && new Date(expiry) < new Date();
+  const expiryDate = parseDob(expiry);
+  const expiryPast = expiryDate && expiryDate < new Date();
   return `<div style="background:white;border:2px solid ${isPrimary?'var(--gold)':'var(--border)'};border-radius:var(--r);padding:16px 18px;position:relative;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;">
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;">${role}${isPrimary?' <span style="color:#7A5000;">⭐ Primary Contact</span>':''}</div>
@@ -3950,16 +4012,24 @@ function parentFullCardHTML(role, roleKey, name, preferredName, phone, qid, expi
         <label>Preferred Name</label>
         <input class="preferred-name-input" placeholder="What they like to be called" value="${preferredName||''}" onblur="saveParentPreferredName('${familyId}','${roleKey}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
       </div>
+      <div class="fg" style="margin-top:8px;margin-bottom:2px;">
+        <label>Email</label>
+        <input class="preferred-name-input" type="email" inputmode="email" placeholder="e.g. parent@example.com" value="${email||''}" onblur="saveParentEmail('${familyId}','${roleKey}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+      </div>
       <div class="info-grid" style="margin-top:12px;">
         <div class="irow"><div class="ikey">QID Number</div><div class="ival">${qid?`<span class="qid-pill" style="margin-top:0;">🪪 ${qid}</span>`:'—'}</div></div>
-        <div class="irow"><div class="ikey">QID Expiry</div><div class="ival" style="${expiryPast?'color:var(--coral);font-weight:800;':''}">${expiry?(expiryPast?'⚠️ Expired — ':'')+new Date(expiry).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—'}</div></div>
+        <div class="irow"><div class="ikey">QID Expiry</div><div class="ival" style="${expiryPast?'color:var(--coral);font-weight:800;':''}">${expiry?(expiryPast?'⚠️ Expired — ':'')+(expiryDate?expiryDate.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):expiry):'—'}</div></div>
         <div class="irow"><div class="ikey">Nationality</div><div class="ival">${nationality||'—'}</div></div>
         <div class="irow"><div class="ikey">Date of Birth</div><div class="ival">${dob||'—'}</div></div>
         <div class="irow"><div class="ikey">Phone</div><div class="ival">${phone||'—'}</div></div>
       </div>
-      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:10px;">🔒 Name, QID, expiry, nationality, DOB and phone come from a QID scan or the original application — they can't be typed over here. Use "Scan QID" to update them from a fresh photo. Preferred name is the one field you can set directly.</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:10px;">🔒 Name, QID, expiry, nationality, DOB and phone come from a QID scan or the original application — they can't be typed over here. Use "Scan QID" to update them from a fresh photo. Preferred name and email can be set directly.</div>
       ${!isPrimary?`<button class="btn-small" style="margin-top:10px;" onclick="setPrimaryContact('${familyId}','${roleKey}')">⭐ Make Primary Contact</button>`:''}
-    ` : `<p style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:6px;">No ${role.toLowerCase()} on file yet — scan a QID to add one.</p>`}
+    ` : `<p style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:6px;">No ${role.toLowerCase()} on file — that's fine for one-parent families. Scan a QID if there is one to add.</p>
+      ${email?`<div class="fg" style="margin-top:8px;margin-bottom:2px;">
+        <label>Email saved under this parent</label>
+        <input class="preferred-name-input" type="email" value="${email}" onblur="saveParentEmail('${familyId}','${roleKey}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+      </div>`:''}`}
   </div>`;
 }
 
@@ -3968,11 +4038,11 @@ function renderParentsTab(f) {
   if(!el) return;
   const primary = f.primary_contact || null;
   el.innerHTML = `
-    ${parentFullCardHTML('Father / Guardian 1', 'father', f.father_name, f.father_preferred_name, f.father_phone, f.father_qid, f.father_qid_expiry, f.father_nationality, f.father_dob, 'father', f.id, primary==='father')}
+    ${parentFullCardHTML('Father / Guardian 1', 'father', f.father_name, f.father_preferred_name, f.father_phone, f.father_qid, f.father_qid_expiry, f.father_nationality, f.father_dob, 'father', f.id, primary==='father', f.father_email)}
     <div style="text-align:center;padding:8px 0;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">
       ${primary ? `⭐ ${primary==='father'?(f.father_preferred_name||f.father_name||'Father'):(f.mother_preferred_name||f.mother_name||'Mother')} is the primary contact` : (f.father_name && f.mother_name ? '⚠️ No primary contact set yet' : '')}
     </div>
-    ${parentFullCardHTML('Mother / Guardian 2', 'mother', f.mother_name, f.mother_preferred_name, f.mother_phone, f.mother_qid, f.mother_qid_expiry, f.mother_nationality, f.mother_dob, 'mother', f.id, primary==='mother')}`;
+    ${parentFullCardHTML('Mother / Guardian 2', 'mother', f.mother_name, f.mother_preferred_name, f.mother_phone, f.mother_qid, f.mother_qid_expiry, f.mother_nationality, f.mother_dob, 'mother', f.id, primary==='mother', f.mother_email)}`;
 }
 
 // ── LITTLE LEARNER PROFILE (single-child hub: pack, check-ins, events) ──
