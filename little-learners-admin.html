@@ -1339,7 +1339,13 @@ function renderEligibleForDay() {
 }
 
 // ── ADD A CHILD WHO DOESN'T MEET THE DAY'S CRITERIA (e.g. outside the age band) ──
+// Only these accounts can add a child outside a day's criteria.
+const OUTSIDE_CRITERIA_EMAILS = ['alliyahchouds@gmail.com'];
+function canAddOutsideCriteria() {
+  return OUTSIDE_CRITERIA_EMAILS.includes((currentUserEmail||'').toLowerCase());
+}
 function addOutsideCriteriaHTML() {
+  if(!canAddOutsideCriteria()) return '';
   return `<div class="card" style="margin-top:18px;padding:14px 16px;">
     <div style="font-size:13px;font-weight:800;color:var(--forest);margin-bottom:4px;">➕ Add a child outside the criteria</div>
     <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px;">For a child you want to invite even though they're not in this day's age band or stage. Search by name, URN or QID.</div>
@@ -1372,6 +1378,7 @@ function renderOutsideCriteriaResults() {
 }
 
 async function addChildOutsideCriteria(childId) {
+  if(!canAddOutsideCriteria()) { showToast('Only Alliyah can add children outside the criteria'); return; }
   const child = allChildren.find(c=>c.id===childId);
   if(!child) return;
   const {data, error} = await db.from('ll_event_attendees')
@@ -1496,6 +1503,7 @@ function renderAttendeesForDay() {
       <button class="btn-teal btn-sm" onclick="sendAllInvites()">📧 Send Invite to All</button>
       <button class="btn-teal btn-sm" onclick="copyWhatsAppList()">📋 Copy WhatsApp List</button>
       <button class="btn-teal btn-sm" onclick="exportAttendeesForCalls()">📞 Export for Calls (CSV)</button>
+      <button class="btn-teal btn-sm" onclick="printNoPhotoSheet()">🚫📷 No-Photos Sheet (Print / PDF)</button>
     </div>
 
     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;">⏳ Awaiting Response (${awaiting.length})</div>
@@ -1521,6 +1529,63 @@ function renderAttendeesForDay() {
     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:18px 0 8px;">❌ Confirmed — Can't Attend (${confirmedNo.length})</div>
     ${confirmedNo.map(declinedCardHTML).join('') || '<div class="empty" style="padding:10px 0;font-size:12.5px;">None</div>'}`;
   loadPhotosFor(confirmedYes, 'att-photo-');
+}
+
+// Printable one-page sheet of children whose parents declined photo consent for the open day.
+// Uses the admin's own session (signed photo URLs) — nothing leaves the portal.
+async function printNoPhotoSheet() {
+  if(!currentAssessDay) { showToast('Open an Assessment Day first'); return; }
+  const w = window.open('', '_blank');
+  if(!w) { showToast('Pop-up blocked — allow pop-ups for this site and try again'); return; }
+  w.document.write('<p style="font-family:Arial;padding:20px;">Preparing sheet…</p>');
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const rows = allEventAttendees
+    .filter(a => a.event_id === currentAssessDay.id && a.attendance !== 'declined')
+    .map(a => ({ a, child: allChildren.find(c => c.id === a.child_id) }))
+    .filter(r => r.child && (r.a.photo_consent === 'No' || r.child.media_consent === 'No'))
+    .sort((x, y) => (x.child.preferred_name || x.child.full_name || '').localeCompare(y.child.preferred_name || y.child.full_name || ''));
+  if(!rows.length) { w.close(); showToast('No children with photo consent "No" for this day'); return; }
+
+  const cards = await Promise.all(rows.map(async ({ child }) => {
+    let img = '<div class="nophoto">No photo on file</div>';
+    if(child.profile_photo_path) {
+      const { data } = await db.storage.from('ll-documents').createSignedUrl(child.profile_photo_path, 600);
+      if(data?.signedUrl) img = `<img src="${data.signedUrl}" alt="">`;
+    }
+    const pref = child.preferred_name || (child.full_name || '').split(' ')[0];
+    const showFull = (child.full_name || '').trim().toLowerCase() !== (pref || '').trim().toLowerCase();
+    return `<div class="card"><div class="tag">NO PHOTOS</div>${img}<div class="pref">${esc(pref)}</div>${showFull ? `<div class="full">${esc(child.full_name)}</div>` : ''}</div>`;
+  }));
+
+  const dateStr = currentAssessDay.event_date
+    ? new Date(currentAssessDay.event_date + 'T12:00:00').toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' }).toUpperCase()
+    : '';
+  const sub = [currentAssessDay.title, currentAssessDay.age_band ? 'Ages ' + currentAssessDay.age_band : null, 'Parents have declined photo consent for these children'].filter(Boolean).join('  ·  ');
+
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>No photos – ${esc(dateStr)}</title><style>
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#222}
+    .page{width:210mm;min-height:297mm;margin:0 auto;padding:14mm 14mm 10mm}
+    .date{text-align:center;color:#2E8B57;font-weight:bold;font-size:26pt;margin:0}
+    h1{text-align:center;color:#C0392B;font-size:22pt;margin:2mm 0 1mm}
+    .sub{text-align:center;color:#666;font-size:10pt;margin:0 0 6mm}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5mm}
+    .card{border:2px solid #C0392B;border-radius:4px;padding:4mm 3mm;text-align:center;break-inside:avoid}
+    .tag{color:#C0392B;font-weight:bold;font-size:9pt;margin-bottom:2mm}
+    .card img{width:100%;height:52mm;object-fit:cover;object-position:center top;border-radius:3px;background:#eee;display:block}
+    .nophoto{width:100%;height:52mm;background:#eee;color:#999;display:flex;align-items:center;justify-content:center;font-size:10pt}
+    .pref{font-size:17pt;font-weight:bold;margin-top:3mm}
+    .full{font-size:8pt;color:#555;margin-top:1mm;text-transform:uppercase}
+    .foot{text-align:center;font-style:italic;color:#666;font-size:9pt;margin-top:6mm}
+    .bar{background:#f3f3f3;padding:10px;text-align:center}
+    .bar button{font-size:14px;padding:8px 16px;background:#2E8B57;color:#fff;border:0;border-radius:6px;cursor:pointer}
+    @page{size:A4;margin:0} @media print{.bar{display:none}}
+  </style></head><body>
+    <div class="bar"><button onclick="window.print()">Print / Save as PDF</button></div>
+    <div class="page"><p class="date">${esc(dateStr)}</p><h1>NO PHOTOS – Assessment Day</h1><p class="sub">${esc(sub)}</p>
+    <div class="grid">${cards.join('')}</div>
+    <p class="foot">Please do not photograph or film these children, or include them in group shots. Internal use only – do not share.</p></div>
+  </body></html>`;
+  w.document.open(); w.document.write(html); w.document.close();
 }
 
 async function approveSponsorPhoto(childId) {
