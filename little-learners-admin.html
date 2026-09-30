@@ -505,6 +505,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
       <button class="modal-close" onclick="closeAssessDayModal()">✕</button>
       <div style="display:flex;gap:6px;">
         <button onclick="toggleEditEventForm()" style="background:var(--teal-soft);border:none;color:var(--teal-mid);border-radius:50px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Quicksand,sans-serif;white-space:nowrap;">✏️ Edit</button>
+        <button id="ad-archive-btn" onclick="toggleArchiveEvent()" style="background:var(--muted);border:none;color:white;border-radius:50px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Quicksand,sans-serif;white-space:nowrap;">🗄 Archive</button>
         <button onclick="deleteEvent()" style="background:var(--coral);border:none;color:white;border-radius:50px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Quicksand,sans-serif;white-space:nowrap;">🗑 Delete</button>
       </div>
     </div>
@@ -1159,6 +1160,24 @@ async function createAssessmentDay() {
   showToast('✅ Event created');
 }
 
+let showArchivedEvents = false;
+function toggleShowArchivedEvents() { showArchivedEvents = !showArchivedEvents; renderAssessDaysList(); }
+
+async function toggleArchiveEvent() {
+  if(!currentAssessDay) return;
+  const archiving = currentAssessDay.status !== 'archived';
+  if(archiving && !confirm('Archive "'+currentAssessDay.title+'"? It will be hidden from the events list, but every child who took part keeps it on their profile.')) return;
+  const status = archiving ? 'archived' : 'upcoming';
+  const {error} = await db.from('ll_events').update({status}).eq('id', currentAssessDay.id);
+  if(error) { showToast('Error: '+error.message); return; }
+  currentAssessDay.status = status;
+  const idx = allEvents.findIndex(d=>d.id===currentAssessDay.id);
+  if(idx>=0) allEvents[idx].status = status;
+  closeAssessDayModal();
+  renderAssessDaysList();
+  showToast(archiving ? '🗄 Event archived — still on each child\'s profile' : '↩️ Event restored');
+}
+
 function renderAssessDaysList() {
   const el = document.getElementById('assess-days-list');
   if(!el) return;
@@ -1167,19 +1186,29 @@ function renderAssessDaysList() {
     return;
   }
   const EVENT_TYPE_LABELS = {assessment_day:'🏫 Assessment Day', workshop:'🎨 Workshop', social:'🎉 Social'};
-  el.innerHTML = allEvents.map(d => {
+  const archivedCount = allEvents.filter(d=>d.status==='archived').length;
+  const shown = allEvents.filter(d => showArchivedEvents || d.status!=='archived');
+  const archiveToggle = archivedCount
+    ? `<div style="margin-bottom:10px;"><button class="pipe-tab" style="font-size:11px;" onclick="toggleShowArchivedEvents()">${showArchivedEvents?'Hide':'Show'} archived events (${archivedCount})</button></div>`
+    : '';
+  if(!shown.length) {
+    el.innerHTML = archiveToggle + '<div class="empty"><div class="eicon">📅</div><p>No active events — all are archived</p></div>';
+    return;
+  }
+  el.innerHTML = archiveToggle + shown.map(d => {
     const attendees = allEventAttendees.filter(a=>a.event_id===d.id);
-    const confirmed = attendees.filter(a=>a.invite_status==='confirmed').length;
+    const confirmed = attendees.filter(a=>a.invite_status==='confirmed' && a.attendance!=='declined').length;
+    const notAttending = attendees.filter(a=>a.invite_status==='confirmed' && a.attendance==='declined').length;
     const attended = attendees.filter(a=>a.day_status==='attended').length;
     const bandLabel = eventBands(d).length ? eventBandLabel(d) : '';
     return `<div class="fam-card" style="cursor:pointer;" onclick="openAssessDay('${d.id}')">
       <div class="fam-info">
-        <div class="fam-name">${d.title} <span style="font-size:11px;color:var(--muted);">${EVENT_TYPE_LABELS[d.event_type]||d.event_type||''}${bandLabel?' · '+bandLabel:''}</span></div>
+        <div class="fam-name">${d.title} <span style="font-size:11px;color:var(--muted);">${EVENT_TYPE_LABELS[d.event_type]||d.event_type||''}${bandLabel?' · '+bandLabel:''}</span>${d.status==='archived'?' <span style="font-size:11px;color:var(--muted);font-weight:700;">🗄 Archived</span>':''}</div>
         <div class="fam-meta">
           <span>📆 ${d.event_date ? new Date(d.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'No date set'}</span>
           ${d.event_time?`<span>🕐 ${d.event_time}</span>`:''}
           ${d.location?`<span>📍 ${d.location}</span>`:''}
-          <span>👥 ${attendees.length} invited · ${confirmed} confirmed · ${attended} attended</span>
+          <span>👥 ${attendees.length} invited · ${confirmed} confirmed${notAttending?` · ${notAttending} not attending`:''} · ${attended} attended</span>
         </div>
       </div>
     </div>`;
@@ -1203,6 +1232,8 @@ function openAssessDay(dayId) {
   currentAssessDay = allEvents.find(d=>d.id===dayId);
   if(!currentAssessDay) return;
   document.getElementById('ad-title').textContent = currentAssessDay.title;
+  const archBtn = document.getElementById('ad-archive-btn');
+  if(archBtn) archBtn.textContent = currentAssessDay.status==='archived' ? '↩️ Unarchive' : '🗄 Archive';
   document.getElementById('ad-sub').innerHTML = `
     <span>${eventBandLabel(currentAssessDay)}</span>
     <span>${currentAssessDay.event_date ? new Date(currentAssessDay.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : ''}</span>
@@ -1483,6 +1514,7 @@ function renderAttendeesForDay() {
         <div class="fam-name">${child?.full_name||'Child'} <span style="font-size:11px;color:var(--muted);">(${a.invite_status})</span></div>
         <div class="fam-meta"><span>⏳ Hasn't responded yet</span></div>
       </div>
+      <button class="pipe-tab" style="font-size:11px;white-space:nowrap;" onclick="uninviteAttendees(['${a.id}'])">✖ Uninvite</button>
     </div>`;
   }
 
@@ -1506,7 +1538,10 @@ function renderAttendeesForDay() {
       <button class="btn-teal btn-sm" onclick="printNoPhotoSheet()">🚫📷 No-Photos Sheet (Print / PDF)</button>
     </div>
 
-    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;">⏳ Awaiting Response (${awaiting.length})</div>
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+      <span>⏳ Awaiting Response (${awaiting.length})</span>
+      ${awaiting.length?`<button class="pipe-tab" style="font-size:11px;" onclick="uninviteAttendees([${awaiting.map(a=>`'${a.id}'`).join(',')}])">✖ Uninvite all ${awaiting.length} awaiting</button>`:''}
+    </div>
     ${awaiting.map(awaitingCardHTML).join('') || '<div class="empty" style="padding:10px 0;font-size:12.5px;">Everyone has responded</div>'}
 
     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:18px 0 8px;">✅ Confirmed — Attending (${confirmedYes.length})</div>
@@ -1586,6 +1621,29 @@ async function printNoPhotoSheet() {
     <p class="foot">Please do not photograph or film these children, or include them in group shots. Internal use only – do not share.</p></div>
   </body></html>`;
   w.document.open(); w.document.write(html); w.document.close();
+}
+
+// Remove children who haven't responded from this day. The child goes back to the
+// Eligible Children list, and their old RSVP link stops working.
+async function uninviteAttendees(attendeeIds) {
+  if(!currentAssessDay || !attendeeIds?.length) return;
+  const rows = allEventAttendees.filter(a=>attendeeIds.includes(a.id) && a.event_id===currentAssessDay.id && a.invite_status!=='confirmed');
+  if(!rows.length) { showToast('Only children who haven\'t responded can be uninvited'); return; }
+  const names = rows.map(a=>allChildren.find(c=>c.id===a.child_id)?.full_name||'Child').join(', ');
+  if(!confirm('Uninvite '+rows.length+' child(ren) from "'+currentAssessDay.title+'"?\n\n'+names+'\n\nThey will return to the Eligible Children list.')) return;
+  const ids = rows.map(a=>a.id);
+  const {error} = await db.from('ll_event_attendees').delete().in('id', ids);
+  if(error) { showToast('Error: '+error.message); return; }
+  for(const a of rows) {
+    const child = allChildren.find(c=>c.id===a.child_id);
+    try { await addActivityLog(a.family_id, a.child_id, 'note', `Uninvited from "${currentAssessDay.title}" (no response).`, ''); } catch(e) {}
+  }
+  allEventAttendees = allEventAttendees.filter(a=>!ids.includes(a.id));
+  renderEligibleForDay();
+  renderAttendeesForDay();
+  if((currentAssessDay.event_type||'assessment_day')==='assessment_day') { renderPreAssessmentList(); renderFinalAssessmentList(); }
+  renderAssessDaysList();
+  showToast('✅ Uninvited '+rows.length+' child'+(rows.length>1?'ren':''));
 }
 
 async function approveSponsorPhoto(childId) {
@@ -3531,11 +3589,11 @@ function renderEventsTab(f, children) {
       const isAssess = (ev.event_type||'assessment_day')==='assessment_day';
       return `<div class="fam-card" style="margin-bottom:8px;">
         <div class="fam-info">
-          <div class="fam-name">${ev.title} <span style="font-size:11px;color:var(--muted);">${EVENT_TYPE_LABELS_SHORT[ev.event_type]||''}</span></div>
+          <div class="fam-name">${ev.title} <span style="font-size:11px;color:var(--muted);">${EVENT_TYPE_LABELS_SHORT[ev.event_type]||''}</span>${ev.status==='archived'?' <span style="font-size:11px;color:var(--muted);font-weight:700;">🗄 Archived</span>':''}</div>
           <div class="fam-meta">
             <span>📆 ${ev.event_date ? new Date(ev.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'No date'}</span>
             <span>🎟 ${a.invite_status||'invited'}</span>
-            ${a.attendance?`<span>✅ ${a.attendance}</span>`:''}
+            ${a.attendance?`<span>${a.attendance==='declined'?'❌':'✅'} ${a.attendance}</span>`:''}
             ${isAssess && a.final_assessment_status ? `<span>📋 ${a.final_assessment_status}</span>` : ''}
             ${isAssess && a.outcome_year_group ? `<span>🎓 ${a.outcome_year_group}</span>` : ''}
           </div>
@@ -4172,10 +4230,10 @@ function renderLearnerProfile(f, children, focusChildId) {
         ${events.length ? events.map(a=>`
           <div class="fam-card" style="margin-bottom:8px;">
             <div class="fam-info">
-              <div class="fam-name">${a.ev.title} <span style="font-size:11px;color:var(--muted);">${EVENT_TYPE_LABELS_SHORT[a.ev.event_type]||''}</span></div>
+              <div class="fam-name">${a.ev.title} <span style="font-size:11px;color:var(--muted);">${EVENT_TYPE_LABELS_SHORT[a.ev.event_type]||''}</span>${a.ev.status==='archived'?' <span style="font-size:11px;color:var(--muted);font-weight:700;">🗄 Archived</span>':''}</div>
               <div class="fam-meta">
                 <span>📆 ${a.ev.event_date?new Date(a.ev.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—'}</span>
-                ${a.attendance?`<span>✅ ${a.attendance}</span>`:''}
+                ${a.attendance?`<span>${a.attendance==='declined'?'❌':'✅'} ${a.attendance}</span>`:''}
               </div>
             </div>
           </div>`).join('') : '<div class="empty" style="padding:16px 0;"><p style="font-size:13px;">No events yet</p></div>'}
