@@ -544,7 +544,11 @@ select.edit-field{cursor:pointer;}
     <div id="messages-view" style="display:none;">
       <div class="welcome-banner">
         <div class="welcome-name">Thank-you Messages</div>
-        <div class="welcome-scope">Friends' messages to their sponsors — approve to send them on, reject to hold them back.</div>
+        <div class="welcome-scope">Friends' messages to their sponsors — approve to send them on, reject to hold them back. Any admin can review these.</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="filter-btn" id="messages-subtab-pending" onclick="setMessagesSubTab('pending')">Awaiting approval<span id="messages-badge-inline" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
+        <button class="filter-btn" id="messages-subtab-approved" onclick="setMessagesSubTab('approved')">Approved</button>
       </div>
       <div id="messages-loading" class="loading"><div class="spinner-lg"></div>Loading messages…</div>
       <div id="messages-list"></div>
@@ -967,7 +971,7 @@ async function handleAdminSession(session) {
   // stay super-admin only, same as before.
   document.getElementById('view-switcher').style.display = 'flex';
   document.getElementById('view-btn-live').style.display = 'inline-block';
-  ['view-btn-distributions','view-btn-sponsorships','view-btn-payments','view-btn-approvals','view-btn-messages'].forEach(function(id){
+  ['view-btn-distributions','view-btn-sponsorships','view-btn-payments','view-btn-approvals'].forEach(function(id){
     var el = document.getElementById(id);
     if (el) el.style.display = (myRole === 'super_admin') ? 'inline-block' : 'none';
   });
@@ -2943,34 +2947,66 @@ setInterval(function() {
 }, 45000);
 
 // ── Thank-you moderation queue ──
+var messagesSubTab = 'pending';
+function setMessagesSubTab(tab) {
+  messagesSubTab = tab;
+  loadMessagesView();
+}
+
+// Thank-you message review queue, open to any logged-in admin (not just
+// super_admin) — these are a friend's words to their sponsor, not a
+// financial or case-management decision, so there's no reason to gate it.
+// Two sub-tabs share this one view: "pending" is the moderation queue
+// (approve/reject), "approved" is a read-only log of everything already
+// sent on, pulled via admin_list_thankyou's status param so nobody has to
+// dig into Supabase directly to see what went out.
 function loadMessagesView() {
   var loadingEl = document.getElementById('messages-loading');
   var listEl = document.getElementById('messages-list');
   var emptyEl = document.getElementById('messages-empty');
+  var isApproved = messagesSubTab === 'approved';
+  document.getElementById('messages-subtab-pending').classList.toggle('active', !isApproved);
+  document.getElementById('messages-subtab-approved').classList.toggle('active', isApproved);
   loadingEl.style.display = ''; listEl.innerHTML = ''; emptyEl.style.display = 'none';
   apiHeadersAsync().then(function(headers) {
     return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
       method: 'POST', headers: headers,
-      body: JSON.stringify({ type: 'admin_list_thankyou' })
+      body: JSON.stringify({ type: 'admin_list_thankyou', status: isApproved ? 'approved' : 'pending' })
     });
   }).then(function(r) { return r.json().then(function(j) { if (!r.ok || j.error) throw new Error(j.error || ('status ' + r.status)); return j; }); })
     .then(function(json) {
       loadingEl.style.display = 'none';
       var msgs = json.messages || [];
-      var badge = document.getElementById('messages-badge');
-      if (badge) { if (msgs.length) { badge.textContent = msgs.length; badge.style.display = 'inline-block'; } else badge.style.display = 'none'; }
-      if (!msgs.length) { emptyEl.style.display = ''; return; }
+      // The nav badge always reflects the pending count, regardless of which
+      // sub-tab is open, so it's a reliable "needs attention" signal — refresh
+      // it here on the pending load, and leave it alone on the approved load.
+      if (!isApproved) {
+        var badge = document.getElementById('messages-badge');
+        var inlineBadge = document.getElementById('messages-badge-inline');
+        [badge, inlineBadge].forEach(function(b) {
+          if (!b) return;
+          if (msgs.length) { b.textContent = msgs.length; b.style.display = 'inline-block'; } else b.style.display = 'none';
+        });
+      }
+      if (!msgs.length) {
+        emptyEl.textContent = isApproved ? 'No approved thank-you messages yet.' : 'No thank-you messages waiting for review.';
+        emptyEl.style.display = '';
+        return;
+      }
       listEl.innerHTML = msgs.map(function(m) {
         var app = m.food_box_applications || {};
         var name = app.full_name_en || app.full_name || 'Unknown friend';
-        var when = m.created_at ? new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+        var dateField = isApproved ? m.reviewed_at : m.created_at;
+        var dateLabel = isApproved ? 'Approved ' : '';
+        var when = dateField ? dateLabel + new Date(dateField).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
         return '<div class="table-wrap" style="padding:16px;margin-bottom:12px;">' +
           '<div style="font-weight:700;margin-bottom:4px;">' + name + '</div>' +
           '<div style="font-size:12px;color:#888;margin-bottom:10px;">' + when + '</div>' +
           (m.message ? '<div style="background:var(--bg,#f7f7f2);border-radius:8px;padding:12px;margin-bottom:10px;font-style:italic;">' + m.message.replace(/</g, '&lt;') + '</div>' : '') +
           (m.photo_url ? '<a href="' + m.photo_url + '" target="_blank"><img src="' + m.photo_url + '" style="max-width:200px;border-radius:8px;margin-bottom:10px;display:block;"/></a>' : '') +
-          '<button class="btn-comment" style="background:var(--green);color:#fff;border:none;margin-right:8px;" onclick="moderateThankyou(\'' + m.id + '\',true)">✓ Approve &amp; send</button>' +
-          '<button class="btn-comment" style="background:#fff;" onclick="moderateThankyou(\'' + m.id + '\',false)">✕ Reject</button>' +
+          (isApproved ? '<div style="font-size:12px;font-weight:700;color:var(--green);">✓ Sent to sponsor</div>' :
+            ('<button class="btn-comment" style="background:var(--green);color:#fff;border:none;margin-right:8px;" onclick="moderateThankyou(\'' + m.id + '\',true)">✓ Approve &amp; send</button>' +
+             '<button class="btn-comment" style="background:#fff;" onclick="moderateThankyou(\'' + m.id + '\',false)">✕ Reject</button>')) +
           '</div>';
       }).join('');
     }).catch(function(e) { loadingEl.style.display = 'none'; emptyEl.textContent = 'Could not load messages: ' + e.message; emptyEl.style.display = ''; });
