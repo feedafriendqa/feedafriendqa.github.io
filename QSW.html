@@ -233,7 +233,36 @@ try {
   };
 }
 
+const RACE_SIGNUP_URL = "https://connect.feedafriend.org/QSW-refillrace-signup.html";
+
 const sessions = [
+  {
+    key: "refill-race-briefing-2026-11-01",
+    dayNum: "1", shortDay: "SUN", dateLabel: "SUN 1 NOV",
+    isoDate: "2026-11-01", startTime: "09:15", endTime: "09:45",
+    title: "Refill Race Briefing",
+    time: "9:15am – 9:45am",
+    place: "Online",
+    locName: "Online",
+    locSub: "Link sent to registered teams",
+    desc: "A 30-minute online briefing on the rules of the game before the Community Fridge Refill Race begins.",
+    note: "Register your team for the race and we'll send you the link.",
+    signup: false, link: RACE_SIGNUP_URL, linkLabel: "Join the race", capacity: 0,
+  },
+  {
+    key: "refill-race-2026-11-01",
+    dayNum: "1", shortDay: "SUN", dateLabel: "SUN 1 NOV",
+    dateText: "1–7 NOV", dateSub: "ALL WEEK",
+    isoDate: "2026-11-01", startTime: "10:00", endTime: "20:00",
+    title: "Community Fridge Refill Race",
+    time: "Sun 1 Nov 10:00am – Sat 7 Nov 8:00pm",
+    place: "From your office to various locations across Qatar",
+    locName: "From your office",
+    locSub: "to various locations across Qatar",
+    desc: "A week-long challenge to keep Qatar's community fridges stocked and clean. Build a team, refill and log every visit for points, and climb the leaderboard.",
+    note: "Starts Sunday after the 9:15am online briefing. Runs until Saturday 7 Nov at 8:00pm.",
+    signup: false, link: RACE_SIGNUP_URL, linkLabel: "Join the race", capacity: 0,
+  },
   {
     key: "food-sorting-2026-11-01",
     dayNum: "1", shortDay: "SUN", dateLabel: "SUN 1 NOV",
@@ -246,19 +275,6 @@ const sessions = [
     desc: "Volunteers decorate and pack food boxes for community fridges and families in need, while learning about food insecurity in Qatar.",
     note: "Indoors, all ages welcome. Gloves and aprons provided.",
     signup: true, capacity: 30,
-  },
-  {
-    key: "fridge-refill-2026-11-02",
-    dayNum: "2", shortDay: "MON", dateLabel: "MON 2 NOV",
-    isoDate: "2026-11-02", startTime: "09:30", endTime: "18:00",
-    title: "Community Fridge Refill Race",
-    time: "9:30am – 6:00pm",
-    place: "From your office to various locations across Qatar",
-    locName: "From your office",
-    locSub: "to various locations across Qatar",
-    desc: "A fun, office-based challenge collecting and assembling snack packs for community fridges across Qatar — reducing food waste and supporting friends directly.",
-    note: "Run this one from your own office — we'll send a simple pack list.",
-    signup: true, capacity: 100,
   },
   {
     key: "welcome-baby-2026-11-04",
@@ -287,15 +303,28 @@ const sessions = [
     signup: true, capacity: 30,
   },
   {
-    key: "book-sale-2026-11-06",
+    key: "book-souq-2026-11-06",
     dayNum: "6", shortDay: "FRI", dateLabel: "FRI 6 NOV",
-    isoDate: "2026-11-06", startTime: "14:00", endTime: "19:00",
-    title: "Books for Good — Preloved Book Sale",
-    time: "2:00pm – 7:00pm",
-    place: "Location TBC",
-    locName: "Location TBC",
-    locSub: "Details announced closer to the date",
-    desc: "A community-led, sustainable book sale promoting literacy and circular giving.",
+    isoDate: "2026-11-06", startTime: "15:00", endTime: "22:00",
+    title: "Books for Good — Book Souq",
+    time: "3:00pm – 10:00pm",
+    place: "Crystal Walk, Gewan Island",
+    locName: "Crystal Walk",
+    locSub: "Gewan Island",
+    desc: "A community-led, sustainable preloved book sale promoting literacy and circular giving.",
+    note: "Open to the public — just come along, no sign-up needed!",
+    signup: false, capacity: 0,
+  },
+  {
+    key: "book-souq-2026-11-07",
+    dayNum: "7", shortDay: "SAT", dateLabel: "SAT 7 NOV",
+    isoDate: "2026-11-07", startTime: "15:00", endTime: "21:00",
+    title: "Books for Good — Book Souq",
+    time: "3:00pm – 9:00pm",
+    place: "Crystal Walk, Gewan Island",
+    locName: "Crystal Walk",
+    locSub: "Gewan Island",
+    desc: "A community-led, sustainable preloved book sale promoting literacy and circular giving.",
     note: "Open to the public — just come along, no sign-up needed!",
     signup: false, capacity: 0,
   },
@@ -326,7 +355,7 @@ async function renderCalendar(){
   const el = document.getElementById("view-calendar");
   el.innerHTML = `
     <div class="hero">Sign up.<br><span>Show up.</span><br><span>Feed a friend.</span></div>
-    <div class="lede">Four days of volunteer sessions and one public book sale. Teams welcome — bring your colleagues. Sessions run at Together for Good HQ, Ain Khaled, except the Community Fridge Refill Race, which happens from your own office to locations across Qatar.</div>
+    <div class="lede">A week-long Community Fridge Refill Race, volunteer sessions and a two-day public book sale. Teams welcome — bring your colleagues. Sessions run at Together for Good HQ, Ain Khaled, except the Refill Race, which happens from your own office to locations across Qatar, and the Book Souq at Crystal Walk, Gewan Island.</div>
     ${sbLoadFailed ? `<div class="conn-warning">Having trouble connecting — spot counts may be out of date. Please refresh the page before signing up.</div>` : ""}
     <div class="events" id="events-list"></div>
     <div class="footer-note">
@@ -345,7 +374,7 @@ function eventRowHtml(s, i){
   return `
   <div class="event ${isOpen ? "open" : ""}" id="event-${i}">
     <div class="event-head" onclick="toggleEvent(${i})">
-      <div class="event-date">${s.dayNum} NOV<br><span class="dow">${s.shortDay}</span></div>
+      <div class="event-date">${s.dateText || (s.dayNum + " NOV")}<br><span class="dow">${s.dateSub || s.shortDay}</span></div>
       <div class="event-main">
         <div class="event-title-row">
           <div class="event-title">${esc(s.title)}</div>
@@ -356,6 +385,8 @@ function eventRowHtml(s, i){
       </div>
       ${s.signup
         ? `<button class="btn-signup" id="signupbtn-${i}" onclick="event.stopPropagation(); openForm(${i})">Sign up</button>`
+        : s.link
+        ? `<a class="btn-signup" style="text-decoration:none;display:inline-flex;align-items:center" href="${esc(s.link)}" onclick="event.stopPropagation()">${esc(s.linkLabel || "Sign up")}</a>`
         : `<div class="public-tag"><span class="k">PUBLIC EVENT</span><br>No sign up needed — just turn up and bring friends.</div>`}
     </div>
     <div class="event-detail">
