@@ -85,6 +85,24 @@ function Field({label,children}){
   return <div><label style={{display:"block",fontWeight:700,fontSize:13,color:DK,marginBottom:6,fontFamily:BF}}>{label}</label>{children}</div>;
 }
 
+// Long text that stays collapsed to a few lines until the volunteer taps "Read more".
+// The toggle only appears when the text actually overflows the collapsed height.
+function ReadMore({text,lines=3,style}){
+  const [open,setOpen]=React.useState(false);
+  const [clamped,setClamped]=React.useState(false);
+  const ref=React.useRef(null);
+  React.useEffect(()=>{
+    const el=ref.current;
+    if(el&&!open) setClamped(el.scrollHeight>el.clientHeight+1);
+  },[text,open]);
+  if(!text) return null;
+  const collapse=open?{}:{display:"-webkit-box",WebkitLineClamp:lines,WebkitBoxOrient:"vertical",overflow:"hidden"};
+  return <div style={{marginBottom:8}}>
+    <div ref={ref} style={{...style,whiteSpace:"pre-line",wordBreak:"break-word",...collapse}}>{text}</div>
+    {(clamped||open)&&<button onClick={()=>setOpen(o=>!o)} style={{background:"none",border:"none",padding:"4px 0 0",fontSize:12,fontWeight:700,color:GN,cursor:"pointer",fontFamily:BF}}>{open?"Show less ▲":"Read more ▼"}</button>}
+  </div>;
+}
+
 // Standard, complete list of nationalities/demonyms — every UN member state plus
 // Palestine, Taiwan, Kosovo and a few common regional identities. Kept alphabetical
 // and neutral: nothing is added or removed on political grounds.
@@ -1337,6 +1355,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   const [opps,setOpps]=useState([]);
   const [su,setSu]=useState([]);
   const [fp,setFp]=useState("all");
+  const [oppTab,setOppTab]=useState("events");
   const [form,setForm]=useState({activity:"",hours:"",date:"",project:"food-boxes",notes:""});
   const [toast,setToast]=useState(null);
   const [signupModal,setSignupModal]=useState(null);
@@ -1417,7 +1436,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
         {!isOngoing&&<span style={{fontFamily:HF,fontWeight:800,fontSize:13,color:p.bg}}>{o.hours}h</span>}
       </div>
       <div style={{fontFamily:HF,fontWeight:900,fontSize:15,textTransform:"uppercase",color:DK,marginBottom:4}}>{o.title}</div>
-      <div style={{fontSize:12,color:MT,lineHeight:1.5,marginBottom:8,fontFamily:BF}}>{o.description}</div>
+      <ReadMore text={o.description} lines={3} style={{fontSize:12,color:MT,lineHeight:1.5,fontFamily:BF}}/>
       <div style={{fontSize:11,color:MT,marginBottom:10,fontFamily:BF}}>{isOngoing?"🤝 "+(o.end_date?"Runs "+o.date+" – "+o.end_date:"Ongoing since "+o.date)+commitLabel(o):"📅 "+o.date+(o.start_time?" · ⏰ "+o.start_time+(o.end_time?" – "+o.end_time:""):"")} · 📍 {o.location}</div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <span style={{fontSize:11,background:p.light,color:p.text,padding:"2px 8px",borderRadius:20,fontWeight:600,fontFamily:BF}}>{o.spots} spots</span>
@@ -1501,10 +1520,13 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
         </div>
         <h2 style={{fontFamily:HF,fontSize:17,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>Upcoming Events</h2>
         <div style={{marginBottom:16}}>
-          {su.filter(s=>s.status==="approved"&&!s.checked_out).length===0
-            ? <div style={{background:"#fff",borderRadius:14,padding:20,border:"1px solid "+BR,textAlign:"center",color:MT,fontSize:13,fontFamily:BF}}>No upcoming events — <span onClick={()=>setView("opportunities")} style={{color:GN,fontWeight:700,cursor:"pointer"}}>browse opportunities</span></div>
-            : su.filter(s=>s.status==="approved"&&!s.checked_out).map(s=>{
-                const o=opps.find(x=>x.id===s.opportunity_id); if(!o) return null;
+          {(()=>{
+            // Upcoming = only signups an admin has approved (never pending / waitlisted),
+            // not yet checked out, and whose event still exists.
+            const upcoming=su.filter(s=>s.status==="approved"&&!s.checked_out&&opps.some(x=>x.id===s.opportunity_id));
+            if(upcoming.length===0) return <div style={{background:"#fff",borderRadius:14,padding:20,border:"1px solid "+BR,textAlign:"center",color:MT,fontSize:13,fontFamily:BF}}>No upcoming events — <span onClick={()=>setView("opportunities")} style={{color:GN,fontWeight:700,cursor:"pointer"}}>browse opportunities</span></div>;
+            return upcoming.map(s=>{
+                const o=opps.find(x=>x.id===s.opportunity_id);
                 const p=gp(o.project);
                 return <div key={s.opportunity_id} style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,borderLeft:"4px solid "+p.bg,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
                   <div style={{width:36,height:36,borderRadius:10,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{p.emoji}</div>
@@ -1517,8 +1539,8 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
                     <button onClick={async()=>{if(window.confirm("Cancel your attendance?")){{await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);st("Attendance cancelled.");loadData();}}}} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"4px 8px",fontSize:10,fontWeight:700,cursor:"pointer"}}>Cancel</button>
                   </div>
                 </div>;
-              })
-          }
+              });
+          })()}
         </div>
         <h2 style={{fontFamily:HF,fontSize:17,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>Our Projects</h2>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
@@ -1551,19 +1573,20 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
           <button onClick={()=>setFp("all")} style={{padding:"5px 12px",borderRadius:20,border:"2px solid "+(fp==="all"?GN:BR),background:fp==="all"?GN:"#fff",color:fp==="all"?"#fff":DK,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:BF}}>All</button>
           {PROJECTS.map(p=><button key={p.id} onClick={()=>setFp(p.id)} style={{padding:"5px 10px",borderRadius:20,border:"2px solid "+(fp===p.id?p.bg:BR),background:fp===p.id?p.bg:"#fff",color:fp===p.id?"#fff":DK,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:BF}}>{p.emoji} {p.label}</button>)}
         </div>
-        {foOngoing.length>0&&<div style={{marginBottom:20}}>
-          <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:"#7C3AED",marginBottom:10}}>🤝 Join the FAF Team</h2>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            {foOngoing.map(renderOppCard)}
-          </div>
+        <div style={{display:"flex",background:"#fff",border:"2px solid "+BR,borderRadius:14,padding:4,gap:4,marginBottom:16}}>
+          {[{id:"events",label:"📅 Event Roles",n:foEvents.length,color:GN},{id:"team",label:"🤝 FAF Team Roles",n:foOngoing.length,color:"#7C3AED"}].map(t=>{
+            const on=oppTab===t.id;
+            return <button key={t.id} onClick={()=>setOppTab(t.id)} style={{flex:1,padding:"10px 8px",borderRadius:10,border:"none",background:on?t.color:"transparent",color:on?"#fff":DK,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:BF}}>{t.label} <span style={{opacity:.8,fontWeight:600}}>({t.n})</span></button>;
+          })}
+        </div>
+        {oppTab==="team"&&foOngoing.length>0&&<div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {foOngoing.map(renderOppCard)}
         </div>}
-        {foEvents.length>0&&<div>
-          {foOngoing.length>0&&<h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>📅 Upcoming Events</h2>}
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            {foEvents.map(renderOppCard)}
-          </div>
+        {oppTab==="events"&&foEvents.length>0&&<div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {foEvents.map(renderOppCard)}
         </div>}
-        {foOngoing.length===0&&foEvents.length===0&&<p style={{color:MT,fontSize:14,textAlign:"center",padding:24,fontFamily:BF}}>No opportunities match this filter yet.</p>}
+        {oppTab==="team"&&foOngoing.length===0&&<p style={{color:MT,fontSize:14,textAlign:"center",padding:24,fontFamily:BF}}>No FAF Team roles match this filter yet.</p>}
+        {oppTab==="events"&&foEvents.length===0&&<p style={{color:MT,fontSize:14,textAlign:"center",padding:24,fontFamily:BF}}>No event roles match this filter yet.</p>}
       </div>}
 
       {view==="log"&&<div className="fade">
