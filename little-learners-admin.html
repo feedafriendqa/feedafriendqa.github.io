@@ -888,8 +888,21 @@ function renderAssessorMgmt() {
       <button class="btn-teal btn-sm" onclick="addAssessor()">+ Add</button>
     </div>
     <div class="note" style="margin-bottom:12px;">Assessors are specific to this assessment day — add whoever's working ${currentAssessDay.title} today.</div>
+    <div class="card" style="padding:14px 16px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:800;color:var(--forest);margin-bottom:4px;">🔗 Assessor notes link</div>
+      <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px;">Share with the assessors. They pick their name from the list, see the children checked in and assigned to them (set the Assessor on the Pre-Assessment tab), and type their notes. Notes land in each child's profile under Assessment notes.</div>
+      <button class="btn-teal btn-sm" onclick="copyAssessorLink()">🔗 Copy Assessor Link</button>
+    </div>
     <div id="assessor-list-mgmt"></div>`;
   renderAssessorListOnly(dayAssessors);
+}
+
+function copyAssessorLink() {
+  const link = `https://feedafriendqa.github.io/little-learners-assessor.html?day=${currentAssessDay.id}`;
+  navigator.clipboard.writeText(link).then(
+    () => showToast('✅ Assessor link copied'),
+    () => showToast('⚠️ Could not copy — please copy manually: '+link)
+  );
 }
 
 function renderAssessorListOnly(dayAssessors) {
@@ -1362,7 +1375,8 @@ function renderEligibleForDay() {
       return `<label class="fam-card" style="display:flex;align-items:center;gap:10px;cursor:pointer;">
         <input type="checkbox" class="elig-check" value="${c.id}" onchange="updateEligibleSelectedCount()" style="width:18px;height:18px;flex-shrink:0;">
         <div class="fam-info">
-          <div class="fam-name">${c.full_name||'Child'} <span style="font-size:11px;color:var(--muted);">(${childAgeYears(c)}y)</span></div>
+          <div class="fam-name">${prefName(c)} <span style="font-size:11px;color:var(--muted);">(${childAgeYears(c)}y)</span></div>
+          ${fullNameSub(c)}
           <div class="fam-meta"><span>👪 ${fam?.father_name||fam?.mother_name||'—'}</span><span>📞 ${fam?.father_phone||fam?.mother_phone||'—'}</span></div>
         </div>
       </label>`;
@@ -1482,12 +1496,13 @@ function renderAttendeesForDay() {
   function checkinCardHTML(a, isArrived) {
     const child = allChildren.find(c=>c.id===a.child_id);
     const fam = allFamilies.find(f=>f.id===a.family_id);
-    const name = child?.full_name||'Child';
+    const name = prefName(child);
     return `<div
         style="background:white;border-radius:12px;box-shadow:var(--shadow);padding:10px;margin-bottom:8px;text-align:center;${isArrived?'border:2px solid var(--lime);':''}">
       <div onclick="markAttendance('${a.id}','${isArrived?'':'attended'}')" style="cursor:pointer;">
         <div style="display:flex;justify-content:center;margin-bottom:6px;">${avatarHTML(child,'att-photo-',a.id,52)}</div>
         <div style="font-weight:800;font-size:13px;">${name}</div>
+        ${fullNameSub(child)}
         <div style="margin-top:3px;font-size:13px;">${senAllergyConsentIcons(child,a)}</div>
         ${rsvpMeta(a,fam)}
       </div>
@@ -1498,10 +1513,11 @@ function renderAttendeesForDay() {
   function noShowCardHTML(a) {
     const child = allChildren.find(c=>c.id===a.child_id);
     const fam = allFamilies.find(f=>f.id===a.family_id);
-    const name = child?.full_name||'Child';
+    const name = prefName(child);
     return `<div style="background:white;border-radius:12px;box-shadow:var(--shadow);padding:10px;margin-bottom:8px;text-align:center;opacity:.75;">
       <div style="display:flex;justify-content:center;margin-bottom:6px;">${avatarHTML(child,'att-photo-',a.id,52)}</div>
       <div style="font-weight:800;font-size:13px;">${name}</div>
+      ${fullNameSub(child)}
       ${rsvpMeta(a,fam)}
       <button class="pipe-tab" style="margin-top:8px;font-size:11px;" onclick="markAttendance('${a.id}','')">Undo — Back to Waiting</button>
     </div>`;
@@ -1511,7 +1527,8 @@ function renderAttendeesForDay() {
     const child = allChildren.find(c=>c.id===a.child_id);
     return `<div class="fam-card">
       <div class="fam-info">
-        <div class="fam-name">${child?.full_name||'Child'} <span style="font-size:11px;color:var(--muted);">(${a.invite_status})</span></div>
+        <div class="fam-name">${prefName(child)} <span style="font-size:11px;color:var(--muted);">(${a.invite_status})</span></div>
+        ${fullNameSub(child)}
         <div class="fam-meta"><span>⏳ Hasn't responded yet</span></div>
       </div>
       <button class="pipe-tab" style="font-size:11px;white-space:nowrap;" onclick="uninviteAttendees(['${a.id}'])">✖ Uninvite</button>
@@ -1522,7 +1539,8 @@ function renderAttendeesForDay() {
     const child = allChildren.find(c=>c.id===a.child_id);
     return `<div class="fam-card">
       <div class="fam-info">
-        <div class="fam-name">${child?.full_name||'Child'}</div>
+        <div class="fam-name">${prefName(child)}</div>
+        ${fullNameSub(child)}
         <div class="fam-meta"><span style="color:var(--coral);font-weight:700;">❌ ${a.decline_reason||'No reason given'}</span></div>
       </div>
     </div>`;
@@ -1679,6 +1697,16 @@ async function loadAttendeePhoto(attendeeId, path, idPrefix) {
   }
 }
 
+// Preferred name is what staff call the child on the day; full name sits underneath
+// (only when it differs) so the register still matches paperwork and QIDs.
+function prefName(child) { return ((child?.preferred_name||'').trim()) || child?.full_name || 'Child'; }
+function fullNameSub(child, style) {
+  const pref = (child?.preferred_name||'').trim();
+  const full = (child?.full_name||'').trim();
+  if(!pref || !full || pref.toLowerCase()===full.toLowerCase()) return '';
+  return `<div style="${style||'font-size:11px;color:var(--muted);font-weight:600;'}">${full}</div>`;
+}
+
 function initials(name) {
   return (name||'?').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
 }
@@ -1726,8 +1754,9 @@ function editFinalRow(attendeeId) { finalExpanded.add(attendeeId); renderFinalAs
 function renderPreAssessmentList() {
   const el = document.getElementById('adp-pre');
   if(!el) return;
-  const attendees = allEventAttendees.filter(a=>a.event_id===currentAssessDay.id);
-  if(!attendees.length) { el.innerHTML = '<div class="empty"><div class="eicon">📝</div><p>No children added yet — use the Eligible Children tab.</p></div>'; return; }
+  // Only children physically checked in (Arrived) on the Attendees tab are assessed
+  const attendees = allEventAttendees.filter(a=>a.event_id===currentAssessDay.id && a.day_status==='attended');
+  if(!attendees.length) { el.innerHTML = '<div class="empty"><div class="eicon">📝</div><p>No children checked in yet — mark them as Arrived on the Attendees tab and they\'ll appear here.</p></div>'; return; }
 
   const todo = attendees.filter(a=>!(a.pre_assessment_status==='Complete' && !preExpanded.has(a.id)));
   const done = attendees.filter(a=>a.pre_assessment_status==='Complete' && !preExpanded.has(a.id));
@@ -1738,7 +1767,8 @@ function renderPreAssessmentList() {
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
         ${avatarHTML(child,'pre-photo-',a.id,40)}
         <div>
-          <div class="fam-name" style="margin-bottom:2px;">${child?.full_name||'Child'}</div>
+          <div class="fam-name" style="margin-bottom:2px;">${prefName(child)}</div>
+          ${fullNameSub(child)}
           <div style="font-size:13px;">${senAllergyConsentIcons(child,a)}</div>
         </div>
       </div>
@@ -1772,8 +1802,10 @@ function renderPreAssessmentList() {
       <div style="display:flex;align-items:center;gap:10px;">
         ${avatarHTML(child,'pre-done-photo-',a.id,36)}
         <div>
-          <div class="fam-name" style="margin-bottom:2px;">${child?.full_name||'Child'} ✅ <span style="font-size:13px;">${senAllergyConsentIcons(child,a)}</span></div>
+          <div class="fam-name" style="margin-bottom:2px;">${prefName(child)} ✅ <span style="font-size:13px;">${senAllergyConsentIcons(child,a)}</span></div>
+          ${fullNameSub(child)}
           <div style="font-size:12px;color:var(--muted);">Recommended: ${a.outcome_year_group||'—'}${assessorName?` · Assessor: ${assessorName}`:''}</div>
+          ${a.pre_assessment_notes?`<div style="font-size:12px;color:var(--muted);margin-top:3px;">📝 ${a.pre_assessment_notes}</div>`:''}
         </div>
       </div>
       <button class="btn-small" onclick="editPreRow('${a.id}')">✏️ Edit</button>
@@ -1793,8 +1825,9 @@ function renderPreAssessmentList() {
 function renderFinalAssessmentList() {
   const el = document.getElementById('adp-final');
   if(!el) return;
-  const attendees = allEventAttendees.filter(a=>a.event_id===currentAssessDay.id);
-  if(!attendees.length) { el.innerHTML = '<div class="empty"><div class="eicon">🎓</div><p>No children added yet — use the Eligible Children tab.</p></div>'; return; }
+  // Only children physically checked in (Arrived) on the Attendees tab are assessed
+  const attendees = allEventAttendees.filter(a=>a.event_id===currentAssessDay.id && a.day_status==='attended');
+  if(!attendees.length) { el.innerHTML = '<div class="empty"><div class="eicon">🎓</div><p>No children checked in yet — mark them as Arrived on the Attendees tab and they\'ll appear here.</p></div>'; return; }
 
   const todo = attendees.filter(a=>!(a.final_assessment_status==='Complete' && !finalExpanded.has(a.id)));
   const done = attendees.filter(a=>a.final_assessment_status==='Complete' && !finalExpanded.has(a.id));
@@ -1805,7 +1838,8 @@ function renderFinalAssessmentList() {
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
         ${avatarHTML(child,'final-photo-',a.id,40)}
         <div>
-          <div class="fam-name" style="margin-bottom:2px;">${child?.full_name||'Child'}</div>
+          <div class="fam-name" style="margin-bottom:2px;">${prefName(child)}</div>
+          ${fullNameSub(child)}
           <div style="font-size:13px;">${senAllergyConsentIcons(child,a)}</div>
         </div>
       </div>
@@ -1813,6 +1847,9 @@ function renderFinalAssessmentList() {
         <div><label>Recommended Year <span style="font-weight:400;color:var(--muted);">(from pre-assessment)</span></label>
           <div style="padding:9px 12px;background:var(--cream);border-radius:8px;font-size:13px;font-weight:700;">${a.outcome_year_group||'— not set yet —'}</div>
         </div>
+        ${a.pre_assessment_notes?`<div><label>Pre-assessment notes</label>
+          <div style="padding:9px 12px;background:var(--cream);border-radius:8px;font-size:13px;white-space:pre-wrap;">${a.pre_assessment_notes}</div>
+        </div>`:''}
         <div><label>Final Assessment Done</label>
           <select id="fas-status-${a.id}">
             <option ${a.final_assessment_status==='Not Started'||!a.final_assessment_status?'selected':''}>Not Started</option>
@@ -1841,7 +1878,8 @@ function renderFinalAssessmentList() {
       <div style="display:flex;align-items:center;gap:10px;">
         ${avatarHTML(child,'final-done-photo-',a.id,36)}
         <div>
-          <div class="fam-name" style="margin-bottom:2px;">${child?.full_name||'Child'} ✅ <span style="font-size:13px;">${senAllergyConsentIcons(child,a)}</span></div>
+          <div class="fam-name" style="margin-bottom:2px;">${prefName(child)} ✅ <span style="font-size:13px;">${senAllergyConsentIcons(child,a)}</span></div>
+          ${fullNameSub(child)}
           <div style="font-size:12px;color:var(--muted);">Final: ${a.material_level||'—'} · Feedback: ${a.parent_feedback_status||'Pending'}</div>
         </div>
       </div>
@@ -1865,6 +1903,10 @@ async function markAttendance(attendeeId, val) {
   const a = allEventAttendees.find(x=>x.id===attendeeId);
   if(a) a.day_status = val||null;
   renderAttendeesForDay();
+  if(currentAssessDay && (currentAssessDay.event_type||'assessment_day')==='assessment_day') {
+    renderPreAssessmentList();
+    renderFinalAssessmentList();
+  }
   renderAssessDaysList();
   showToast('✅ Attendance updated');
 }
@@ -1936,34 +1978,87 @@ async function saveFinalAssessment(attendeeId) {
   showToast('✅ Final assessment saved');
 }
 
+// Pack hand-out board — same idea as the register: "To Give" on the left, tap a child to
+// hand over their pack and they move to "Given" on the right. Packs appear once the child's
+// Final Assessment has set their level.
+function packAttendees() {
+  return allEventAttendees.filter(a=>a.event_id===currentAssessDay.id && a.material_level);
+}
+function packSortKey(a) {
+  const child = allChildren.find(c=>c.id===a.child_id);
+  const order = [...YEAR_GROUP_VALUES, 'Further Review'];
+  const lvl = order.indexOf(a.material_level);
+  return [lvl<0?99:lvl, prefName(child).toLowerCase()];
+}
+function sortPackAttendees(list) {
+  return list.slice().sort((x,y)=>{
+    const [lx,nx]=packSortKey(x), [ly,ny]=packSortKey(y);
+    return lx-ly || nx.localeCompare(ny);
+  });
+}
+
 function renderPackDistribution() {
   const el = document.getElementById('adp-packs');
   if(!el) return;
-  const attendees = allEventAttendees.filter(a=>a.event_id===currentAssessDay.id && a.material_level);
+  const attendees = packAttendees();
   if(!attendees.length) {
     el.innerHTML = '<div class="empty"><div class="eicon">📦</div><p>No pack decisions recorded yet — packs appear here once Final Assessment is saved for each child.</p></div>';
     return;
   }
-  const groups = {};
-  attendees.forEach(a => {
+  const isGiven = a => allChildren.find(c=>c.id===a.child_id)?.pack_status==='given';
+  const toGive = sortPackAttendees(attendees.filter(a=>!isGiven(a)));
+  const given = sortPackAttendees(attendees.filter(isGiven));
+
+  function packCardHTML(a, done) {
     const child = allChildren.find(c=>c.id===a.child_id);
-    (groups[a.material_level] = groups[a.material_level]||[]).push(child?.full_name||'Unnamed child');
-  });
-  const order = [...YEAR_GROUP_VALUES, 'Further Review'];
-  const sortedKeys = Object.keys(groups).sort((x,y)=>order.indexOf(x)-order.indexOf(y));
+    return `<div style="background:white;border-radius:12px;box-shadow:var(--shadow);padding:10px;margin-bottom:8px;text-align:center;${done?'border:2px solid var(--lime);':''}">
+      <div ${done?'':`onclick="togglePackGiven('${a.id}',true)" style="cursor:pointer;"`}>
+        <div style="display:flex;justify-content:center;margin-bottom:6px;">${avatarHTML(child,'pack-photo-',a.id,52)}</div>
+        <div style="font-weight:800;font-size:13px;">${prefName(child)}</div>
+        ${fullNameSub(child)}
+        <div style="display:inline-block;margin-top:6px;padding:3px 10px;border-radius:99px;background:var(--teal-soft);color:var(--teal-mid);font-size:12px;font-weight:800;">📦 ${a.material_level}</div>
+        ${done && child?.pack_given_date ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">Given ${new Date(child.pack_given_date).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</div>` : ''}
+      </div>
+      ${done ? `<button class="pipe-tab" style="margin-top:8px;font-size:11px;" onclick="togglePackGiven('${a.id}',false)">↩ Undo — Back to To Give</button>` : ''}
+    </div>`;
+  }
 
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-      <span style="font-size:13px;font-weight:700;color:var(--muted);">${attendees.length} pack decision(s) recorded</span>
+      <span style="font-size:13px;font-weight:700;color:var(--muted);">${given.length} of ${attendees.length} packs given</span>
       <button class="btn-teal btn-sm" onclick="exportPackDistribution()">⬇️ Export / Print</button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">
-      ${sortedKeys.map(k => `
-        <div class="fam-card" style="flex-direction:column;align-items:stretch;">
-          <div class="fam-name" style="margin-bottom:6px;">${k} <span style="font-size:11px;color:var(--muted);">(${groups[k].length})</span></div>
-          ${groups[k].map(n=>`<div style="font-size:13px;padding:3px 0;border-top:1px solid var(--border);">${n}</div>`).join('')}
-        </div>`).join('')}
+    <div style="display:flex;gap:10px;">
+      <div style="flex:1;">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;text-align:center;">📦 To Give (${toGive.length})</div>
+        ${toGive.map(a=>packCardHTML(a,false)).join('') || '<div class="empty" style="padding:10px 0;font-size:12.5px;">All packs given 🎉</div>'}
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;text-align:center;">✅ Given (${given.length})</div>
+        ${given.map(a=>packCardHTML(a,true)).join('') || '<div class="empty" style="padding:10px 0;font-size:12.5px;">None yet</div>'}
+      </div>
     </div>`;
+  loadPhotosFor(attendees, 'pack-photo-');
+}
+
+async function togglePackGiven(attendeeId, give) {
+  const a = allEventAttendees.find(x=>x.id===attendeeId);
+  const child = a && allChildren.find(c=>c.id===a.child_id);
+  if(!child) return;
+  const updates = give
+    ? { pack_status:'given', pack_given_date: new Date().toISOString().slice(0,10) }
+    : { pack_status:'pending', pack_given_date: null };
+  const {error} = await db.from('ll_children').update(updates).eq('id', child.id);
+  if(error) { showToast('Error: '+error.message); return; }
+  Object.assign(child, updates);
+  try {
+    await addActivityLog(a.family_id, child.id, 'note',
+      give ? `Learning pack given at ${a.material_level} level (${currentAssessDay.title}).`
+           : `Learning pack hand-over undone (${currentAssessDay.title}).`,
+      give ? 'pack_given' : '');
+  } catch(e) {}
+  renderPackDistribution();
+  showToast(give ? '✅ Pack given' : '↩ Moved back to To Give');
 }
 
 function exportAttendeesForCalls() {
@@ -1995,17 +2090,12 @@ function exportAttendeesForCalls() {
 }
 
 function exportPackDistribution() {
-  const attendees = allEventAttendees.filter(a=>a.event_id===currentAssessDay.id && a.material_level);
+  const attendees = sortPackAttendees(packAttendees());
   if(!attendees.length) { showToast('No pack decisions to export yet'); return; }
-  const rows = [['Pack / Year Group','Child Name']];
-  const groups = {};
+  const rows = [['Pack / Year Group','Preferred Name','Full Name','Status']];
   attendees.forEach(a => {
     const child = allChildren.find(c=>c.id===a.child_id);
-    (groups[a.material_level] = groups[a.material_level]||[]).push(child?.full_name||'Unnamed child');
-  });
-  const order = [...YEAR_GROUP_VALUES, 'Further Review'];
-  Object.keys(groups).sort((x,y)=>order.indexOf(x)-order.indexOf(y)).forEach(k => {
-    groups[k].forEach(name => rows.push([k, name]));
+    rows.push([a.material_level, prefName(child), child?.full_name||'Unnamed child', child?.pack_status==='given'?'Given':'To give']);
   });
   const csv = rows.map(r => r.map(v => `"${(v||'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv'});
@@ -3597,14 +3687,28 @@ function renderEventsTab(f, children) {
             ${isAssess && a.final_assessment_status ? `<span>📋 ${a.final_assessment_status}</span>` : ''}
             ${isAssess && a.outcome_year_group ? `<span>🎓 ${a.outcome_year_group}</span>` : ''}
           </div>
-          ${a.outcome_notes?`<div class="fam-meta" style="margin-top:4px;color:var(--muted);">📝 ${a.outcome_notes}</div>`:''}
+
         </div>
       </div>`;
     }).join('');
     const status = c.learner_status || 'active';
+    // Assessment notes: everything written about this child on assessment days, in one place
+    const noteBlocks = allEventAttendees
+      .filter(a=>a.child_id===c.id && (a.pre_assessment_notes||a.assessor_notes||a.outcome_notes))
+      .map(a => {
+        const ev = allEvents.find(e=>e.id===a.event_id);
+        const assessor = allAssessors.find(x=>x.id===a.assessor_id)?.name;
+        const line = (label, text) => text ? `<div style="margin-top:6px;"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">${label}</div><div style="font-size:13px;white-space:pre-wrap;">${text}</div></div>` : '';
+        return `<div style="padding:10px 12px;background:var(--cream);border-radius:10px;margin-bottom:8px;">
+          <div style="font-size:12px;font-weight:800;color:var(--forest);">${ev?ev.title:'Assessment day'}${ev?.event_date?' · '+new Date(ev.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):''}${assessor?' · Assessor: '+assessor:''}</div>
+          ${line('Assessor notes', a.assessor_notes)}
+          ${line('Pre-assessment notes', a.pre_assessment_notes)}
+          ${line('Final assessment notes', a.outcome_notes)}
+        </div>`;
+      }).join('');
     return `<div class="card" style="margin-bottom:16px;">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>${c.full_name||'Child'}</span>
+        <span>${prefName(c)}${fullNameSub(c,'font-size:11px;color:var(--muted);font-weight:600;')}</span>
         <span class="status-tag st-${status==='active'?'year_group_confirmed':status}">${LEARNER_STATUS_LABELS[status]||status}</span>
       </div>
       ${status==='archived' && c.archived_reason ? `<div class="warn" style="margin-bottom:10px;">🗄 ${c.archived_reason}</div>` : ''}
@@ -3619,6 +3723,8 @@ function renderEventsTab(f, children) {
         <button class="btn-teal btn-sm" onclick="confirmArchiveLearner('${c.id}')">Save</button>
       </div>
       ${rows || '<div class="empty" style="padding:16px 0;"><p style="font-size:13px;">No events yet for this child</p></div>'}
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:14px 0 8px;">📝 Assessment notes</div>
+      ${noteBlocks || '<div style="font-size:12.5px;color:var(--muted);">No assessment notes yet.</div>'}
     </div>`;
   }).join('');
 }

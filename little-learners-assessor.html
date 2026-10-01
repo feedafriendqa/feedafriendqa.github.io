@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Little Learners — Assessor Notes</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#0A3D1F;--forest-mid:#145C30;--lime:#5CB85C;--lime-soft:#EAF5EA;--gold:#3AAFA4;--coral:#E05252;--muted:#5A7A65;--border:#C8DFC8;--cream:#F4F9F4;--shadow:0 4px 20px rgba(10,61,31,.09);--r:14px;--rs:10px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Quicksand',sans-serif;background:var(--cream);color:var(--forest);min-height:100vh;}
+header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14px;display:flex;align-items:center;height:56px;gap:10px;}
+.logo{display:flex;align-items:center;gap:9px;}
+.logo img{height:32px;width:auto;}
+.logo-text{font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:white;}
+.wrap{padding:16px 14px;max-width:520px;margin:0 auto;}
+.hero{background:var(--forest);border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:center;color:white;}
+.hero h1{font-family:'Nunito',sans-serif;font-weight:900;font-size:19px;}
+.hero p{font-size:13px;opacity:.85;margin-top:8px;line-height:1.5;}
+.card{background:white;border-radius:var(--r);padding:18px;box-shadow:var(--shadow);margin-bottom:14px;}
+.detail-row{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px;}
+.detail-row:last-child{border-bottom:none;}
+.detail-icon{font-size:16px;}
+.fg{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+.fg label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.choice-row{display:flex;gap:8px;}
+.choice{flex:1;padding:12px;border-radius:var(--rs);border:2px solid var(--border);text-align:center;cursor:pointer;font-weight:700;font-size:13.5px;color:var(--muted);background:white;transition:all .15s;}
+.choice.sel{border-color:var(--lime);background:var(--lime-soft);color:var(--forest);}
+.btn-gold{background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:13px 24px;width:100%;font-family:'Quicksand',sans-serif;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-gold:disabled{background:#ccc;cursor:not-allowed;}
+.err-msg{background:#FDEAEA;border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:600;color:#8B2020;margin-top:10px;border-left:4px solid var(--coral);display:none;}
+.success-pg{text-align:center;padding:40px 20px;}
+.success-pg .sicon{font-size:56px;margin-bottom:14px;}
+.success-pg h2{font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--forest);}
+.success-pg p{font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.6;}
+.spinner{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(10,61,31,.2);border-top-color:var(--forest);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.note{background:var(--lime-soft);border-radius:var(--rs);padding:10px 14px;font-size:12.5px;font-weight:600;color:var(--forest-mid);margin-bottom:14px;border-left:4px solid var(--lime);line-height:1.5;}
+.warn-note{background:#FEF3D6;border-radius:var(--rs);padding:10px 14px;font-size:12.5px;font-weight:700;color:#7A5000;margin-bottom:14px;border-left:4px solid var(--gold);line-height:1.5;}
+.upload-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.upload-side-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.file-input-styled{width:100%;padding:12px 8px;border-radius:var(--rs);border:2.5px dashed var(--border);background:var(--cream);font-family:'Quicksand',sans-serif;font-size:11.5px;font-weight:700;color:var(--muted);cursor:pointer;text-align:center;}
+.file-input-styled::-webkit-file-upload-button{background:var(--forest);color:white;border:none;padding:5px 12px;border-radius:50px;font-family:'Quicksand',sans-serif;font-weight:700;font-size:11px;cursor:pointer;margin-right:6px;}
+.scan-btn{width:100%;background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:12px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;}
+.scan-btn:disabled{background:#ccc;color:#888;cursor:not-allowed;}
+.scan-result{background:var(--lime-soft);border-radius:var(--rs);border:2px solid var(--lime);padding:10px 12px;margin-bottom:12px;font-size:12.5px;}
+.scan-field{display:flex;justify-content:space-between;padding:3px 0;}
+.scan-field-key{color:var(--muted);font-weight:700;}
+.link-btn{background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;display:block;margin:0 auto;}
+.fg select{padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);background:white;}
+.fg input[type=text]{padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);}
+.day-pick{background:white;border-radius:var(--r);padding:16px;box-shadow:var(--shadow);margin-bottom:12px;cursor:pointer;transition:all .15s;}
+.day-pick:active{transform:scale(.98);}
+.day-pick h3{font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;color:var(--forest);}
+.day-pick p{font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.5;}
+
+.pick{background:white;border-radius:var(--r);padding:16px;box-shadow:var(--shadow);margin-bottom:14px;}
+.pick label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;}
+.pick select{width:100%;padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:15px;font-weight:700;color:var(--forest);background:white;}
+.kid{background:white;border-radius:var(--r);padding:16px;box-shadow:var(--shadow);margin-bottom:14px;}
+.kid-name{font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;}
+.kid-full{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin-top:2px;}
+.flag{font-size:12.5px;font-weight:700;margin-top:6px;}
+.flag.al{color:var(--coral);} .flag.sen{color:#7A5000;}
+.kid textarea{width:100%;min-height:110px;margin-top:10px;padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);resize:vertical;}
+.kid textarea:focus{outline:none;border-color:var(--lime);}
+.save-row{display:flex;align-items:center;gap:10px;margin-top:10px;}
+.save-btn{background:var(--forest);color:white;border:none;border-radius:50px;padding:11px 22px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:13.5px;cursor:pointer;}
+.save-btn:disabled{background:#ccc;cursor:not-allowed;}
+.save-state{font-size:12.5px;font-weight:700;color:var(--muted);}
+.save-state.ok{color:var(--forest-mid);} .save-state.bad{color:var(--coral);}
+.top-row{display:flex;justify-content:space-between;align-items:center;margin:4px 0 12px;font-size:12.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.top-row button{background:none;border:none;color:var(--forest-mid);font-family:'Quicksand',sans-serif;font-weight:800;font-size:12.5px;text-decoration:underline;cursor:pointer;}
+</style>
+</head>
+<body>
+<header><div class="logo"><img src="data:image/png;base64,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" alt="Feed a Friend"><div class="logo-text">Little Learners</div></div></header>
+<div class="wrap">
+  <div class="hero"><h1 id="h-title">Assessor Notes</h1><p id="h-sub">Choose your name to see the children you assessed.</p></div>
+  <div id="err" class="err-msg"></div>
+  <div id="main" style="display:none;">
+    <div class="pick"><label for="assessor-select">Who are you?</label>
+      <select id="assessor-select" onchange="onPick()"><option value="">Select your name…</option></select></div>
+    <div id="kids"></div>
+  </div>
+  <div id="loading" style="text-align:center;padding:30px;"><span class="spinner"></span></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+<script>
+const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
+let db, dayId=null, assessorId=null, kids=[];
+const drafts = {};            // unsaved text per attendee, survives a refresh
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = id => document.getElementById(id);
+function showErr(m){ const e=$('err'); e.textContent=m; e.style.display='block'; $('loading').style.display='none'; }
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+async function init() {
+  if(!(window.supabase && window.supabase.createClient)) { setTimeout(init,100); return; }
+  db = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  dayId = new URLSearchParams(location.search).get('day');
+  if(!dayId) return showErr('This link is missing its assessment day. Please ask for the link again.');
+  const { data, error } = await db.rpc('get_assessor_portal', { p_day_id: dayId });
+  if(error || !data) return showErr('We couldn\'t find this assessment day. Please check the link.');
+  $('h-title').textContent = data.title || 'Assessor Notes';
+  const d = data.event_date ? new Date(data.event_date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
+  $('h-sub').textContent = (d ? d+' · ' : '') + 'Choose your name to see the children you assessed.';
+  const sel = $('assessor-select');
+  (data.assessors||[]).forEach(a => { const o=document.createElement('option'); o.value=a.id; o.textContent=a.name; sel.appendChild(o); });
+  if(!(data.assessors||[]).length) return showErr('No assessors have been added to this day yet.');
+  $('loading').style.display='none'; $('main').style.display='block';
+  const last = lsGet('ll-assessor-'+dayId);
+  if(last && [...sel.options].some(o=>o.value===last)) { sel.value = last; onPick(); }
+}
+
+async function onPick() {
+  assessorId = $('assessor-select').value || null;
+  $('kids').innerHTML = '';
+  if(!assessorId) return;
+  lsSet('ll-assessor-'+dayId, assessorId);
+  await loadKids();
+}
+
+async function loadKids() {
+  $('kids').innerHTML = '<div style="text-align:center;padding:20px;"><span class="spinner"></span></div>';
+  const { data, error } = await db.rpc('list_assessor_children', { p_day_id: dayId, p_assessor_id: assessorId });
+  if(error) { $('kids').innerHTML = '<div class="warn-note">Couldn\'t load your children. Check your connection and tap Refresh.</div>'; return; }
+  kids = data || [];
+  render();
+}
+
+function render() {
+  const head = '<div class="top-row"><span>'+kids.length+' child'+(kids.length===1?'':'ren')+'</span><button onclick="loadKids()">↻ Refresh</button></div>';
+  if(!kids.length) {
+    $('kids').innerHTML = head + '<div class="note">No children yet. They appear here once they\'ve been checked in as arrived and assigned to you.</div>';
+    return;
+  }
+  $('kids').innerHTML = head + kids.map(k => {
+    const pref = (k.preferred_name||'').trim() || k.full_name || 'Child';
+    const sub = (k.preferred_name||'').trim() && (k.full_name||'').trim().toLowerCase() !== pref.toLowerCase() ? '<div class="kid-full">'+esc(k.full_name)+'</div>' : '';
+    const al = k.has_allergies==='Yes' ? '<div class="flag al">⚠️ Allergy: '+esc(k.allergy_detail||'unspecified')+'</div>' : '';
+    const sen = k.sen ? '<div class="flag sen">🧩 SEN'+(k.sen_detail?': '+esc(k.sen_detail):'')+'</div>' : '';
+    const val = (k.attendee_id in drafts) ? drafts[k.attendee_id] : (k.assessor_notes||'');
+    return '<div class="kid"><div class="kid-name">'+esc(pref)+'</div>'+sub+al+sen
+      +'<textarea id="n-'+k.attendee_id+'" placeholder="Your notes on '+esc(pref)+'…" oninput="onType(\''+k.attendee_id+'\')">'+esc(val)+'</textarea>'
+      +'<div class="save-row"><button class="save-btn" id="b-'+k.attendee_id+'" onclick="save(\''+k.attendee_id+'\')">💾 Save notes</button><span class="save-state" id="s-'+k.attendee_id+'"></span></div></div>';
+  }).join('');
+}
+
+function onType(id) {
+  drafts[id] = $('n-'+id).value;
+  const s = $('s-'+id); s.textContent = 'Not saved yet'; s.className = 'save-state';
+}
+
+async function save(id) {
+  const btn = $('b-'+id), s = $('s-'+id), text = $('n-'+id).value;
+  btn.disabled = true; s.textContent = 'Saving…'; s.className = 'save-state';
+  const { data, error } = await db.rpc('save_assessor_notes', { p_day_id: dayId, p_assessor_id: assessorId, p_attendee_id: id, p_notes: text });
+  btn.disabled = false;
+  if(error || data !== true) { s.textContent = '⚠️ Not saved — tap Save to try again'; s.className = 'save-state bad'; return; }
+  const k = kids.find(x=>x.attendee_id===id); if(k) k.assessor_notes = text.trim();
+  delete drafts[id];
+  s.textContent = '✓ Saved'; s.className = 'save-state ok';
+}
+init();
+</script>
+</body>
+</html>
