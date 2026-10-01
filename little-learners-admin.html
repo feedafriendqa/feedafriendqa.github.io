@@ -888,8 +888,21 @@ function renderAssessorMgmt() {
       <button class="btn-teal btn-sm" onclick="addAssessor()">+ Add</button>
     </div>
     <div class="note" style="margin-bottom:12px;">Assessors are specific to this assessment day — add whoever's working ${currentAssessDay.title} today.</div>
+    <div class="card" style="padding:14px 16px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:800;color:var(--forest);margin-bottom:4px;">🔗 Assessor notes link</div>
+      <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px;">Share with the assessors. They pick their name from the list, see the children checked in and assigned to them (set the Assessor on the Pre-Assessment tab), and type their notes. Notes land in each child's profile under Assessment notes.</div>
+      <button class="btn-teal btn-sm" onclick="copyAssessorLink()">🔗 Copy Assessor Link</button>
+    </div>
     <div id="assessor-list-mgmt"></div>`;
   renderAssessorListOnly(dayAssessors);
+}
+
+function copyAssessorLink() {
+  const link = `https://feedafriendqa.github.io/little-learners-assessor.html?day=${currentAssessDay.id}`;
+  navigator.clipboard.writeText(link).then(
+    () => showToast('✅ Assessor link copied'),
+    () => showToast('⚠️ Could not copy — please copy manually: '+link)
+  );
 }
 
 function renderAssessorListOnly(dayAssessors) {
@@ -3674,15 +3687,28 @@ function renderEventsTab(f, children) {
             ${isAssess && a.final_assessment_status ? `<span>📋 ${a.final_assessment_status}</span>` : ''}
             ${isAssess && a.outcome_year_group ? `<span>🎓 ${a.outcome_year_group}</span>` : ''}
           </div>
-          ${a.pre_assessment_notes?`<div class="fam-meta" style="margin-top:4px;color:var(--muted);">📝 Pre-assessment: ${a.pre_assessment_notes}</div>`:''}
-          ${a.outcome_notes?`<div class="fam-meta" style="margin-top:4px;color:var(--muted);">📝 Final: ${a.outcome_notes}</div>`:''}
+
         </div>
       </div>`;
     }).join('');
     const status = c.learner_status || 'active';
+    // Assessment notes: everything written about this child on assessment days, in one place
+    const noteBlocks = allEventAttendees
+      .filter(a=>a.child_id===c.id && (a.pre_assessment_notes||a.assessor_notes||a.outcome_notes))
+      .map(a => {
+        const ev = allEvents.find(e=>e.id===a.event_id);
+        const assessor = allAssessors.find(x=>x.id===a.assessor_id)?.name;
+        const line = (label, text) => text ? `<div style="margin-top:6px;"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">${label}</div><div style="font-size:13px;white-space:pre-wrap;">${text}</div></div>` : '';
+        return `<div style="padding:10px 12px;background:var(--cream);border-radius:10px;margin-bottom:8px;">
+          <div style="font-size:12px;font-weight:800;color:var(--forest);">${ev?ev.title:'Assessment day'}${ev?.event_date?' · '+new Date(ev.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):''}${assessor?' · Assessor: '+assessor:''}</div>
+          ${line('Assessor notes', a.assessor_notes)}
+          ${line('Pre-assessment notes', a.pre_assessment_notes)}
+          ${line('Final assessment notes', a.outcome_notes)}
+        </div>`;
+      }).join('');
     return `<div class="card" style="margin-bottom:16px;">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>${c.full_name||'Child'}</span>
+        <span>${prefName(c)}${fullNameSub(c,'font-size:11px;color:var(--muted);font-weight:600;')}</span>
         <span class="status-tag st-${status==='active'?'year_group_confirmed':status}">${LEARNER_STATUS_LABELS[status]||status}</span>
       </div>
       ${status==='archived' && c.archived_reason ? `<div class="warn" style="margin-bottom:10px;">🗄 ${c.archived_reason}</div>` : ''}
@@ -3697,6 +3723,8 @@ function renderEventsTab(f, children) {
         <button class="btn-teal btn-sm" onclick="confirmArchiveLearner('${c.id}')">Save</button>
       </div>
       ${rows || '<div class="empty" style="padding:16px 0;"><p style="font-size:13px;">No events yet for this child</p></div>'}
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:14px 0 8px;">📝 Assessment notes</div>
+      ${noteBlocks || '<div style="font-size:12.5px;color:var(--muted);">No assessment notes yet.</div>'}
     </div>`;
   }).join('');
 }
