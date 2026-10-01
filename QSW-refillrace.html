@@ -120,11 +120,22 @@
             </div>
           </div>
         </div>
+        <div style="flex:1; min-width:220px; background:#ffffff; border:3px solid #14261a; border-radius:16px; padding:16px 18px; box-shadow:5px 5px 0 rgba(0,0,0,0.28); transform:rotate(-0.4deg)">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.1em; color:#7c8177">TOP STUDENT TEAM 🎓</div>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:6px">
+            <div style="font-size:26px; line-height:1">🏆</div>
+            <div style="min-width:0">
+              <div id="trophyStudentName" style="font-family:'Outfit',sans-serif; font-weight:800; font-size:16px; color:#14261a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">—</div>
+              <div id="trophyStudentPoints" style="font-size:12px; color:#5d6359"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div style="display:flex; gap:8px; margin-top:20px">
+      <div style="display:flex; gap:8px; margin-top:20px; flex-wrap:wrap">
         <button id="tabTeamsBtn" onclick="setBoardTab('teams')" style="border:2.5px solid #14261a; font-weight:800; font-size:13px; padding:10px 18px; border-radius:99px; cursor:pointer">Teams</button>
         <button id="tabBizBtn" onclick="setBoardTab('business')" style="border:2.5px solid #14261a; font-weight:800; font-size:13px; padding:10px 18px; border-radius:99px; cursor:pointer">Businesses</button>
+        <button id="tabStudentsBtn" onclick="setBoardTab('students')" style="border:2.5px solid #14261a; font-weight:800; font-size:13px; padding:10px 18px; border-radius:99px; cursor:pointer">Students 🎓</button>
       </div>
 
       <div id="sampleNotice" style="margin-top:18px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.06em; color:#f4a832; display:none">SHOWING SAMPLE DATA · connect Supabase to go live</div>
@@ -292,12 +303,14 @@ const CONFIG = {
 };
 
 const SAMPLE_TEAMS = [
-  { team_id: 's1', team_name: 'The Fridge Force', business: 'Ooredoo Qatar', member_count: 6, points: 180, logs_count: 12 },
-  { team_id: 's2', team_name: 'Chill Squad', business: 'Qatar Airways', member_count: 5, points: 150, logs_count: 9 },
-  { team_id: 's3', team_name: 'Snack Attack', business: null, member_count: 4, points: 120, logs_count: 8 },
-  { team_id: 's4', team_name: 'The Refillers', business: 'Ooredoo Qatar', member_count: 5, points: 90, logs_count: 6 },
-  { team_id: 's5', team_name: 'Green Machine', business: 'QNB', member_count: 3, points: 60, logs_count: 4 },
-  { team_id: 's6', team_name: 'Cold Storage Crew', business: 'Vodafone Qatar', member_count: 6, points: 40, logs_count: 3 }
+  { team_id: 's1', team_name: 'The Fridge Force', business: 'Ooredoo Qatar', member_count: 6, points: 180, logs_count: 12, is_student_team: false, school_name: null },
+  { team_id: 's2', team_name: 'Chill Squad', business: 'Qatar Airways', member_count: 5, points: 150, logs_count: 9, is_student_team: false, school_name: null },
+  { team_id: 's3', team_name: 'Snack Attack', business: null, member_count: 4, points: 120, logs_count: 8, is_student_team: false, school_name: null },
+  { team_id: 's4', team_name: 'The Refillers', business: 'Ooredoo Qatar', member_count: 5, points: 90, logs_count: 6, is_student_team: false, school_name: null },
+  { team_id: 's5', team_name: 'Green Machine', business: 'QNB', member_count: 3, points: 60, logs_count: 4, is_student_team: false, school_name: null },
+  { team_id: 's6', team_name: 'Cold Storage Crew', business: 'Vodafone Qatar', member_count: 6, points: 40, logs_count: 3, is_student_team: false, school_name: null },
+  { team_id: 's7', team_name: 'Young Refillers', business: null, member_count: 5, points: 70, logs_count: 5, is_student_team: true, school_name: 'Qatar Academy' },
+  { team_id: 's8', team_name: 'Eco Eagles', business: null, member_count: 4, points: 55, logs_count: 4, is_student_team: true, school_name: 'American School of Doha' }
 ];
 
 // ===================== STATE =====================
@@ -449,12 +462,15 @@ function setBoardTab(tab) { state.tab = tab; renderBoard(); }
 function styleTabButtons() {
   const teamsBtn = document.getElementById('tabTeamsBtn');
   const bizBtn = document.getElementById('tabBizBtn');
+  const studentsBtn = document.getElementById('tabStudentsBtn');
   const active = { background: '#c6f24a', color: '#0e3d24' };
   const inactive = { background: 'transparent', color: '#c6f24a' };
   const t = state.tab === 'teams' ? active : inactive;
   const b = state.tab === 'business' ? active : inactive;
+  const s = state.tab === 'students' ? active : inactive;
   teamsBtn.style.background = t.background; teamsBtn.style.color = t.color;
   bizBtn.style.background = b.background; bizBtn.style.color = b.color;
+  studentsBtn.style.background = s.background; studentsBtn.style.color = s.color;
 }
 
 function renderBoard() {
@@ -494,9 +510,14 @@ function renderBoard() {
     name: b.name, points: b.points, sub: b.teamCount + ' team' + (b.teamCount === 1 ? '' : 's') + ' · ' + b.logs + ' refills'
   })));
 
-  // Trophy callouts — top team and top organisation (an organisation's
-  // points are the sum of every team it fields), always visible above the
-  // tabs regardless of which board the person is looking at.
+  const studentRows = buildRows(state.teams.filter(t => t.is_student_team).map(t => ({
+    name: t.team_name, points: t.points || 0,
+    sub: (t.school_name ? t.school_name + ' · ' : '') + (t.member_count || 0) + ' members · ' + (t.logs_count || 0) + ' refills'
+  })));
+
+  // Trophy callouts — top team, top organisation (an organisation's points
+  // are the sum of every team it fields), and top student team — always
+  // visible above the tabs regardless of which board the person is looking at.
   const trophyRow = document.getElementById('trophyRow');
   trophyRow.style.display = (showBoard && state.teams.length) ? 'flex' : 'none';
   if (showBoard && state.teams.length) {
@@ -506,9 +527,12 @@ function renderBoard() {
     const topBiz = bizRows[0];
     document.getElementById('trophyBizName').textContent = topBiz ? topBiz.name : '—';
     document.getElementById('trophyBizPoints').textContent = topBiz ? topBiz.points + ' pts' : '';
+    const topStudent = studentRows[0];
+    document.getElementById('trophyStudentName').textContent = topStudent ? topStudent.name : '—';
+    document.getElementById('trophyStudentPoints').textContent = topStudent ? topStudent.points + ' pts' : '';
   }
 
-  const rows = state.tab === 'teams' ? teamRows : bizRows;
+  const rows = state.tab === 'teams' ? teamRows : state.tab === 'business' ? bizRows : studentRows;
   document.getElementById('noRowsNotice').style.display = (showBoard && rows.length === 0) ? 'block' : 'none';
 
   rows.forEach(row => {
