@@ -131,8 +131,17 @@
             <span id="ntNameErr" style="font-size:11.5px; color:#c0392b; display:none">Please give your team a name</span>
           </label>
           <label style="display:block">
-            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">BUSINESS (OPTIONAL)</span>
-            <input id="ntBusiness" placeholder="Leave blank if you're not repping a business" style="width:100%; margin-top:5px; border:1.5px solid #d9ded6; border-radius:10px; padding:11px 12px; font-size:14px; color:#14261a; outline:none">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">ORGANISATION/COMMUNITY GROUP NAME (OPTIONAL)</span>
+            <input id="ntBusiness" placeholder="Leave blank if you're not repping a business or group" style="width:100%; margin-top:5px; border:1.5px solid #d9ded6; border-radius:10px; padding:11px 12px; font-size:14px; color:#14261a; outline:none">
+          </label>
+          <label style="display:flex; align-items:flex-start; gap:9px; cursor:pointer; background:#f4f9f0; border:1.5px solid #e6ebe1; border-radius:10px; padding:11px 12px">
+            <input id="ntIsStudentTeam" type="checkbox" onchange="toggleSchoolName()" style="width:18px; height:18px; margin-top:1px; accent-color:#1b7a43; cursor:pointer; flex:none">
+            <span style="font-size:13px; color:#14261a; line-height:1.4">This is a school team / a team made up entirely of students — eligible for the student award 🎓</span>
+          </label>
+          <label id="ntSchoolNameWrap" style="display:none">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">SCHOOL NAME</span>
+            <input id="ntSchoolName" placeholder="e.g. Qatar Academy" style="width:100%; margin-top:5px; border:1.5px solid #d9ded6; border-radius:10px; padding:11px 12px; font-size:14px; color:#14261a; outline:none">
+            <span id="ntSchoolNameErr" style="font-size:11.5px; color:#c0392b; display:none">Please add your school's name</span>
           </label>
           <label style="display:block">
             <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">CAPTAIN NAME</span>
@@ -321,6 +330,15 @@ function navigate() {
 window.addEventListener('hashchange', navigate);
 
 // ===================== NEW TEAM =====================
+function toggleSchoolName() {
+  const checked = document.getElementById('ntIsStudentTeam').checked;
+  document.getElementById('ntSchoolNameWrap').style.display = checked ? 'block' : 'none';
+  if (!checked) {
+    document.getElementById('ntSchoolName').value = '';
+    document.getElementById('ntSchoolNameErr').style.display = 'none';
+  }
+}
+
 function ntChangeCount(delta) {
   state.nt.memberCount = Math.max(2, Math.min(6, (state.nt.memberCount || 4) + delta));
   document.getElementById('ntCount').textContent = state.nt.memberCount;
@@ -362,7 +380,7 @@ function collectMemberNames() {
 }
 
 function clearNtErrors() {
-  ['ntNameErr', 'ntCaptainNameErr', 'ntCaptainEmailErr', 'ntCaptainPhoneErr', 'ntMembersErr'].forEach(id => {
+  ['ntNameErr', 'ntCaptainNameErr', 'ntCaptainEmailErr', 'ntCaptainPhoneErr', 'ntMembersErr', 'ntSchoolNameErr'].forEach(id => {
     const el = document.getElementById(id);
     el.style.display = 'none';
     if (el.dataset.defaultMsg) el.textContent = el.dataset.defaultMsg;
@@ -380,6 +398,8 @@ function submitTeam() {
   document.getElementById('ntPostFailed').style.display = 'none';
   const name = document.getElementById('ntName').value.trim();
   const business = document.getElementById('ntBusiness').value.trim();
+  const isStudentTeam = document.getElementById('ntIsStudentTeam').checked;
+  const schoolName = document.getElementById('ntSchoolName').value.trim();
   const captainName = document.getElementById('ntCaptainName').value.trim();
   const captainEmail = document.getElementById('ntCaptainEmail').value.trim();
   const captainPhone = document.getElementById('ntCaptainPhone').value.trim();
@@ -391,6 +411,7 @@ function submitTeam() {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(captainEmail)) { document.getElementById('ntCaptainEmailErr').style.display = 'inline'; hasErr = true; }
   if (captainPhone.length < 6) { document.getElementById('ntCaptainPhoneErr').style.display = 'inline'; hasErr = true; }
   if (memberNames.some(n => !n)) { document.getElementById('ntMembersErr').style.display = 'inline'; hasErr = true; }
+  if (isStudentTeam && !schoolName) { document.getElementById('ntSchoolNameErr').style.display = 'inline'; hasErr = true; }
   if (hasErr) return;
 
   const btn = document.getElementById('ntSubmitBtn');
@@ -416,7 +437,7 @@ function submitTeam() {
   }).then(r => r.ok ? r.json() : false).then(taken => {
     if (taken === true) { resetBtn(); showNtEmailTaken(); return; }
 
-    const record = { name: name, business: business || null, captain_name: captainName, captain_email: captainEmail, captain_phone: captainPhone, member_count: state.nt.memberCount, member_names: memberNames };
+    const record = { name: name, business: business || null, is_student_team: isStudentTeam, school_name: isStudentTeam ? schoolName : null, captain_name: captainName, captain_email: captainEmail, captain_phone: captainPhone, member_count: state.nt.memberCount, member_names: memberNames };
     fetch(c.url + '/rest/v1/' + c.teamsTable, {
       method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, headers()), body: JSON.stringify(record)
     }).then(r => {
@@ -424,7 +445,7 @@ function submitTeam() {
       if (!r.ok) throw new Error();
       finishTeam(name);
       notifyMailer({ type: 'team', team: {
-        name: name, business: business || null, captainName: captainName,
+        name: name, business: business || null, isStudentTeam: isStudentTeam, schoolName: isStudentTeam ? schoolName : null, captainName: captainName,
         captainEmail: captainEmail, captainPhone: captainPhone, memberCount: state.nt.memberCount,
         memberNames: memberNames
       }});
