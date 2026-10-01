@@ -1971,6 +1971,24 @@ async function saveFinalAssessment(attendeeId) {
     child.material_level = material_level;
   }
 
+  // Assessed: once the Final Assessment is Complete with a real level, the child's own profile
+  // moves on — final year group is set and the pipeline advances to YG Confirmed (this is what
+  // makes them a Little Learner with a profile). Children already further along are not moved back.
+  if(child && final_assessment_status==='Complete' && material_level && material_level!=='Further Review') {
+    const patch = { final_year_group: material_level, year_group_approved_at: new Date().toISOString() };
+    const advance = ASSESS_ADVANCE_FROM.has(child.pipeline_status||'new');
+    if(advance) patch.pipeline_status = 'year_group_confirmed';
+    const {error:ce} = await db.from('ll_children').update(patch).eq('id', child.id);
+    if(ce) { showToast('Saved, but could not update the child\'s profile: '+ce.message); }
+    else {
+      Object.assign(child, patch);
+      if(advance) {
+        try { await addActivityLog(a.family_id, a.child_id, 'note', `Assessed on ${currentAssessDay.title}. Final year group ${material_level}; moved to YG Confirmed.`, ''); } catch(e) {}
+      }
+      try { renderDash(); renderPipelineTabs(); renderFams(); } catch(e) {}
+    }
+  }
+
   renderAttendeesForDay();
   finalExpanded.delete(attendeeId);
   renderFinalAssessmentList();
@@ -3094,7 +3112,28 @@ function programPillsHTML(f) {
   return pills.join('');
 }
 
+// A child counts as assessed once their Final Assessment is marked Complete on an assessment day.
+function childAssessments(c) {
+  return allEventAttendees
+    .filter(a=>a.child_id===c.id && a.final_assessment_status==='Complete')
+    .map(a=>({a, ev: allEvents.find(e=>e.id===a.event_id)}))
+    .filter(x=>x.ev)
+    .sort((x,y)=>new Date(y.ev.event_date||0)-new Date(x.ev.event_date||0));
+}
+// One-line summary for profiles: when assessed, the final year group, and (if different) what pre-assessment recommended.
+function assessedSummaryHTML(c) {
+  const latest = childAssessments(c)[0];
+  if(!latest) return '';
+  const {a, ev} = latest;
+  const d = ev.event_date ? new Date(ev.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '';
+  const pre = a.outcome_year_group && a.outcome_year_group!==a.material_level ? ` <span style="color:var(--muted);">(pre-assessment recommended ${a.outcome_year_group})</span>` : '';
+  return `<div style="margin-top:8px;font-size:12.5px;font-weight:700;color:var(--forest-mid);background:var(--lime-soft);padding:8px 10px;border-radius:var(--rs);">✅ Assessed${d?' '+d:''} — final year group: <strong>${a.material_level||'—'}</strong>${pre}</div>`;
+}
+const ASSESS_ADVANCE_FROM = new Set(['new','waiting_for_assessment','pre_assessment_scheduled','pre_assessed','year_group_pending']);
+
 function childAssessedDateStr(c) {
+  const done = childAssessments(c);
+  if(done.length && done[0].ev.event_date) return new Date(done[0].ev.event_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
   const rows = allEventAttendees.filter(a=>a.child_id===c.id && a.attendance==='Present');
   if(!rows.length) return null;
   const dates = rows.map(a=>{
@@ -3334,6 +3373,7 @@ function renderChildren(children, f) {
             `:''}
             ${!unassessed?`<button class="override-btn" onclick="toggleYGEdit('yge-${c.id}',this)">✏️ Override</button>`:''}
           </div>
+          ${assessedSummaryHTML(c)}
           ${c.year_group_justification?`<div style="margin-top:8px;font-size:12px;color:var(--muted);background:var(--cream);padding:8px 10px;border-radius:var(--rs);">📝 ${c.year_group_justification}</div>`:''}
         </div>
 
@@ -3685,7 +3725,8 @@ function renderEventsTab(f, children) {
             <span>🎟 ${a.invite_status||'invited'}</span>
             ${a.attendance?`<span>${a.attendance==='declined'?'❌':'✅'} ${a.attendance}</span>`:''}
             ${isAssess && a.final_assessment_status ? `<span>📋 ${a.final_assessment_status}</span>` : ''}
-            ${isAssess && a.outcome_year_group ? `<span>🎓 ${a.outcome_year_group}</span>` : ''}
+            ${isAssess && a.outcome_year_group ? `<span>💡 Pre-assessment: ${a.outcome_year_group}</span>` : ''}
+            ${isAssess && a.material_level ? `<span>🎓 Final: ${a.material_level}</span>` : ''}
           </div>
 
         </div>
@@ -4332,7 +4373,8 @@ function renderLearnerProfile(f, children, focusChildId) {
           <button class="btn-small" onclick="jumpToTab('events')">📅 View All Events</button>
           <button class="btn-small" onclick="jumpToTab('overview')">👪 Family Case File</button>
         </div>
-        <h3 style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">Event History</h3>
+        ${assessedSummaryHTML(c)}
+        <h3 style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:14px 0 8px;">Event History</h3>
         ${events.length ? events.map(a=>`
           <div class="fam-card" style="margin-bottom:8px;">
             <div class="fam-info">
