@@ -170,6 +170,8 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 .del-btn:disabled{opacity:.6;cursor:default}
 .remove-fam-btn{width:100%;margin-top:8px;padding:11px;border-radius:30px;border:1.5px solid #f1d4d0;background:#fff;font-family:"Manrope",sans-serif;font-size:12px;font-weight:700;color:#c0392b;cursor:pointer}
 .remove-fam-btn:disabled{opacity:.5;cursor:default}
+.not-delivered-btn{width:100%;margin-top:8px;padding:11px;border-radius:30px;border:1.5px solid #f0dca8;background:#fff;font-family:"Manrope",sans-serif;font-size:12px;font-weight:700;color:#a0691b;cursor:pointer}
+.not-delivered-btn:disabled{opacity:.5;cursor:default}
 
 /* LIFETIME STATS (No-trip dashboard) */
 .stats-row{display:flex;gap:12px;margin:0 16px 10px}
@@ -638,6 +640,16 @@ var TR={
   remove_reason_label:{en:"Why are you removing this delivery?",ar:"لماذا تقوم بإزالة هذا التوصيل؟"},
   remove_reason_placeholder:{en:"e.g. can't reach this area, picked too many…",ar:"مثال: لا يمكنني الوصول إلى هذه المنطقة، اخترت عددًا أكبر من اللازم…"},
   remove_reason_required:{en:"Please give a reason before removing.",ar:"يرجى ذكر السبب قبل الإزالة."},
+  not_delivered_btn:{en:"Not delivered",ar:"لم يتم التوصيل"},
+  not_delivered_confirm_title:{en:"Mark as not delivered?",ar:"تسجيل كعدم توصيل؟"},
+  not_delivered_confirm_body_pre:{en:"This records that ",ar:"سيتم تسجيل أن "},
+  not_delivered_confirm_body_post:{en:" was not delivered and sends it to the office for review — they'll decide whether to redeliver it or reallocate the box. This will not count against the family's allowance.",ar:" لم يتم توصيلها وإرسالها إلى المكتب للمراجعة — سيقررون إعادة التوصيل أو إعادة تخصيص الصندوق. لن يُحتسب هذا ضمن حصة الأسرة."},
+  not_delivered_confirm_btn:{en:"Yes, mark not delivered",ar:"نعم، سجّل كعدم توصيل"},
+  not_delivered_reason_label:{en:"Why wasn't this delivered?",ar:"لماذا لم يتم توصيل هذا؟"},
+  not_delivered_reason_placeholder:{en:"e.g. no answer, wrong address, family not home…",ar:"مثال: لا يوجد رد، عنوان خاطئ، الأسرة غير موجودة…"},
+  not_delivered_reason_required:{en:"Please give a reason before continuing.",ar:"يرجى ذكر السبب قبل المتابعة."},
+  marking_not_delivered_label:{en:"Saving…",ar:"جارٍ الحفظ…"},
+  not_delivered_failed:{en:"Could not save — please try again.",ar:"تعذّر الحفظ — يرجى المحاولة مرة أخرى."},
   cannot_mark_yet_pre:{en:"You can mark deliveries starting on your distribution day (",ar:"يمكنك تسجيل التوصيلات ابتداءً من يوم التوزيع ("},
   cannot_mark_yet_post:{en:").",ar:")."},
   alt_no_app:{en:"No application on file for this delivery — can't look up alternative contacts.",ar:"لا يوجد طلب مسجّل لهذه التوصيلة — لا يمكن البحث عن جهات اتصال بديلة."},
@@ -1560,6 +1572,7 @@ function renderFamCard(row,num){
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#146c43"/></svg></span><div style="flex:1"><div class="fam-lbl">'+t("fam_note_label")+'</div><textarea class="fam-notes-inp" id="notes-'+row.id+'" placeholder="'+t("fam_note_placeholder")+'" '+(done?"disabled":"")+'>'+notesVal+'</textarea></div></div>'
     +(done?latePhotoBlock(row):'<div class="fam-row"><span class="fam-ic">📷</span><div style="flex:1"><div class="fam-lbl">'+t("fam_photo_label")+'</div><input type="file" accept="image/*" class="fam-photo-inp" id="photo-'+row.id+'" onchange="previewPhoto(\''+row.id+'\')"><div class="fam-photo-preview" id="photo-preview-'+row.id+'"></div></div></div>')
     +'<button class="del-btn'+(done?" done":"")+'" id="db-'+row.id+'" data-app="'+(row.application_id||"")+'" onclick="markDel(\''+row.id+'\')" '+((done||!canMark)?"disabled":"")+'>'+(done?t("marked_delivered"):(canMark?t("mark_delivered"):t("not_yet_deliverable")))+'</button>'
+    +(done?"":'<button class="not-delivered-btn" id="nd-'+row.id+'" data-app="'+(row.application_id||"")+'" data-name="'+name.replace(/"/g,"&quot;")+'" onclick="confirmMarkNotDelivered(\''+row.id+'\')">⚠ '+t("not_delivered_btn")+'</button>')
     +(done?"":'<button class="remove-fam-btn" id="rm-'+row.id+'" data-name="'+name.replace(/"/g,"&quot;")+'" data-boxes="'+boxCount+'" onclick="confirmRemoveFamily(\''+row.id+'\')">✕ '+t("remove_family_btn")+'</button>')
     +'</div>';
 }
@@ -1749,6 +1762,64 @@ async function performRemoveFamily(id){
   }
   closeAltNumberModal();
   if(AT&&typeof j.boxes_count==="number")AT.boxes_count=j.boxes_count;
+  CURRENT_FAMS=(CURRENT_FAMS||[]).filter(function(row){return row.id!==id;});
+  fadeOutFamCard(id);
+}
+// ── NOT DELIVERED ────────────────────────────────────────────────────────
+// Driver couldn't complete this delivery (no answer, wrong address, family
+// not home, etc). Unlike Remove from trip, this is NOT "I picked wrong" —
+// it's an outcome that needs office follow-up. Reuses the same modal as
+// remove/alt-number. Requires a reason. Does NOT touch the family's box
+// allowance — that decision (redeliver vs. reallocate vs. count as used) is
+// made by an admin reviewing the flagged case, mirroring how a returned box
+// has been handled before. The trip_assignment is marked not_delivered
+// server-side (not deleted), so the card leaves this driver's list the same
+// way a delivered one does.
+function confirmMarkNotDelivered(id){
+  var card=document.getElementById("fc-"+id);
+  var btn=document.getElementById("nd-"+id);
+  if(!card||!btn||btn.disabled)return;
+  var name=btn.dataset.name||t("dash");
+  var body=document.getElementById("alt-num-modal-body");
+  body.innerHTML='<div class="modal-title">'+t("not_delivered_confirm_title")+'</div>'
+    +'<div class="modal-body">'+t("not_delivered_confirm_body_pre")+'<strong>'+name+'</strong>'+t("not_delivered_confirm_body_post")+'</div>'
+    +'<div class="modal-body" style="margin-top:14px"><label for="not-delivered-reason-inp" style="display:block;font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px">'+t("not_delivered_reason_label")+'</label>'
+    +'<textarea id="not-delivered-reason-inp" class="fam-notes-inp" placeholder="'+t("not_delivered_reason_placeholder")+'" style="width:100%"></textarea>'
+    +'<div id="not-delivered-reason-err" style="display:none;color:#c0392b;font-size:11px;font-weight:700;margin-top:6px">'+t("not_delivered_reason_required")+'</div></div>'
+    +'<div class="modal-btns"><button class="modal-btn modal-btn-secondary" onclick="closeAltNumberModal()">'+t("remove_cancel")+'</button><button class="modal-btn modal-btn-primary" style="background:#a0691b" onclick="performMarkNotDelivered(\''+id+'\')">'+t("not_delivered_confirm_btn")+'</button></div>';
+  document.getElementById("alt-num-modal").classList.add("show");
+}
+async function performMarkNotDelivered(id){
+  var reasonEl=document.getElementById("not-delivered-reason-inp");
+  var reason=reasonEl?reasonEl.value.trim():"";
+  if(!reason){
+    var errEl=document.getElementById("not-delivered-reason-err");
+    if(errEl)errEl.style.display="block";
+    if(reasonEl)reasonEl.focus();
+    return;
+  }
+  var modalBody=document.getElementById("alt-num-modal-body");
+  var btns=modalBody?modalBody.querySelectorAll("button"):[];
+  btns.forEach(function(b){b.disabled=true;});
+  if(reasonEl)reasonEl.disabled=true;
+  var lastBtn=btns[btns.length-1];
+  if(lastBtn)lastBtn.textContent=t("marking_not_delivered_label");
+  var ndBtn=document.getElementById("nd-"+id);
+  var appId=ndBtn?ndBtn.dataset.app:null;
+  if(!appId){
+    var dbBtn=document.getElementById("db-"+id);
+    appId=dbBtn?dbBtn.dataset.app:null;
+  }
+  try{
+    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"mark_family_not_delivered",trip_assignment_id:id,application_id:appId,driver_email:CU.email,reason:reason})});
+    var j=await r.json();
+    if(!r.ok||j.error)throw new Error(j.error||t("not_delivered_failed"));
+  }catch(e){
+    closeAltNumberModal();
+    alert(t("not_delivered_failed")+(e.message?" ("+e.message+")":""));
+    return;
+  }
+  closeAltNumberModal();
   CURRENT_FAMS=(CURRENT_FAMS||[]).filter(function(row){return row.id!==id;});
   fadeOutFamCard(id);
 }

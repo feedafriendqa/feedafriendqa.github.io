@@ -322,6 +322,7 @@ select.edit-field{cursor:pointer;}
       <button class="filter-btn" id="view-btn-payments" onclick="showView('payments')">💰 Payments</button>
       <button class="filter-btn" id="view-btn-approvals" onclick="showView('approvals')">🚗 Approvals<span id="approvals-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
       <button class="filter-btn" id="view-btn-messages" onclick="showView('messages')">💌 Messages<span id="messages-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
+      <button class="filter-btn" id="view-btn-redelivery" onclick="showView('redelivery')">🔁 Not Delivered<span id="redelivery-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
     </div>
     <div id="cases-view">
     <div class="welcome-banner">
@@ -548,6 +549,16 @@ select.edit-field{cursor:pointer;}
       <div id="messages-loading" class="loading"><div class="spinner-lg"></div>Loading messages…</div>
       <div id="messages-list"></div>
       <div id="messages-empty" class="empty" style="display:none;">No thank-you messages waiting for review.</div>
+    </div>
+
+    <div id="redelivery-view" style="display:none;">
+      <div class="welcome-banner">
+        <div class="welcome-name">Not Delivered — Review Queue</div>
+        <div class="welcome-scope">A driver marked these as not delivered. Decide whether to redeliver the box (returns the family to the unassigned pool for the next route, no allowance change) or count it as delivered anyway (e.g. the box was reallocated or otherwise used) — this bumps their allowance the same way a normal delivery does.</div>
+      </div>
+      <div id="redelivery-loading" class="loading"><div class="spinner-lg"></div>Loading review queue…</div>
+      <div id="redelivery-list"></div>
+      <div id="redelivery-empty" class="empty" style="display:none;">No not-delivered cases awaiting review.</div>
     </div>
   </div>
 
@@ -988,6 +999,19 @@ async function handleAdminSession(session) {
       var badge = document.getElementById('messages-badge');
       if (!badge) return;
       var count = (json.messages || []).length;
+      if (count) { badge.textContent = count; badge.style.display = 'inline-block'; }
+      else badge.style.display = 'none';
+    }).catch(function(){});
+
+    apiHeadersAsync().then(function(headers) {
+      return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+        method: 'POST', headers: headers,
+        body: JSON.stringify({ type: 'admin_list_redelivery_review' })
+      });
+    }).then(function(r) { return r.json(); }).then(function(json) {
+      var badge = document.getElementById('redelivery-badge');
+      if (!badge) return;
+      var count = (json.cases || []).length;
       if (count) { badge.textContent = count; badge.style.display = 'inline-block'; }
       else badge.style.display = 'none';
     }).catch(function(){});
@@ -2731,6 +2755,7 @@ function showView(view) {
   document.getElementById('payments-view').style.display = (view === 'payments') ? '' : 'none';
   document.getElementById('approvals-view').style.display = (view === 'approvals') ? '' : 'none';
   document.getElementById('messages-view').style.display = (view === 'messages') ? '' : 'none';
+  document.getElementById('redelivery-view').style.display = (view === 'redelivery') ? '' : 'none';
   document.getElementById('view-btn-live').classList.toggle('active', view === 'live');
   document.getElementById('view-btn-cases').classList.toggle('active', view === 'cases');
   document.getElementById('view-btn-distributions').classList.toggle('active', view === 'distributions');
@@ -2738,10 +2763,12 @@ function showView(view) {
   document.getElementById('view-btn-payments').classList.toggle('active', view === 'payments');
   document.getElementById('view-btn-approvals').classList.toggle('active', view === 'approvals');
   document.getElementById('view-btn-messages').classList.toggle('active', view === 'messages');
+  document.getElementById('view-btn-redelivery').classList.toggle('active', view === 'redelivery');
   if (view === 'live') { loadLiveApps(); loadSponsorshipsView(); }
   else if (view === 'distributions' || view === 'sponsorships' || view === 'payments') loadSponsorshipsView();
   if (view === 'approvals') loadApprovalsView();
   if (view === 'messages') loadMessagesView();
+  if (view === 'redelivery') loadRedeliveryView();
 }
 
 // ── Live sign-up dashboard ──
@@ -2959,6 +2986,60 @@ function moderateThankyou(messageId, approve) {
   }).then(function(r) { return r.json().then(function(j) { if (!r.ok || j.error) throw new Error(j.error || ('status ' + r.status)); return j; }); })
     .then(function() { loadMessagesView(); })
     .catch(function(e) { alert('Could not update this message: ' + e.message); });
+}
+
+// ── Not-delivered / redelivery review queue ──
+// A driver marks a stop "not delivered" and gives a reason; that flags the
+// application (needs_redelivery_review) without touching boxes_received or
+// status — the allowance decision is deliberately left to an admin here,
+// case by case (redeliver vs. count it as used), mirroring how the 25 Sep
+// Salah case was handled by hand before this queue existed.
+function loadRedeliveryView() {
+  var loadingEl = document.getElementById('redelivery-loading');
+  var listEl = document.getElementById('redelivery-list');
+  var emptyEl = document.getElementById('redelivery-empty');
+  loadingEl.style.display = ''; listEl.innerHTML = ''; emptyEl.style.display = 'none';
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST', headers: headers,
+      body: JSON.stringify({ type: 'admin_list_redelivery_review' })
+    });
+  }).then(function(r) { return r.json().then(function(j) { if (!r.ok || j.error) throw new Error(j.error || ('status ' + r.status)); return j; }); })
+    .then(function(json) {
+      loadingEl.style.display = 'none';
+      var cases = json.cases || [];
+      var badge = document.getElementById('redelivery-badge');
+      if (badge) { if (cases.length) { badge.textContent = cases.length; badge.style.display = 'inline-block'; } else badge.style.display = 'none'; }
+      if (!cases.length) { emptyEl.style.display = ''; return; }
+      listEl.innerHTML = cases.map(function(c) {
+        var name = c.full_name_en || c.full_name || 'Unknown friend';
+        var when = c.redelivery_flagged_at ? new Date(c.redelivery_flagged_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+        var allowance = (c.boxes_received != null && c.max_boxes != null) ? (c.boxes_received + ' of ' + c.max_boxes + ' boxes received') : '';
+        return '<div class="table-wrap" style="padding:16px;margin-bottom:12px;">' +
+          '<div style="font-weight:700;margin-bottom:4px;">' + name + (c.area ? ' <span style="font-weight:400;color:#888;">· ' + c.area + '</span>' : '') + '</div>' +
+          '<div style="font-size:12px;color:#888;margin-bottom:10px;">Flagged ' + when + (allowance ? ' · ' + allowance : '') + (c.phone ? ' · ' + c.phone : '') + '</div>' +
+          (c.redelivery_reason ? '<div style="background:var(--bg,#f7f7f2);border-radius:8px;padding:12px;margin-bottom:10px;font-style:italic;">' + c.redelivery_reason.replace(/</g, '&lt;') + '</div>' : '') +
+          '<button class="btn-comment" style="background:var(--green);color:#fff;border:none;margin-right:8px;" onclick="resolveRedelivery(\'' + c.id + '\',\'redeliver\')">↩ Redeliver (no allowance change)</button>' +
+          '<button class="btn-comment" style="background:#fff;" onclick="resolveRedelivery(\'' + c.id + '\',\'count_delivered\')">✓ Count as delivered</button>' +
+          '</div>';
+      }).join('');
+    }).catch(function(e) { loadingEl.style.display = 'none'; emptyEl.textContent = 'Could not load review queue: ' + e.message; emptyEl.style.display = ''; });
+}
+
+function resolveRedelivery(applicationId, action) {
+  var confirmMsg = action === 'redeliver'
+    ? 'Send this family back to the unassigned pool for another driver to pick up? This will NOT count against their allowance.'
+    : 'Count this as delivered? This WILL bump their allowance, same as a normal delivery.';
+  if (!confirm(confirmMsg)) return;
+  var notes = prompt('Optional note for this decision (leave blank to skip):') || '';
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+      method: 'POST', headers: headers,
+      body: JSON.stringify({ type: 'admin_resolve_redelivery', application_id: applicationId, action: action, notes: notes })
+    });
+  }).then(function(r) { return r.json().then(function(j) { if (!r.ok || j.error) throw new Error(j.error || ('status ' + r.status)); return j; }); })
+    .then(function() { loadRedeliveryView(); })
+    .catch(function(e) { alert('Could not resolve this case: ' + e.message); });
 }
 
 function dismissDriverNote(appId) {
