@@ -322,7 +322,6 @@ select.edit-field{cursor:pointer;}
       <button class="filter-btn" id="view-btn-payments" onclick="showView('payments')">💰 Payments</button>
       <button class="filter-btn" id="view-btn-approvals" onclick="showView('approvals')">🚗 Approvals<span id="approvals-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
       <button class="filter-btn" id="view-btn-messages" onclick="showView('messages')">💌 Messages<span id="messages-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
-      <button class="filter-btn" id="view-btn-redelivery" onclick="showView('redelivery')">🔁 Not Delivered<span id="redelivery-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
     </div>
     <div id="cases-view">
     <div class="welcome-banner">
@@ -440,19 +439,33 @@ select.edit-field{cursor:pointer;}
         <div class="welcome-scope">Every distribution cycle — one list, used by both monthly pledges and one-off sponsors.</div>
       </div>
 
-      <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
-        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;">
-          <div>
-            <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Name</label>
-            <input id="pledge-round-name" class="filter-btn" style="padding:8px 12px;" placeholder="e.g. September 2026 Distribution">
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="filter-btn" id="distributions-subtab-rounds" onclick="setDistributionsSubTab('rounds')">📅 Rounds</button>
+        <button class="filter-btn" id="distributions-subtab-redelivery" onclick="setDistributionsSubTab('redelivery')">🔁 Not Delivered<span id="redelivery-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
+      </div>
+
+      <div id="distributions-subtab-rounds-panel">
+        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;">
+            <div>
+              <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Name</label>
+              <input id="pledge-round-name" class="filter-btn" style="padding:8px 12px;" placeholder="e.g. September 2026 Distribution">
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Distribution date</label>
+              <input id="pledge-round-date" type="date" class="filter-btn" style="padding:8px 12px;">
+            </div>
+            <button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="openPledgeRound()">+ Create distribution</button>
           </div>
-          <div>
-            <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Distribution date</label>
-            <input id="pledge-round-date" type="date" class="filter-btn" style="padding:8px 12px;">
-          </div>
-          <button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="openPledgeRound()">+ Create distribution</button>
+          <div id="pledge-rounds-admin-list" style="font-size:13px;color:var(--muted);">Loading distributions…</div>
         </div>
-        <div id="pledge-rounds-admin-list" style="font-size:13px;color:var(--muted);">Loading distributions…</div>
+      </div>
+
+      <div id="distributions-subtab-redelivery-panel" style="display:none;">
+        <div class="welcome-scope" style="margin-bottom:14px;">A driver marked these as not delivered. Decide whether to redeliver the box (returns the family to the unassigned pool for the next route, no allowance change) or count it as delivered anyway (e.g. the box was reallocated or otherwise used) — this bumps their allowance the same way a normal delivery does.</div>
+        <div id="redelivery-loading" class="loading"><div class="spinner-lg"></div>Loading review queue…</div>
+        <div id="redelivery-list"></div>
+        <div id="redelivery-empty" class="empty" style="display:none;">No not-delivered cases awaiting review.</div>
       </div>
     </div>
 
@@ -555,15 +568,6 @@ select.edit-field{cursor:pointer;}
       <div id="messages-empty" class="empty" style="display:none;">No thank-you messages waiting for review.</div>
     </div>
 
-    <div id="redelivery-view" style="display:none;">
-      <div class="welcome-banner">
-        <div class="welcome-name">Not Delivered — Review Queue</div>
-        <div class="welcome-scope">A driver marked these as not delivered. Decide whether to redeliver the box (returns the family to the unassigned pool for the next route, no allowance change) or count it as delivered anyway (e.g. the box was reallocated or otherwise used) — this bumps their allowance the same way a normal delivery does.</div>
-      </div>
-      <div id="redelivery-loading" class="loading"><div class="spinner-lg"></div>Loading review queue…</div>
-      <div id="redelivery-list"></div>
-      <div id="redelivery-empty" class="empty" style="display:none;">No not-delivered cases awaiting review.</div>
-    </div>
   </div>
 
   <!-- SPONSORSHIP EDIT MODAL -->
@@ -2759,7 +2763,6 @@ function showView(view) {
   document.getElementById('payments-view').style.display = (view === 'payments') ? '' : 'none';
   document.getElementById('approvals-view').style.display = (view === 'approvals') ? '' : 'none';
   document.getElementById('messages-view').style.display = (view === 'messages') ? '' : 'none';
-  document.getElementById('redelivery-view').style.display = (view === 'redelivery') ? '' : 'none';
   document.getElementById('view-btn-live').classList.toggle('active', view === 'live');
   document.getElementById('view-btn-cases').classList.toggle('active', view === 'cases');
   document.getElementById('view-btn-distributions').classList.toggle('active', view === 'distributions');
@@ -2767,12 +2770,25 @@ function showView(view) {
   document.getElementById('view-btn-payments').classList.toggle('active', view === 'payments');
   document.getElementById('view-btn-approvals').classList.toggle('active', view === 'approvals');
   document.getElementById('view-btn-messages').classList.toggle('active', view === 'messages');
-  document.getElementById('view-btn-redelivery').classList.toggle('active', view === 'redelivery');
   if (view === 'live') { loadLiveApps(); loadSponsorshipsView(); }
   else if (view === 'distributions' || view === 'sponsorships' || view === 'payments') loadSponsorshipsView();
   if (view === 'approvals') loadApprovalsView();
   if (view === 'messages') loadMessagesView();
-  if (view === 'redelivery') loadRedeliveryView();
+  if (view === 'distributions') setDistributionsSubTab(distributionsSubTab);
+}
+
+// Distributions sub-tabs: "Rounds" (create/manage distribution rounds) and
+// "Not Delivered" (the driver not-delivered review queue, moved in here
+// from its own top-level nav tab since it's inherently tied to a
+// distribution round — 2026-10-01).
+var distributionsSubTab = 'rounds';
+function setDistributionsSubTab(tab) {
+  distributionsSubTab = tab;
+  document.getElementById('distributions-subtab-rounds-panel').style.display = (tab === 'rounds') ? '' : 'none';
+  document.getElementById('distributions-subtab-redelivery-panel').style.display = (tab === 'redelivery') ? '' : 'none';
+  document.getElementById('distributions-subtab-rounds').classList.toggle('active', tab === 'rounds');
+  document.getElementById('distributions-subtab-redelivery').classList.toggle('active', tab === 'redelivery');
+  if (tab === 'redelivery') loadRedeliveryView();
 }
 
 // ── Live sign-up dashboard ──
@@ -3053,7 +3069,7 @@ function loadRedeliveryView() {
         var allowance = (c.boxes_received != null && c.max_boxes != null) ? (c.boxes_received + ' of ' + c.max_boxes + ' boxes received') : '';
         return '<div class="table-wrap" style="padding:16px;margin-bottom:12px;">' +
           '<div style="font-weight:700;margin-bottom:4px;">' + name + (c.area ? ' <span style="font-weight:400;color:#888;">· ' + c.area + '</span>' : '') + '</div>' +
-          '<div style="font-size:12px;color:#888;margin-bottom:10px;">Flagged ' + when + (allowance ? ' · ' + allowance : '') + (c.phone ? ' · ' + c.phone : '') + '</div>' +
+          '<div style="font-size:12px;color:#888;margin-bottom:10px;">Flagged ' + when + (allowance ? ' · ' + allowance : '') + (c.whatsapp ? ' · ' + c.whatsapp : '') + '</div>' +
           (c.redelivery_reason ? '<div style="background:var(--bg,#f7f7f2);border-radius:8px;padding:12px;margin-bottom:10px;font-style:italic;">' + c.redelivery_reason.replace(/</g, '&lt;') + '</div>' : '') +
           '<button class="btn-comment" style="background:var(--green);color:#fff;border:none;margin-right:8px;" onclick="resolveRedelivery(\'' + c.id + '\',\'redeliver\')">↩ Redeliver (no allowance change)</button>' +
           '<button class="btn-comment" style="background:#fff;" onclick="resolveRedelivery(\'' + c.id + '\',\'count_delivered\')">✓ Count as delivered</button>' +
