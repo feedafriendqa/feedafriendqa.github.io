@@ -91,6 +91,7 @@
   .mode-row{ display:flex; gap:8px; margin:18px 0 16px; }
   .mode-btn{ flex:1; border:1.5px solid var(--card-line); background:#fff; color:var(--card-sub); font-weight:700; font-size:12.5px; padding:11px 8px; border-radius:10px; cursor:pointer; min-height:44px; }
   .mode-btn.active{ border-color:var(--bg); background:var(--bg); color:#fff; }
+  .biz-note{ margin:16px 0; padding:12px 14px; border-radius:10px; background:#eef6df; border:1.5px solid #c6f24a; color:#2b2b2b; font-size:13px; line-height:1.45; }
   .field-col{ display:flex; flex-direction:column; gap:13px; }
   label.field{ display:block; }
   .field-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.08em; color:var(--card-sub); }
@@ -373,11 +374,11 @@ async function renderCalendar(){
   el.innerHTML = `
     <div class="partner-pill"><span class="pp-long">COMMUNITY PARTNER &middot; QATAR SUSTAINABILITY WEEK 2026</span><span class="pp-short">COMMUNITY PARTNER &middot; QSW 2026</span></div>
     <div class="hero">Sign up.<br><span>Show up.</span><br><span>Feed a Friend.</span></div>
-    <div class="lede">A week-long Community Fridge Refill Race, volunteer sessions and a two-day public book sale. Teams welcome — bring your colleagues.</div>
+    <div class="lede">A week-long Community Fridge Refill Race, volunteer sessions and a two-day public book sale. Open to businesses and organisations — bring your colleagues.</div>
     ${sbLoadFailed ? `<div class="conn-warning">Having trouble connecting — spot counts may be out of date. Please refresh the page before signing up.</div>` : ""}
     <div class="events" id="events-list"></div>
     <div class="footer-note">
-      <div><b>Signing up a team?</b> Add your company name and how many are coming — we'll do the rest.</div>
+      <div><b>Volunteer sessions are for businesses and organisations.</b> Add your company or organisation name and how many are coming — we'll do the rest.</div>
       <div>Questions: <a href="mailto:salaam@feedafriend.org">salaam@feedafriend.org</a></div>
       <div class="social-row">Follow us: <a href="https://instagram.com/feed.a.friend" target="_blank" rel="noopener">@feed.a.friend on Instagram ↗</a></div>
     </div>
@@ -447,14 +448,14 @@ function toggleEvent(i){
 }
 
 // ---- Form state ----
-let form = { mode: "solo", name: "", email: "", phone: "", company: "", people: 1, photos: true, names: [""] };
+let form = { mode: "team", name: "", email: "", phone: "", company: "", people: 1, photos: true, names: [""] };
 let err = {};
 let askSure = false;
 
 let knownFull = false;
 
 function resetForm(){
-  form = { mode: "solo", name: "", email: "", phone: "", company: "", people: 1, photos: true, names: [""] };
+  form = { mode: "team", name: "", email: "", phone: "", company: "", people: 1, photos: true, names: [""] };
   err = {}; askSure = false; knownFull = false;
 }
 
@@ -480,12 +481,6 @@ function goCalendar(){
   renderCalendar();
 }
 
-function setMode(mode){
-  form.mode = mode;
-  if (mode === "team" && form.people < 2) form.people = 2;
-  renderForm();
-}
-
 function stepPeople(delta){
   const next = form.people + delta;
   if (next < 1 || next > activeSession.capacity) return;
@@ -498,7 +493,6 @@ function stepPeople(delta){
 
 function renderForm(){
   const s = activeSession;
-  const soloActive = form.mode === "solo";
   const el = document.getElementById("view-form");
   const namesInputsHtml = form.people > 1 ? `
     <label class="field">
@@ -542,10 +536,7 @@ function renderForm(){
         <div class="form-heading">Reserve your spot${form.people > 1 ? "s" : ""}</div>
         <div class="form-intro">Fill this in and we'll email your confirmation straight away.</div>
 
-        <div class="mode-row">
-          <button class="mode-btn ${soloActive ? "active" : ""}" onclick="setMode('solo')">Just me / friends</button>
-          <button class="mode-btn ${!soloActive ? "active" : ""}" onclick="setMode('team')">Company team</button>
-        </div>
+        <div class="biz-note"><b>For businesses and organisations only.</b> These sessions are for company, school and organisation teams. Individuals and friend groups are welcome at the public Book Souq.</div>
 
         <div class="form-error" id="form-error"></div>
 
@@ -566,9 +557,9 @@ function renderForm(){
             <span class="field-err" ${err.phone ? "" : "style='display:none'"}>We need a number for day-of updates</span>
           </label>
           <label class="field">
-            <span class="field-label">${soloActive ? "COMPANY (OPTIONAL)" : "COMPANY OR SCHOOL"}</span>
-            <input type="text" id="f-company" value="${esc(form.company)}" placeholder="Company or school">
-            <span class="field-err" ${err.company ? "" : "style='display:none'"}>Company name is required for team sign-ups</span>
+            <span class="field-label">COMPANY OR ORGANISATION</span>
+            <input type="text" id="f-company" value="${esc(form.company)}" placeholder="Company, school or organisation" required>
+            <span class="field-err" ${err.company ? "" : "style='display:none'"}>Please add your company or organisation name</span>
           </label>
           <div>
             <span class="field-label">HOW MANY PEOPLE</span>
@@ -639,7 +630,7 @@ function validate(){
   if (!form.name.trim()) err.name = true;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) err.email = true;
   if (!form.phone.trim()) err.phone = true;
-  if (form.mode === "team" && !form.company.trim()) err.company = true;
+  if (!form.company.trim()) err.company = true;
   if (form.people < 1 || form.people > activeSession.capacity){
     err.people = true; err.peopleMsg = `Choose between 1 and ${activeSession.capacity} people.`;
   }
@@ -691,7 +682,7 @@ async function submitForm(){
     full_name: form.name.trim(),
     email: form.email.trim(),
     phone: form.phone.trim(),
-    company: form.company.trim() || null,
+    company: form.company.trim(),
     people_count: form.people,
     attendee_names: attendeeNames,
     photos_consent: !!form.photos,
