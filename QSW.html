@@ -278,6 +278,21 @@ const sessions = [
     signup: false, link: RACE_SIGNUP_URL, linkLabel: "Join the race", capacity: 0,
   },
   {
+    key: "book-drive-2026-11-01",
+    dayNum: "1", shortDay: "SUN", dateLabel: "SUN 1 NOV",
+    dateText: "1–7 NOV", dateSub: "ALL WEEK",
+    isoDate: "2026-11-01", startTime: "00:00", endTime: "23:59",
+    title: "Books for Good Book Drive",
+    time: "All week · hand in by Thu 5 Nov",
+    place: "Collect from your office",
+    locName: "From your office",
+    locSub: "Hand-in details to be confirmed",
+    desc: "A week-long book drive. Collect preloved books with your team and hand them in by Thursday 5 November to support Books for Good.",
+    note: "Open to everyone — no sign-up needed.",
+    tagK: "OPEN TO ALL", tagText: "No sign-up needed — collect and hand in your books.",
+    signup: false, capacity: 0,
+  },
+  {
     key: "food-sorting-2026-11-01",
     dayNum: "1", shortDay: "SUN", dateLabel: "SUN 1 NOV",
     isoDate: "2026-11-01", startTime: "10:00", endTime: "12:00",
@@ -390,7 +405,7 @@ function eventRowHtml(s, i){
         ? `<button class="btn-signup" id="signupbtn-${i}" onclick="event.stopPropagation(); openForm(${i})">Sign up</button>`
         : s.link
         ? `<a class="btn-signup" style="text-decoration:none;display:inline-flex;align-items:center" href="${esc(s.link)}" onclick="event.stopPropagation()">${esc(s.linkLabel || "Sign up")}</a>`
-        : `<div class="public-tag"><span class="k">PUBLIC EVENT</span><br>No sign up needed — just turn up and bring friends.</div>`}
+        : `<div class="public-tag"><span class="k">${esc(s.tagK || "PUBLIC EVENT")}</span><br>${esc(s.tagText || "No sign up needed — just turn up and bring friends.")}</div>`}
     </div>
     <div class="event-detail">
       <div class="event-detail-desc">${esc(s.desc)}</div>
