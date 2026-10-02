@@ -29,6 +29,7 @@
   .top{ display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:34px; }
   .brand{ display:flex; align-items:center; gap:16px; }
   .qsw-mark{ display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
+  .pp-short{ display:none; }
   .partner-pill{ display:inline-block; border:2px solid var(--lime); color:var(--lime); border-radius:99px; padding:7px 16px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.12em; line-height:1.5; margin-bottom:18px; }
   .brand .name{ font-family:'Outfit',sans-serif; font-weight:800; font-size:15px; letter-spacing:-0.01em; }
   .brand .div{ width:1px; height:34px; background:rgba(255,255,255,.35); }
@@ -150,26 +151,33 @@
   /* ---- Mobile tightening ---- */
   @media (max-width: 560px){
     .page{ padding:16px 16px 48px; }
-    .top{ margin-bottom:20px; gap:10px; }
-    .brand img:first-child{ height:32px !important; }
-    .brand img:last-child{ height:38px !important; margin:0 !important; }
+    .top{ display:grid; grid-template-columns:1fr auto; align-items:center; column-gap:12px; row-gap:10px; margin-bottom:22px; }
+    .qsw-mark{ display:contents; }
+    .brand{ gap:10px; }
+    .brand img:first-child{ height:38px !important; }
+    .brand img:last-child{ height:46px !important; margin:0 !important; }
     .brand .div{ height:26px; }
-    .kicker{ font-size:9.5px; line-height:1.5; }
+    .top > img, .qsw-mark > img{ height:44px !important; }
+    .kicker{ grid-column:1 / -1; text-align:left; font-size:10.5px; line-height:1.5; letter-spacing:.12em; }
 
-    .partner-pill{ font-size:9.5px; letter-spacing:.08em; padding:6px 12px; border-width:1.5px; margin-bottom:12px; }
+    .pp-long{ display:none; }
+    .pp-short{ display:inline; }
+    .partner-pill{ font-size:10.5px; letter-spacing:.1em; padding:6px 14px; border-width:1.5px; margin-bottom:16px; }
     .hero{ font-size:30px; line-height:1.05; letter-spacing:-0.02em; }
-    .lede{ font-size:13.5px; line-height:1.5; margin:12px 0 22px; max-width:none; }
+    .lede{ font-size:14px; line-height:1.5; margin:14px 0 24px; max-width:none; }
 
     .events{ gap:0; }
     .event{ padding:14px 0; border-top-width:1px; }
     .events::after{ border-top-width:1px; }
-    .event-head{ gap:10px; }
-    .event-date{ width:44px; font-size:10.5px; line-height:1.35; }
+    .event-head{ display:grid; grid-template-columns:58px 1fr; column-gap:12px; row-gap:0; align-items:start; }
+    .event-date{ width:auto; font-size:10.5px; line-height:1.4; white-space:nowrap; padding-top:3px; }
+    .event-main{ min-width:0; }
+    .event-head > .btn-signup, .event-head > .public-tag{ grid-column:2; justify-self:start; margin-top:12px; }
     .event-title{ font-size:16px; line-height:1.2; }
     .event-meta{ font-size:11.5px; margin-top:3px; }
     .event-spots{ font-size:9.5px; margin-top:4px; }
     .btn-signup{ padding:9px 14px; font-size:11.5px; min-height:36px; }
-    .public-tag{ font-size:10.5px; max-width:130px; }
+    .public-tag{ font-size:11px; max-width:none; }
     .public-tag .k{ font-size:9.5px; }
     .chev{ font-size:11px; }
 
@@ -348,9 +356,9 @@ async function fetchSpots(key){
 async function renderCalendar(){
   const el = document.getElementById("view-calendar");
   el.innerHTML = `
-    <div class="partner-pill">COMMUNITY PARTNER &middot; QATAR SUSTAINABILITY WEEK 2026</div>
+    <div class="partner-pill"><span class="pp-long">COMMUNITY PARTNER &middot; QATAR SUSTAINABILITY WEEK 2026</span><span class="pp-short">COMMUNITY PARTNER &middot; QSW 2026</span></div>
     <div class="hero">Sign up.<br><span>Show up.</span><br><span>Feed a friend.</span></div>
-    <div class="lede">A week-long Community Fridge Refill Race, volunteer sessions and a two-day public book sale. Teams welcome — bring your colleagues. Sessions run at Together for Good HQ, Ain Khaled, except the Refill Race, which happens from your own office to locations across Qatar, and the Book Souq at Crystal Walk, Gewan Island.</div>
+    <div class="lede">A week-long Community Fridge Refill Race, volunteer sessions and a two-day public book sale. Teams welcome — bring your colleagues.</div>
     ${sbLoadFailed ? `<div class="conn-warning">Having trouble connecting — spot counts may be out of date. Please refresh the page before signing up.</div>` : ""}
     <div class="events" id="events-list"></div>
     <div class="footer-note">
