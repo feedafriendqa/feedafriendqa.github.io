@@ -29,7 +29,7 @@
   .top{ display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:34px; }
   .brand{ display:flex; align-items:center; gap:16px; }
   .qsw-mark{ display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
-  .partner{ font-size:12.5px; color:var(--ink-light); line-height:1.45; text-align:right; max-width:270px; }
+  .partner-pill{ display:inline-block; border:2px solid var(--lime); color:var(--lime); border-radius:99px; padding:7px 16px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.12em; line-height:1.5; margin-bottom:18px; }
   .brand .name{ font-family:'Outfit',sans-serif; font-weight:800; font-size:15px; letter-spacing:-0.01em; }
   .brand .div{ width:1px; height:34px; background:rgba(255,255,255,.35); }
   .brand .tfg{ font-weight:700; font-size:13px; color:var(--ink-light); }
@@ -156,6 +156,7 @@
     .brand .div{ height:26px; }
     .kicker{ font-size:9.5px; line-height:1.5; }
 
+    .partner-pill{ font-size:9.5px; letter-spacing:.08em; padding:6px 12px; border-width:1.5px; margin-bottom:12px; }
     .hero{ font-size:30px; line-height:1.05; letter-spacing:-0.02em; }
     .lede{ font-size:13.5px; line-height:1.5; margin:12px 0 22px; max-width:none; }
 
@@ -205,7 +206,6 @@
       <div class="qsw-mark">
         <img src="qsw-logo.png" alt="Qatar Sustainability Week 2026" style="height:clamp(48px,13vw,68px); width:auto; display:block">
         <div class="kicker">QATAR SUSTAINABILITY<br>WEEK 2026 &middot; 1&ndash;7 NOV</div>
-        <div class="partner">Proud Community Partner of Qatar Sustainability Week. Sign up, show up, feed a friend.</div>
       </div>
     </div>
 
@@ -348,6 +348,7 @@ async function fetchSpots(key){
 async function renderCalendar(){
   const el = document.getElementById("view-calendar");
   el.innerHTML = `
+    <div class="partner-pill">COMMUNITY PARTNER &middot; QATAR SUSTAINABILITY WEEK 2026</div>
     <div class="hero">Sign up.<br><span>Show up.</span><br><span>Feed a friend.</span></div>
     <div class="lede">A week-long Community Fridge Refill Race, volunteer sessions and a two-day public book sale. Teams welcome — bring your colleagues. Sessions run at Together for Good HQ, Ain Khaled, except the Refill Race, which happens from your own office to locations across Qatar, and the Book Souq at Crystal Walk, Gewan Island.</div>
     ${sbLoadFailed ? `<div class="conn-warning">Having trouble connecting — spot counts may be out of date. Please refresh the page before signing up.</div>` : ""}
