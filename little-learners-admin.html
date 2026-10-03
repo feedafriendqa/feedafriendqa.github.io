@@ -107,6 +107,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 .fam-card.year_group_confirmed::before{background:var(--lime);}
 .fam-card.pack_sent::before{background:var(--forest);}
 .fam-card.assessment_day::before{background:var(--coral);}
+.fam-card.invited_to_assessment::before{background:var(--coral);}
 .fam-card.completed::before{background:#888;}
 .urn-badge{background:var(--forest);color:var(--teal);font-family:'Nunito',sans-serif;font-weight:900;font-size:12px;padding:6px 12px;border-radius:8px;white-space:nowrap;flex-shrink:0;}
 .fam-info{flex:1;min-width:160px;}
@@ -121,6 +122,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 .st-year_group_confirmed{background:var(--lime-soft);color:var(--forest);}
 .st-pack_sent{background:#E8F5E9;color:#1B5E20;}
 .st-assessment_day{background:#FDEAEA;color:#8B2020;}
+.st-invited_to_assessment{background:#FDEAEA;color:#8B2020;}
 .st-completed{background:#ECEFF1;color:#455A64;}
 .st-archived{background:#FDEAEA;color:#8B2020;}
 .nd-band-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
@@ -377,7 +379,6 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
     <div class="stat forest" onclick="goToFamilies({})"><span class="stat-ic">👪</span><div class="stat-num" id="s-total">—</div><div class="stat-lbl">Total Families</div></div>
     <div class="stat teal" onclick="goToFamilies({})"><span class="stat-ic">🧒</span><div class="stat-num" id="s-children">—</div><div class="stat-lbl">Children</div></div>
     <div class="stat lime" onclick="goToFamilies({pipeline:'new'})"><span class="stat-ic">🌱</span><div class="stat-num" id="s-new">—</div><div class="stat-lbl">New Applications</div></div>
-    <div class="stat gold" onclick="goToFamilies({pipeline:'year_group_pending'})"><span class="stat-ic">📚</span><div class="stat-num" id="s-pending-yg">—</div><div class="stat-lbl">Awaiting YG Approval</div></div>
     <div class="stat coral" onclick="goToFamilies({assigned:'unassigned'})"><span class="stat-ic">❗</span><div class="stat-num" id="s-unassigned">—</div><div class="stat-lbl">Unassigned</div></div>
     <div class="stat forest" onclick="goToFamilies({dupOnly:true})"><span class="stat-ic">⚠️</span><div class="stat-num" id="s-dups">—</div><div class="stat-lbl">Duplicates</div></div>
     <div class="stat sky" onclick="goToLearners()"><span class="stat-ic">🌟</span><div class="stat-num" id="s-learners">—</div><div class="stat-lbl">Little Learners</div></div>
@@ -673,11 +674,8 @@ const PIPELINE_STAGES = [
   {key:'waiting_for_assessment', label:'Waiting for Assessment', icon:'🗓️'},
   {key:'pre_assessment_scheduled', label:'Call Scheduled', icon:'📅'},
   {key:'pre_assessed', label:'Call Completed', icon:'✅'},
-  {key:'year_group_pending', label:'YG Pending', icon:'⏳'},
-  {key:'year_group_confirmed', label:'YG Confirmed', icon:'📚'},
-  {key:'pack_sent', label:'Pack Sent', icon:'📦'},
-  {key:'assessment_day', label:'Assessment Day', icon:'🏫'},
-  {key:'completed', label:'Completed', icon:'🎓'},
+  {key:'invited_to_assessment', label:'Invited to Assessment', icon:'✉️'},
+  {key:'completed', label:'Enrolled', icon:'🎓'},
   {key:'referred', label:'Referred', icon:'🤝'},
   {key:'school_secured', label:'School Secured', icon:'🏫'},
   {key:'archived_arabic', label:'Archived – Arabic', icon:'🗣️'},
@@ -685,19 +683,23 @@ const PIPELINE_STAGES = [
 
 const STATUS_LABELS = {
   new:'New',waiting_for_assessment:'Waiting for Assessment',pre_assessment_scheduled:'Call Scheduled',pre_assessed:'Call Completed',
-  year_group_pending:'YG Pending Approval',year_group_confirmed:'YG Confirmed',
-  pack_sent:'Pack Sent',assessment_day:'Assessment Day',completed:'Completed',
+  invited_to_assessment:'Invited to Assessment',completed:'Enrolled',
   referred:'Referred',school_secured:'School Secured',archived:'Archived',archived_arabic:'Archived – Arabic'
 };
 
 // A child becomes a "Little Learner" with their own profile once THEIR OWN case
 // (not the family's — siblings can be at different stages) has passed assessment
 // and a year group has been confirmed for them.
-const POST_ASSESS_STATUSES = new Set(['year_group_confirmed','pack_sent','assessment_day','completed']);
+const POST_ASSESS_STATUSES = new Set(['invited_to_assessment','completed']);
+// Pack given moves an assessed child on to Enrolled automatically.
+const ENROL_FROM = new Set(['invited_to_assessment']);
 // Year groups are only allocated AFTER assessment. Before that, a child has no year
 // group — no age-based suggestion is shown and no override can be set.
 const UNASSESSED_STATUSES = new Set(['new','waiting_for_assessment','pre_assessment_scheduled','pre_assessed','referred','archived_arabic']);
-function isUnassessed(c) { return UNASSESSED_STATUSES.has(c.pipeline_status||'new'); }
+function isUnassessed(c) {
+  const st = c.pipeline_status||'new';
+  return UNASSESSED_STATUSES.has(st) || (st==='invited_to_assessment' && !c.final_year_group);
+}
 function isPostAssessChild(c) {
   return POST_ASSESS_STATUSES.has(c.pipeline_status) && !!(c.final_year_group || c.year_group_override);
 }
@@ -1349,7 +1351,7 @@ function renderEligibleForDay() {
     eligible = allChildren.filter(c => {
       if(!childInEventBands(c, currentAssessDay)) return false;
       if(alreadyIn.has(c.id)) return false;
-      const callDone = ['waiting_for_assessment','pre_assessed','pre_assessment_passed','pre_assessment_failed','year_group_pending','year_group_confirmed'].includes(c.pipeline_status);
+      const callDone = ['waiting_for_assessment','pre_assessed','pre_assessment_passed','pre_assessment_failed','invited_to_assessment'].includes(c.pipeline_status);
       return callDone;
     });
     emptyMsg = 'No eligible children left to add — they either haven\'t completed their Introductory Call yet, are outside this age band, or are already on this list.';
@@ -1972,18 +1974,18 @@ async function saveFinalAssessment(attendeeId) {
   }
 
   // Assessed: once the Final Assessment is Complete with a real level, the child's own profile
-  // moves on — final year group is set and the pipeline advances to YG Confirmed (this is what
+  // moves on — final year group is set and the pipeline advances to Invited to Assessment (this is what
   // makes them a Little Learner with a profile). Children already further along are not moved back.
   if(child && final_assessment_status==='Complete' && material_level && material_level!=='Further Review') {
     const patch = { final_year_group: material_level, year_group_approved_at: new Date().toISOString() };
     const advance = ASSESS_ADVANCE_FROM.has(child.pipeline_status||'new');
-    if(advance) patch.pipeline_status = 'year_group_confirmed';
+    if(advance) patch.pipeline_status = 'invited_to_assessment';
     const {error:ce} = await db.from('ll_children').update(patch).eq('id', child.id);
     if(ce) { showToast('Saved, but could not update the child\'s profile: '+ce.message); }
     else {
       Object.assign(child, patch);
       if(advance) {
-        try { await addActivityLog(a.family_id, a.child_id, 'note', `Assessed on ${currentAssessDay.title}. Final year group ${material_level}; moved to YG Confirmed.`, ''); } catch(e) {}
+        try { await addActivityLog(a.family_id, a.child_id, 'note', `Assessed on ${currentAssessDay.title}. Final year group ${material_level}.`, ''); } catch(e) {}
       }
       try { renderDash(); renderPipelineTabs(); renderFams(); } catch(e) {}
     }
@@ -2066,17 +2068,22 @@ async function togglePackGiven(attendeeId, give) {
   const updates = give
     ? { pack_status:'given', pack_given_date: new Date().toISOString().slice(0,10) }
     : { pack_status:'pending', pack_given_date: null };
+  // Pack given => Enrolled (automatic). Undoing it puts an assessment-day child back to Invited to Assessment.
+  let moved = null;
+  if(give && ENROL_FROM.has(child.pipeline_status)) { updates.pipeline_status = 'completed'; moved = 'Enrolled'; }
+  if(!give && child.pipeline_status==='completed' && childAssessments(child).length) { updates.pipeline_status = 'invited_to_assessment'; moved = 'Invited to Assessment'; }
   const {error} = await db.from('ll_children').update(updates).eq('id', child.id);
   if(error) { showToast('Error: '+error.message); return; }
   Object.assign(child, updates);
   try {
     await addActivityLog(a.family_id, child.id, 'note',
-      give ? `Learning pack given at ${a.material_level} level (${currentAssessDay.title}).`
-           : `Learning pack hand-over undone (${currentAssessDay.title}).`,
+      (give ? `Learning pack given at ${a.material_level} level (${currentAssessDay.title}).`
+            : `Learning pack hand-over undone (${currentAssessDay.title}).`) + (moved ? ` Moved to ${moved}.` : ''),
       give ? 'pack_given' : '');
   } catch(e) {}
+  try { renderDash(); renderPipelineTabs(); renderFams(); } catch(e) {}
   renderPackDistribution();
-  showToast(give ? '✅ Pack given' : '↩ Moved back to To Give');
+  showToast(give ? (moved ? '✅ Pack given — now Enrolled' : '✅ Pack given') : '↩ Moved back to To Give');
 }
 
 function exportAttendeesForCalls() {
@@ -2671,15 +2678,19 @@ function toggleBooksCheckedForm(childId) { const el=document.getElementById('boo
 async function giveLearningPack(childId) {
   const level = document.getElementById('pack-level-'+childId).value;
   const updates = { pack_status:'given', pack_given_date: new Date().toISOString().slice(0,10), material_level: level };
+  const cur = allChildren.find(c=>c.id===childId);
+  const enrol = !!cur && ENROL_FROM.has(cur.pipeline_status);
+  if(enrol) updates.pipeline_status = 'completed';
   const {error} = await db.from('ll_children').update(updates).eq('id',childId);
   if(error) { showToast('Error: '+error.message); return; }
   const idx = allChildren.findIndex(c=>c.id===childId);
   if(idx>=0) Object.assign(allChildren[idx], updates);
   currentChildren = allChildren.filter(c=>c.family_id===currentFamily.id);
-  await addActivityLog(currentFamily.id, childId, 'note', `Learning pack given at ${level} level.`, 'pack_given');
+  await addActivityLog(currentFamily.id, childId, 'note', `Learning pack given at ${level} level.${enrol?' Moved to Enrolled.':''}`, 'pack_given');
+  try { renderDash(); renderPipelineTabs(); renderFams(); } catch(e) {}
   renderPackTab(currentFamily, currentChildren);
   renderActivityLog(currentFamily.id);
-  showToast('✅ Learning pack recorded');
+  showToast(enrol ? '✅ Learning pack recorded — now Enrolled' : '✅ Learning pack recorded');
 }
 
 async function declineLearningPack(childId) {
@@ -2952,7 +2963,6 @@ function renderDash() {
   document.getElementById('s-total').textContent = fams.length;
   document.getElementById('s-children').textContent = kids.length;
   document.getElementById('s-new').textContent = kids.filter(c=>(c.pipeline_status||'new')==='new').length;
-  document.getElementById('s-pending-yg').textContent = kids.filter(c=>c.pipeline_status==='year_group_pending').length;
   document.getElementById('s-unassigned').textContent = fams.filter(f=>!f.assigned_to).length;
   document.getElementById('s-dups').textContent = dups.size;
   document.getElementById('s-learners').textContent = kids.filter(isPostAssessChild).length;
@@ -3129,7 +3139,7 @@ function assessedSummaryHTML(c) {
   const pre = a.outcome_year_group && a.outcome_year_group!==a.material_level ? ` <span style="color:var(--muted);">(pre-assessment recommended ${a.outcome_year_group})</span>` : '';
   return `<div style="margin-top:8px;font-size:12.5px;font-weight:700;color:var(--forest-mid);background:var(--lime-soft);padding:8px 10px;border-radius:var(--rs);">✅ Assessed${d?' '+d:''} — final year group: <strong>${a.material_level||'—'}</strong>${pre}</div>`;
 }
-const ASSESS_ADVANCE_FROM = new Set(['new','waiting_for_assessment','pre_assessment_scheduled','pre_assessed','year_group_pending']);
+const ASSESS_ADVANCE_FROM = new Set(['new','waiting_for_assessment','pre_assessment_scheduled','pre_assessed']);
 
 function childAssessedDateStr(c) {
   const done = childAssessments(c);
@@ -3331,6 +3341,7 @@ function renderChildren(children, f) {
             📸 Photo
             <input type="file" accept="image/*" style="display:none;" onchange="uploadChildPhoto(event,'${c.id}','${f.id}')">
           </label>
+          ${c.profile_photo_path?`<button style="cursor:pointer;border:none;background:rgba(255,255,255,.15);color:white;border-radius:50px;padding:5px 12px;font-size:11px;font-weight:700;font-family:Quicksand,sans-serif;" onclick="openPhotoEditor('${c.id}')">✂️ Adjust</button>`:''}
         </div>
       </div>
       <div class="child-profile-body">
@@ -3367,10 +3378,7 @@ function renderChildren(children, f) {
           <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Year Group</div>
           <div class="yg-auto-row">
             <span class="yg-badge ${isApproved?'approved':isOverride?'override':''}">${displayYG}</span>
-            <span class="yg-sub">${isApproved?'✅ Approved by '+c.year_group_approved_by:isOverride?'⏳ Override pending approval':reason}</span>
-            ${isOverride&&currentUserRole==='admin'?`
-              <button class="approve-btn btn-sm" onclick="approveYG('${c.id}')">Approve</button>
-            `:''}
+            <span class="yg-sub">${isApproved?'✅ Set by '+c.year_group_approved_by:reason}</span>
             ${!unassessed?`<button class="override-btn" onclick="toggleYGEdit('yge-${c.id}',this)">✏️ Override</button>`:''}
           </div>
           ${assessedSummaryHTML(c)}
@@ -3387,7 +3395,7 @@ function renderChildren(children, f) {
           </select>
           <label>Justification (required)</label>
           <textarea id="ygj-${c.id}" placeholder="e.g. Child appears to be working at Year 3 level based on assessment…">${c.year_group_justification||''}</textarea>
-          <button class="btn-teal btn-sm" onclick="saveYGOverride('${c.id}')">Save — Send for Approval</button>
+          <button class="btn-teal btn-sm" onclick="saveYGOverride('${c.id}')">Save Override</button>
         </div>
 
         <div class="info-grid" style="margin-top:10px;">
@@ -3497,8 +3505,8 @@ function renderChildren(children, f) {
                   ? `<div style="font-size:11px;color:var(--coral);font-weight:700;margin-top:6px;">⚠️ No profile photo on file yet — upload one first (via 📷 Photo button above).</div>`
                   : c.sponsor_photo_path
                     ? `<div style="font-size:11px;color:var(--lime);font-weight:700;margin-top:6px;">✅ Live on the sponsor page.</div>
-                       <button class="btn-small" style="margin-top:6px;" onclick="approveSponsorPhoto('${c.id}')">🔄 Refresh Sponsor Photo</button>`
-                    : `<button class="btn-small" style="margin-top:6px;" onclick="approveSponsorPhoto('${c.id}')">📸 Approve Photo for Sponsor Page</button>`
+                       <button class="btn-small" style="margin-top:6px;" onclick="approveSponsorPhoto('${c.id}')">🔄 Refresh Sponsor Photo</button> <button class="btn-small" style="margin-top:6px;" onclick="openPhotoEditor('${c.id}')">✂️ Adjust Photo</button>`
+                    : `<button class="btn-small" style="margin-top:6px;" onclick="openPhotoEditor('${c.id}')">✂️ Adjust Photo</button> <button class="btn-small" style="margin-top:6px;" onclick="approveSponsorPhoto('${c.id}')">📸 Approve Photo for Sponsor Page</button>`
                 )
           ) : ''}
         </div>
@@ -3555,14 +3563,216 @@ async function uploadChildPhoto(e, childId, familyId) {
   if(!file) return;
   const ext = file.name.split('.').pop();
   const path = familyId+'/child_photo_'+childId+'.'+ext;
+  const prevPath = allChildren.find(c=>c.id===childId)?.profile_photo_path || '';
   const {error} = await db.storage.from('ll-documents').upload(path, file, {upsert:true});
   if(error) { showToast('Upload failed: '+error.message); return; }
-  await db.from('ll_children').update({profile_photo_path:path}).eq('id',childId);
+  await db.from('ll_children').update({profile_photo_path:path, profile_photo_original_path:null}).eq('id',childId);
+  if(prevPath.includes('_crop_')) { try { await db.storage.from('ll-documents').remove([prevPath]); } catch(e) {} }
   const idx = allChildren.findIndex(c=>c.id===childId);
-  if(idx>=0) allChildren[idx].profile_photo_path = path;
+  if(idx>=0) { allChildren[idx].profile_photo_path = path; allChildren[idx].profile_photo_original_path = null; }
   currentChildren = allChildren.filter(c=>c.family_id===currentFamily.id);
   renderChildren(currentChildren, currentFamily);
   showToast('✅ Photo uploaded');
+}
+
+// ── PHOTO EDITOR (reposition / zoom / rotate / crop to a square) ──
+// Non-destructive for the original: the first edit keeps the uploaded photo as
+// profile_photo_original_path and saves the cropped square as the new profile photo.
+// Re-editing always starts again from the original, so a crop can be widened later.
+let pe = null;
+const PE_OUT = 800;
+
+function peLoadImage(blob) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const im = new Image();
+    im.onload = () => resolve({im, url});
+    im.onerror = () => { URL.revokeObjectURL(url); reject(new Error('this image type can’t be opened here')); };
+    im.src = url;
+  });
+}
+function peTheta() { return (pe.rot + pe.tilt) * Math.PI / 180; }
+// Smallest scale at which the (rotated) image still covers the whole square frame.
+function peScale() {
+  const t = peTheta();
+  const sMin = pe.F * (Math.abs(Math.cos(t)) + Math.abs(Math.sin(t))) / Math.min(pe.w, pe.h);
+  return sMin * pe.zoom;
+}
+// Keep the frame inside the image so there are never empty edges.
+function peClamp() {
+  const m = Math.min(pe.w, pe.h) / (2 * pe.zoom);
+  pe.cx = Math.min(Math.max(pe.cx, m), pe.w - m);
+  pe.cy = Math.min(Math.max(pe.cy, m), pe.h - m);
+}
+function peDraw(ctx, k) {
+  const s = peScale(), t = peTheta();
+  ctx.save();
+  ctx.scale(k, k);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, pe.F, pe.F);
+  ctx.translate(pe.F / 2, pe.F / 2);
+  ctx.rotate(t);
+  ctx.scale(pe.flip ? -s : s, s);
+  ctx.translate(-pe.cx, -pe.cy);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(pe.im, 0, 0);
+  ctx.restore();
+}
+function peRender() {
+  if(!pe) return;
+  peClamp();
+  const cv = pe.canvas, ctx = cv.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  peDraw(ctx, cv.width / pe.F);
+}
+// screen-space movement -> image-space movement (accounts for rotation, zoom and flip)
+function peDelta(dx, dy) {
+  const t = peTheta(), s = peScale();
+  let x = (dx * Math.cos(t) + dy * Math.sin(t)) / s;
+  const y = (-dx * Math.sin(t) + dy * Math.cos(t)) / s;
+  if(pe.flip) x = -x;
+  return [x, y];
+}
+function peSetZoom(z) {
+  pe.zoom = Math.min(6, Math.max(1, z));
+  pe.zoomInput.value = Math.round(pe.zoom * 100);
+  peRender();
+}
+function peRotate90(dir) { pe.rot = (pe.rot + dir * 90 + 360) % 360; peRender(); }
+function peFlip() { pe.flip = !pe.flip; peRender(); }
+function peReset() {
+  pe.rot = 0; pe.tilt = 0; pe.flip = false; pe.zoom = 1; pe.cx = pe.w / 2; pe.cy = pe.h / 2;
+  pe.zoomInput.value = 100; pe.tiltInput.value = 0; pe.tiltVal.textContent = '0°';
+  peRender();
+}
+function peClose() {
+  if(!pe) return;
+  try { URL.revokeObjectURL(pe.url); } catch(e) {}
+  document.getElementById('pe-overlay')?.remove();
+  pe = null;
+}
+
+async function openPhotoEditor(childId) {
+  const child = allChildren.find(c=>c.id===childId);
+  if(!child?.profile_photo_path) { showToast('Add a photo first (📸 Photo)'); return; }
+  const hasCrop = !!child.profile_photo_original_path && (child.profile_photo_path||'').includes('_crop_');
+  const srcPath = hasCrop ? child.profile_photo_original_path : child.profile_photo_path;
+  showToast('Loading photo…');
+  let loaded;
+  try {
+    const {data, error} = await db.storage.from('ll-documents').createSignedUrl(srcPath, 120);
+    if(error || !data?.signedUrl) throw new Error(error?.message || 'no link');
+    const resp = await fetch(data.signedUrl);
+    if(!resp.ok) throw new Error('download failed ('+resp.status+')');
+    loaded = await peLoadImage(await resp.blob());
+  } catch(e) { showToast('Could not open photo: '+e.message); return; }
+  if(pe) peClose();
+
+  const F = Math.max(220, Math.min(340, Math.floor(window.innerWidth - 64)));
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const btn = 'cursor:pointer;border:2px solid var(--border);background:white;border-radius:50px;padding:7px 12px;font-size:12px;font-weight:800;font-family:Quicksand,sans-serif;color:var(--forest);';
+  const ov = document.createElement('div');
+  ov.id = 'pe-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,61,31,.6);z-index:500;display:flex;align-items:flex-start;justify-content:center;padding:12px;overflow-y:auto;';
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:20px;width:100%;max-width:400px;margin:auto;padding:16px;box-shadow:0 12px 40px rgba(0,0,0,.3);font-family:Quicksand,sans-serif;">
+      <div style="font-family:Nunito,sans-serif;font-weight:900;font-size:16px;color:var(--forest);">✂️ Adjust photo</div>
+      <div style="font-size:12px;color:var(--muted);margin:2px 0 10px;">${prefName(child)}</div>
+      <div style="position:relative;width:${F}px;height:${F}px;margin:0 auto 8px;border-radius:12px;overflow:hidden;background:#eee;">
+        <canvas id="pe-canvas" width="${Math.round(F*dpr)}" height="${Math.round(F*dpr)}" style="width:${F}px;height:${F}px;touch-action:none;cursor:grab;display:block;"></canvas>
+        <div style="position:absolute;inset:0;border-radius:50%;border:2px dashed rgba(255,255,255,.95);box-shadow:0 0 0 1px rgba(0,0,0,.25);pointer-events:none;"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:12px;line-height:1.4;">Drag to reposition · pinch or slide to zoom.<br>Sponsors see the whole square; the circle is how it looks in the portal.</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:11px;font-weight:800;color:var(--muted);width:76px;">Zoom</span><input id="pe-zoom" type="range" min="100" max="600" value="100" style="flex:1;"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><span style="font-size:11px;font-weight:800;color:var(--muted);width:76px;">Straighten <span id="pe-tilt-val">0°</span></span><input id="pe-tilt" type="range" min="-45" max="45" step="0.5" value="0" style="flex:1;"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:14px;">
+        <button type="button" style="${btn}" onclick="peRotate90(-1)">⟲ 90°</button>
+        <button type="button" style="${btn}" onclick="peRotate90(1)">⟳ 90°</button>
+        <button type="button" style="${btn}" onclick="peFlip()">⇋ Flip</button>
+        <button type="button" style="${btn}" onclick="peReset()">↺ Reset</button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button type="button" style="${btn}flex:1;" onclick="peClose()">Cancel</button>
+        <button type="button" id="pe-save" style="cursor:pointer;border:none;background:var(--teal);color:white;border-radius:50px;padding:9px 14px;font-size:13px;font-weight:800;font-family:Quicksand,sans-serif;flex:2;" onclick="savePhotoEdit()">Save photo</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+
+  pe = { childId, im: loaded.im, url: loaded.url, w: loaded.im.naturalWidth, h: loaded.im.naturalHeight,
+         rot: 0, tilt: 0, flip: false, zoom: 1, F, ptrs: new Map(), saving: false,
+         canvas: document.getElementById('pe-canvas'), zoomInput: document.getElementById('pe-zoom'),
+         tiltInput: document.getElementById('pe-tilt'), tiltVal: document.getElementById('pe-tilt-val') };
+  pe.cx = pe.w / 2; pe.cy = pe.h / 2;
+
+  const cv = pe.canvas;
+  cv.onpointerdown = e => { cv.setPointerCapture(e.pointerId); pe.ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY}); cv.style.cursor = 'grabbing'; };
+  cv.onpointermove = e => {
+    if(!pe || !pe.ptrs.has(e.pointerId)) return;
+    const prev = pe.ptrs.get(e.pointerId), cur = {x:e.clientX, y:e.clientY};
+    if(pe.ptrs.size === 1) {
+      const [dx, dy] = peDelta(cur.x - prev.x, cur.y - prev.y);
+      pe.cx -= dx; pe.cy -= dy;
+      pe.ptrs.set(e.pointerId, cur);
+      peRender();
+    } else if(pe.ptrs.size === 2) {
+      const other = [...pe.ptrs.entries()].find(([id]) => id !== e.pointerId)[1];
+      const d0 = Math.hypot(prev.x - other.x, prev.y - other.y), d1 = Math.hypot(cur.x - other.x, cur.y - other.y);
+      pe.ptrs.set(e.pointerId, cur);
+      if(d0 > 0) peSetZoom(pe.zoom * d1 / d0);
+    }
+  };
+  cv.onpointerup = cv.onpointercancel = e => { pe?.ptrs.delete(e.pointerId); cv.style.cursor = 'grab'; };
+  cv.onwheel = e => { e.preventDefault(); peSetZoom(pe.zoom * (e.deltaY < 0 ? 1.08 : 1/1.08)); };
+  pe.zoomInput.oninput = () => peSetZoom(pe.zoomInput.value / 100);
+  pe.tiltInput.oninput = () => { pe.tilt = parseFloat(pe.tiltInput.value) || 0; pe.tiltVal.textContent = pe.tilt + '°'; peRender(); };
+  peRender();
+}
+
+async function savePhotoEdit() {
+  if(!pe || pe.saving) return;
+  const st = pe;
+  const child = allChildren.find(c=>c.id===st.childId);
+  if(!child) return;
+  st.saving = true;
+  const saveBtn = document.getElementById('pe-save');
+  if(saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+  try {
+    const out = document.createElement('canvas');
+    out.width = out.height = PE_OUT;
+    peDraw(out.getContext('2d'), PE_OUT / st.F);
+    const blob = await new Promise(r => out.toBlob(r, 'image/jpeg', 0.9));
+    if(!blob) throw new Error('could not create the image');
+
+    const prevPath = child.profile_photo_path;
+    const hadCrop = (prevPath||'').includes('_crop_');
+    const originalPath = hadCrop ? (child.profile_photo_original_path || null) : prevPath;
+    const newPath = child.family_id + '/child_photo_' + child.id + '_crop_' + Date.now() + '.jpg';
+
+    const {error: uErr} = await db.storage.from('ll-documents').upload(newPath, blob, {contentType:'image/jpeg', upsert:false});
+    if(uErr) throw new Error(uErr.message);
+    const {error: dErr} = await db.from('ll_children')
+      .update({profile_photo_path: newPath, profile_photo_original_path: originalPath}).eq('id', child.id);
+    if(dErr) { try { await db.storage.from('ll-documents').remove([newPath]); } catch(e) {} throw new Error(dErr.message); }
+    // the previous crop is ours to tidy up; the original upload is never deleted
+    if(hadCrop && prevPath !== originalPath) { try { await db.storage.from('ll-documents').remove([prevPath]); } catch(e) {} }
+
+    child.profile_photo_path = newPath;
+    child.profile_photo_original_path = originalPath;
+    try { await addActivityLog(child.family_id, child.id, 'note', 'Profile photo adjusted (repositioned / cropped).', ''); } catch(e) {}
+    peClose();
+    currentChildren = allChildren.filter(c=>c.family_id===currentFamily.id);
+    if(child.sponsor_photo_path) {
+      // already live on the sponsor page — publish the adjusted version too
+      await approveSponsorPhoto(child.id);
+    } else {
+      renderChildren(currentChildren, currentFamily);
+      showToast('✅ Photo saved');
+    }
+  } catch(e) {
+    st.saving = false;
+    if(saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save photo'; }
+    showToast('Could not save photo: ' + e.message);
+  }
 }
 
 // ── YEAR GROUP OVERRIDE ──
@@ -3582,41 +3792,20 @@ async function saveYGOverride(childId) {
   const yg = document.getElementById('ygs-'+childId).value;
   const just = document.getElementById('ygj-'+childId).value.trim();
   if(!just) { showToast('Please add a justification'); return; }
-  const {error} = await db.from('ll_children').update({
-    year_group_override:yg,year_group_justification:just,
-    year_group_approved:false,year_group_approved_by:null
-  }).eq('id',childId);
-  if(error) { showToast('Error: '+error.message); return; }
-  // Update pipeline to pending approval
-  await setPipelineStatus('year_group_pending', false);
-  const idx = allChildren.findIndex(c=>c.id===childId);
-  if(idx>=0) Object.assign(allChildren[idx],{year_group_override:yg,year_group_justification:just,year_group_approved:false});
-  currentChildren = allChildren.filter(c=>c.family_id===currentFamily.id);
-  renderChildren(currentChildren, currentFamily);
-  showToast('✅ Override saved — sent for approval');
-}
-
-async function approveYG(childId) {
   const {data:{user}} = await db.auth.getUser();
   const admin = allAdmins.find(a=>a.email===user?.email);
-  const approverName = admin?.name || user?.email || 'Admin';
-  const child = allChildren.find(c=>c.id===childId);
-  const finalYG = child?.year_group_override;
-
-  const {error} = await db.from('ll_children').update({
-    year_group_approved:true,
-    year_group_approved_by:approverName,
-    year_group_approved_at:new Date().toISOString(),
-    final_year_group:finalYG
-  }).eq('id',childId);
+  const by = admin?.name || user?.email || 'Admin';
+  const patch = {
+    year_group_override:yg, final_year_group:yg, year_group_justification:just,
+    year_group_approved:true, year_group_approved_by:by, year_group_approved_at:new Date().toISOString()
+  };
+  const {error} = await db.from('ll_children').update(patch).eq('id',childId);
   if(error) { showToast('Error: '+error.message); return; }
-
   const idx = allChildren.findIndex(c=>c.id===childId);
-  if(idx>=0) Object.assign(allChildren[idx],{year_group_approved:true,year_group_approved_by:approverName,final_year_group:finalYG});
-  await setPipelineStatus('year_group_confirmed', false);
+  if(idx>=0) Object.assign(allChildren[idx], patch);
   currentChildren = allChildren.filter(c=>c.family_id===currentFamily.id);
   renderChildren(currentChildren, currentFamily);
-  showToast('✅ Year group approved: '+finalYG);
+  showToast('✅ Year group set: '+yg);
 }
 
 // ── ASSIGN HANDLER ──
@@ -4165,7 +4354,7 @@ async function decideApplication(decision) {
   if(!family || !childId) return;
   const child = allChildren.find(c=>c.id===childId);
   if(decision==='accepted') {
-    await setPipelineStatus(childId, 'year_group_confirmed', false);
+    await setPipelineStatus(childId, 'pre_assessed', false);
   } else {
     await setStatus(childId, decision);
   }
