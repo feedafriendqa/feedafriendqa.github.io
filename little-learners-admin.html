@@ -3357,20 +3357,22 @@ function renderChildren(children, f) {
         </div>
 
         <!-- SECURED SCHOOL PLACE — can be flagged at any stage, independent of pipeline status -->
-        <div class="${c.school_place_status?'warn-box':'note'}" style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <div>
-            🏫 ${c.school_place_status ? `<strong>Secured a school place</strong> — ${c.school_place_status==='verified'?'✅ verified':'⏳ reported, needs verification'}${c.school_place_note?' — '+c.school_place_note:''}` : 'No school place flagged yet.'}
-          </div>
+        ${c.school_place_status ? `<div class="warn-box" style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div>🏫 <strong>Secured a school place</strong> — ${c.school_place_status==='verified'?'✅ verified':'⏳ reported, needs verification'}${c.school_place_note?' — '+c.school_place_note:''}</div>
           <div style="display:flex;gap:6px;">
-            ${!c.school_place_status?`<button class="btn-small" onclick="toggleSchoolPlaceForm('sp-form-${c.id}',this)">🏫 Flag School Place</button>`:''}
             ${c.school_place_status==='reported'?`<button class="btn-small" onclick="verifySchoolPlace('${c.id}')">✅ Verify</button>`:''}
-            ${c.school_place_status?`<button class="btn-small" onclick="setSchoolPlaceStatus('${c.id}', null)">✖ Clear</button>`:''}
+            <button class="btn-small" onclick="setSchoolPlaceStatus('${c.id}', null)">✖ Clear</button>
           </div>
-        </div>
-        <div class="yg-edit" id="sp-form-${c.id}" style="margin-bottom:14px;">
-          <label>Note (e.g. which school, when)</label>
-          <textarea id="sp-note-${c.id}" placeholder="e.g. Received a place at 1st Alsalam school, starting Sept 26"></textarea>
-          <button class="btn-teal btn-sm" onclick="setSchoolPlaceStatus('${c.id}','reported',document.getElementById('sp-note-${c.id}').value)">Save</button>
+        </div>` : ''}
+
+        <!-- SOCIAL MEDIA / PHOTO CONSENT — always visible, any stage -->
+        <div class="${c.media_consent==='Yes'?'note':'warn-box'}" style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div>📷 <strong>Social media &amp; photo consent</strong> — ${c.media_consent==='Yes'?'✅ Consent given':c.media_consent==='No'?'🚫 No consent':'⚠️ Not recorded'}</div>
+          <select style="padding:6px 10px;border-radius:8px;border:2px solid var(--border);font-size:12px;" onchange="saveChildField('${c.id}','media_consent',this.value||null,true)">
+            <option value="" ${!c.media_consent?'selected':''}>Not recorded</option>
+            <option value="Yes" ${c.media_consent==='Yes'?'selected':''}>Yes, consent given</option>
+            <option value="No" ${c.media_consent==='No'?'selected':''}>No consent</option>
+          </select>
         </div>
 
         <!-- YEAR GROUP BOX -->
