@@ -3006,14 +3006,15 @@ function goToLearners() {
 function learnerCardHTML(c, f) {
   const yg = c.final_year_group || c.year_group_override || '—';
   const packStatus = c.pack_status || 'pending';
-  const packLabel = packStatus==='given' ? '📦 Pack given' : packStatus==='not_given' ? '🚫 No pack' : '⏳ Pack pending';
+  // Show the pipeline status (Enrolled once the pack is given) rather than the pack state
+  const packLabel = c.pipeline_status==='completed' ? '✅ Enrolled' : '✉️ Invited to Assessment';
   const anchor = c.last_checkin_date || c.pack_given_date;
   const overdue = packStatus==='given' && daysSince(anchor)!==null && daysSince(anchor)>=90;
   const lstatus = c.learner_status || 'active';
   return `<div class="fam-card" onclick="openProfile('${f.id}','profile','${c.id}')">
     <div class="urn-badge">${f.urn||'—'}</div>
     <div class="fam-info">
-      <div class="fam-name">${c.preferred_name||c.full_name||'Child'}</div>
+      <div class="fam-name">${c.full_name||c.preferred_name||'Child'}${(f.father_name||f.mother_name)?` <small style="font-weight:600;font-size:11px;color:var(--muted);">· 👪 ${f.father_name||f.mother_name}</small>`:''}</div>
       <div class="fam-meta">
         <span>🎓 ${yg}</span>
         <span>🎂 ${childAgeYears(c)}y</span>
@@ -3032,7 +3033,7 @@ function renderLearners() {
   if(q) {
     kids = kids.filter(c => {
       const f = allFamilies.find(x=>x.id===c.family_id);
-      const text = ((c.full_name||'')+' '+(c.preferred_name||'')+' '+(c.qid||'')+' '+(f?.urn||'')).toLowerCase();
+      const text = ((c.full_name||'')+' '+(c.preferred_name||'')+' '+(c.qid||'')+' '+(f?.urn||'')+' '+(f?.father_name||'')+' '+(f?.mother_name||'')).toLowerCase();
       return text.includes(q);
     });
   }
