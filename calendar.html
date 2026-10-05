@@ -153,9 +153,18 @@ html,body{height:100%;font-family:'Nunito Sans',sans-serif;background:#f4f7f4;co
 @media(max-width:700px){
 .days{grid-template-rows:none;grid-auto-rows:minmax(72px,auto);}
 .day{overflow:hidden;padding:3px;min-width:0;}
-.pip{justify-content:center;font-size:12px;line-height:1.2;padding:3px 2px;border-left-width:0;}
+.day{display:block;text-align:center;}
+.dnum{margin:0 auto 3px;}
+.pip{display:inline-block;font-size:0;width:9px;height:9px;padding:0;margin:1px 1.5px;border-radius:50%;border:0;overflow:hidden;}
 .pip .pt{display:none;}
-.more{text-align:center;padding-left:0;}
+.more{display:none;}
+.day.sel{background:#e8f2e9;}
+.agenda{border-top:2px solid #e4ede5;padding:12px;background:#fff;}
+.agenda h4{font-family:'Nunito',sans-serif;font-size:15px;font-weight:900;color:#1a2b1c;margin-bottom:8px;}
+.ag-ev{display:flex;gap:10px;padding:10px;border-radius:10px;margin-bottom:8px;cursor:pointer;border-left:5px solid;}
+.ag-t{font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;line-height:1.25;overflow-wrap:anywhere;}
+.ag-m{font-size:13px;margin-top:2px;opacity:.85;}
+.ag-none{font-size:14px;color:#8a9e8c;padding:6px 0;}
 .ltitle{white-space:normal;overflow-wrap:anywhere;}
 .ldesc{-webkit-line-clamp:3;}
 .chips-row{flex-wrap:wrap;overflow-x:visible;}
@@ -341,7 +350,7 @@ function applyLang(skipRender){
   if(!skipRender){renderChips();renderContent();}
 }
 const NOW=new Date(),TY=NOW.getFullYear(),TM=NOW.getMonth();
-let curY=TY,curM=TM,view="month",filter="all",isAdmin=false,isSuperAdmin=false,toastT;
+let selDay=null;let curY=TY,curM=TM,view="month",filter="all",isAdmin=false,isSuperAdmin=false,toastT;
 let authToken=null,authRefresh=null,authName="";
 const SESSION_KEY="faf_cal_session";
 let allEvents=[];
@@ -544,9 +553,28 @@ function renderMonth(){
       day.appendChild(pip);
     });
     if(evs.length>3){const m=document.createElement("div");m.className="more";m.textContent="+"+(evs.length-3)+" "+T("more");day.appendChild(m);}
+    if(selDay&&same(d,selDay))day.classList.add("sel");
+    day.onclick=()=>{selDay=d;renderContent();};
     grid.appendChild(day);
   });
-  cal.appendChild(grid);return cal;
+  cal.appendChild(grid);
+  if(window.innerWidth<=700){
+    if(!selDay||selDay.getFullYear()!==curY||selDay.getMonth()!==curM){selDay=(NOW.getFullYear()===curY&&NOW.getMonth()===curM)?NOW:new Date(curY,curM,1);}
+    const ag=document.createElement("div");ag.className="agenda";
+    const h=document.createElement("h4");h.textContent=MONTHS[selDay.getMonth()]+" "+selDay.getDate();ag.appendChild(h);
+    const dayEvs=vis.filter(e=>same(e.date,selDay));
+    if(!dayEvs.length){const nn=document.createElement("div");nn.className="ag-none";nn.textContent=(document.documentElement.lang==="ar")?"لا توجد فعاليات في هذا اليوم":"No events on this day";ag.appendChild(nn);}
+    dayEvs.forEach(ev=>{
+      const p=ev.isBirthday?{bg:"#fce4f3",tc:"#c2185b",em:"🎂",label:"Birthday"}:gp(ev.prog);
+      const c=ev.isBirthday?"#c2185b":tc(p);
+      const r=document.createElement("div");r.className="ag-ev";r.style.background=p.bg;r.style.color=c;r.style.borderLeftColor=c;
+      r.innerHTML='<div><div class="ag-t">'+p.em+" "+ev.title+'</div>'+((ev.time||ev.location)?'<div class="ag-m">'+(ev.time?"🕐 "+f12(ev.time)+(ev.endTime?" – "+f12(ev.endTime):""):"")+(ev.location?" 📍 "+ev.location.split(",")[0]:"")+'</div>':"")+'</div>';
+      r.onclick=()=>openDetail(ev);
+      ag.appendChild(r);
+    });
+    cal.appendChild(ag);
+  }
+  return cal;
 }
 
 function renderList(){
@@ -887,7 +915,6 @@ async function rejectPending(id){
 document.getElementById("prevM").onclick=()=>{curM--;if(curM<0){curM=11;curY--;}renderContent();};
 document.getElementById("nextM").onclick=()=>{curM++;if(curM>11){curM=0;curY++;}renderContent();};
 document.getElementById("todayB").onclick=()=>{curY=TY;curM=TM;renderContent();};
-if(window.innerWidth<=700){view="list";document.getElementById("vList").classList.add("on");document.getElementById("vMonth").classList.remove("on");}
 document.getElementById("vMonth").onclick=()=>{view="month";document.getElementById("vMonth").classList.add("on");document.getElementById("vList").classList.remove("on");renderContent();};
 document.getElementById("vList").onclick=()=>{view="list";document.getElementById("vList").classList.add("on");document.getElementById("vMonth").classList.remove("on");renderContent();};
 document.getElementById("submitBtn").onclick=function(){openSubmit();};
