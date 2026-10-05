@@ -236,6 +236,35 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       transition:.25s ease;
     }
     .field input::placeholder{color:rgba(255,255,255,.42)}
+    .field select{
+      width:100%;
+      border:1px solid rgba(255,255,255,.20);
+      border-radius:15px;
+      background:rgba(255,255,255,.10);
+      color:#fff;
+      padding:15px 16px;
+      outline:none;
+      transition:.25s ease;
+      font:inherit;
+    }
+    .field select option{color:#0b2f20;background:#fff}
+    .field select:focus{
+      border-color:rgba(169,223,73,.80);
+      box-shadow:0 0 0 4px rgba(169,223,73,.09);
+    }
+    .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .chip{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:5px 6px 5px 11px;border-radius:999px;
+      background:rgba(169,223,73,.18);border:1px solid rgba(169,223,73,.45);
+      color:#fff;font-size:12px;font-weight:700;
+    }
+    .chip button{
+      border:0;background:none;color:#fff;cursor:pointer;
+      font-size:15px;line-height:1;padding:0 4px;opacity:.8;
+    }
+    .pill-row{display:flex;gap:9px}
+    .pill-row label{flex:1;justify-content:center}
     .field input:focus{
       border-color:rgba(169,223,73,.80);
       box-shadow:0 0 0 4px rgba(169,223,73,.09);
@@ -612,8 +641,13 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
               </div>
 
               <div class="field">
-                <label for="regPassword" data-en="Create a password" data-ar="أنشئ كلمة مرور">Create a password</label>
-                <input id="regPassword" type="password" placeholder="At least 8 characters" data-en-placeholder="At least 8 characters" data-ar-placeholder="8 أحرف على الأقل" autocomplete="new-password" minlength="8" required>
+                <label for="regPassword" data-en="Password" data-ar="كلمة المرور">Password</label>
+                <input id="regPassword" type="password" placeholder="Min. 6 characters" data-en-placeholder="Min. 6 characters" data-ar-placeholder="6 أحرف على الأقل" autocomplete="new-password" minlength="6" required>
+              </div>
+
+              <div class="field">
+                <label for="regPasswordConfirm" data-en="Confirm password" data-ar="تأكيد كلمة المرور">Confirm password</label>
+                <input id="regPasswordConfirm" type="password" placeholder="Repeat password" data-en-placeholder="Repeat password" data-ar-placeholder="أعد إدخال كلمة المرور" autocomplete="new-password" minlength="6" required>
               </div>
 
               <div class="field">
@@ -628,48 +662,69 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
 
               <div class="field">
                 <label for="regNationality" data-en="Nationality" data-ar="الجنسية">Nationality</label>
-                <input id="regNationality" type="text" placeholder="Your nationality" data-en-placeholder="Your nationality" data-ar-placeholder="جنسيتك" autocomplete="country-name" required>
+                <input id="regNationality" type="text" list="nationalityList" placeholder="Start typing... e.g. Qatari" data-en-placeholder="Start typing... e.g. Qatari" data-ar-placeholder="ابدأ بالكتابة... مثال: قطري" autocomplete="off" required>
+                <datalist id="nationalityList"></datalist>
               </div>
 
               <div class="field">
+                <label data-en="Employment status" data-ar="الحالة الوظيفية">Employment status</label>
                 <div class="checkbox-group">
-                  <label><input type="checkbox" id="regIsStudent"> <span data-en="I'm currently a student" data-ar="أنا حالياً طالب">I'm currently a student</span></label>
+                  <label><input type="radio" name="employment" value="student"> <span data-en="🎓 Student" data-ar="🎓 طالب">🎓 Student</span></label>
+                  <label><input type="radio" name="employment" value="working"> <span data-en="💼 Working" data-ar="💼 موظف">💼 Working</span></label>
+                  <label><input type="radio" name="employment" value="not_working"> <span data-en="🏠 Not currently working" data-ar="🏠 لا أعمل حالياً">🏠 Not currently working</span></label>
                 </div>
               </div>
 
               <div id="studentFields" class="hidden-view">
                 <div class="field">
                   <label for="regStudentLevel" data-en="Level of study" data-ar="المرحلة الدراسية">Level of study</label>
-                  <input id="regStudentLevel" type="text" placeholder="e.g. High school, Undergraduate" data-en-placeholder="e.g. High school, Undergraduate" data-ar-placeholder="مثال: ثانوية، جامعة">
+                  <select id="regStudentLevel">
+                    <option value="" data-en="Select level..." data-ar="اختر المرحلة...">Select level...</option>
+                    <option value="Secondary School (GCSE)">Secondary School (GCSE)</option>
+                    <option value="Sixth Form / A-Levels">Sixth Form / A-Levels</option>
+                    <option value="Undergraduate">Undergraduate</option>
+                    <option value="Postgraduate">Postgraduate</option>
+                    <option value="Other">Other</option>
+                  </select>
                 </div>
                 <div class="field">
                   <label for="regStudentSchool" data-en="School / University" data-ar="المدرسة / الجامعة">School / University</label>
-                  <input id="regStudentSchool" type="text" placeholder="Name of school or university" data-en-placeholder="Name of school or university" data-ar-placeholder="اسم المدرسة أو الجامعة">
-                </div>
-              </div>
-
-              <div class="field">
-                <div class="checkbox-group">
-                  <label><input type="checkbox" id="regIsWorking"> <span data-en="I'm currently working" data-ar="أنا حالياً موظف">I'm currently working</span></label>
+                  <input id="regStudentSchool" type="text" placeholder="e.g. University of Manchester" data-en-placeholder="e.g. University of Manchester" data-ar-placeholder="مثال: جامعة مانشستر">
                 </div>
               </div>
 
               <div id="workingFields" class="hidden-view">
                 <div class="field">
-                  <label for="regProfession" data-en="Profession / job title" data-ar="المهنة / المسمى الوظيفي">Profession / job title</label>
-                  <input id="regProfession" type="text" placeholder="e.g. Teacher, Engineer" data-en-placeholder="e.g. Teacher, Engineer" data-ar-placeholder="مثال: معلم، مهندس">
+                  <label for="regProfession" data-en="Profession" data-ar="المهنة">Profession</label>
+                  <input id="regProfession" type="text" placeholder="e.g. Teacher, Nurse..." data-en-placeholder="e.g. Teacher, Nurse..." data-ar-placeholder="مثال: معلم، ممرض...">
                 </div>
               </div>
 
               <div class="field">
-                <label data-en="Which programmes interest you?" data-ar="ما البرامج التي تهمك؟">Which programmes interest you?</label>
+                <label data-en="Projects you're interested in" data-ar="المشاريع التي تهمك">Projects you're interested in</label>
                 <div class="checkbox-group">
-                  <label><input type="checkbox" name="program" value="Food Boxes"> <span data-en="Food Boxes" data-ar="صناديق الطعام">Food Boxes</span></label>
-                  <label><input type="checkbox" name="program" value="Welcome Baby"> <span data-en="Welcome Baby" data-ar="أهلاً بالمولود">Welcome Baby</span></label>
-                  <label><input type="checkbox" name="program" value="Community Fridges"> <span data-en="Community Fridges" data-ar="الثلاجات المجتمعية">Community Fridges</span></label>
-                  <label><input type="checkbox" name="program" value="Little Learners"> <span data-en="Little Learners" data-ar="المتعلمون الصغار">Little Learners</span></label>
-                  <label><input type="checkbox" name="program" value="Giving Garden"> <span data-en="Giving Garden" data-ar="حديقة العطاء">Giving Garden</span></label>
-                  <label><input type="checkbox" name="program" value="Share and Care"> <span data-en="Share and Care" data-ar="شارك واهتم">Share and Care</span></label>
+                  <label><input type="checkbox" name="program" value="food-boxes"> <span data-en="📦 Food Boxes" data-ar="📦 صناديق الطعام">📦 Food Boxes</span></label>
+                  <label><input type="checkbox" name="program" value="welcome-baby"> <span data-en="👶 Welcome Baby" data-ar="👶 أهلاً بالمولود">👶 Welcome Baby</span></label>
+                  <label><input type="checkbox" name="program" value="community-fridges"> <span data-en="🧊 Community Fridges" data-ar="🧊 الثلاجات المجتمعية">🧊 Community Fridges</span></label>
+                  <label><input type="checkbox" name="program" value="little-learners"> <span data-en="📚 Little Learners" data-ar="📚 المتعلمون الصغار">📚 Little Learners</span></label>
+                  <label><input type="checkbox" name="program" value="share-and-care"> <span data-en="🤝 Share and Care" data-ar="🤝 شارك واهتم">🤝 Share and Care</span></label>
+                  <label><input type="checkbox" name="program" value="giving-garden"> <span data-en="🌱 Giving Garden" data-ar="🌱 حديقة العطاء">🌱 Giving Garden</span></label>
+                  <label><input type="checkbox" name="program" value="general"> <span data-en="⭐ General" data-ar="⭐ عام">⭐ General</span></label>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="regLanguageInput" data-en="Languages spoken" data-ar="اللغات التي تتحدثها">Languages spoken</label>
+                <input id="regLanguageInput" type="text" list="languageList" placeholder="Type a language and press Enter..." data-en-placeholder="Type a language and press Enter..." data-ar-placeholder="اكتب لغة واضغط Enter..." autocomplete="off">
+                <datalist id="languageList"></datalist>
+                <div class="chips" id="languageChips"></div>
+              </div>
+
+              <div class="field">
+                <label data-en="Preferred language" data-ar="اللغة المفضلة">Preferred language</label>
+                <div class="checkbox-group pill-row">
+                  <label><input type="radio" name="preferred_language" value="english"> <span>English</span></label>
+                  <label><input type="radio" name="preferred_language" value="arabic"> <span>العربية Arabic</span></label>
                 </div>
               </div>
 
@@ -892,17 +947,54 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
     const registerOk = document.getElementById('registerSuccess');
     const registerBtn = document.getElementById('registerBtn');
 
-    const isStudentBox = document.getElementById('regIsStudent');
+    const NATIONALITIES = ["Afghan","Albanian","Algerian","American","Andorran","Angolan","Antiguan and Barbudan","Argentine","Armenian","Australian","Austrian","Azerbaijani","Bahamian","Bahraini","Bangladeshi","Barbadian","Belarusian","Belgian","Belizean","Beninese","Bhutanese","Bolivian","Bosnian","Botswanan","Brazilian","British","Bruneian","Bulgarian","Burkinabe","Burmese","Burundian","Cambodian","Cameroonian","Canadian","Cape Verdean","Central African","Chadian","Chilean","Chinese","Colombian","Comoran","Congolese","Costa Rican","Croatian","Cuban","Cypriot","Czech","Danish","Djiboutian","Dominican","Dutch","East Timorese","Ecuadorian","Egyptian","Emirati","English","Equatorial Guinean","Eritrean","Estonian","Ethiopian","Fijian","Filipino","Finnish","French","Gabonese","Gambian","Georgian","German","Ghanaian","Greek","Grenadian","Guatemalan","Guinean","Guinea-Bissauan","Guyanese","Haitian","Honduran","Hungarian","Icelandic","Indian","Indonesian","Iranian","Iraqi","Irish","Israeli","Italian","Ivorian","Jamaican","Japanese","Jordanian","Kazakh","Kenyan","Kittitian","Kosovar","Kuwaiti","Kyrgyz","Laotian","Latvian","Lebanese","Basotho","Liberian","Libyan","Liechtensteiner","Lithuanian","Luxembourgish","Macedonian","Malagasy","Malawian","Malaysian","Maldivian","Malian","Maltese","Marshallese","Mauritanian","Mauritian","Mexican","Micronesian","Moldovan","Monacan","Mongolian","Montenegrin","Moroccan","Mozambican","Namibian","Nauruan","Nepali","New Zealander","Nicaraguan","Nigerian","Nigerien","North Korean","Northern Irish","Norwegian","Omani","Pakistani","Palauan","Palestinian","Panamanian","Papua New Guinean","Paraguayan","Peruvian","Polish","Portuguese","Puerto Rican","Qatari","Romanian","Russian","Rwandan","Saint Lucian","Salvadoran","Samoan","San Marinese","Sao Tomean","Saudi","Scottish","Senegalese","Serbian","Seychellois","Sierra Leonean","Singaporean","Slovak","Slovenian","Solomon Islander","Somali","South African","South Korean","South Sudanese","Spanish","Sri Lankan","Sudanese","Surinamese","Swazi","Swedish","Swiss","Syrian","Taiwanese","Tajik","Tanzanian","Thai","Togolese","Tongan","Trinidadian","Tunisian","Turkish","Turkmen","Tuvaluan","Ugandan","Ukrainian","Uruguayan","Uzbek","Vanuatuan","Venezuelan","Vietnamese","Welsh","Yemeni","Zambian","Zimbabwean"];
+    const LANGUAGES = ["English","Arabic","Hindi","Urdu","Tagalog / Filipino","Malayalam","Tamil","Bengali","Nepali","Sinhala","Indonesian / Bahasa","French","Swahili","Amharic","Spanish","Telugu","Punjabi","Pashto","Farsi / Persian","Turkish","Russian","Chinese (Mandarin)","Portuguese","German","Italian"];
+
     const studentFields = document.getElementById('studentFields');
-    isStudentBox.addEventListener('change', () => {
-      studentFields.classList.toggle('hidden-view', !isStudentBox.checked);
+    const workingFields = document.getElementById('workingFields');
+    registerForm.querySelectorAll('input[name="employment"]').forEach(r => {
+      r.addEventListener('change', () => {
+        const v = (registerForm.querySelector('input[name="employment"]:checked') || {}).value;
+        studentFields.classList.toggle('hidden-view', v !== 'student');
+        workingFields.classList.toggle('hidden-view', v !== 'working');
+      });
     });
 
-    const isWorkingBox = document.getElementById('regIsWorking');
-    const workingFields = document.getElementById('workingFields');
-    isWorkingBox.addEventListener('change', () => {
-      workingFields.classList.toggle('hidden-view', !isWorkingBox.checked);
-    });
+    document.getElementById('nationalityList').innerHTML =
+      NATIONALITIES.map(n => '<option value="' + n + '"></option>').join('');
+    document.getElementById('languageList').innerHTML =
+      LANGUAGES.map(l => '<option value="' + l + '"></option>').join('');
+
+    // Type-to-add languages spoken, shown as removable chips
+    let languages = [];
+    const langInput = document.getElementById('regLanguageInput');
+    const langChips = document.getElementById('languageChips');
+    function renderLanguages(){
+      langChips.innerHTML = '';
+      languages.forEach(l => {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.appendChild(document.createTextNode(l));
+        const x = document.createElement('button');
+        x.type = 'button';
+        x.setAttribute('aria-label', 'Remove ' + l);
+        x.textContent = '×';
+        x.addEventListener('click', () => { languages = languages.filter(v => v !== l); renderLanguages(); });
+        chip.appendChild(x);
+        langChips.appendChild(chip);
+      });
+    }
+    function addLanguage(){
+      const raw = langInput.value.trim();
+      if (!raw) return;
+      const known = LANGUAGES.find(l => l.toLowerCase() === raw.toLowerCase());
+      const val = known || raw;
+      if (!languages.some(l => l.toLowerCase() === val.toLowerCase())) languages.push(val);
+      langInput.value = '';
+      renderLanguages();
+    }
+    langInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addLanguage(); } });
+    langInput.addEventListener('change', addLanguage);
 
     registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -916,18 +1008,48 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       const surname = document.getElementById('regSurname').value.trim();
       const email = document.getElementById('regEmail').value.trim();
       const password = document.getElementById('regPassword').value;
+      const passwordConfirm = document.getElementById('regPasswordConfirm').value;
       const phone = document.getElementById('regPhone').value.trim();
       const dob = document.getElementById('regDob').value || null;
-      const nationality = document.getElementById('regNationality').value.trim();
-      const is_student = isStudentBox.checked;
-      const student_level = is_student ? document.getElementById('regStudentLevel').value.trim() : null;
-      const student_school = is_student ? document.getElementById('regStudentSchool').value.trim() : null;
-      const is_working = isWorkingBox.checked;
-      const profession = is_working ? document.getElementById('regProfession').value.trim() : null;
-      const fun_fact = document.getElementById('regFunFact').value.trim() || null;
+      const natRaw = document.getElementById('regNationality').value.trim();
+      const nationality = NATIONALITIES.find(n => n.toLowerCase() === natRaw.toLowerCase()) || '';
+      const employment = (registerForm.querySelector('input[name="employment"]:checked') || {}).value || '';
+      const is_student = employment === 'student';
+      const is_working = employment === 'working';
+      const student_level = is_student ? document.getElementById('regStudentLevel').value : '';
+      const student_school = is_student ? document.getElementById('regStudentSchool').value.trim() : '';
+      const profession = is_working ? document.getElementById('regProfession').value.trim() : '';
+      const fun_fact = document.getElementById('regFunFact').value.trim() || '';
+      const preferred_language = (registerForm.querySelector('input[name="preferred_language"]:checked') || {}).value || null;
+      if (langInput.value.trim()) addLanguage();
       const projects = [...new Set(Array.from(
         registerForm.querySelectorAll('input[name="program"]:checked')
       ).map(cb => cb.value))];
+
+      const fail = (msg) => {
+        registerErr.textContent = msg;
+        registerErr.style.display = 'block';
+        registerBtn.disabled = false;
+        registerBtn.textContent = prevLabel;
+      };
+      if (!first_name || !surname || !dob || !phone || !email || !password) {
+        return fail(t('Please fill in all required fields.', 'يرجى تعبئة جميع الحقول المطلوبة.'));
+      }
+      if (!nationality) {
+        return fail(t('Please pick your nationality from the suggestions.', 'يرجى اختيار جنسيتك من الاقتراحات.'));
+      }
+      if (!employment) {
+        return fail(t('Please select your employment status.', 'يرجى اختيار حالتك الوظيفية.'));
+      }
+      if (projects.length === 0) {
+        return fail(t('Please select at least one project you are interested in.', 'يرجى اختيار مشروع واحد على الأقل.'));
+      }
+      if (password !== passwordConfirm) {
+        return fail(t('Passwords do not match.', 'كلمتا المرور غير متطابقتين.'));
+      }
+      if (password.length < 6) {
+        return fail(t('Password must be at least 6 characters.', 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.'));
+      }
 
       const { data, error } = await sb.auth.signUp({ email, password });
 
@@ -954,6 +1076,9 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
         profession,
         fun_fact,
         projects,
+        languages,
+        preferred_language,
+        role: 'volunteer',
         approved: false
       });
 
@@ -991,6 +1116,8 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       registerOk.textContent = t("Thanks! Your registration is pending admin approval — we'll be in touch.", "شكراً لك! تسجيلك قيد موافقة الإدارة — سنتواصل معك قريباً.");
       registerOk.style.display = 'block';
       registerForm.reset();
+      languages = [];
+      renderLanguages();
       studentFields.classList.add('hidden-view');
       workingFields.classList.add('hidden-view');
       registerBtn.disabled = false;
