@@ -151,9 +151,11 @@ html,body{height:100%;font-family:'Nunito Sans',sans-serif;background:#f4f7f4;co
 }
 /* ---- Mobile: text wraps instead of being cut off ---- */
 @media(max-width:700px){
-.days{grid-template-rows:none;grid-auto-rows:minmax(86px,auto);}
-.day{overflow:visible;padding:3px;min-width:0;}
-.pip{white-space:normal;overflow:visible;text-overflow:clip;word-break:break-word;overflow-wrap:anywhere;align-items:flex-start;font-size:10px;line-height:1.2;padding:3px 4px;}
+.days{grid-template-rows:none;grid-auto-rows:minmax(72px,auto);}
+.day{overflow:hidden;padding:3px;min-width:0;}
+.pip{justify-content:center;font-size:12px;line-height:1.2;padding:3px 2px;border-left-width:0;}
+.pip .pt{display:none;}
+.more{text-align:center;padding-left:0;}
 .ltitle{white-space:normal;overflow-wrap:anywhere;}
 .ldesc{-webkit-line-clamp:3;}
 .chips-row{flex-wrap:wrap;overflow-x:visible;}
@@ -537,7 +539,7 @@ function renderMonth(){
       const p=gp(ev.prog);
       const pip=document.createElement("div");pip.className="pip"+(ev.isBirthday?" bday-pip":"");
       if(!ev.isBirthday){pip.style.background=p.bg;pip.style.color=tc(p);}
-      pip.textContent=p.em+" "+ev.title;
+      pip.innerHTML="";pip.appendChild(document.createTextNode(p.em));const pt=document.createElement("span");pt.className="pt";pt.textContent=" "+ev.title;pip.appendChild(pt);pip.title=ev.title;
       pip.onclick=e=>{e.stopPropagation();openDetail(ev);};
       day.appendChild(pip);
     });
@@ -885,6 +887,7 @@ async function rejectPending(id){
 document.getElementById("prevM").onclick=()=>{curM--;if(curM<0){curM=11;curY--;}renderContent();};
 document.getElementById("nextM").onclick=()=>{curM++;if(curM>11){curM=0;curY++;}renderContent();};
 document.getElementById("todayB").onclick=()=>{curY=TY;curM=TM;renderContent();};
+if(window.innerWidth<=700){view="list";document.getElementById("vList").classList.add("on");document.getElementById("vMonth").classList.remove("on");}
 document.getElementById("vMonth").onclick=()=>{view="month";document.getElementById("vMonth").classList.add("on");document.getElementById("vList").classList.remove("on");renderContent();};
 document.getElementById("vList").onclick=()=>{view="list";document.getElementById("vList").classList.add("on");document.getElementById("vMonth").classList.remove("on");renderContent();};
 document.getElementById("submitBtn").onclick=function(){openSubmit();};
