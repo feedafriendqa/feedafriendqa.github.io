@@ -473,6 +473,30 @@
   html[dir="rtl"] .cta-panel{direction:rtl;}
   html[dir="rtl"] .cta-illustration{align-self:flex-start;}
   html[dir="rtl"] .tile-arrow{align-self:flex-start;}
+
+  /* ---------- Desktop: calmer sizes, two-column hero ---------- */
+  @media (min-width:941px){
+    .profile-name{font-size:16px;}
+    #home-section .section-inner{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);column-gap:56px;grid-template-rows:auto auto auto 1fr;align-content:start;}
+    #home-section .hero-greet{grid-column:1;grid-row:1;font-size:18px;align-self:end;margin-bottom:6px;}
+    #home-section h1{grid-column:1;grid-row:2;font-size:46px;line-height:1.1;}
+    #home-section .hero-sub{grid-column:1;grid-row:3;font-size:18px;max-width:460px;margin:12px 0 22px;}
+    #home-section .hero-btns{grid-column:1;grid-row:4;align-self:start;}
+    #home-section .btn-solid,#home-section .btn-outline{font-size:17px;padding:12px 20px;}
+    #home-section .hero-photo-card{grid-column:2;grid-row:1 / span 4;margin-top:0;align-self:center;}
+    #home-section .impact,#home-section .pk{grid-column:1 / -1;}
+    .impact-head h2{font-size:26px;}
+    .impact-link{font-size:16px;}
+    .ms-num{font-size:60px;}
+    .ms-unit{font-size:24px;}
+    .ms-next{font-size:16px;}
+    .event-mid .t{font-size:18px;}
+    .event-mid .l{font-size:15px;}
+    .event-time{font-size:16px;}
+    .event-time .d2{font-size:14.5px;}
+    .events-head h2{font-size:24px;}
+    .page-intro{font-size:17px;}
+  }
 </style>
 
 </head>
@@ -523,7 +547,7 @@
     <span data-en="Resources" data-ar="الموارد">Resources</span>
   </a>
 </div>
-<section class="snap-section" id="home-section" style="padding-top:96px;min-height:auto;justify-content:flex-start;">
+<section class="snap-section" id="home-section" style="padding-top:140px;min-height:auto;justify-content:flex-start;">
   <div class="section-inner">
     <div class="hero-greet">
       <span id="greetText" data-en="Assalamu alaikum, Friend! 👋" data-ar="السلام عليكم، صديقي! 👋">Assalamu alaikum, Friend! 👋</span>
@@ -1297,6 +1321,24 @@
     if (prevBtn) prevBtn.addEventListener('click', () => scrollByCard(-1));
     if (nextBtn) nextBtn.addEventListener('click', () => scrollByCard(1));
   }
+</script>
+
+<script>
+  // The header is fixed, so push the hero down by exactly its height (+ a little air).
+  (function(){
+    function place(){
+      var h = document.querySelector('header');
+      var s = document.getElementById('home-section');
+      if (!h || !s) return;
+      s.style.setProperty('padding-top', (h.offsetHeight + 24) + 'px', 'important');
+    }
+    place();
+    window.addEventListener('load', place);
+    window.addEventListener('resize', place);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(place);
+    var img = document.querySelector('header img');
+    if (img && !img.complete) img.addEventListener('load', place);
+  })();
 </script>
 </body>
 </html>
