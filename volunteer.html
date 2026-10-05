@@ -919,7 +919,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
             <Avtr u={u} sz={44}/>
             <div>
-              <div style={{fontWeight:700,fontSize:15,fontFamily:BF}}>{u.first_name} {u.surname}</div>
+              <div onClick={()=>setViewProf(u)} style={{fontWeight:700,fontSize:15,fontFamily:BF,cursor:"pointer",textDecoration:"underline",textDecorationStyle:"dotted",textUnderlineOffset:3}}>{u.first_name} {u.surname}</div>
               <div style={{fontSize:12,color:MT}}>{u.email} · DOB: {u.dob}</div>
             </div>
           </div>
@@ -960,7 +960,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
           return <div key={u.id} style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
             <Avtr u={u} sz={40}/>
             <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:14,fontFamily:BF}}>{u.first_name} {u.surname}</div>
+              <div onClick={()=>setViewProf(u)} style={{fontWeight:700,fontSize:14,fontFamily:BF,cursor:"pointer",textDecoration:"underline",textDecorationStyle:"dotted",textUnderlineOffset:3}}>{u.first_name} {u.surname}</div>
               <div style={{fontSize:12,color:MT}}>{u.email}</div>
               <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
                 {u.is_student&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>🎓 Student</span>}
@@ -981,7 +981,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
             <Avtr u={a} sz={44}/>
             <div style={{flex:1}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{fontWeight:700,fontSize:15,fontFamily:BF}}>{a.first_name} {a.surname}</div>
+                <div onClick={()=>setViewProf(a)} style={{fontWeight:700,fontSize:15,fontFamily:BF,cursor:"pointer",textDecoration:"underline",textDecorationStyle:"dotted",textUnderlineOffset:3}}>{a.first_name} {a.surname}</div>
                 <RoleBadge role={a.role}/>
               </div>
               <div style={{fontSize:12,color:MT}}>{a.email}</div>
@@ -1156,7 +1156,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
             <div>
               <Tag pid={l.project} sm/>
               <div style={{fontWeight:700,fontSize:14,marginTop:6,fontFamily:BF}}>{l.activity}</div>
-              <div style={{fontSize:12,color:MT,marginTop:2}}>{l.profiles?.first_name} {l.profiles?.surname} · {l.date} · {l.hours}h</div>
+              <div style={{fontSize:12,color:MT,marginTop:2}}><span role="button" tabIndex={0} onClick={async()=>{const known=[...vols,...pending].find(x=>x.id===l.volunteer_id);if(known){setViewProf(known);return;}const{data}=await sb.from("profiles").select("*").eq("id",l.volunteer_id).single();setViewProf(data||l.profiles);}} style={{color:DK,fontWeight:700,cursor:"pointer",textDecoration:"underline",textDecorationStyle:"dotted",textUnderlineOffset:3}}>{l.profiles?.first_name} {l.profiles?.surname}</span> · {l.date} · {l.hours}h</div>
               {l.notes&&<div style={{fontSize:12,color:MT,marginTop:2,fontStyle:"italic"}}>"{l.notes}"</div>}
             </div>
             <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:10}}>
