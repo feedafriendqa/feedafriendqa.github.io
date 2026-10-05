@@ -71,6 +71,47 @@
   .impact-head h2{font-size:28.5px;display:flex;align-items:center;gap:8px;}
   .impact-link{font-size:22.4px;font-weight:700;color:var(--green);}
   .impact-stats{display:flex;}
+
+  /* Your Impact: milestone journey */
+  .ms-card{background:#fff;border-radius:18px;padding:24px 32px;display:flex;flex-direction:column;gap:22px;}
+  .ms-top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;}
+  .ms-num{font-family:'League Spartan';font-size:72px;font-weight:900;color:var(--green);line-height:1;letter-spacing:-0.04em;}
+  .ms-unit{font-family:'League Spartan';font-weight:800;font-size:28px;color:var(--charcoal);}
+  .ms-next{font-size:18px;color:#4F5A54;margin-left:16px;}
+  .ms-track{position:relative;height:96px;direction:ltr;}
+  .ms-bar,.ms-fill{position:absolute;left:0;top:16px;height:12px;border-radius:6px;}
+  .ms-bar{right:0;background:#E3E8DE;}
+  .ms-fill{width:0;background:var(--green);transition:width .8s ease;}
+  .ms-node{position:absolute;top:0;width:44px;margin-left:-22px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .ms-dot{width:44px;height:44px;border-radius:50%;box-sizing:border-box;background:#fff;border:3px solid #9AA59E;display:flex;align-items:center;justify-content:center;}
+  .ms-dot svg{width:18px;height:18px;display:none;}
+  .ms-node.done .ms-dot{background:var(--green);border:4px solid #fff;box-shadow:0 0 0 2px var(--green);}
+  .ms-node.done .ms-dot svg{display:block;}
+  .ms-lab{font-weight:800;font-size:15px;white-space:nowrap;color:#4F5A54;}
+  .ms-node.done .ms-lab{color:var(--charcoal);}
+  .ms-chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+  .ms-chip{background:var(--panel);border-radius:14px;padding:12px 18px;display:flex;align-items:baseline;gap:10px;}
+  .ms-chip b{font-family:'League Spartan';font-weight:900;font-size:32px;color:var(--green);}
+  .ms-chip span{font-size:16px;font-weight:700;color:#4F5A54;}
+
+  /* What's new: peek carousel */
+  .pk{margin-top:28px;}
+  .pk-head{font-family:'League Spartan';font-weight:900;font-size:24px;letter-spacing:-0.02em;color:var(--green);margin:0 0 12px;}
+  .pk-viewport{overflow:hidden;border-radius:20px;}
+  .pk-track{display:flex;gap:16px;transition:transform .5s ease;}
+  .pk-card{flex:0 0 560px;box-sizing:border-box;min-height:150px;border-radius:20px;color:#fff;padding:22px 26px;display:flex;flex-direction:column;justify-content:space-between;gap:14px;}
+  .pk-tag{font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;}
+  .pk-title{margin-top:6px;font-family:'League Spartan';font-weight:900;font-size:26px;line-height:1.08;letter-spacing:-0.01em;color:#fff;}
+  .pk-cta{font-weight:800;font-size:16px;text-decoration:underline;}
+  .pk-controls{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px;}
+  .pk-nav{width:44px;height:44px;border-radius:50%;border:2px solid #D3D9D0;background:#fff;color:var(--green);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .pk-nav svg{width:18px;height:18px;}
+  .pk-dots{display:flex;align-items:center;}
+  .pk-dot{height:44px;min-width:20px;border:0;background:transparent;padding:0 3px;display:flex;align-items:center;cursor:pointer;}
+  .pk-dot span{display:block;width:8px;height:8px;border-radius:4px;background:#C3CCC1;transition:width .25s ease,background .25s ease;}
+  .pk-dot.on span{width:24px;background:var(--green);}
+  html[dir="rtl"] .pk-track{direction:ltr;}
+  html[dir="rtl"] .pk-card{direction:rtl;}
   .stat{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:6px 18px;border-right:1px solid var(--line);text-align:center;}
   .stat:last-child{border-right:none;}
   .stat:first-child{padding-left:18px;}
@@ -328,6 +369,23 @@
     .impact-head h2{font-size:16px;}
     .impact-link{font-size:12px;}
     .impact-stats{flex-wrap:nowrap;}
+    .ms-card{padding:16px;gap:14px;}
+    .ms-num{font-size:48px;}
+    .ms-unit{font-size:20px;}
+    .ms-next{font-size:14px;margin-left:0;flex-basis:100%;}
+    .ms-track{height:76px;}
+    .ms-bar,.ms-fill{top:10px;height:10px;}
+    .ms-node{width:32px;margin-left:-16px;}
+    .ms-dot{width:32px;height:32px;border-width:2px;}
+    .ms-node.done .ms-dot{border-width:3px;}
+    .ms-dot svg{width:13px;height:13px;}
+    .ms-lab{font-size:12px;}
+    .ms-chip{padding:10px 12px;gap:6px;}
+    .ms-chip b{font-size:24px;}
+    .ms-chip span{font-size:13px;}
+    .pk-head{font-size:19px;}
+    .pk-card{flex-basis:78vw;min-height:140px;padding:18px 20px;}
+    .pk-title{font-size:22px;}
     .stat{flex:1;border-right:1px solid var(--line);border-bottom:none;padding:0 4px;gap:3px;}
     .stat:first-child{padding-left:0;}
     .stat:last-child{border-right:none;}
@@ -493,24 +551,33 @@
           <h2 data-en="Your Impact" data-ar="أثرك">Your Impact</h2>
           <a class="impact-link" href="#" onclick="alert('Coming soon!'); return false;" data-en="View full dashboard →" data-ar="عرض لوحة المتابعة الكاملة ←">View full dashboard →</a>
         </div>
-        <div class="impact-stats">
-          <div class="stat">
-            <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></svg></span>
-            <div><div class="stat-num">TBC</div><div class="stat-label" data-en="Volunteer Hours" data-ar="ساعات التطوع">Volunteer Hours</div></div>
+        <div class="ms-card" id="impactCard">
+          <div class="ms-top">
+            <div class="ms-num" id="msHours">–</div>
+            <div class="ms-unit" data-en="hours given" data-ar="ساعة تطوع">hours given</div>
+            <div class="ms-next" id="msNext"></div>
           </div>
-          <div class="stat">
-            <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-8"/><path d="M12 13c-4 0-6-2-6-6 4 0 6 2 6 6z"/><path d="M12 13c4 0 6-3 6-7-4 0-6 3-6 7z"/></svg></span>
-            <div><div class="stat-num">TBC</div><div class="stat-label" data-en="Projects Joined" data-ar="المشاريع المنضم إليها">Projects Joined</div></div>
+          <div class="ms-track" aria-hidden="true">
+            <div class="ms-bar"></div><div class="ms-fill" id="msFill"></div>
+          <div class="ms-node" data-ms="10" style="left:12.5%;"><div class="ms-dot"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></div><div class="ms-lab" data-en="10 hrs" data-ar="10 ساعة">10 hrs</div></div>
+          <div class="ms-node" data-ms="25" style="left:37.5%;"><div class="ms-dot"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></div><div class="ms-lab" data-en="25 hrs" data-ar="25 ساعة">25 hrs</div></div>
+          <div class="ms-node" data-ms="50" style="left:62.5%;"><div class="ms-dot"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></div><div class="ms-lab" data-en="50 hrs" data-ar="50 ساعة">50 hrs</div></div>
+          <div class="ms-node" data-ms="100" style="left:87.5%;"><div class="ms-dot"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></div><div class="ms-lab" data-en="100 hrs" data-ar="100 ساعة">100 hrs</div></div>
           </div>
-          <div class="stat">
-            <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.9 6.4.6-4.9 4.3 1.5 6.3L12 16.9 6.4 20.1l1.5-6.3L3 9.5l6.4-.6z"/></svg></span>
-            <div><div class="stat-num">TBC</div><div class="stat-label" data-en="Events Attended" data-ar="الفعاليات التي تم حضورها">Events Attended</div></div>
-          </div>
-          <div class="stat">
-            <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 20c0-3 2.5-5 6-5s6 2 6 5"/><path d="M10 20c0-3 2.5-5 6-5s6 2 6 5"/></svg></span>
-            <div><div class="stat-num">TBC</div><div class="stat-label" data-en="Lives Supported" data-ar="حياة تم دعمها">Lives Supported</div></div>
+          <div class="ms-chips">
+            <div class="ms-chip"><b id="msProjects">–</b><span data-en="Projects joined" data-ar="المشاريع المنضم إليها">Projects joined</span></div>
+            <div class="ms-chip"><b id="msEvents">–</b><span data-en="Events attended" data-ar="الفعاليات التي تم حضورها">Events attended</span></div>
           </div>
         </div>
+      </div>
+    </div>
+    <div class="pk" id="whatsNew" style="display:none;">
+      <h2 class="pk-head" data-en="What's new at Feed a Friend" data-ar="جديد فيد أ فريند">What's new at Feed a Friend</h2>
+      <div class="pk-viewport" id="pkViewport"><div class="pk-track" id="pkTrack"></div></div>
+      <div class="pk-controls">
+        <button type="button" class="pk-nav" id="pkPrev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <div class="pk-dots" id="pkDots"></div>
+        <button type="button" class="pk-nav" id="pkNext" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
       </div>
     </div>
   </div>
@@ -686,6 +753,146 @@
     }
     const { data: profile } = await sb.from('profiles').select('first_name, role').eq('id', session.user.id).single();
     const name = (profile && profile.first_name) ? profile.first_name : '';
+
+    // ===== Your Impact: milestone journey (real numbers) =====
+    (async function loadImpact(){
+      const MS = [10, 25, 50, 100];
+      const isAr = () => document.documentElement.getAttribute('lang') === 'ar';
+      const hoursEl = document.getElementById('msHours');
+      const nextEl = document.getElementById('msNext');
+      const fillEl = document.getElementById('msFill');
+      const projEl = document.getElementById('msProjects');
+      const evEl = document.getElementById('msEvents');
+      if (!hoursEl) return;
+      try {
+        const uid = session.user.id;
+        const [logsRes, supRes] = await Promise.all([
+          sb.from('hour_logs').select('hours,project').eq('volunteer_id', uid).eq('status', 'approved'),
+          sb.from('signups').select('checked_in,did_not_attend').eq('volunteer_id', uid)
+        ]);
+        if (logsRes.error) throw logsRes.error;
+        const logs = logsRes.data || [];
+        const total = logs.reduce((n, l) => n + (Number(l.hours) || 0), 0);
+        const hrs = Math.round(total * 10) / 10;
+        const projects = new Set(logs.map(l => l.project).filter(Boolean)).size;
+        const events = ((supRes.data) || []).filter(x => x.checked_in && !x.did_not_attend).length;
+
+        hoursEl.textContent = hrs;
+        projEl.textContent = projects;
+        evEl.textContent = events;
+
+        // Bar: nodes sit at 12.5 / 37.5 / 62.5 / 87.5 %, so map hours piecewise between them
+        const pos = [12.5, 37.5, 62.5, 87.5];
+        let pct;
+        if (hrs >= 100) pct = 100;
+        else if (hrs >= 50) pct = 62.5 + (hrs - 50) / 50 * 25;
+        else if (hrs >= 25) pct = 37.5 + (hrs - 25) / 25 * 25;
+        else if (hrs >= 10) pct = 12.5 + (hrs - 10) / 15 * 25;
+        else pct = hrs / 10 * 12.5;
+        requestAnimationFrame(() => { fillEl.style.width = pct + '%'; });
+        document.querySelectorAll('.ms-node').forEach(n => {
+          n.classList.toggle('done', hrs >= Number(n.getAttribute('data-ms')));
+        });
+
+        const next = MS.find(m => m > hrs);
+        let en, ar;
+        if (!next) {
+          en = "You've reached every milestone. Thank you!";
+          ar = 'لقد وصلت إلى جميع المراحل. شكراً لك!';
+        } else if (hrs === 0) {
+          en = 'Log your first hours to start your journey.';
+          ar = 'سجّل ساعاتك الأولى لتبدأ رحلتك.';
+        } else {
+          const rem = Math.round((next - hrs) * 10) / 10;
+          en = rem + ' more hours to your ' + next + '-hour milestone';
+          ar = rem + ' ساعة أخرى للوصول إلى ' + next + ' ساعة';
+        }
+        nextEl.setAttribute('data-en', en);
+        nextEl.setAttribute('data-ar', ar);
+        nextEl.textContent = isAr() ? ar : en;
+      } catch (err) {
+        console.error('Impact stats failed:', err);
+      }
+    })();
+
+    // ===== What's new: peek carousel =====
+    // Reads active rows from a `banners` table if one exists; otherwise
+    // falls back to the built-in list below so the strip never sits empty.
+    (async function loadWhatsNew(){
+      const wrap = document.getElementById('whatsNew');
+      const track = document.getElementById('pkTrack');
+      if (!wrap || !track) return;
+      const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      const FALLBACK = [
+        {tag:'New', tag_ar:'جديد', title:'Share and Care is live', title_ar:'شارك واهتم متاح الآن', cta:'Browse items', cta_ar:'تصفّح الأغراض', url:'share-and-care.html', color:'#4A5BB0'},
+        {tag:'Books for Good', tag_ar:'كتب للخير', title:'Donate a book, share a story', title_ar:'تبرّع بكتاب وشارك قصة', cta:'See how to donate', cta_ar:'تعرّف على طريقة التبرع', url:'project-books-for-good.html', color:'#A63A4D'},
+        {tag:'Volunteers needed', tag_ar:'مطلوب متطوعون', title:'Pack baby boxes with us', title_ar:'جهّز صناديق المواليد معنا', cta:'Choose a shift', cta_ar:'اختر وردية', url:'project-welcome-baby.html', color:'#7B4FA6'},
+        {tag:'Little Learners', tag_ar:'المتعلمون الصغار', title:'Support a child’s education', title_ar:'ادعم تعليم طفل', cta:'Find out more', cta_ar:'اعرف المزيد', url:'project-little-learners.html', color:'#1F7F73'}
+      ];
+      let items = FALLBACK;
+      try {
+        const { data, error } = await sb.from('banners').select('*').eq('active', true).order('sort_order');
+        if (!error && data && data.length) {
+          items = data.map(r => ({
+            tag:r.tag||'', tag_ar:r.tag_ar||r.tag||'', title:r.title||'', title_ar:r.title_ar||r.title||'',
+            cta:r.cta_label||'Learn more', cta_ar:r.cta_label_ar||r.cta_label||'اعرف المزيد',
+            url:r.cta_url||'#', color:r.color||'#08752F'
+          }));
+        }
+      } catch (e) { /* table not there yet: keep fallback */ }
+
+      track.innerHTML = items.map(c =>
+        '<a class="pk-card" href="' + esc(c.url) + '" style="background:' + esc(c.color) + ';">' +
+          '<div><div class="pk-tag" data-en="' + esc(c.tag) + '" data-ar="' + esc(c.tag_ar) + '">' + esc(c.tag) + '</div>' +
+          '<div class="pk-title" data-en="' + esc(c.title) + '" data-ar="' + esc(c.title_ar) + '">' + esc(c.title) + '</div></div>' +
+          '<span class="pk-cta" data-en="' + esc(c.cta) + ' →" data-ar="' + esc(c.cta_ar) + ' ←">' + esc(c.cta) + ' →</span>' +
+        '</a>').join('');
+      wrap.style.display = '';
+      // apply the current language to the freshly added nodes
+      if (document.documentElement.getAttribute('lang') === 'ar') {
+        track.querySelectorAll('[data-en]').forEach(el => { el.textContent = el.getAttribute('data-ar'); });
+      }
+
+      const viewport = document.getElementById('pkViewport');
+      const dotsEl = document.getElementById('pkDots');
+      let idx = 0, timer = null;
+      const GAP = 16;
+      function metrics(){
+        const first = track.querySelector('.pk-card');
+        const cw = first ? first.offsetWidth : 560;
+        const visible = Math.max(1, Math.floor((viewport.clientWidth + GAP) / (cw + GAP)));
+        return { step: cw + GAP, max: Math.max(0, items.length - visible) };
+      }
+      function render(){
+        const m = metrics();
+        if (idx > m.max) idx = 0;
+        track.style.transform = 'translateX(-' + (idx * m.step) + 'px)';
+        let d = '';
+        for (let i = 0; i <= m.max; i++) {
+          d += '<button type="button" class="pk-dot' + (i === idx ? ' on' : '') + '" data-i="' + i + '" aria-label="Show cards from ' + (i + 1) + '"><span></span></button>';
+        }
+        dotsEl.innerHTML = d;
+        const multi = m.max > 0;
+        document.getElementById('pkPrev').style.visibility = multi ? '' : 'hidden';
+        document.getElementById('pkNext').style.visibility = multi ? '' : 'hidden';
+      }
+      function go(i){ const m = metrics(); idx = (i + m.max + 1) % (m.max + 1); render(); }
+      dotsEl.addEventListener('click', e => { const b = e.target.closest('.pk-dot'); if (b) { go(Number(b.getAttribute('data-i'))); restart(); } });
+      document.getElementById('pkPrev').addEventListener('click', () => { go(idx - 1); restart(); });
+      document.getElementById('pkNext').addEventListener('click', () => { go(idx + 1); restart(); });
+      function stop(){ if (timer) { clearInterval(timer); timer = null; } }
+      function start(){
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        stop(); timer = setInterval(() => go(idx + 1), 5000);
+      }
+      function restart(){ stop(); start(); }
+      wrap.addEventListener('mouseenter', stop);
+      wrap.addEventListener('mouseleave', start);
+      wrap.addEventListener('focusin', stop);
+      wrap.addEventListener('focusout', start);
+      window.addEventListener('resize', render);
+      render(); start();
+    })();
 
     // ===== Upcoming events ("What's Happening Next?") =====
     // Live from the same two sources as the calendar page: volunteer
