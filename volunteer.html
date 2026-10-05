@@ -45,11 +45,12 @@ const PROJECTS = [
   {id:"welcome-baby",label:"Welcome Baby",emoji:"👶",bg:"#9B59B6",light:"#F3E8FF",text:"#5B21B6"},
   {id:"community-fridges",label:"Community Fridges",emoji:"🧊",bg:"#E8732A",light:"#FFEDD5",text:"#9A3412"},
   {id:"little-learners",label:"Little Learners",emoji:"📚",bg:"#1A9E8F",light:"#CCFBF1",text:"#134E4A"},
-  {id:"pay-it-forward",label:"Pay it Forward",emoji:"🎁",bg:"#E74C3C",light:"#FEE2E2",text:"#991B1B"},
+  {id:"share-and-care",label:"Share and Care",emoji:"🤝",bg:"#2E86C1",light:"#DBEAFE",text:"#1E3A8A"},
   {id:"giving-garden",label:"Giving Garden",emoji:"🌱",bg:"#8E44AD",light:"#EDE9FE",text:"#4C1D95"},
   {id:"general",label:"General",emoji:"⭐",bg:"#607D8B",light:"#ECEFF1",text:"#37474F"},
 ];
-const gp = id => PROJECTS.find(p=>p.id===id)||PROJECTS[0];
+// Pay it Forward was replaced by Share and Care — old records still carrying the old id show as Share and Care.
+const gp = id => PROJECTS.find(p=>p.id===(id==="pay-it-forward"?"share-and-care":id))||PROJECTS[0];
 const commitLabel = o => o.commitment_hours ? " · ⏱ "+o.commitment_hours+" hrs/"+(o.commitment_frequency||"week") : "";
 
 async function sendEmail(type,name,email,adminEmail="",eventTitle=""){
@@ -1120,7 +1121,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
               const [name,project,activity,date,hours]=parts;
               const nameLower=name.toLowerCase();
               // Map spreadsheet project names to app project IDs
-              const projMap={"little learners":"little-learners","giving garden":"giving-garden","food boxes":"food-boxes","food-boxes":"food-boxes","packing/sorting":"food-boxes","packing sorting":"food-boxes","welcome baby":"welcome-baby","pay it forward":"pay-it-forward","community fridges":"community-fridges","funlabs":"little-learners","events":"food-boxes","arabic support":"little-learners","arabic-support":"little-learners"};
+              const projMap={"little learners":"little-learners","giving garden":"giving-garden","food boxes":"food-boxes","food-boxes":"food-boxes","packing/sorting":"food-boxes","packing sorting":"food-boxes","welcome baby":"welcome-baby","pay it forward":"share-and-care","share and care":"share-and-care","share-and-care":"share-and-care","community fridges":"community-fridges","funlabs":"little-learners","events":"food-boxes","arabic support":"little-learners","arabic-support":"little-learners"};
               const mappedProject=projMap[project.toLowerCase()]||project;
               const vol=allVols.find(v=>{
                 const full=(v.first_name+" "+v.surname).toLowerCase();
