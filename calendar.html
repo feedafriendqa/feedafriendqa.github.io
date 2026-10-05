@@ -112,6 +112,54 @@ html,body{height:100%;font-family:'Nunito Sans',sans-serif;background:#f4f7f4;co
 .spinner{width:22px;height:22px;border:3px solid #e4ede5;border-top-color:#2A6E35;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#2A6E35;color:#fff;padding:11px 24px;border-radius:50px;font-size:13px;font-weight:800;font-family:'Nunito',sans-serif;z-index:1000;box-shadow:0 4px 20px rgba(42,110,53,.3);white-space:nowrap;display:none;}
+
+/* ---- Bigger text on desktop ---- */
+@media(min-width:901px){
+.top{padding:16px 32px;}
+.brand img{height:60px;}
+.brand-name{font-size:26px;}
+.brand-sub{font-size:13px;}
+.ib{width:40px;height:40px;font-size:17px;}
+.abadge,#langBtn,#pendingBtn{font-size:14px!important;}
+.mnav span{font-size:24px;}
+.nb{width:38px;height:38px;font-size:17px;}
+.tdb{font-size:14px;padding:8px 16px;}
+.vt{font-size:15px;padding:8px 20px;}
+.chip{font-size:14px;padding:8px 16px;}
+.content{padding:16px 32px 0;}
+.dc{font-size:14px;padding:12px 0;}
+.day{padding:6px 8px;min-height:104px;}
+.dnum{width:30px;height:30px;font-size:15px;}
+.pip{font-size:13px;padding:4px 8px;gap:4px;margin-bottom:3px;border-radius:6px;}
+.more{font-size:12px;}
+.lev{margin-bottom:14px;}
+.ldate{min-width:84px;}
+.ld{font-size:34px;}
+.lm{font-size:13px;}
+.ltitle{font-size:19px;}
+.ptag,.ttag{font-size:13px;padding:4px 11px;}
+.ir{font-size:14px;}
+.ldesc{font-size:14px;}
+.li{font-size:13px;padding:5px 11px;}
+.btn{font-size:15px;padding:11px 24px;}
+.mh h2{font-size:22px;}
+.mh p{font-size:14px;}
+.fg label{font-size:13px;}
+.fi,.fs,.ft{font-size:15px;}
+.dmr{font-size:15px;}
+.pn,.vr label,.vct,.pb{font-size:14px;}
+}
+/* ---- Mobile: text wraps instead of being cut off ---- */
+@media(max-width:700px){
+.days{grid-template-rows:none;grid-auto-rows:minmax(86px,auto);}
+.day{overflow:visible;padding:3px;min-width:0;}
+.pip{white-space:normal;overflow:visible;text-overflow:clip;word-break:break-word;overflow-wrap:anywhere;align-items:flex-start;font-size:10px;line-height:1.2;padding:3px 4px;}
+.ltitle{white-space:normal;overflow-wrap:anywhere;}
+.ldesc{-webkit-line-clamp:3;}
+.chips-row{flex-wrap:wrap;overflow-x:visible;}
+.top-row2{row-gap:10px;}
+.cal{min-height:0;}
+}
 </style>
 </head>
 <body>
