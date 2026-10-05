@@ -172,11 +172,11 @@ const PROGS=[
   {id:"welcome-baby",  label:"Welcome Baby",       bg:"#9B59B6",tc:"#fff",   em:"👶"},
   {id:"community-fridges",label:"Community Fridges",bg:"#E8955A",tc:"#fff", em:"🥗"},
   {id:"little-learners",label:"Little Learners",   bg:"#3ABFBF",tc:"#fff",   em:"📚"},
-  {id:"pay-it-forward",label:"Pay it Forward",     bg:"#E07B3A",tc:"#fff",   em:"🎁"},
+  {id:"share-and-care",label:"Share and Care",     bg:"#4A5BB0",tc:"#fff",   em:"🤝"},
   {id:"giving-garden", label:"Giving Garden",      bg:"#7D3C98",tc:"#fff",   em:"🌱"},
 ];
 PROGS.forEach(p=>{p.labelEn=p.label;});
-const PROGS_AR={"food-boxes":"صناديق الطعام","welcome-baby":"مرحباً بالطفل","community-fridges":"ثلاجات المجتمع","little-learners":"المتعلمون الصغار","pay-it-forward":"رد الجميل","giving-garden":"حديقة العطاء"};
+const PROGS_AR={"food-boxes":"صناديق الطعام","welcome-baby":"مرحباً بالطفل","community-fridges":"ثلاجات المجتمع","little-learners":"المتعلمون الصغار","share-and-care":"شارك واهتم","giving-garden":"حديقة العطاء"};
 
 const MONTHS_EN=["January","February","March","April","May","June","July","August","September","October","November","December"];
 const MONTHS_AR=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
@@ -296,7 +296,8 @@ let authToken=null,authRefresh=null,authName="";
 const SESSION_KEY="faf_cal_session";
 let allEvents=[];
 
-const gp=id=>PROGS.find(p=>p.id===id)||PROGS[0];
+// Pay it Forward was replaced by Share and Care: older events tagged with the old id show as Share and Care.
+const gp=id=>PROGS.find(p=>p.id===(id==="pay-it-forward"?"share-and-care":id))||PROGS[0];
 const same=(a,b)=>a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
 const fmtD=d=>`${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 const f12=t=>{if(!t)return"";const[h,m]=t.split(":"),hh=+h;return`${hh>12?hh-12:hh||12}:${m} ${hh>=12?"PM":"AM"}`};

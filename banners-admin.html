@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Banners Admin — Feed a Friend</title>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{--green:#08752F;--green-dark:#065923;--charcoal:#2B2F2C;--muted:#4F5A54;--line:#EBEAE3;--panel:#F3F5F0;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--panel);color:var(--charcoal);font-family:'Nunito Sans',sans-serif;}
+h1,h2,h3{font-family:'League Spartan',sans-serif;color:var(--green);margin:0;letter-spacing:-0.02em}
+button,input,select{font-family:inherit;font-size:15px}
+.wrap{max-width:980px;margin:0 auto;padding:24px 20px 80px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.sub{color:var(--muted);margin:0 0 22px}
+.btn{border:0;border-radius:999px;padding:11px 20px;font-weight:800;cursor:pointer;background:var(--green);color:#fff}
+.btn:hover{background:var(--green-dark)}
+.btn.ghost{background:#fff;color:var(--green);border:2px solid #D3D9D0}
+.btn.danger{background:#fff;color:#B42318;border:2px solid #F2C4BF}
+.btn.small{padding:8px 14px;font-size:14px}
+.btn:disabled{opacity:.5;cursor:default}
+.card{background:#fff;border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:14px;margin-bottom:10px;flex-wrap:wrap}
+.card.off{opacity:.6}
+.sw{width:14px;align-self:stretch;border-radius:7px;flex-shrink:0}
+.info{flex:1;min-width:200px}
+.info .t{font-weight:800;font-size:17px}
+.info .m{color:var(--muted);font-size:14px;margin-top:2px}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:800;background:#E6F2EA;color:var(--green-dark)}
+.pill.off{background:#EBEAE3;color:var(--muted)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.panel{background:#fff;border-radius:18px;padding:22px;margin-bottom:22px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+label{display:block;font-weight:800;font-size:13px;margin:0 0 6px;color:var(--muted)}
+input[type=text],input[type=email],input[type=password],input[type=url]{width:100%;border:1.5px solid #D3D9D0;border-radius:12px;padding:11px 13px;background:#fff}
+input:focus{outline:3px solid #BFE0C8;border-color:var(--green)}
+.full{grid-column:1/-1}
+.colors{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.colors button{width:36px;height:36px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1.5px #C3CCC1;cursor:pointer}
+.colors button.on{box-shadow:0 0 0 3px var(--charcoal)}
+.hint{font-size:13px;color:var(--muted);margin-top:6px}
+.warn{color:#B42318;font-weight:700}
+.preview{margin-top:6px;border-radius:20px;color:#fff;padding:22px 26px;min-height:150px;display:flex;flex-direction:column;justify-content:space-between;gap:14px;max-width:560px}
+.preview .tag{font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.preview .title{margin-top:6px;font-family:'League Spartan',sans-serif;font-weight:900;font-size:26px;line-height:1.08}
+.preview .cta{font-weight:800;text-decoration:underline}
+.msg{padding:10px 14px;border-radius:12px;margin-bottom:14px;font-weight:700}
+.msg.ok{background:#E6F2EA;color:var(--green-dark)}
+.msg.err{background:#FDECEA;color:#B42318}
+.center{max-width:380px;margin:12vh auto;background:#fff;border-radius:18px;padding:26px}
+.center .grid{grid-template-columns:1fr}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><p class="sub">Loading…</p></div>
+<script>
+const sb = supabase.createClient(
+  "https://xbxagukdvgyaoqvbqoic.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4"
+);
+const app = document.getElementById('app');
+const PRESETS = ['#4A5BB0', '#A63A4D', '#7B4FA6', '#1F7F73', '#B5601F', '#08752F'];
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let rows = [];
+let form = null;      // null = list only; object = add/edit form open
+let notice = null;    // {kind:'ok'|'err', text}
+
+function lum(hex){
+  const n = parseInt(hex.slice(1), 16);
+  const f = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  return 0.2126 * f((n >> 16) & 255) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
+}
+function whiteContrast(hex){ return 1.05 / (lum(hex) + 0.05); }
+function safeUrl(u){
+  u = (u || '').trim();
+  if (!u) return '';
+  if (/^https?:\/\//i.test(u)) return u;
+  if (/^[a-z0-9][a-z0-9._\-\/]*(\?[^\s]*)?(#[^\s]*)?$/i.test(u) && !/^[a-z][a-z0-9+.\-]*:/i.test(u)) return u;
+  return null;
+}
+
+async function boot(){
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return renderLogin();
+  const { data: p } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
+  if (!p || !['admin', 'superadmin'].includes(p.role)) {
+    app.innerHTML = '<div class="center"><h2>Admins only</h2><p class="sub">This page is for Feed a Friend admins. <a href="connect.html">Back to Connect</a></p></div>';
+    return;
+  }
+  await load();
+}
+function renderLogin(err){
+  app.innerHTML = '<div class="center"><h2>Banners admin</h2><p class="sub">Sign in with your admin account.</p>' +
+    (err ? '<div class="msg err">' + esc(err) + '</div>' : '') +
+    '<div class="grid"><div><label for="em">Email</label><input id="em" type="email" autocomplete="email"></div>' +
+    '<div><label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password"></div>' +
+    '<button class="btn" id="go">Sign in</button></div></div>';
+  document.getElementById('go').onclick = async () => {
+    const { error } = await sb.auth.signInWithPassword({ email: document.getElementById('em').value.trim(), password: document.getElementById('pw').value });
+    if (error) renderLogin(error.message); else boot();
+  };
+}
+async function load(){
+  const { data, error } = await sb.from('banners').select('*').order('sort_order');
+  if (error) { notice = { kind: 'err', text: error.message }; rows = []; } else rows = data || [];
+  render();
+}
+function blank(){ return { id: null, tag: '', tag_ar: '', title: '', title_ar: '', cta_label: 'Learn more', cta_label_ar: 'اعرف المزيد', cta_url: '', color: PRESETS[0], active: true }; }
+
+function render(){
+  let h = '<div class="top"><div><h1>What\'s new banners</h1></div><div class="acts"><a class="btn ghost small" href="connect.html" style="text-decoration:none">← Back to Connect</a><button class="btn small" id="add">+ Add banner</button></div></div>' +
+    '<p class="sub">These are the cards in the "What\'s new at Feed a Friend" strip on the Connect page, in the order shown. Switch one off to hide it without deleting it.</p>';
+  if (notice) h += '<div class="msg ' + notice.kind + '">' + esc(notice.text) + '</div>';
+  if (form) h += formHtml();
+  h += rows.length ? rows.map((r, i) =>
+    '<div class="card' + (r.active ? '' : ' off') + '"><div class="sw" style="background:' + esc(r.color) + '"></div>' +
+    '<div class="info"><div class="t">' + esc(r.title) + '</div><div class="m">' + esc(r.tag) + ' · ' + esc(r.cta_label) + ' → ' + esc(r.cta_url) + '</div>' +
+    '<div style="margin-top:6px"><span class="pill' + (r.active ? '' : ' off') + '">' + (r.active ? 'Showing' : 'Hidden') + '</span></div></div>' +
+    '<div class="acts">' +
+    '<button class="btn ghost small" data-act="up" data-id="' + r.id + '"' + (i === 0 ? ' disabled' : '') + ' aria-label="Move up">↑</button>' +
+    '<button class="btn ghost small" data-act="down" data-id="' + r.id + '"' + (i === rows.length - 1 ? ' disabled' : '') + ' aria-label="Move down">↓</button>' +
+    '<button class="btn ghost small" data-act="toggle" data-id="' + r.id + '">' + (r.active ? 'Hide' : 'Show') + '</button>' +
+    '<button class="btn ghost small" data-act="edit" data-id="' + r.id + '">Edit</button>' +
+    '<button class="btn danger small" data-act="del" data-id="' + r.id + '">Delete</button></div></div>').join('')
+    : '<div class="panel">No banners yet. Add your first one.</div>';
+  app.innerHTML = h;
+  document.getElementById('add').onclick = () => { form = blank(); notice = null; render(); window.scrollTo(0, 0); };
+  app.querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(b.dataset.act, b.dataset.id));
+  if (form) wireForm();
+}
+
+function formHtml(){
+  const f = form;
+  const warn = whiteContrast(f.color) < 4.5;
+  return '<div class="panel"><h2 style="margin-bottom:14px">' + (f.id ? 'Edit banner' : 'New banner') + '</h2><div class="grid">' +
+    '<div><label for="f_tag">Small label (English)</label><input type="text" id="f_tag" value="' + esc(f.tag) + '" placeholder="e.g. Volunteers needed"></div>' +
+    '<div><label for="f_tag_ar">Small label (Arabic)</label><input type="text" id="f_tag_ar" dir="rtl" value="' + esc(f.tag_ar) + '"></div>' +
+    '<div><label for="f_title">Headline (English) *</label><input type="text" id="f_title" value="' + esc(f.title) + '" placeholder="e.g. Pack baby boxes with us"></div>' +
+    '<div><label for="f_title_ar">Headline (Arabic)</label><input type="text" id="f_title_ar" dir="rtl" value="' + esc(f.title_ar) + '"></div>' +
+    '<div><label for="f_cta">Button text (English)</label><input type="text" id="f_cta" value="' + esc(f.cta_label) + '"></div>' +
+    '<div><label for="f_cta_ar">Button text (Arabic)</label><input type="text" id="f_cta_ar" dir="rtl" value="' + esc(f.cta_label_ar) + '"></div>' +
+    '<div class="full"><label for="f_url">Where it links to *</label><input type="text" id="f_url" value="' + esc(f.cta_url) + '" placeholder="project-welcome-baby.html or https://…"><div class="hint">A page on this site (like project-welcome-baby.html) or a full https:// link.</div></div>' +
+    '<div class="full"><label>Colour</label><div class="colors">' +
+    PRESETS.map(c => '<button type="button" data-c="' + c + '" class="' + (c.toLowerCase() === f.color.toLowerCase() ? 'on' : '') + '" style="background:' + c + '" aria-label="Colour ' + c + '"></button>').join('') +
+    '<input type="color" id="f_color" value="' + esc(f.color) + '" aria-label="Custom colour" style="width:44px;height:36px;border:0;padding:0;background:none"></div>' +
+    '<div class="hint warn" id="warn"' + (warn ? '' : ' hidden') + '>This colour is too light for white text. Pick a darker one so the card is readable.</div></div>' +
+    '<div class="full"><label><input type="checkbox" id="f_active"' + (f.active ? ' checked' : '') + '> Show this banner on the Connect page</label></div>' +
+    '<div class="full"><label>Preview</label><div class="preview" id="pv" style="background:' + esc(f.color) + '"><div><div class="tag" id="pv_tag">' + esc(f.tag) + '</div><div class="title" id="pv_title">' + esc(f.title || 'Your headline here') + '</div></div><div class="cta" id="pv_cta">' + esc(f.cta_label) + ' →</div></div></div>' +
+    '</div><div class="acts" style="margin-top:16px"><button class="btn" id="save">Save banner</button><button class="btn ghost" id="cancel">Cancel</button></div></div>';
+}
+function readForm(){
+  const g = id => document.getElementById(id).value;
+  form.tag = g('f_tag'); form.tag_ar = g('f_tag_ar'); form.title = g('f_title'); form.title_ar = g('f_title_ar');
+  form.cta_label = g('f_cta'); form.cta_label_ar = g('f_cta_ar'); form.cta_url = g('f_url');
+  form.color = g('f_color'); form.active = document.getElementById('f_active').checked;
+}
+function wireForm(){
+  ['f_tag','f_title','f_cta'].forEach(id => document.getElementById(id).addEventListener('input', () => {
+    readForm();
+    document.getElementById('pv_tag').textContent = form.tag;
+    document.getElementById('pv_title').textContent = form.title || 'Your headline here';
+    document.getElementById('pv_cta').textContent = form.cta_label + ' →';
+  }));
+  document.getElementById('f_color').addEventListener('input', () => { readForm(); render(); });
+  app.querySelectorAll('.colors [data-c]').forEach(b => b.onclick = () => { readForm(); form.color = b.dataset.c; render(); });
+  document.getElementById('cancel').onclick = () => { form = null; render(); };
+  document.getElementById('save').onclick = save;
+}
+async function save(){
+  readForm();
+  const url = safeUrl(form.cta_url);
+  if (!form.title.trim()) { notice = { kind: 'err', text: 'Please add a headline.' }; render(); return; }
+  if (url === null || url === '') { notice = { kind: 'err', text: 'The link must be a page on this site (like project-welcome-baby.html) or start with https://' }; render(); return; }
+  const rec = {
+    tag: form.tag.trim(), tag_ar: form.tag_ar.trim() || null, title: form.title.trim(), title_ar: form.title_ar.trim() || null,
+    cta_label: form.cta_label.trim() || 'Learn more', cta_label_ar: form.cta_label_ar.trim() || null,
+    cta_url: url, color: form.color, active: form.active, updated_at: new Date().toISOString()
+  };
+  let error;
+  if (form.id) ({ error } = await sb.from('banners').update(rec).eq('id', form.id));
+  else { rec.sort_order = rows.length ? Math.max(...rows.map(r => r.sort_order)) + 10 : 10; ({ error } = await sb.from('banners').insert(rec)); }
+  notice = error ? { kind: 'err', text: error.message } : { kind: 'ok', text: 'Saved. It will show on the Connect page right away.' };
+  if (!error) form = null;
+  await load();
+}
+async function act(a, id){
+  const i = rows.findIndex(r => r.id === id); const r = rows[i];
+  notice = null;
+  if (a === 'edit') { form = { ...r, tag_ar: r.tag_ar || '', title_ar: r.title_ar || '', cta_label_ar: r.cta_label_ar || '' }; render(); window.scrollTo(0, 0); return; }
+  let error;
+  if (a === 'toggle') ({ error } = await sb.from('banners').update({ active: !r.active, updated_at: new Date().toISOString() }).eq('id', id));
+  else if (a === 'del') {
+    if (!confirm('Delete "' + r.title + '"? This cannot be undone. (Hide it instead to keep it.)')) return;
+    ({ error } = await sb.from('banners').delete().eq('id', id));
+  } else if (a === 'up' || a === 'down') {
+    const j = a === 'up' ? i - 1 : i + 1; const o = rows[j]; if (!o) return;
+    const r1 = await sb.from('banners').update({ sort_order: o.sort_order }).eq('id', r.id);
+    const r2 = await sb.from('banners').update({ sort_order: r.sort_order }).eq('id', o.id);
+    error = r1.error || r2.error;
+    if (!error && r.sort_order === o.sort_order) {
+      // equal values can't be swapped: renumber the whole list
+      const order = rows.map(x => x.id); [order[i], order[j]] = [order[j], order[i]];
+      for (let k = 0; k < order.length; k++) await sb.from('banners').update({ sort_order: (k + 1) * 10 }).eq('id', order[k]);
+    }
+  }
+  if (error) notice = { kind: 'err', text: error.message };
+  await load();
+}
+boot();
+</script>
+</body>
+</html>
