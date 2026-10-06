@@ -110,6 +110,17 @@ html[dir="rtl"] .mobile-menu-link{flex-direction:row-reverse;text-align:right;}
 .badge-pending_payment{background:#fff3d6;color:#9a6800;}
 .badge-rejected{background:#fde8e8;color:#a83232;}
 .badge-default{background:#eceff1;color:#546e7a;}
+.ll-sum{display:flex;gap:10px;flex-wrap:wrap;margin:-4px 0 14px;}
+.ll-chip{font-size:13px;font-weight:700;padding:7px 14px;border-radius:20px;background:var(--panel);color:var(--charcoal);}
+.ll-chip b{font-weight:800;}
+.ll-bank{display:none;margin-top:10px;background:var(--panel);border-radius:12px;padding:12px 14px;font-size:13px;}
+.ll-bank.open{display:block;}
+.ll-bank .row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.06);}
+.ll-bank .row:last-of-type{border-bottom:none;}
+.ll-bank .row span{color:var(--muted);}
+.ll-bank .row b{color:var(--charcoal);direction:ltr;unicode-bidi:isolate;text-align:right;}
+.ll-bank .tip{margin-top:8px;font-size:12px;color:#9a6800;line-height:1.5;}
+.ll-link-btn{display:inline-block;margin-top:8px;margin-inline-end:8px;border:none;background:none;color:var(--green);font-size:12px;font-weight:800;text-decoration:underline;cursor:pointer;padding:0;}
 
 .empty-state{padding:60px 10px;text-align:center;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:18px;}
 .empty-state .ic{font-size:38px;display:block;margin-bottom:12px;}
@@ -348,6 +359,15 @@ html[dir="rtl"] .event-time{text-align:left;}
         <div id="spon-list"></div>
       </div>
       <input type="file" id="proof-file-input" accept="image/*" style="display:none" onchange="handleProofFileSelected(this)">
+
+      <div id="ll-section" style="display:none">
+        <div class="section-head" style="margin-top:36px;">
+          <h2 data-en="Little Learners sponsorships" data-ar="كفالات المتعلّمين الصغار">Little Learners sponsorships</h2>
+        </div>
+        <div class="ll-sum" id="ll-sum"></div>
+        <div class="events-card"><div id="ll-list"></div></div>
+        <input type="file" id="ll-proof-input" accept="image/*,.pdf" style="display:none" onchange="handleLLProofSelected(this)">
+      </div>
     </div>
 
     <div class="side-col">
@@ -412,6 +432,7 @@ function setLang(lang){
   });
   sessionStorage.setItem("faf_lang", lang);
   renderList(window.lastSponsorships || []);
+  if(typeof renderLL === 'function') renderLL(window.lastLL || []);
 }
 document.getElementById("langToggleBtn").addEventListener("click", function(){
   var current = document.documentElement.getAttribute("lang") === "ar" ? "ar" : "en";
@@ -683,6 +704,125 @@ async function loadSponsorships(userId){
   renderList(rows);
 }
 
+
+// ── Little Learners sponsorships (child sponsorships made on the Little Learners sponsor page) ──
+var LL_STATUS = {
+  received: { en: "Payment received", ar: "تم استلام الدفع", cls: "badge-paid" },
+  sent: { en: "Proof uploaded — confirming", ar: "تم رفع الإثبات — قيد التأكيد", cls: "badge-uploaded" },
+  pending: { en: "Payment due", ar: "الدفع مستحق", cls: "badge-pending_payment" },
+  flagged: { en: "Needs review", ar: "يحتاج مراجعة", cls: "badge-discrepancy" },
+  expired: { en: "Expired — released", ar: "انتهت المهلة — أُعيد الطفل", cls: "badge-default" }
+};
+function llDigits(str, isAr){
+  if(!isAr) return str;
+  return String(str).replace(/[0-9]/g, function(d){ return "٠١٢٣٤٥٦٧٨٩"[d]; });
+}
+function llEsc(x){
+  return String(x == null ? "" : x).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; });
+}
+function llTimeLeft(expiresAt, isAr){
+  var ms = new Date(expiresAt).getTime() - Date.now();
+  if(!(ms > 0)) return "";
+  var h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+  return isAr ? ("الوقت المتبقي للدفع: " + h + " س " + m + " د") : ("Pay within " + h + "h " + m + "m");
+}
+async function loadLLPledges(){
+  try{
+    var res = await sbClient.rpc("my_ll_pledges");
+    if(res.error) throw res.error;
+    renderLL(res.data || []);
+  }catch(e){
+    console.warn("Could not load Little Learners sponsorships (non-fatal):", e);
+  }
+}
+function renderLL(rows){
+  window.lastLL = rows;
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  var sect = document.getElementById("ll-section");
+  if(!rows || !rows.length){ sect.style.display = "none"; return; }
+  sect.style.display = "";
+  var paid = 0, due = 0, dueKnown = true;
+  rows.forEach(function(r){
+    var st = r.effective_status;
+    if(st === "received" && r.amount) paid += Number(r.amount);
+    if(st === "pending" || st === "sent" || st === "flagged"){ if(st === "pending" && r.amount) due += Number(r.amount); else if(st === "pending") dueKnown = false; }
+  });
+  var qar = isAr ? "ر.ق" : "QAR";
+  var fmt = function(n){ return llDigits(isAr ? (n + " " + qar) : (qar + " " + n), isAr); };
+  document.getElementById("ll-sum").innerHTML =
+    '<span class="ll-chip">' + (isAr ? "المدفوع: " : "Paid: ") + '<b>' + fmt(paid) + '</b></span>' +
+    '<span class="ll-chip">' + (isAr ? "المستحق: " : "Due: ") + '<b>' + (dueKnown ? fmt(due) : (isAr ? "سنؤكد المبلغ" : "Amount to be confirmed")) + '</b></span>';
+
+  document.getElementById("ll-list").innerHTML = rows.map(function(r){
+    var st = LL_STATUS[r.effective_status] || { en: r.effective_status, ar: r.effective_status, cls: "badge-default" };
+    var date = llDigits(new Date(r.created_at).toLocaleDateString(isAr ? "ar-QA-u-ca-gregory" : "en-GB", { day: "numeric", month: "short", year: "numeric" }), isAr);
+    var yg = r.year_group ? " · " + llDigits(llEsc(isAr ? r.year_group.replace(/^year\s*(\d+)$/i, "السنة $1") : r.year_group), isAr) : "";
+    var amountTxt = r.amount ? fmt(Number(r.amount)) : (isAr ? "المبلغ يُؤكَّد" : "Amount TBC");
+    var isDue = r.effective_status === "pending";
+    var left = isDue ? llTimeLeft(r.expires_at, isAr) : "";
+    var actions = "";
+    if(isDue || r.effective_status === "flagged"){
+      actions =
+        '<button class="ll-link-btn" onclick="toggleLLBank(\'' + r.id + '\')">' + (isAr ? "تفاصيل الدفع" : "Payment details") + '</button>' +
+        '<button class="upload-proof-btn" style="display:inline-block;" id="ll-up-' + r.id + '" onclick="startLLProof(\'' + r.id + '\')">' + (isAr ? "رفع إثبات الدفع" : "Upload proof of payment") + '</button>' +
+        '<div class="ll-bank" id="ll-bank-' + r.id + '">' +
+          '<div class="row"><span>' + (isAr ? "اسم البنك" : "Bank") + '</span><b>QNB</b></div>' +
+          '<div class="row"><span>' + (isAr ? "اسم الحساب" : "Account name") + '</span><b>Together for Good Events</b></div>' +
+          '<div class="row"><span>' + (isAr ? "رقم الحساب" : "Account number") + '</span><b>0250227446001</b></div>' +
+          '<div class="row"><span>IBAN</span><b>QA21QNBA000000000250227446001</b></div>' +
+          '<div class="row"><span>SWIFT</span><b>QNBAQAQAXXX</b></div>' +
+          '<div class="row"><span>' + (isAr ? "فوران — نوع الحساب" : "Fawran — account type") + '</span><b>' + (isAr ? "شركات / أعمال" : "Corporate / Business") + '</b></div>' +
+          '<div class="row"><span>' + (isAr ? "فوران — رقم السجل التجاري" : "Fawran — CR number") + '</span><b>229085</b></div>' +
+          '<div class="tip">' + (isAr ? "⚠️ اختر «شركات/أعمال» في فوران، وإذا طُلب الغرض فاختر «سلع وخدمات».": "⚠️ Choose Corporate/Business on Fawran, and “Goods and Services” if asked for a purpose.") + '</div>' +
+        '</div>';
+    }
+    return '<div class="event-row" id="ll-row-' + r.id + '">' +
+      '<div class="event-thumb">💚</div>' +
+      '<div class="event-mid">' +
+        '<div class="t">' + (isAr ? "كفالة " : "Sponsoring ") + llEsc(r.child_display_name) + '</div>' +
+        '<div class="l">' + date + yg + '</div>' +
+        (left ? '<div class="l" style="color:#9a6800;font-weight:700;">⏱️ ' + llDigits(left, isAr) + '</div>' : '') +
+        actions +
+        '<div class="auth-err" id="ll-err-' + r.id + '" style="display:none;"></div>' +
+      '</div>' +
+      '<div class="event-time"><div class="amt">' + amountTxt + '</div><span class="badge ' + st.cls + '">' + (isAr ? st.ar : st.en) + '</span></div>' +
+    '</div>';
+  }).join("");
+}
+function toggleLLBank(id){
+  var el = document.getElementById("ll-bank-" + id);
+  if(el) el.classList.toggle("open");
+}
+var llProofTarget = null;
+function startLLProof(id){
+  llProofTarget = id;
+  document.getElementById("ll-proof-input").click();
+}
+async function handleLLProofSelected(input){
+  var file = input.files && input.files[0];
+  input.value = "";
+  if(!file || !llProofTarget) return;
+  var id = llProofTarget;
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  var btn = document.getElementById("ll-up-" + id);
+  var errEl = document.getElementById("ll-err-" + id);
+  if(errEl) errEl.style.display = "none";
+  if(btn){ btn.disabled = true; btn.textContent = isAr ? "جارٍ الرفع…" : "Uploading…"; }
+  try{
+    var ext = ((file.name.split(".").pop()) || "jpg").toLowerCase();
+    var path = id + "/proof_" + Date.now() + "." + ext;
+    var up = await sbClient.storage.from("sponsorship-proofs").upload(path, file, { upsert: true, contentType: file.type || "application/octet-stream" });
+    if(up.error) throw new Error(up.error.message);
+    var rpc = await sbClient.rpc("attach_sponsor_proof", { p_pledge_id: id, p_proof_path: path });
+    if(rpc.error) throw new Error(rpc.error.message);
+    if(!rpc.data || !rpc.data.success) throw new Error((rpc.data && rpc.data.error) || "Could not save your proof — please try again.");
+    loadLLPledges();
+  }catch(e){
+    if(errEl){ errEl.textContent = (isAr ? "فشل الرفع: " : "Upload failed: ") + e.message; errEl.style.display = "block"; }
+    if(btn){ btn.disabled = false; btn.textContent = isAr ? "رفع إثبات الدفع" : "Upload proof of payment"; }
+  }
+}
+
 function revealPaymentsContent(user, session){
   window.currentAuthUser = user;
   window.currentAuthSession = session || null;
@@ -690,6 +830,7 @@ function revealPaymentsContent(user, session){
   document.getElementById("payments-content").style.display = "grid";
   loadSponsorships(user.id);
   loadPledgeData(user.id);
+  loadLLPledges();
 }
 
 // Recognizes an existing Connect session automatically — Supabase Auth

@@ -307,6 +307,29 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 .empty .eicon{font-size:26px;margin-bottom:10px;width:52px;height:52px;border-radius:50%;background:var(--lime-soft);display:flex;align-items:center;justify-content:center;margin-left:auto;margin-right:auto;}
 .empty p{font-size:13px;font-weight:600;max-width:280px;margin:0 auto;line-height:1.5;}
 .loading{text-align:center;padding:30px;color:var(--muted);font-weight:600;}
+.sp-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px;}
+.sp-tile{background:#fff;border-radius:var(--rs);padding:10px 8px;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,.06);cursor:pointer;border:2px solid transparent;}
+.sp-tile.on{border-color:var(--teal);}
+.sp-tile .n{font-size:22px;font-weight:900;color:var(--forest);}
+.sp-tile .l{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin-top:2px;}
+.sp-tile.hot .n{color:var(--coral);}
+.sp-card{background:#fff;border-radius:var(--r);box-shadow:0 2px 10px rgba(0,0,0,.06);padding:14px;margin-bottom:10px;border-left:5px solid var(--border);}
+.sp-card.fu-confirm{border-left-color:#2c5aa8;} .sp-card.fu-chase{border-left-color:var(--gold);} .sp-card.fu-issue{border-left-color:var(--coral);} .sp-card.fu-done{border-left-color:var(--lime);} .sp-card.fu-released{border-left-color:#b0b8b4;opacity:.85;}
+.sp-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.sp-who{font-weight:900;font-size:15px;color:var(--forest);}
+.sp-who small{font-weight:700;color:var(--muted);font-size:12px;}
+.sp-sub{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5;}
+.sp-badge{font-size:10.5px;font-weight:800;padding:4px 10px;border-radius:50px;white-space:nowrap;height:fit-content;}
+.sp-badge.confirm{background:#e5eefc;color:#2c5aa8;} .sp-badge.chase{background:#fff3d6;color:#9a6800;} .sp-badge.issue{background:#fde8e8;color:#a83232;} .sp-badge.done{background:#e0f7fa;color:#007a6e;} .sp-badge.released{background:#eceff1;color:#546e7a;}
+.sp-fu{margin-top:8px;font-size:12.5px;font-weight:800;color:var(--forest);}
+.sp-body{display:grid;grid-template-columns:90px 1fr;gap:12px;margin-top:10px;}
+.sp-body img{width:90px;height:90px;object-fit:cover;border-radius:10px;cursor:pointer;background:var(--cream);}
+.sp-noproof{width:90px;height:90px;border-radius:10px;background:var(--cream);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--muted);text-align:center;}
+.sp-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.sp-row-in{display:flex;gap:8px;flex-wrap:wrap;}
+.sp-row-in input{padding:7px 10px;border-radius:8px;border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:12.5px;}
+.sp-need{background:#fff;border-radius:var(--rs);padding:10px 12px;margin-bottom:6px;font-size:12.5px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.sp-need b{color:var(--forest);} .sp-need span{color:var(--coral);font-weight:700;font-size:11.5px;}
 </style>
 </head>
 <body>
@@ -368,6 +391,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
   <button class="bb-item" onclick="goToLearners()"><div class="bb-ic">🌟</div><div class="bb-tx">Learners</div></button>
   <button class="bb-item" id="bb-assess-days" onclick="showPg('assess-days',this)"><div class="bb-ic">📅</div><div class="bb-tx">Events</div></button>
   <button class="bb-item" onclick="showPg('qid-signin',this)"><div class="bb-ic">🪪</div><div class="bb-tx">QID Sign-In</div></button>
+  <button class="bb-item" id="bb-sponsorships" style="display:none;" onclick="goToSponsorships(this)"><div class="bb-ic">💚</div><div class="bb-tx">Sponsors</div></button>
   <button class="bb-item" onclick="toggleProfileMenu()"><div class="bb-ic">👤</div><div class="bb-tx" id="bb-profile-name">Profile</div></button>
 </div>
 
@@ -441,6 +465,27 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
   </div>
   <div id="learners-list"><div class="loading">Loading…</div></div>
 </div>
+
+<!-- SPONSORSHIPS (super admin only) -->
+<div class="pg" id="pg-sponsorships">
+  <div style="height:12px;"></div>
+  <div class="gp-sect" style="margin:0 0 4px;"><div class="gp-badge">💚</div><div class="sec-title" style="margin-bottom:0;">Sponsorships <span class="pill" id="sp-count">0</span></div></div>
+  <div style="font-size:12px;color:#6b7280;margin:0 0 12px 41px;">Who has sponsored whom, what has been paid, and what needs following up. Super admin only.</div>
+  <div class="sp-sum" id="sp-sum"></div>
+  <div id="sp-list"><div class="loading">Loading…</div></div>
+
+  <div class="gp-sect" style="margin:22px 0 6px;"><div class="gp-badge">🙋</div><div class="sec-title" style="margin-bottom:0;">Still needing a sponsor <span class="pill" id="sp-need-count">0</span></div></div>
+  <div style="font-size:12px;color:#6b7280;margin:0 0 10px 41px;">Children marked Needs Sponsor. Anything in red is stopping them from showing on the public sponsor page.</div>
+  <div id="sp-need-list"></div>
+
+  <div class="gp-sect" style="margin:22px 0 6px;"><div class="gp-badge">🏦</div><div class="sec-title" style="margin-bottom:0;">Match a bank statement</div></div>
+  <div style="font-size:12px;color:#6b7280;margin:0 0 10px 41px;">Upload a CSV from the bank to find payments for pledges that have a receipt waiting.</div>
+  <input type="file" accept=".csv,text/csv" onchange="spHandleCsv(this)" style="margin-bottom:8px;">
+  <div id="sp-csv-status"></div>
+  <div id="sp-matches"></div>
+</div>
+
+<div class="lightbox" id="sp-lightbox" onclick="this.classList.remove('open')" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;"><img id="sp-lightbox-img" style="max-width:94vw;max-height:90vh;border-radius:10px;"></div>
 
 <!-- EVENTS (assessment days, workshops, socials) -->
 <div class="pg" id="pg-assess-days">
@@ -864,6 +909,7 @@ async function loadData() {
   } else if(currentUserRole!=='admin' && document.getElementById('pg-assess-days')?.classList.contains('active')) {
     showPg('dash', document.querySelector('.bb-item'));
   }
+  await detectSuperAdmin();
   populateHandlerFilter();
   populateAgeBandSelect();
   populateAgeFilterSelect();
@@ -4584,6 +4630,227 @@ function renderLearnerProfile(f, children, focusChildId) {
       if(data?.signedUrl) { const img = document.getElementById('lp-img-'+c.id); if(img) img.src = data.signedUrl; }
     });
   }
+}
+
+// ── SPONSORSHIPS (super admin only) ──
+// The data comes from admin_sponsorships_overview(), which checks is_super_admin() on the
+// database side too — hiding the tab alone is not the only protection.
+function esc(t) { return String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+let isSuperAdmin = false;
+let spRows = [];
+let spFilter = 'followup';
+
+async function detectSuperAdmin() {
+  isSuperAdmin = false;
+  try {
+    const { data: { user } } = await db.auth.getUser();
+    if(user) {
+      const { data } = await db.rpc('is_super_admin', { check_user_id: user.id });
+      isSuperAdmin = data === true;
+    }
+  } catch(e) { isSuperAdmin = false; }
+  const btn = document.getElementById('bb-sponsorships');
+  if(btn) btn.style.display = isSuperAdmin ? 'flex' : 'none';
+  if(!isSuperAdmin && document.getElementById('pg-sponsorships')?.classList.contains('active')) {
+    showPg('dash', document.querySelector('.bb-item'));
+  }
+}
+
+function goToSponsorships(btn) {
+  if(!isSuperAdmin) return;
+  showPg('sponsorships', btn);
+  loadSponsorshipsAdmin();
+}
+
+// How urgent is each pledge, and what should you do about it
+function spFollowUp(r) {
+  const st = r.effective_status;
+  const hoursLeft = r.expires_at ? (new Date(r.expires_at).getTime() - Date.now()) / 3600000 : null;
+  const daysOld = (Date.now() - new Date(r.created_at).getTime()) / 86400000;
+  if(st === 'sent')    return { cls:'confirm', badge:'Confirm payment', fu:'🧾 Receipt uploaded' + (daysOld >= 2 ? ' ' + Math.floor(daysOld) + ' days ago' : '') + ' — check it against the bank and mark received.', group:'followup', card:'fu-confirm' };
+  if(st === 'flagged') return { cls:'issue', badge:'Issue flagged', fu:'🚩 ' + (r.staff_note ? esc(r.staff_note) : 'Flagged — follow up with the sponsor.'), group:'followup', card:'fu-issue' };
+  if(st === 'pending') {
+    const left = hoursLeft != null ? Math.max(0, Math.floor(hoursLeft)) + 'h left on the hold' : '';
+    const urgent = hoursLeft != null && hoursLeft < 12;
+    return { cls:'chase', badge:'Awaiting payment', fu:(urgent ? '⏰ Chase today — ' : '⏳ ') + left + '. No receipt yet.', group: urgent ? 'followup' : 'waiting', card:'fu-chase' };
+  }
+  if(st === 'received') return { cls:'done', badge:'Paid', fu:'✅ Payment confirmed' + (r.resolved_at ? ' on ' + new Date(r.resolved_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '') + '.', group:'paid', card:'fu-done' };
+  return { cls:'released', badge:'Released', fu:'The 48-hour hold lapsed or it was released — the child is back on the sponsor page.', group:'released', card:'fu-released' };
+}
+
+async function loadSponsorshipsAdmin() {
+  const list = document.getElementById('sp-list');
+  list.innerHTML = '<div class="loading">Loading…</div>';
+  try {
+    const { data, error } = await db.rpc('admin_sponsorships_overview');
+    if(error) throw new Error(error.message);
+    spRows = data || [];
+    renderSponsorshipsAdmin();
+  } catch(e) {
+    list.innerHTML = `<div class="warn-box">Could not load sponsorships: ${esc(e.message)}</div>`;
+  }
+  renderStillNeedingSponsor();
+}
+
+function renderSponsorshipsAdmin() {
+  const fu = spRows.map(r => ({ r, f: spFollowUp(r) }));
+  const count = g => fu.filter(x => x.f.group === g).length;
+  const followup = fu.filter(x => x.f.group === 'followup').length;
+  document.getElementById('sp-count').textContent = spRows.length;
+  const tiles = [
+    ['followup', followup, 'Needs follow-up', followup > 0],
+    ['waiting', count('waiting'), 'Waiting on payment', false],
+    ['paid', count('paid'), 'Paid', false],
+    ['released', count('released'), 'Released', false],
+    ['all', spRows.length, 'All', false],
+  ];
+  document.getElementById('sp-sum').innerHTML = tiles.map(([k, n, l, hot]) =>
+    `<div class="sp-tile ${spFilter===k?'on':''} ${hot?'hot':''}" onclick="spSetFilter('${k}')"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+  const shown = fu.filter(x => spFilter === 'all' || x.f.group === spFilter);
+  const order = { followup:0, waiting:1, paid:2, released:3 };
+  shown.sort((a, b) => order[a.f.group] - order[b.f.group] || new Date(b.r.created_at) - new Date(a.r.created_at));
+  const list = document.getElementById('sp-list');
+  if(!shown.length) { list.innerHTML = '<div class="empty"><div class="eicon">💚</div><p>Nothing here right now.</p></div>'; return; }
+  list.innerHTML = shown.map(({ r, f }) => spCardHTML(r, f)).join('');
+  shown.forEach(({ r }) => { if(r.proof_path) spLoadProof(r.id, r.proof_path); });
+}
+
+function spSetFilter(k) { spFilter = k; renderSponsorshipsAdmin(); }
+
+function spCardHTML(r, f) {
+  const date = new Date(r.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+  const canAct = r.effective_status !== 'released' && r.effective_status !== 'expired';
+  const bits = [];
+  if(r.sponsor_email) bits.push(`✉️ ${esc(r.sponsor_email)}`);
+  if(r.sponsor_phone) bits.push(`📞 ${esc(r.sponsor_phone)}`);
+  const prefs = `Meet the child: <b>${esc(r.wants_to_meet||'—')}</b> · Updates: <b>${esc(r.wants_updates||'—')}</b>`;
+  return `<div class="sp-card ${f.card}" id="sp-${r.id}">
+    <div class="sp-top">
+      <div>
+        <div class="sp-who">${esc(r.sponsor_name||'Unknown sponsor')} <small>→ sponsoring</small> ${esc(r.child_name||'')}${r.year_group?` <small>(${esc(r.year_group)})</small>`:''}</div>
+        <div class="sp-sub">${esc(r.child_full_name||'')}${r.family_urn?' · '+esc(r.family_urn):''} · pledged ${date}</div>
+        <div class="sp-sub">${bits.join(' · ')}</div>
+        <div class="sp-sub">${prefs}</div>
+      </div>
+      <span class="sp-badge ${f.cls}">${f.badge}</span>
+    </div>
+    <div class="sp-fu">${f.fu}</div>
+    <div class="sp-body">
+      <div id="sp-proof-${r.id}">${r.proof_path ? '<div class="sp-noproof">Loading…</div>' : '<div class="sp-noproof">No receipt</div>'}</div>
+      <div>
+        ${canAct ? `<div class="sp-row-in">
+          <input type="number" id="sp-amt-${r.id}" value="${r.amount||''}" placeholder="Amount QAR" style="width:120px;">
+          <input type="text" id="sp-note-${r.id}" value="${esc(r.staff_note||'')}" placeholder="Note…" style="flex:1;min-width:120px;">
+        </div>
+        <div class="sp-actions">
+          ${r.effective_status !== 'received' ? `<button class="btn-small" onclick="spUpdate('${r.id}','received')">✅ Mark received</button>` : `<button class="btn-small" onclick="spUpdate('${r.id}','sent')">↩ Back to receipt check</button>`}
+          <button class="btn-small" onclick="spUpdate('${r.id}','flagged')">🚩 Flag issue</button>
+          <button class="btn-small" onclick="spRelease('${r.id}')">🔓 Release child</button>
+        </div>` : `<div class="sp-sub">${r.staff_note?'📝 '+esc(r.staff_note):''}</div>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+async function spLoadProof(id, path) {
+  const holder = document.getElementById('sp-proof-' + id);
+  if(!holder) return;
+  try {
+    const { data } = await db.storage.from('sponsorship-proofs').createSignedUrl(path, 3600);
+    if(data?.signedUrl) {
+      const isPdf = /\.pdf($|\?)/i.test(path);
+      holder.innerHTML = isPdf
+        ? `<a class="sp-noproof" href="${data.signedUrl}" target="_blank" rel="noopener">📄 Open PDF</a>`
+        : `<img src="${data.signedUrl}" alt="Receipt" onclick="spOpenImg('${data.signedUrl}')">`;
+    }
+  } catch(e) { holder.innerHTML = '<div class="sp-noproof">Could not load</div>'; }
+}
+function spOpenImg(url) {
+  document.getElementById('sp-lightbox-img').src = url;
+  const lb = document.getElementById('sp-lightbox'); lb.style.display = 'flex'; lb.classList.add('open');
+  lb.onclick = () => { lb.style.display = 'none'; lb.classList.remove('open'); };
+}
+
+async function spUpdate(id, status) {
+  const amount = document.getElementById('sp-amt-' + id)?.value;
+  const note = document.getElementById('sp-note-' + id)?.value.trim();
+  const { data, error } = await db.rpc('superadmin_update_pledge', {
+    p_pledge_id: id, p_status: status, p_amount: amount ? parseFloat(amount) : null, p_note: note || null
+  });
+  if(error || !data) { showToast('Error: ' + (error?.message || 'could not update')); return; }
+  showToast(status === 'received' ? '✅ Marked as received' : status === 'flagged' ? '🚩 Flagged' : 'Updated');
+  loadSponsorshipsAdmin();
+}
+
+async function spRelease(id) {
+  const r = spRows.find(x => x.id === id);
+  if(!confirm(`Release ${r?.child_name || 'this child'}? They go back on the public sponsor page and ${r?.sponsor_name || 'the sponsor'}'s pledge is cancelled.`)) return;
+  const { data, error } = await db.rpc('superadmin_update_pledge', { p_pledge_id: id, p_status: 'expired', p_amount: null, p_note: 'Released by super admin' });
+  if(error || !data) { showToast('Error: ' + (error?.message || 'could not release')); return; }
+  // keep the local child list in step
+  const c = allChildren.find(x => x.id === r?.child_id);
+  if(c) { c.sponsorship_status = 'needs_sponsor'; c.sponsored_by_name = null; }
+  showToast('🔓 Released — back on the sponsor page');
+  loadSponsorshipsAdmin();
+}
+
+// Children marked Needs Sponsor, and what is stopping each from showing publicly
+function renderStillNeedingSponsor() {
+  const kids = allChildren.filter(c => c.sponsorship_status === 'needs_sponsor');
+  document.getElementById('sp-need-count').textContent = kids.length;
+  const el = document.getElementById('sp-need-list');
+  if(!kids.length) { el.innerHTML = '<div class="empty"><div class="eicon">🎉</div><p>Every child has a sponsor.</p></div>'; return; }
+  const rows = kids.map(c => {
+    const blockers = [];
+    if(c.media_consent !== 'Yes') blockers.push('no social media consent');
+    if(!c.aspiration) blockers.push('no aspiration');
+    if(!c.sponsor_photo_path) blockers.push(c.profile_photo_path ? 'photo not approved' : 'no photo');
+    return { c, blockers };
+  }).sort((a, b) => a.blockers.length - b.blockers.length);
+  el.innerHTML = rows.map(({ c, blockers }) => `<div class="sp-need">
+    <div><b>${esc(c.preferred_name || c.full_name || 'Child')}</b>${c.final_year_group ? ' · ' + esc(c.final_year_group) : ''}</div>
+    <div>${blockers.length ? '<span>' + blockers.join(' · ') + '</span>' : '<span style="color:var(--lime);">✅ live on the sponsor page</span>'}</div>
+  </div>`).join('');
+}
+
+// ── Bank statement matching (CSV) ──
+let spCsv = [];
+function spParseCsv(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if(!lines.length) return [];
+  const split = line => { const out = []; let cur = '', q = false; for(const ch of line) { if(ch === '"') { q = !q; continue; } if(ch === ',' && !q) { out.push(cur); cur = ''; continue; } cur += ch; } out.push(cur); return out.map(x => x.trim()); };
+  const h = split(lines[0]).map(x => x.toLowerCase());
+  const di = h.findIndex(x => x.includes('date')), ai = h.findIndex(x => x.includes('amount') || x.includes('credit') || x.includes('value')), ni = h.findIndex(x => x.includes('desc') || x.includes('narrat') || x.includes('detail') || x.includes('reference'));
+  return lines.slice(1).map(l => { const c = split(l); return { date: di >= 0 ? c[di] : '', amount: ai >= 0 ? parseFloat((c[ai] || '').replace(/[^0-9.\-]/g, '')) : null, description: ni >= 0 ? c[ni] : c.join(' ') }; }).filter(r => r.description);
+}
+function spHandleCsv(input) {
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    spCsv = spParseCsv(e.target.result);
+    document.getElementById('sp-csv-status').innerHTML = `<div class="note">✅ Read ${spCsv.length} transaction(s)</div>`;
+    spRunMatching();
+  };
+  reader.readAsText(file);
+}
+function spRunMatching() {
+  const el = document.getElementById('sp-matches');
+  const waiting = spRows.filter(r => r.effective_status === 'sent');
+  if(!waiting.length) { el.innerHTML = '<div class="note">No pledges are waiting on a receipt check.</div>'; return; }
+  el.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;font-size:12.5px;border-collapse:collapse;"><tr style="text-align:left;color:var(--muted);"><th>Sponsor / child</th><th>Expected</th><th>Suggested match</th><th></th></tr>' + waiting.map(r => {
+    let best = null, bestScore = 0;
+    for(const t of spCsv) {
+      let score = 0;
+      if(r.amount && t.amount != null && Math.abs(t.amount - r.amount) < 0.01) score += 10;
+      const d = (t.description || '').toLowerCase();
+      const first = (r.sponsor_name || '').toLowerCase().split(' ')[0];
+      if(first && d.includes(first)) score += 5;
+      if(r.child_name && d.includes(r.child_name.toLowerCase())) score += 3;
+      if(score > bestScore) { bestScore = score; best = t; }
+    }
+    const ok = bestScore >= 5;
+    return `<tr style="border-top:1px solid var(--border);"><td style="padding:8px 4px;">${esc(r.sponsor_name)}<br><span style="color:var(--muted);">${esc(r.child_name)}</span></td><td>${r.amount ? 'QAR ' + r.amount : '<span style="color:var(--muted);">not set</span>'}</td><td>${ok ? '✅ ' + esc(best.description) + ' (' + esc(best.date) + ')' : '<span style="color:var(--muted);">No confident match</span>'}</td><td>${ok ? `<button class="btn-small" onclick="spUpdate('${r.id}','received')">Confirm</button>` : ''}</td></tr>`;
+  }).join('') + '</table></div>';
 }
 
 // ── NAV ──

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Little Learners — Meet the Children Who Need a Sponsor</title>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Quicksand:wght@500;600;700&family=Cairo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{--forest:#0A3D1F;--forest-mid:#145C30;--lime:#5CB85C;--lime-soft:#EAF5EA;--gold:#3AAFA4;--coral:#E05252;--muted:#5A7A65;--border:#C8DFC8;--cream:#F4F9F4;--shadow:0 4px 20px rgba(10,61,31,.09);--r:14px;--rs:10px;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -96,35 +96,48 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:10px
 .ns-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:12.5px;color:var(--forest);margin-bottom:4px;}
 .countdown-box{background:#FDEAEA;border-left:4px solid var(--coral);border-radius:var(--rs);padding:10px 14px;font-size:12.5px;font-weight:600;color:#8B2020;margin-bottom:14px;}
 .countdown-box b{font-family:'Nunito',sans-serif;font-weight:900;}
+.lang-btn{background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.35);color:white;border-radius:50px;padding:6px 14px;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;font-family:'Cairo','Quicksand',sans-serif;margin-inline-end:8px;}
+.lang-btn:hover{background:rgba(255,255,255,.22);}
+.pcard .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px;}
+.pcard .yg{font-size:11.5px;font-weight:800;color:var(--forest);background:var(--lime-soft);border-radius:50px;padding:3px 10px;}
+.pcard .qlabel{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:12px;}
+.pcard .qlabel + .quote{margin-top:4px;}
+html[dir=rtl] .pcard .qlabel{letter-spacing:0;text-transform:none;font-size:12px;}
+html[dir=rtl] body, html[dir=rtl] button, html[dir=rtl] input, html[dir=rtl] .logo-text, html[dir=rtl] .hero h1, html[dir=rtl] .pcard .pname, html[dir=rtl] .hiw-title, html[dir=rtl] .modal h3, html[dir=rtl] .ns-title, html[dir=rtl] .countdown-box b{font-family:'Cairo','Quicksand',sans-serif;}
+html[dir=rtl] .bank-row b{text-align:left;}
+html[dir=rtl] .acct-dropdown{right:auto;left:0;}
+html[dir=rtl] .pcard .quote{font-style:normal;}
+.ltr{direction:ltr;unicode-bidi:isolate;}
 </style>
 </head>
 <body>
 <header>
-  <div class="logo"><img src="data:image/png;base64,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" alt="Feed a Friend"><div class="logo-text">Little Learners</div></div>
+  <div class="logo"><img src="data:image/png;base64,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" alt="Feed a Friend"><div class="logo-text" data-i18n="logo">Little Learners</div></div>
   <div style="flex:1;"></div>
+  <button class="lang-btn" id="lang-toggle" type="button" onclick="toggleLang()" aria-label="Switch language">العربية</button>
   <div id="header-account" style="color:white;font-size:12px;"></div>
 </header>
 <div class="wrap">
   <div class="hero">
-    <h1>Meet the Children Who Need a Sponsor</h1>
-    <p>Every child on this page is waiting for someone to sponsor their place on the Little Learners programme. Their names shown are first names or nicknames only, to protect their privacy.</p>
+    <h1 data-i18n="hero_h1">Meet the Children Who Need a Sponsor</h1>
+    <p data-i18n="hero_p">Every child on this page is waiting for someone to sponsor their place on the Little Learners programme. Their names shown are first names or nicknames only, to protect their privacy.</p>
   </div>
 
   <div class="hiw">
     <div class="hiw-top">
-      <div class="hiw-title">💚 How It Works</div>
-      <div class="hiw-pct">💯 100% goes to your Little Learner</div>
+      <div class="hiw-title" data-i18n="hiw_title">💚 How It Works</div>
+      <div class="hiw-pct" data-i18n="hiw_pct">💯 100% goes to your Little Learner</div>
     </div>
     <div class="hiw-row">
-      <div class="hiw-chip"><div class="ic">📚</div><div class="t">Curriculum Booklets</div></div>
-      <div class="hiw-chip"><div class="ic">🎨</div><div class="t">Stationery Bag</div></div>
-      <div class="hiw-chip"><div class="ic">🍽️</div><div class="t">Assessment Day Lunch</div></div>
+      <div class="hiw-chip"><div class="ic">📚</div><div class="t" data-i18n="chip1">Curriculum Booklets</div></div>
+      <div class="hiw-chip"><div class="ic">🎨</div><div class="t" data-i18n="chip2">Stationery Bag</div></div>
+      <div class="hiw-chip"><div class="ic">🍽️</div><div class="t" data-i18n="chip3">Assessment Day Lunch</div></div>
     </div>
-    <button class="hiw-more" onclick="document.getElementById('hiw-detail').classList.toggle('open')">Learn more ▾</button>
+    <button class="hiw-more" onclick="document.getElementById('hiw-detail').classList.toggle('open')" data-i18n="learn_more">Learn more ▾</button>
     <div class="hiw-detail" id="hiw-detail">
-      <p><b>📚 Curriculum Booklets</b> — printed booklets curated for our Little Learners, covering every strand of the British curriculum, to help them transition smoothly back into school once a place is offered.</p>
-      <p><b>🎨 Stationery Bag</b> — all the essentials, including tools that help develop fine motor skills.</p>
-      <p><b>🍽️ Assessment Day Lunch</b> — a lunch on their assessment day.</p>
+      <p data-i18n-html="d1"><b>📚 Curriculum Booklets</b> — printed booklets curated for our Little Learners, covering every strand of the British curriculum, to help them transition smoothly back into school once a place is offered.</p>
+      <p data-i18n-html="d2"><b>🎨 Stationery Bag</b> — all the essentials, including tools that help develop fine motor skills.</p>
+      <p data-i18n-html="d3"><b>🍽️ Assessment Day Lunch</b> — a lunch on their assessment day.</p>
     </div>
   </div>
 
@@ -133,98 +146,123 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:10px
 
 <div class="modal-bg" id="pledge-modal">
   <div class="modal">
-    <div class="step-indicator" id="step-indicator">Step 1 of 3 — Log In</div>
+    <div class="step-indicator" id="step-indicator"></div>
 
-    <div id="auth-gate-view" style="display:none;">
-      <h3>Log In or Sign Up to Sponsor</h3>
-      <div class="sub">You'll need an account so you can track your sponsorship and payment. It's the same login used for our volunteer portal.</div>
-      <div class="auth-tabs">
-        <div class="auth-tab sel" id="auth-tab-login" onclick="switchAuthTab('login')">Log In</div>
-        <div class="auth-tab" id="auth-tab-signup" onclick="switchAuthTab('signup')">Sign Up</div>
-      </div>
-      <div id="signup-extra-fields" style="display:none;">
-        <div class="fg"><label>First Name</label><input type="text" id="auth-first-name" placeholder="First name"></div>
-        <div class="fg"><label>Surname</label><input type="text" id="auth-surname" placeholder="Surname"></div>
-        <div class="fg"><label>Contact Number</label><input type="tel" id="auth-phone" placeholder="e.g. 5xxxxxxx"></div>
-      </div>
-      <div class="fg"><label>Email</label><input type="email" id="auth-email" placeholder="you@example.com"></div>
-      <div class="fg"><label>Password</label><input type="password" id="auth-password" placeholder="••••••••"></div>
-      <div class="modal-err" id="auth-err"></div>
+    <div id="auth-email-view" style="display:none;">
+      <h3 data-i18n="auth_h3">Log In or Sign Up to Sponsor</h3>
+      <div class="sub" data-i18n="auth_sub2">Enter your email. We'll log you in if you already have an account, or help you create one.</div>
+      <div class="fg"><label data-i18n="email">Email</label><input type="email" id="auth-email" dir="ltr" placeholder="you@example.com" onkeydown="if(event.key==='Enter')handleEmailContinue()"></div>
+      <div class="modal-err" id="email-err"></div>
       <div class="modal-actions">
-        <button class="btn-cancel" onclick="closePledgeModal()">Cancel</button>
-        <button class="btn-submit" id="auth-submit-btn" onclick="submitAuth()">Log In →</button>
+        <button class="btn-cancel" onclick="closePledgeModal()" data-i18n="cancel">Cancel</button>
+        <button class="btn-submit" id="email-continue-btn" onclick="handleEmailContinue()" data-i18n="continue">Continue →</button>
+      </div>
+    </div>
+
+    <div id="auth-signin-view" style="display:none;">
+      <h3 data-i18n="signin_h3">Welcome back</h3>
+      <div class="sub"><span data-i18n="signing_in_as">Signing in as</span> <bdi class="ltr" data-latin id="signin-email-display"></bdi></div>
+      <div class="fg"><label data-i18n="password">Password</label><input type="password" id="si-password" dir="ltr" placeholder="••••••••" onkeydown="if(event.key==='Enter')doSignIn()"></div>
+      <div class="modal-err" id="signin-err"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="backToEmail()" data-i18n="back">Back</button>
+        <button class="btn-submit" id="signin-btn" onclick="doSignIn()" data-i18n="btn_signin">Log In →</button>
+      </div>
+    </div>
+
+    <div id="auth-register-view" style="display:none;">
+      <h3 data-i18n="register_h3">Create your account</h3>
+      <div class="sub"><span data-i18n="creating_for">Creating an account for</span> <bdi class="ltr" data-latin id="register-email-display"></bdi></div>
+      <div class="fg"><label data-i18n="first_name">First Name</label><input type="text" id="reg-first" dir="auto" placeholder="First name" data-i18n-ph="ph_first"></div>
+      <div class="fg"><label data-i18n="surname">Surname</label><input type="text" id="reg-surname" dir="auto" placeholder="Surname" data-i18n-ph="ph_surname"></div>
+      <div class="fg"><label data-i18n="phone">Contact Number</label><input type="tel" id="reg-phone" dir="ltr" placeholder="e.g. 5xxxxxxx" data-i18n-ph="ph_phone"></div>
+      <div class="fg"><label data-i18n="password">Password</label><input type="password" id="reg-password" dir="ltr" placeholder="••••••••" onkeydown="if(event.key==='Enter')doRegister()"></div>
+      <div class="modal-err" id="register-err"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="backToEmail()" data-i18n="back">Back</button>
+        <button class="btn-submit" id="register-btn" onclick="doRegister()" data-i18n="btn_register">Create Account →</button>
+      </div>
+    </div>
+
+    <div id="limit-view" style="display:none;">
+      <div class="pledge-success">
+        <div class="sicon">💚</div>
+        <h3 data-i18n="limit_h3">One sponsorship per month</h3>
+        <p style="font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.6;" id="limit-text"></p>
+        <button class="btn-submit" style="width:100%;margin-top:16px;" onclick="closePledgeModal()" data-i18n="ok">OK</button>
       </div>
     </div>
 
     <div id="pledge-form-view" style="display:none;">
       <h3 id="pledge-title">Sponsor a Little Learner</h3>
-      <div class="sub">Just two quick questions.</div>
-      <div class="countdown-box" id="reserve-countdown-box">⏱️ Please finish within <b id="reserve-countdown">5:00</b> or this Little Learner may become available to another sponsor.</div>
+      <div class="sub" data-i18n="pledge_sub">Just two quick questions.</div>
+      <div class="countdown-box" id="reserve-countdown-box">⏱️ <span id="reserve-text" data-i18n-html="reserve_text">Please finish within <b id="reserve-countdown">5:00</b> or this Little Learner may become available to another sponsor.</span></div>
       <div class="fg">
-        <label>Would you like to meet the Little Learner, should the parents agree?</label>
+        <label data-i18n="q_meet">Would you like to meet the Little Learner, should the parents agree?</label>
         <div class="choice-row">
-          <div class="choice" id="meet-yes" onclick="selectSpChoice('meet','Yes',this)">Yes</div>
-          <div class="choice" id="meet-no" onclick="selectSpChoice('meet','No',this)">No</div>
+          <div class="choice" id="meet-yes" onclick="selectSpChoice('meet','Yes',this)" data-i18n="yes">Yes</div>
+          <div class="choice" id="meet-no" onclick="selectSpChoice('meet','No',this)" data-i18n="no">No</div>
         </div>
       </div>
       <div class="fg">
-        <label>Would you like updates on your Little Learner?</label>
+        <label data-i18n="q_updates">Would you like updates on your Little Learner?</label>
         <div class="choice-row">
-          <div class="choice" id="updates-yes" onclick="selectSpChoice('updates','Yes',this)">Yes</div>
-          <div class="choice" id="updates-no" onclick="selectSpChoice('updates','No',this)">No</div>
+          <div class="choice" id="updates-yes" onclick="selectSpChoice('updates','Yes',this)" data-i18n="yes">Yes</div>
+          <div class="choice" id="updates-no" onclick="selectSpChoice('updates','No',this)" data-i18n="no">No</div>
         </div>
       </div>
       <div class="modal-err" id="pledge-err"></div>
-      <div class="sub" style="margin-bottom:0;">Tapping below reserves this Little Learner for you and starts your 48-hour payment window.</div>
+      <div class="sub" style="margin-bottom:0;" data-i18n="pledge_note">Tapping below reserves this Little Learner for you and starts your 48-hour payment window.</div>
       <div class="modal-actions">
-        <button class="btn-cancel" onclick="closePledgeModal()">Cancel</button>
-        <button class="btn-submit" id="pledge-submit-btn" onclick="submitPledge()">Confirm Sponsorship →</button>
+        <button class="btn-cancel" onclick="closePledgeModal()" data-i18n="cancel">Cancel</button>
+        <button class="btn-submit" id="pledge-submit-btn" onclick="submitPledge()"></button>
       </div>
     </div>
 
     <div id="bank-transfer-view" style="display:none;">
-      <h3>Send Your Sponsorship</h3>
-      <div class="sub">Please arrange your transfer within <b>2 working days</b> using the details below.</div>
+      <h3 data-i18n="bank_h3">Send Your Sponsorship</h3>
+      <div class="sub" data-i18n-html="bank_sub">Please arrange your transfer within <b>2 working days</b> using the details below.</div>
+      <div class="bank-box" id="amount-box" style="display:none;"><div class="bank-row"><span data-i18n="amount_lbl">Amount to send</span><b id="amount-val"></b></div></div>
       <div class="bank-box">
-        <div class="bank-row"><span>Bank Name</span><b>QNB</b></div>
-        <div class="bank-row"><span>Account Name</span><b>Together for Good Events</b></div>
-        <div class="bank-row"><span>Account Number</span><b>0250227446001</b></div>
-        <div class="bank-row"><span>IBAN</span><b>QA21QNBA000000000250227446001</b></div>
-        <div class="bank-row"><span>SWIFT Code</span><b>QNBAQAQAXXX</b></div>
+        <div class="bank-row"><span data-i18n="bank_name">Bank Name</span><b class="ltr">QNB</b></div>
+        <div class="bank-row"><span data-i18n="acct_name">Account Name</span><b class="ltr">Together for Good Events</b></div>
+        <div class="bank-row"><span data-i18n="acct_no">Account Number</span><b class="ltr" data-latin>0250227446001</b></div>
+        <div class="bank-row"><span data-i18n="iban">IBAN</span><b class="ltr" data-latin>QA21QNBA000000000250227446001</b></div>
+        <div class="bank-row"><span data-i18n="swift">SWIFT Code</span><b class="ltr" data-latin>QNBAQAQAXXX</b></div>
       </div>
       <div class="bank-box">
-        <div class="bank-row"><span>Fawran — Account Type</span><b>Corporate / Business</b></div>
-        <div class="bank-row"><span>Fawran — CR Number</span><b>229085</b></div>
+        <div class="bank-row"><span data-i18n="fw_type">Fawran — Account Type</span><b data-i18n="fw_type_v">Corporate / Business</b></div>
+        <div class="bank-row"><span data-i18n="fw_cr">Fawran — CR Number</span><b class="ltr" data-latin>229085</b></div>
       </div>
-      <div class="modal-err" style="display:block;background:#FFF7E0;border-left-color:var(--gold);color:#7A5000;">⚠️ On Fawran: select <b>Corporate/Business</b> (not Individual), then enter the Commercial Registration number above.</div>
-      <div class="modal-err" style="display:block;background:#FFF7E0;border-left-color:var(--gold);color:#7A5000;">⚠️ Important: if your payment method asks for a purpose or category, please select <b>"Goods and Services"</b> / <b>"Online Payment for Goods and Services"</b> — not Friends & Family or Personal.</div>
+      <div class="modal-err" style="display:block;background:#FFF7E0;border-left-color:var(--gold);color:#7A5000;" data-i18n-html="warn1">⚠️ On Fawran: select <b>Corporate/Business</b> (not Individual), then enter the Commercial Registration number above.</div>
+      <div class="modal-err" style="display:block;background:#FFF7E0;border-left-color:var(--gold);color:#7A5000;" data-i18n-html="warn2">⚠️ Important: if your payment method asks for a purpose or category, please select <b>"Goods and Services"</b> / <b>"Online Payment for Goods and Services"</b> — not Friends & Family or Personal.</div>
       <div class="modal-actions">
-        <button class="btn-cancel" onclick="closePledgeModal()">Cancel</button>
-        <button class="btn-submit" onclick="goToProofUpload()">I've Sent It →</button>
+        <button class="btn-cancel" onclick="closePledgeModal()" data-i18n="cancel">Cancel</button>
+        <button class="btn-submit" onclick="goToProofUpload()" data-i18n="sent_it">I've Sent It →</button>
       </div>
     </div>
 
     <div id="proof-upload-view" style="display:none;">
-      <h3>Attach Your Transfer Receipt</h3>
-      <div class="sub">Upload a screenshot or photo of your transfer confirmation.</div>
+      <h3 data-i18n="proof_h3">Attach Your Transfer Receipt</h3>
+      <div class="sub" data-i18n="proof_sub">Upload a screenshot or photo of your transfer confirmation.</div>
       <div class="fg">
-        <label>Proof of Transfer</label>
+        <label data-i18n="proof_label">Proof of Transfer</label>
         <input type="file" accept="image/*,.pdf" id="proof-file-input">
       </div>
       <div class="modal-err" id="proof-err"></div>
       <div class="modal-actions">
-        <button class="btn-cancel" onclick="goBackToBankView()">Back</button>
-        <button class="btn-submit" id="proof-submit-btn" onclick="submitProof()">Submit</button>
+        <button class="btn-cancel" onclick="goBackToBankView()" data-i18n="back">Back</button>
+        <button class="btn-submit" id="proof-submit-btn" onclick="submitProof()" data-i18n="submit">Submit</button>
       </div>
     </div>
 
     <div id="pledge-success-view" style="display:none;">
       <div class="pledge-success">
         <div class="sicon">🎉</div>
-        <h3>Thank You!</h3>
-        <p style="font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.6;">You're now sponsoring this Little Learner. We've received your transfer proof and will confirm by email shortly.</p>
-        <button class="btn-submit" style="width:100%;margin-top:16px;" onclick="location.href='my-sponsorships.html'">View My Sponsorships →</button>
-        <button class="btn-cancel" style="width:100%;margin-top:8px;" onclick="closePledgeModal()">Keep Browsing</button>
+        <h3 data-i18n="thanks_h3">Thank You!</h3>
+        <p style="font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.6;" data-i18n="thanks_p">You're now sponsoring this Little Learner. We've received your transfer proof and will confirm by email shortly.</p>
+        <button class="btn-submit" style="width:100%;margin-top:16px;" onclick="location.href='my-payments.html'" data-i18n="view_mine">View My Payments →</button>
+        <button class="btn-cancel" style="width:100%;margin-top:8px;" onclick="closePledgeModal()" data-i18n="keep_browsing">Keep Browsing</button>
       </div>
     </div>
   </div>
@@ -235,6 +273,196 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:10px
 const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
 let db;
+
+// ── LANGUAGE (English / العربية) ──
+const I18N = {
+  en: {
+    logo:'Little Learners', hero_h1:'Meet the Children Who Need a Sponsor',
+    hero_p:'Every child on this page is waiting for someone to sponsor their place on the Little Learners programme. Their names shown are first names or nicknames only, to protect their privacy.',
+    hiw_title:'💚 How It Works', hiw_pct:'💯 100% goes to your Little Learner',
+    chip1:'Curriculum Booklets', chip2:'Stationery Bag', chip3:'Assessment Day Lunch', learn_more:'Learn more ▾',
+    d1:'<b>📚 Curriculum Booklets</b> — printed booklets curated for our Little Learners, covering every strand of the British curriculum, to help them transition smoothly back into school once a place is offered.',
+    d2:'<b>🎨 Stationery Bag</b> — all the essentials, including tools that help develop fine motor skills.',
+    d3:'<b>🍽️ Assessment Day Lunch</b> — a lunch on their assessment day.',
+    loading:'Loading profiles…', empty:'All children currently have a sponsor — thank you! Please check back soon.',
+    load_err:'Could not load profiles right now. Please try again shortly.',
+    age:'Age {n}', qlabel:'What do I want to be when I grow up?', sponsor_btn:'💚 Sponsor {name}',
+    acct:'👤 Account ▾', my_sp:'💚 My Payments', logout:'Log Out', login:'Log In',
+    step_gate:'Before You Start — Log In', step_login:'Log In', step_1:'Step 1 of 3 — A Couple of Questions', step_2:'Step 2 of 3 — Send Payment', step_3:'Step 3 of 3 — Attach Receipt',
+    auth_h3:'Log In or Sign Up to Sponsor',
+    auth_sub:"You'll need an account so you can track your sponsorship and payment. It's the same login used for our volunteer portal.",
+    tab_login:'Log In', tab_signup:'Sign Up', first_name:'First Name', surname:'Surname', phone:'Contact Number', email:'Email', password:'Password',
+    ph_first:'First name', ph_surname:'Surname', ph_phone:'e.g. 5xxxxxxx',
+    cancel:'Cancel', btn_login:'Log In →', btn_signup:'Sign Up →',
+    pledge_title:'Sponsor {name}', pledge_sub:'Just two quick questions.',
+    reserve_text:'Please finish within <b id="reserve-countdown">5:00</b> or this Little Learner may become available to another sponsor.',
+    q_meet:'Would you like to meet the Little Learner, should the parents agree?', q_updates:'Would you like updates on your Little Learner?',
+    yes:'Yes', no:'No', pledge_note:'Next you will log in or create an account. Your Little Learner is reserved for you at that point, and your 48-hour payment window starts.',
+    confirm:'Confirm Sponsorship →',
+    bank_h3:'Send Your Sponsorship', bank_sub:'Please arrange your transfer within <b>2 working days</b> using the details below.',
+    bank_name:'Bank Name', acct_name:'Account Name', acct_no:'Account Number', iban:'IBAN', swift:'SWIFT Code',
+    fw_type:'Fawran — Account Type', fw_type_v:'Corporate / Business', fw_cr:'Fawran — CR Number',
+    warn1:'⚠️ On Fawran: select <b>Corporate/Business</b> (not Individual), then enter the Commercial Registration number above.',
+    warn2:'⚠️ Important: if your payment method asks for a purpose or category, please select <b>"Goods and Services"</b> / <b>"Online Payment for Goods and Services"</b> — not Friends & Family or Personal.',
+    sent_it:"I've Sent It →",
+    proof_h3:'Attach Your Transfer Receipt', proof_sub:'Upload a screenshot or photo of your transfer confirmation.', proof_label:'Proof of Transfer', back:'Back', submit:'Submit',
+    thanks_h3:'Thank You!', thanks_p:"You're now sponsoring this Little Learner. We've received your transfer proof and will confirm by email shortly.",
+    view_mine:'View My Payments →', keep_browsing:'Keep Browsing',
+    e_need_login:'⚠️ Please enter your email and password.', e_need_fields:'Please fill in your first name, surname, and contact number.',
+    e_no_account:'Could not create your account — please try again.',
+    ok_created:'✅ Account created! Please check your email to confirm it, then log in to continue sponsoring.',
+    e_generic:'Something went wrong — please try again.',
+    e_time_up:"⏱️ Time's up — please start again to sponsor this Little Learner.",
+    e_window:'⏱️ The 48-hour window has passed — this Little Learner may now be available to another sponsor.',
+    e_both:'⚠️ Please answer both questions above.', e_pledge:'Could not process your sponsorship — please try again.',
+    e_wrong:'Something went wrong: ', e_wrong_retry:'please try again.', e_attach:'⚠️ Please attach a screenshot or photo of your transfer.',
+    e_proof:'Could not save your proof — please try again.', title:'Little Learners — Meet the Children Who Need a Sponsor', toggle:'العربية',
+    auth_sub2:"Enter your email. We'll log you in if you already have an account, or help you create one.",
+    continue:'Continue →', signin_h3:'Welcome back', signing_in_as:'Signing in as', register_h3:'Create your account', creating_for:'Creating an account for',
+    btn_register:'Create Account →', btn_signin:'Log In →',
+    st_questions:'A Couple of Questions', st_auth:'Log In or Sign Up', st_login_only:'Log In', st_pay:'Send Payment', st_receipt:'Attach Receipt', st_limit:'Sponsorship limit',
+    step_n:'Step {n} of {total} — {title}',
+    limit_h3:'One sponsorship per month',
+    limit_text:'You can sponsor one Little Learner per month, and you have already sponsored one this month. You are welcome to sponsor again from {date}.',
+    ok:'OK', e_email:'Please enter a valid email', e_pw:'Please enter your password', e_bad_pw:'Incorrect password',
+    e_reg_fields:'Please fill in your first name, surname, and a password of at least 6 characters.',
+    amount_lbl:'Amount to send', qar:'QAR'
+  },
+  ar: {
+    logo:'المتعلّمون الصغار', hero_h1:'تعرّف على الأطفال الذين يحتاجون إلى كفيل',
+    hero_p:'كل طفل في هذه الصفحة بانتظار من يكفل مقعده في برنامج المتعلّمين الصغار. نعرض الأسماء الأولى أو الألقاب فقط حفاظًا على خصوصيتهم.',
+    hiw_title:'💚 كيف تعمل الكفالة', hiw_pct:'💯 ١٠٠٪ تذهب إلى متعلّمك الصغير',
+    chip1:'كُتيّبات المنهج', chip2:'حقيبة القرطاسية', chip3:'غداء يوم التقييم', learn_more:'اعرف المزيد ▾',
+    d1:'<b>📚 كُتيّبات المنهج</b> — كُتيّبات مطبوعة مختارة بعناية لمتعلّمينا الصغار، تغطي جميع مسارات المنهج البريطاني، لتساعدهم على العودة إلى المدرسة بسلاسة فور توفّر مقعد.',
+    d2:'<b>🎨 حقيبة القرطاسية</b> — كل الأساسيات، بما في ذلك أدوات تساعد على تنمية المهارات الحركية الدقيقة.',
+    d3:'<b>🍽️ غداء يوم التقييم</b> — وجبة غداء في يوم تقييمهم.',
+    loading:'جارٍ تحميل الملفات…', empty:'جميع الأطفال لديهم كفيل حاليًا — شكرًا لكم! يُرجى العودة قريبًا.',
+    load_err:'تعذّر تحميل الملفات حاليًا. يُرجى المحاولة لاحقًا.',
+    age:'العمر {n} سنوات', qlabel:'ماذا أريد أن أكون عندما أكبر؟', sponsor_btn:'💚 اكفل {name}',
+    acct:'👤 حسابي ▾', my_sp:'💚 مدفوعاتي', logout:'تسجيل الخروج', login:'تسجيل الدخول',
+    step_gate:'قبل أن تبدأ — تسجيل الدخول', step_login:'تسجيل الدخول', step_1:'الخطوة 1 من 3 — سؤالان سريعان', step_2:'الخطوة 2 من 3 — إرسال المبلغ', step_3:'الخطوة 3 من 3 — إرفاق الإيصال',
+    auth_h3:'سجّل الدخول أو أنشئ حسابًا للكفالة',
+    auth_sub:'ستحتاج إلى حساب لتتابع كفالتك ودفعتك. وهو نفس تسجيل الدخول المستخدم في بوابة المتطوعين.',
+    tab_login:'تسجيل الدخول', tab_signup:'إنشاء حساب', first_name:'الاسم الأول', surname:'اسم العائلة', phone:'رقم التواصل', email:'البريد الإلكتروني', password:'كلمة المرور',
+    ph_first:'الاسم الأول', ph_surname:'اسم العائلة', ph_phone:'مثال: 5xxxxxxx',
+    cancel:'إلغاء', btn_login:'تسجيل الدخول ←', btn_signup:'إنشاء حساب ←',
+    pledge_title:'اكفل {name}', pledge_sub:'سؤالان سريعان فقط.',
+    reserve_text:'يُرجى الإكمال خلال <b id="reserve-countdown">5:00</b> وإلا قد يصبح هذا المتعلّم الصغير متاحًا لكفيل آخر.',
+    q_meet:'هل ترغب في لقاء المتعلّم الصغير، في حال موافقة الوالدين؟', q_updates:'هل ترغب في تلقّي أخبار عن متعلّمك الصغير؟',
+    yes:'نعم', no:'لا', pledge_note:'بعد ذلك ستسجّل الدخول أو تنشئ حسابًا. عندها يُحجز المتعلّم الصغير لك وتبدأ مهلة الدفع البالغة 48 ساعة.',
+    confirm:'تأكيد الكفالة ←',
+    bank_h3:'أرسل مبلغ الكفالة', bank_sub:'يُرجى إجراء التحويل خلال <b>يومَي عمل</b> باستخدام التفاصيل أدناه.',
+    bank_name:'اسم البنك', acct_name:'اسم الحساب', acct_no:'رقم الحساب', iban:'رقم الآيبان (IBAN)', swift:'رمز السويفت (SWIFT)',
+    fw_type:'فوران — نوع الحساب', fw_type_v:'شركات / أعمال', fw_cr:'فوران — رقم السجل التجاري',
+    warn1:'⚠️ في فوران: اختر <b>شركات/أعمال</b> (وليس أفراد)، ثم أدخل رقم السجل التجاري أعلاه.',
+    warn2:'⚠️ مهم: إذا طلبت وسيلة الدفع تحديد الغرض أو الفئة، يُرجى اختيار <b>«سلع وخدمات»</b> / <b>«دفع إلكتروني مقابل سلع وخدمات»</b> — وليس «الأصدقاء والعائلة» أو «شخصي».',
+    sent_it:'لقد أرسلتُه ←',
+    proof_h3:'أرفق إيصال التحويل', proof_sub:'ارفع لقطة شاشة أو صورة لتأكيد التحويل.', proof_label:'إثبات التحويل', back:'رجوع', submit:'إرسال',
+    thanks_h3:'شكرًا لك!', thanks_p:'أنت الآن تكفل هذا المتعلّم الصغير. استلمنا إثبات التحويل وسنؤكد لك عبر البريد الإلكتروني قريبًا.',
+    view_mine:'عرض مدفوعاتي ←', keep_browsing:'متابعة التصفح',
+    e_need_login:'⚠️ يُرجى إدخال بريدك الإلكتروني وكلمة المرور.', e_need_fields:'يُرجى إدخال اسمك الأول واسم العائلة ورقم التواصل.',
+    e_no_account:'تعذّر إنشاء حسابك — يُرجى المحاولة مجددًا.',
+    ok_created:'✅ تم إنشاء الحساب! يُرجى التحقق من بريدك الإلكتروني لتأكيده، ثم سجّل الدخول لمتابعة الكفالة.',
+    e_generic:'حدث خطأ — يُرجى المحاولة مجددًا.',
+    e_time_up:'⏱️ انتهى الوقت — يُرجى البدء من جديد لكفالة هذا المتعلّم الصغير.',
+    e_window:'⏱️ انتهت مهلة الـ 48 ساعة — قد يصبح هذا المتعلّم الصغير متاحًا لكفيل آخر.',
+    e_both:'⚠️ يُرجى الإجابة عن السؤالين أعلاه.', e_pledge:'تعذّرت معالجة كفالتك — يُرجى المحاولة مجددًا.',
+    e_wrong:'حدث خطأ: ', e_wrong_retry:'يُرجى المحاولة مجددًا.', e_attach:'⚠️ يُرجى إرفاق لقطة شاشة أو صورة للتحويل.',
+    e_proof:'تعذّر حفظ الإثبات — يُرجى المحاولة مجددًا.', title:'المتعلّمون الصغار — تعرّف على الأطفال الذين يحتاجون إلى كفيل', toggle:'English',
+    auth_sub2:'أدخل بريدك الإلكتروني. سنسجّل دخولك إذا كان لديك حساب، أو نساعدك على إنشاء حساب.',
+    continue:'متابعة ←', signin_h3:'مرحبًا بعودتك', signing_in_as:'تسجيل الدخول باسم', register_h3:'أنشئ حسابك', creating_for:'إنشاء حساب باسم',
+    btn_register:'إنشاء الحساب ←', btn_signin:'تسجيل الدخول ←',
+    st_questions:'سؤالان سريعان', st_auth:'تسجيل الدخول أو إنشاء حساب', st_login_only:'تسجيل الدخول', st_pay:'إرسال المبلغ', st_receipt:'إرفاق الإيصال', st_limit:'حد الكفالة',
+    step_n:'الخطوة {n} من {total} — {title}',
+    limit_h3:'كفالة واحدة في الشهر',
+    limit_text:'يمكنك كفالة متعلّم صغير واحد في الشهر، وقد كفلتَ متعلّمًا هذا الشهر بالفعل. يسعدنا أن تكفل مجددًا ابتداءً من {date}.',
+    ok:'حسنًا', e_email:'يُرجى إدخال بريد إلكتروني صحيح', e_pw:'يُرجى إدخال كلمة المرور', e_bad_pw:'كلمة المرور غير صحيحة',
+    e_reg_fields:'يُرجى إدخال الاسم الأول واسم العائلة وكلمة مرور من 6 أحرف على الأقل.',
+    amount_lbl:'المبلغ المطلوب', qar:'ر.ق'
+  }
+};
+let LANG = 'en';
+function t(key, vars) {
+  let str = (I18N[LANG] && I18N[LANG][key]) ?? I18N.en[key] ?? key;
+  if(vars) Object.keys(vars).forEach(k => { str = str.split('{'+k+'}').join(vars[k]); });
+  return str;
+}
+// Western digits <-> Arabic-Indic digits
+const AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+function toAr(str) { return str.replace(/[0-9]/g, d => AR_DIGITS[d]); }
+function toEn(str) { return str.replace(/[٠-٩]/g, d => String(AR_DIGITS.indexOf(d))); }
+function skipNode(n) {
+  const el = n.nodeType === 1 ? n : n.parentElement;
+  if(!el) return true;
+  return !!el.closest('[data-latin], script, style, textarea, input, .ltr');
+}
+function convertDigits(root, toArabic) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while(walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(n => {
+    if(skipNode(n)) return;
+    const v = n.nodeValue;
+    const nv = toArabic ? toAr(v) : toEn(v);
+    if(nv !== v) n.nodeValue = nv;
+  });
+}
+let digitObserver = null;
+function setDigitObserver(on) {
+  if(digitObserver) { digitObserver.disconnect(); digitObserver = null; }
+  if(!on) return;
+  digitObserver = new MutationObserver(muts => {
+    muts.forEach(m => {
+      if(m.type === 'characterData') {
+        if(!skipNode(m.target)) { const nv = toAr(m.target.nodeValue); if(nv !== m.target.nodeValue) m.target.nodeValue = nv; }
+      } else {
+        m.addedNodes.forEach(n => {
+          if(n.nodeType === 3) { if(!skipNode(n)) { const nv = toAr(n.nodeValue); if(nv !== n.nodeValue) n.nodeValue = nv; } }
+          else if(n.nodeType === 1) convertDigits(n, true);
+        });
+      }
+    });
+  });
+  digitObserver.observe(document.body, { childList:true, subtree:true, characterData:true });
+}
+function applyStatic() {
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  document.title = t('title');
+  document.getElementById('lang-toggle').textContent = t('toggle');
+}
+function applyLang(lang) {
+  LANG = lang === 'ar' ? 'ar' : 'en';
+  try { localStorage.setItem('ll_lang', LANG); } catch(e) {}
+  const h = document.documentElement;
+  h.lang = LANG; h.dir = LANG === 'ar' ? 'rtl' : 'ltr';
+  setDigitObserver(false);
+  applyStatic();
+  // dynamic bits that were rendered in the previous language
+  renderAccountHeader();
+  refreshStepIndicator();
+  const pb = document.getElementById('pledge-submit-btn');
+  if(pb && !pb.disabled) pb.textContent = pledgeBtnLabel();
+  renderLimit();
+  showAmount(lastAmount);
+  if(currentPledgeChild) document.getElementById('pledge-title').textContent = t('pledge_title', { name: currentPledgeChild.display_name });
+  if(profilesLoaded) renderProfiles();
+  // digits last, after everything is in the right language
+  convertDigits(document.body, LANG === 'ar');
+  setDigitObserver(LANG === 'ar');
+}
+function toggleLang() { applyLang(LANG === 'ar' ? 'en' : 'ar'); }
+function ygLabel(yg) {
+  if(!yg) return '';
+  if(LANG !== 'ar') return yg;
+  const m = /^year\s*(\d+)$/i.exec(yg.trim());
+  if(m) return 'السنة ' + m[1];
+  const f = /^FS\s*(\d)$/i.exec(yg.trim());
+  if(f) return 'مرحلة التأسيس ' + f[1];
+  return yg;
+}
+
 let currentPledgeChild = null;
 let spChoices = { meet: null, updates: null };
 let currentSession = null;
@@ -242,10 +470,12 @@ let currentSession = null;
 async function init() {
   if(!(window.supabase && window.supabase.createClient)) { setTimeout(init, 100); return; }
   db = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  let startLang = 'en';
+  try { startLang = new URLSearchParams(location.search).get('lang') || localStorage.getItem('ll_lang') || 'en'; } catch(e) {}
   const { data } = await db.auth.getSession();
   currentSession = data?.session || null;
   db.auth.onAuthStateChange((_event, session) => { currentSession = session; renderAccountHeader(); });
-  renderAccountHeader();
+  applyLang(startLang);
   await loadProfiles();
 }
 
@@ -254,14 +484,14 @@ function renderAccountHeader() {
   if(currentSession) {
     el.innerHTML = `
       <div class="acct-menu-wrap">
-        <div class="acct-menu-btn" onclick="toggleAcctMenu()">👤 Account ▾</div>
+        <div class="acct-menu-btn" onclick="toggleAcctMenu()">${t('acct')}</div>
         <div class="acct-dropdown" id="acct-dropdown">
-          <div onclick="location.href='my-sponsorships.html'">💚 My Sponsorships</div>
-          <div onclick="toggleAcctMenu();logOut();">Log Out</div>
+          <div onclick="location.href='my-payments.html'">${t('my_sp')}</div>
+          <div onclick="toggleAcctMenu();logOut();">${t('logout')}</div>
         </div>
       </div>`;
   } else {
-    el.innerHTML = `<span class="acct-menu-btn" onclick="openAuthGateStandalone()">Log In</span>`;
+    el.innerHTML = `<span class="acct-menu-btn" onclick="openAuthGateStandalone()">${t('login')}</span>`;
   }
 }
 
@@ -282,34 +512,53 @@ async function logOut() {
 }
 
 let currentProfiles = [];
+let profilesLoaded = false;
+
+function renderProfiles() {
+  const el = document.getElementById('content');
+  if(!currentProfiles.length) {
+    el.innerHTML = `<div class="empty"><div class="eicon">💚</div><p>${t('empty')}</p></div>`;
+    return;
+  }
+  const cards = currentProfiles.map(p => {
+    const { data: urlData } = db.storage.from('donor-photos').getPublicUrl(p.sponsor_photo_path);
+    const photo = urlData?.publicUrl || '';
+    const yg = ygLabel(p.year_group);
+    return `<div class="pcard">
+      <img class="photo" src="${photo}" alt="${escapeHtml(p.display_name)}" loading="lazy">
+      <div class="body">
+        <div class="pname">${escapeHtml(p.display_name)}</div>
+        <div class="meta">
+          ${p.age != null ? `<span class="page" style="margin:0;">${t('age', { n: p.age })}</span>` : ''}
+          ${yg ? `<span class="yg">${escapeHtml(yg)}</span>` : ''}
+        </div>
+        <div class="qlabel">${t('qlabel')}</div>
+        <div class="quote" dir="auto">${escapeHtml(p.aspiration)}</div>
+        <button class="sponsor-btn" onclick="openPledgeModal('${p.child_id}')">${t('sponsor_btn', { name: escapeHtml(p.display_name) })}</button>
+      </div>
+    </div>`;
+  });
+  el.innerHTML = `<div class="grid">${cards.join('')}</div>`;
+}
 
 async function loadProfiles() {
   const el = document.getElementById('content');
-  el.innerHTML = `<div class="loading"><div class="spinner"></div><p style="margin-top:10px;">Loading profiles…</p></div>`;
+  el.innerHTML = `<div class="loading"><div class="spinner"></div><p style="margin-top:10px;">${t('loading')}</p></div>`;
   try {
     const { data, error } = await db.rpc('get_sponsor_profiles');
     if(error) throw new Error(error.message);
     currentProfiles = data || [];
-    if(!currentProfiles.length) {
-      el.innerHTML = `<div class="empty"><div class="eicon">💚</div><p>All children currently have a sponsor — thank you! Please check back soon.</p></div>`;
-      return;
-    }
-    const cards = currentProfiles.map(p => {
-      const { data: urlData } = db.storage.from('donor-photos').getPublicUrl(p.sponsor_photo_path);
-      const photo = urlData?.publicUrl || '';
-      return `<div class="pcard">
-        <img class="photo" src="${photo}" alt="${escapeHtml(p.display_name)}" loading="lazy">
-        <div class="body">
-          <div class="pname">${escapeHtml(p.display_name)}</div>
-          <div class="page">${p.age != null ? 'Age ' + p.age : ''}</div>
-          <div class="quote">${escapeHtml(p.aspiration)}</div>
-          <button class="sponsor-btn" onclick="openPledgeModal('${p.child_id}')">💚 Sponsor ${escapeHtml(p.display_name)}</button>
-        </div>
-      </div>`;
-    });
-    el.innerHTML = `<div class="grid">${cards.join('')}</div>`;
+    // confirmed year groups come from a separate lookup; the page still works if it fails
+    try {
+      const yr = await db.rpc('get_sponsor_year_groups');
+      const map = {};
+      (yr.data || []).forEach(r => { map[r.child_id] = r.year_group; });
+      currentProfiles.forEach(p => { p.year_group = map[p.child_id] || null; });
+    } catch(_) {}
+    profilesLoaded = true;
+    renderProfiles();
   } catch(e) {
-    el.innerHTML = `<div class="empty"><div class="eicon">⚠️</div><p>Could not load profiles right now. Please try again shortly.</p></div>`;
+    el.innerHTML = `<div class="empty"><div class="eicon">⚠️</div><p>${t('load_err')}</p></div>`;
     console.error(e);
   }
 }
@@ -320,135 +569,185 @@ function escapeHtml(s) {
 }
 
 let currentPledgeId = null;
-let pendingChildIdAfterAuth = null;
+let hadAuthStep = true;          // does this run include the log-in step? (affects "Step n of total")
+let checkedEmail = '';
+let limitNextDate = null;
+let lastAmount = null;
+const EDGE_FUNCTION_URL = SUPA_URL + '/functions/v1/clever-responder';
+const SPINNER = '<div class="spinner" style="width:16px;height:16px;border-width:2.5px;border-color:rgba(10,61,31,.3);border-top-color:var(--forest);display:inline-block;"></div>';
+const pledgeBtnLabel = () => t(currentSession ? 'confirm' : 'continue');
 
-function openPledgeModal(childId) {
+async function monthStatus() {
+  try { const { data, error } = await db.rpc('sponsor_month_status'); return error ? null : data; } catch(e) { return null; }
+}
+
+async function openPledgeModal(childId) {
   const child = currentProfiles.find(p => p.child_id === childId);
   if(!child) return;
   currentPledgeChild = child;
   currentPledgeId = null;
+  hadAuthStep = !currentSession;
+  resetAuthForms();
   document.getElementById('pledge-modal').classList.add('open');
-
-  if(!currentSession) {
-    pendingChildIdAfterAuth = childId;
-    resetAuthForm();
-    showStep('auth-gate-view', 'Before You Start — Log In');
-    return;
+  if(currentSession) {
+    // already logged in: tell them straight away if they've used this month's sponsorship
+    const st = await monthStatus();
+    if(st && st.allowed === false) { showLimit(st.next_date); return; }
   }
   startPledgeDetailsStep(child);
 }
 
+function showLimit(nextDate) {
+  limitNextDate = nextDate;
+  stopReserveCountdown();
+  renderLimit();
+  showStep('limit-view', 'st_limit');
+}
+function renderLimit() {
+  if(!limitNextDate) return;
+  const d = new Date(limitNextDate + 'T00:00:00');
+  const txt = d.toLocaleDateString(LANG === 'ar' ? 'ar-QA-u-ca-gregory' : 'en-GB', { day:'numeric', month:'long', year:'numeric' });
+  document.getElementById('limit-text').textContent = t('limit_text', { date: txt });
+}
+function showAmount(amount) {
+  lastAmount = (amount != null && Number(amount) > 0) ? Number(amount) : null;
+  const box = document.getElementById('amount-box');
+  if(lastAmount == null) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  document.getElementById('amount-val').textContent = LANG === 'ar' ? `${lastAmount} ${t('qar')}` : `${t('qar')} ${lastAmount}`;
+}
+
+// Header "Log In" chip: log in without sponsoring anyone
 function openAuthGateStandalone() {
-  pendingChildIdAfterAuth = null;
   currentPledgeChild = null;
-  resetAuthForm();
+  hadAuthStep = true;
+  resetAuthForms();
   document.getElementById('pledge-modal').classList.add('open');
-  showStep('auth-gate-view', 'Log In');
+  showStep('auth-email-view', 'st_login_only');
 }
 
-function resetAuthForm() {
-  document.getElementById('auth-email').value = '';
-  document.getElementById('auth-password').value = '';
-  document.getElementById('auth-first-name').value = '';
-  document.getElementById('auth-surname').value = '';
-  document.getElementById('auth-phone').value = '';
-  document.getElementById('auth-err').style.display = 'none';
-  switchAuthTab('login');
+function resetAuthForms() {
+  ['auth-email','si-password','reg-first','reg-surname','reg-phone','reg-password'].forEach(id => { const e = document.getElementById(id); if(e) e.value = ''; });
+  ['email-err','signin-err','register-err'].forEach(id => { const e = document.getElementById(id); if(e) e.style.display = 'none'; });
 }
+const authStepKey = () => currentPledgeChild ? 'st_auth' : 'st_login_only';
+function showErr(id, msg) { const e = document.getElementById(id); e.textContent = msg; e.style.display = 'block'; e.style.background=''; e.style.borderLeftColor=''; e.style.color=''; }
 
-function switchAuthTab(tab) {
-  document.getElementById('auth-tab-login').classList.toggle('sel', tab==='login');
-  document.getElementById('auth-tab-signup').classList.toggle('sel', tab==='signup');
-  document.getElementById('signup-extra-fields').style.display = tab==='signup' ? 'block' : 'none';
-  document.getElementById('auth-submit-btn').textContent = tab==='signup' ? 'Sign Up →' : 'Log In →';
-  document.getElementById('auth-submit-btn').dataset.mode = tab;
-}
-
-async function submitAuth() {
-  const err = document.getElementById('auth-err');
-  const mode = document.getElementById('auth-submit-btn').dataset.mode || 'login';
+// Email first: one account check decides whether we show log in or register (same as Food Boxes)
+async function handleEmailContinue() {
+  document.getElementById('email-err').style.display = 'none';
   const email = document.getElementById('auth-email').value.trim();
-  const password = document.getElementById('auth-password').value;
-  if(!email || !password) {
-    err.textContent = '⚠️ Please enter your email and password.';
-    err.style.display = 'block';
-    return;
-  }
-  const btn = document.getElementById('auth-submit-btn');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('email-err', '⚠️ ' + t('e_email')); return; }
+  const btn = document.getElementById('email-continue-btn');
   btn.disabled = true;
-  const originalText = btn.textContent;
-  btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2.5px;border-color:rgba(10,61,31,.3);border-top-color:var(--forest);display:inline-block;"></div>';
   try {
-    if(mode === 'signup') {
-      const firstName = document.getElementById('auth-first-name').value.trim();
-      const surname = document.getElementById('auth-surname').value.trim();
-      const phone = document.getElementById('auth-phone').value.trim();
-      if(!firstName || !surname || !phone) {
-        throw new Error('Please fill in your first name, surname, and contact number.');
-      }
-      const { data, error } = await db.auth.signUp({ email, password });
-      if(error) throw new Error(error.message);
-      const uid = data?.user?.id;
-      if(!uid) throw new Error('Could not create your account — please try again.');
-      const { error: profErr } = await db.from('profiles').insert({
-        id: uid, first_name: firstName, surname, email, phone,
-        role: null, approved: true, is_sponsor: true,
-      });
-      if(profErr) throw new Error(profErr.message);
-      const { data: sessData } = await db.auth.getSession();
-      currentSession = sessData?.session || null;
-      if(!currentSession) {
-        renderAccountHeader();
-        err.style.display = 'block';
-        err.style.background = '#EAF5EA';
-        err.style.borderLeftColor = 'var(--lime)';
-        err.style.color = 'var(--forest)';
-        err.textContent = '✅ Account created! Please check your email to confirm it, then log in to continue sponsoring.';
-        switchAuthTab('login');
-        btn.disabled = false;
-        btn.textContent = 'Log In →';
-        return;
-      }
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'check_email_exists', email })
+    });
+    const json = await res.json();
+    checkedEmail = email;
+    if(json.exists) {
+      document.getElementById('signin-email-display').textContent = email;
+      document.getElementById('si-password').value = '';
+      showStep('auth-signin-view', authStepKey());
+      document.getElementById('si-password').focus();
     } else {
-      const { data, error } = await db.auth.signInWithPassword({ email, password });
-      if(error) throw new Error(error.message);
-      currentSession = data?.session || null;
-      // Ensure existing volunteer accounts logging in for the first time to sponsor get flagged
-      if(currentSession) {
-        await db.from('profiles').update({ is_sponsor: true }).eq('id', currentSession.user.id);
-      }
+      document.getElementById('register-email-display').textContent = email;
+      showStep('auth-register-view', authStepKey());
     }
-    renderAccountHeader();
-    if(pendingChildIdAfterAuth) {
-      const child = currentProfiles.find(p => p.child_id === pendingChildIdAfterAuth);
-      pendingChildIdAfterAuth = null;
-      if(child) { startPledgeDetailsStep(child); return; }
-    }
-    closePledgeModal();
   } catch(e) {
-    err.textContent = '⚠️ ' + (e.message || 'Something went wrong — please try again.');
-    err.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = originalText;
+    showErr('email-err', '⚠️ ' + t('e_generic'));
   }
+  btn.disabled = false;
+}
+
+function backToEmail() {
+  document.getElementById('si-password').value = '';
+  showStep('auth-email-view', authStepKey());
+}
+
+async function doSignIn() {
+  const password = document.getElementById('si-password').value;
+  document.getElementById('signin-err').style.display = 'none';
+  if(!password) { showErr('signin-err', '⚠️ ' + t('e_pw')); return; }
+  const btn = document.getElementById('signin-btn');
+  btn.disabled = true;
+  try {
+    const { data, error } = await db.auth.signInWithPassword({ email: checkedEmail, password });
+    if(error) { showErr('signin-err', '⚠️ ' + t('e_bad_pw')); return; }
+    currentSession = data?.session || null;
+    if(currentSession) {
+      // existing volunteer accounts logging in to sponsor get flagged as sponsors
+      try { await db.from('profiles').update({ is_sponsor: true }).eq('id', currentSession.user.id); } catch(_) {}
+    }
+    await afterAuth();
+  } catch(e) {
+    showErr('signin-err', '⚠️ ' + (e.message || t('e_generic')));
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function doRegister() {
+  const firstName = document.getElementById('reg-first').value.trim();
+  const surname = document.getElementById('reg-surname').value.trim();
+  const phone = document.getElementById('reg-phone').value.trim();
+  const password = document.getElementById('reg-password').value;
+  document.getElementById('register-err').style.display = 'none';
+  if(!firstName || !surname || password.length < 6) { showErr('register-err', '⚠️ ' + t('e_reg_fields')); return; }
+  const btn = document.getElementById('register-btn');
+  btn.disabled = true;
+  try {
+    const { data, error } = await db.auth.signUp({ email: checkedEmail, password });
+    if(error) throw new Error(error.message);
+    const uid = data?.user?.id;
+    if(!uid) throw new Error(t('e_no_account'));
+    const { error: profErr } = await db.from('profiles').insert({
+      id: uid, first_name: firstName, surname, email: checkedEmail, phone: phone || null,
+      role: null, approved: true, is_sponsor: true,
+    });
+    if(profErr) throw new Error(profErr.message);
+    const { data: sessData } = await db.auth.getSession();
+    currentSession = sessData?.session || null;
+    if(!currentSession) {
+      // email confirmation is switched on: they need to confirm before logging in
+      const e = document.getElementById('register-err');
+      e.textContent = t('ok_created');
+      e.style.display = 'block'; e.style.background = '#EAF5EA'; e.style.borderLeftColor = 'var(--lime)'; e.style.color = 'var(--forest)';
+      return;
+    }
+    await afterAuth();
+  } catch(e) {
+    showErr('register-err', '⚠️ ' + (e.message || t('e_generic')));
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function afterAuth() {
+  renderAccountHeader();
+  if(currentPledgeChild && spChoices.meet && spChoices.updates) { await createPledge(); return; }
+  closePledgeModal();
 }
 
 function startPledgeDetailsStep(child) {
   spChoices = { meet: null, updates: null };
   document.querySelectorAll('#pledge-form-view .choice').forEach(x=>x.classList.remove('sel'));
   document.getElementById('pledge-err').style.display = 'none';
-  document.getElementById('pledge-title').textContent = `Sponsor ${child.display_name}`;
-  showStep('pledge-form-view', 'Step 1 of 3 — A Couple of Questions');
+  document.getElementById('pledge-title').textContent = t('pledge_title', { name: child.display_name });
+  showStep('pledge-form-view', 'st_questions');
   const btn = document.getElementById('pledge-submit-btn');
   btn.disabled = false;
-  btn.textContent = 'Confirm Sponsorship →';
+  btn.textContent = pledgeBtnLabel();
   startReserveCountdown();
 }
 
 let reserveTimerHandle = null;
 function startReserveCountdown() {
   stopReserveCountdown();
-  let secondsLeft = 5 * 60;
+  let secondsLeft = 10 * 60;
   const box = document.getElementById('reserve-countdown-box');
   const disp = document.getElementById('reserve-countdown');
   box.style.display = 'block';
@@ -457,8 +756,9 @@ function startReserveCountdown() {
     disp.textContent = `${m}:${String(s).padStart(2,'0')}`;
     if(secondsLeft <= 0) {
       stopReserveCountdown();
+      showStep('pledge-form-view', 'st_questions');
       const err = document.getElementById('pledge-err');
-      err.textContent = "⏱️ Time's up — please start again to sponsor this Little Learner.";
+      err.textContent = t('e_time_up');
       err.style.display = 'block';
       document.getElementById('pledge-submit-btn').disabled = true;
       return;
@@ -488,7 +788,7 @@ function startPaymentCountdown(expiresAtIso) {
       stopPaymentCountdown();
       const err = document.getElementById('proof-err') || document.getElementById('pledge-err');
       if(err) {
-        err.textContent = '⏱️ The 48-hour window has passed — this Little Learner may now be available to another sponsor.';
+        err.textContent = t('e_window');
         err.style.display = 'block';
       }
       const sbtn = document.getElementById('proof-submit-btn');
@@ -502,11 +802,21 @@ function stopPaymentCountdown() {
   if(paymentTimerHandle) { clearInterval(paymentTimerHandle); paymentTimerHandle = null; }
 }
 
-function showStep(viewId, indicatorText) {
-  ['auth-gate-view','pledge-form-view','bank-transfer-view','proof-upload-view','pledge-success-view'].forEach(id => {
+let currentStepKey = '';
+function refreshStepIndicator() {
+  const el = document.getElementById('step-indicator');
+  if(!currentStepKey) { el.textContent = ''; return; }
+  const total = hadAuthStep ? 4 : 3;
+  const nums = { st_questions: 1, st_auth: 2, st_pay: hadAuthStep ? 3 : 2, st_receipt: hadAuthStep ? 4 : 3 };
+  const n = nums[currentStepKey];
+  el.textContent = n ? t('step_n', { n, total, title: t(currentStepKey) }) : t(currentStepKey);
+}
+function showStep(viewId, stepKey) {
+  ['auth-email-view','auth-signin-view','auth-register-view','limit-view','pledge-form-view','bank-transfer-view','proof-upload-view','pledge-success-view'].forEach(id => {
     document.getElementById(id).style.display = (id === viewId) ? 'block' : 'none';
   });
-  document.getElementById('step-indicator').textContent = indicatorText || '';
+  currentStepKey = stepKey || '';
+  refreshStepIndicator();
 }
 
 function closePledgeModal() {
@@ -522,17 +832,37 @@ function selectSpChoice(group, val, el) {
   el.classList.add('sel');
 }
 
+// Step 1 button: validate the two answers, then log in / register if needed, then reserve
 async function submitPledge() {
   const err = document.getElementById('pledge-err');
   if(!spChoices.meet || !spChoices.updates) {
-    err.textContent = '⚠️ Please answer both questions above.';
+    err.textContent = t('e_both');
     err.style.display = 'block';
     return;
   }
   err.style.display = 'none';
+  if(!currentSession) {
+    resetAuthForms();
+    showStep('auth-email-view', 'st_auth');
+    document.getElementById('auth-email').focus();
+    return;
+  }
+  await createPledge();
+}
+
+async function createPledge() {
+  const err = document.getElementById('pledge-err');
   const btn = document.getElementById('pledge-submit-btn');
+  err.style.display = 'none';
   btn.disabled = true;
-  btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2.5px;border-color:rgba(10,61,31,.3);border-top-color:var(--forest);display:inline-block;"></div>';
+  btn.innerHTML = SPINNER;
+  const backToQuestions = (msg) => {
+    showStep('pledge-form-view', 'st_questions');
+    err.textContent = msg;
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = pledgeBtnLabel();
+  };
   try {
     const { data, error } = await db.rpc('create_sponsor_pledge', {
       p_child_id: currentPledgeChild.child_id,
@@ -541,38 +871,34 @@ async function submitPledge() {
     });
     if(error) throw new Error(error.message);
     if(!data?.success) {
-      err.textContent = '⚠️ ' + (data?.error || 'Could not process your sponsorship — please try again.');
-      err.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'Confirm Sponsorship →';
+      if(data?.code === 'monthly_limit') { btn.disabled = false; btn.textContent = pledgeBtnLabel(); showLimit(data.next_date); return; }
+      backToQuestions('⚠️ ' + (data?.error || t('e_pledge')));
       return;
     }
     currentPledgeId = data.pledge_id;
     stopReserveCountdown();
-    showStep('bank-transfer-view', 'Step 2 of 3 — Send Payment');
+    showAmount(data.amount);
+    showStep('bank-transfer-view', 'st_pay');
   } catch(e) {
-    err.textContent = 'Something went wrong: ' + (e.message || 'please try again.');
-    err.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = 'Confirm Sponsorship →';
+    backToQuestions(t('e_wrong') + (e.message || t('e_wrong_retry')));
   }
 }
 
 function goToProofUpload() {
   document.getElementById('proof-err').style.display = 'none';
   document.getElementById('proof-file-input').value = '';
-  showStep('proof-upload-view', 'Step 3 of 3 — Attach Receipt');
+  showStep('proof-upload-view', 'st_receipt');
 }
 
 function goBackToBankView() {
-  showStep('bank-transfer-view', 'Step 2 of 3 — Send Payment');
+  showStep('bank-transfer-view', 'st_pay');
 }
 
 async function submitProof() {
   const err = document.getElementById('proof-err');
   const file = document.getElementById('proof-file-input').files[0];
   if(!file) {
-    err.textContent = '⚠️ Please attach a screenshot or photo of your transfer.';
+    err.textContent = t('e_attach');
     err.style.display = 'block';
     return;
   }
@@ -588,15 +914,15 @@ async function submitProof() {
 
     const { data, error } = await db.rpc('attach_sponsor_proof', { p_pledge_id: currentPledgeId, p_proof_path: path });
     if(error) throw new Error(error.message);
-    if(!data?.success) throw new Error(data?.error || 'Could not save your proof — please try again.');
+    if(!data?.success) throw new Error(data?.error || t('e_proof'));
 
     stopPaymentCountdown();
     showStep('pledge-success-view', '');
   } catch(e) {
-    err.textContent = 'Something went wrong: ' + (e.message || 'please try again.');
+    err.textContent = t('e_wrong') + (e.message || t('e_wrong_retry'));
     err.style.display = 'block';
     btn.disabled = false;
-    btn.textContent = 'Submit';
+    btn.textContent = t('submit');
   }
 }
 
