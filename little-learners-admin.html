@@ -2470,6 +2470,39 @@ async function saveArabicName(childId, val) {
   showToast('✅ Arabic name saved');
 }
 
+async function translateToArabic(childId, btn) {
+  const orig = btn ? btn.textContent : '';
+  try {
+    if(btn) { btn.disabled = true; btn.textContent = 'Translating…'; }
+    const { data: sd } = await db.auth.getSession();
+    const tok = sd?.session?.access_token;
+    if(!tok) throw new Error('Not logged in');
+    const resp = await fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/translate-child-ar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+      body: JSON.stringify({ child_id: childId }),
+    });
+    const r = await resp.json();
+    if(!resp.ok || r.error) throw new Error(r.error || 'Translation failed');
+    const idx = allChildren.findIndex(c=>c.id===childId);
+    const upd = {};
+    if(r.name_ar) upd.display_name_ar = r.name_ar;
+    if(r.aspiration_ar) upd.aspiration_ar = r.aspiration_ar;
+    if(Object.keys(upd).length) {
+      const { error } = await db.from('ll_children').update(upd).eq('id', childId);
+      if(error) throw new Error(error.message);
+      if(idx>=0) Object.assign(allChildren[idx], upd);
+    }
+    document.querySelectorAll('[data-arname="'+childId+'"]').forEach(i => { if(r.name_ar) i.value = r.name_ar; });
+    document.querySelectorAll('[data-arasp="'+childId+'"]').forEach(i => { if(r.aspiration_ar) i.value = r.aspiration_ar; });
+    showToast('✅ Arabic saved — please check it reads right');
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  } finally {
+    if(btn) { btn.disabled = false; btn.textContent = orig; }
+  }
+}
+
 async function saveAspirationAr(childId, val) {
   const v = val.trim();
   const {error} = await db.from('ll_children').update({aspiration_ar: v||null}).eq('id', childId);
@@ -3472,7 +3505,8 @@ function renderChildren(children, f) {
           </div>
           <div class="irow" style="grid-column:span 2;">
             <div class="ikey">Arabic Name <span style="text-transform:none;font-weight:600;color:var(--muted);">(shown on the Arabic sponsor page)</span></div>
-            <input class="preferred-name-input" dir="rtl" style="margin-top:4px;" placeholder="مثال: محمد" value="${(c.display_name_ar||'').replace(/"/g,'&quot;')}" onblur="saveArabicName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+            <input class="preferred-name-input" data-arname="${c.id}" dir="rtl" style="margin-top:4px;" placeholder="مثال: محمد" value="${(c.display_name_ar||'').replace(/"/g,'&quot;')}" onblur="saveArabicName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+              <button type="button" class="btn-small" style="margin-top:6px;" onclick="translateToArabic('${c.id}', this)">✨ Translate to Arabic</button>
           </div>
           <div class="irow" style="grid-column:span 2;">
             <div class="ikey">QID Number <span style="text-transform:none;font-weight:600;color:var(--muted);">(auto-filled by Scan QID, or enter/correct manually)</span></div>
@@ -4633,12 +4667,13 @@ function renderLearnerProfile(f, children, focusChildId) {
         </div>
         <div class="fg" style="margin-bottom:12px;">
           <label>Arabic Name <span style="font-weight:600;color:var(--muted);">(shown on the Arabic sponsor page)</span></label>
-          <input class="preferred-name-input" dir="rtl" placeholder="مثال: محمد" value="${(c.display_name_ar||'').replace(/"/g,'&quot;')}" onblur="saveArabicName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          <input class="preferred-name-input" data-arname="${c.id}" dir="rtl" placeholder="مثال: محمد" value="${(c.display_name_ar||'').replace(/"/g,'&quot;')}" onblur="saveArabicName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          <button type="button" class="btn-small" style="margin-top:6px;" onclick="translateToArabic('${c.id}', this)">✨ Translate to Arabic</button>
         </div>
         ${c.aspiration_response?`<div class="note" style="margin-bottom:12px;">💭 "${c.aspiration_response}"</div>`:''}
         <div class="fg" style="margin-bottom:12px;">
           <label>Dream in Arabic <span style="font-weight:600;color:var(--muted);">(shown on the Arabic sponsor page)</span></label>
-          <textarea dir="rtl" rows="2" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:8px 10px;font-family:Quicksand,sans-serif;font-size:13px;" placeholder="الحلم بالعربية" onblur="saveAspirationAr('${c.id}', this.value)">${(c.aspiration_ar||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
+          <textarea data-arasp="${c.id}" dir="rtl" rows="2" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:8px 10px;font-family:Quicksand,sans-serif;font-size:13px;" placeholder="الحلم بالعربية" onblur="saveAspirationAr('${c.id}', this.value)">${(c.aspiration_ar||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
         </div>
         ${lstatus==='archived'&&c.archived_reason?`<div class="warn-box">🗄 ${c.archived_reason}</div>`:''}
         <div class="info-grid" style="margin-bottom:14px;">
