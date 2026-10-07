@@ -721,10 +721,11 @@ function llEsc(x){
   return String(x == null ? "" : x).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; });
 }
 function llTimeLeft(expiresAt, isAr){
-  var ms = new Date(expiresAt).getTime() - Date.now();
-  if(!(ms > 0)) return "";
-  var h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
-  return isAr ? ("الوقت المتبقي للدفع: " + h + " س " + m + " د") : ("Pay within " + h + "h " + m + "m");
+  var d = new Date(expiresAt);
+  if(!(d.getTime() > Date.now())) return "";
+  var opts = { timeZone: "Asia/Qatar", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" };
+  var when = d.toLocaleString(isAr ? "ar-QA-u-ca-gregory" : "en-GB", opts);
+  return isAr ? ("نرجو الدفع قبل " + when) : ("Please send by " + when);
 }
 async function loadLLPledges(){
   try{
@@ -781,7 +782,7 @@ function renderLL(rows){
       '<div class="event-mid">' +
         '<div class="t">' + (isAr ? "كفالة " : "Sponsoring ") + llEsc(r.child_display_name) + '</div>' +
         '<div class="l">' + date + yg + '</div>' +
-        (left ? '<div class="l" style="color:#9a6800;font-weight:700;">⏱️ ' + llDigits(left, isAr) + '</div>' : '') +
+        (left ? '<div class="l" style="color:#9a6800;font-weight:700;">🗓️ ' + llDigits(left, isAr) + '</div>' : '') +
         actions +
         '<div class="auth-err" id="ll-err-' + r.id + '" style="display:none;"></div>' +
       '</div>' +
