@@ -545,8 +545,28 @@ function renderAccountHeader() {
 }
 
 function toggleAcctMenu() {
-  document.getElementById('acct-dropdown')?.classList.toggle('open');
+  const dd = document.getElementById('acct-dropdown');
+  if(!dd) return;
+  const open = dd.classList.toggle('open');
+  if(open) positionAcctMenu();
 }
+// keep the dropdown fully on screen (either language, any phone width)
+function positionAcctMenu() {
+  const dd = document.getElementById('acct-dropdown');
+  const btn = document.querySelector('.acct-menu-btn');
+  if(!dd || !btn || !dd.classList.contains('open')) return;
+  const r = btn.getBoundingClientRect();
+  const w = dd.offsetWidth, vw = document.documentElement.clientWidth, m = 8;
+  const rtl = document.documentElement.dir === 'rtl';
+  let left = rtl ? r.left : r.right - w;
+  left = Math.max(m, Math.min(left, vw - w - m));
+  dd.style.position = 'fixed';
+  dd.style.right = 'auto';
+  dd.style.left = left + 'px';
+  dd.style.top = (r.bottom + 6) + 'px';
+}
+window.addEventListener('resize', positionAcctMenu);
+window.addEventListener('scroll', () => document.getElementById('acct-dropdown')?.classList.remove('open'), { passive:true });
 document.addEventListener('click', (e) => {
   const wrap = document.querySelector('.acct-menu-wrap');
   if(wrap && !wrap.contains(e.target)) {
