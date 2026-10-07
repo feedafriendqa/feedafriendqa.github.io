@@ -2470,32 +2470,54 @@ async function saveArabicName(childId, val) {
   showToast('✅ Arabic name saved');
 }
 
+// Common first names -> Arabic. Add more here as new children arrive; unknown names are left blank for staff to type.
+const AR_NAMES = {
+  'abdulkareem':'عبد الكريم','abdullahi':'عبد الله','abdullah':'عبد الله','abdulrahman':'عبد الرحمن','abdulaziz':'عبد العزيز',
+  'adam':'آدم','ameenah':'أمينة','amina':'أمينة','aminah':'أمينة','araash':'آراش','asiya':'آسية','asiyah':'آسية','asmaa':'أسماء',
+  'ava':'آفا','ayman':'أيمن','ayaan':'أيان','ahmed':'أحمد','ahmad':'أحمد','ali':'علي','aisha':'عائشة','aaisha':'عائشة','alyaa':'علياء',
+  'brayan':'بريان','bilal':'بلال','daniel':'دانيال','deborah':'ديبورا','ella':'إيلا','emma':'إيما','fathima':'فاطمة','fatima':'فاطمة','zara':'زارا',
+  'hassan':'حسن','hasan':'حسن','hiba':'هبة','hussain':'حسين','husain':'حسين','hamza':'حمزة','ibrahim':'إبراهيم','ismail':'إسماعيل','idris':'إدريس',
+  'khadijah':'خديجة','khadija':'خديجة','khalid':'خالد','lina':'لينا','layla':'ليلى','leila':'ليلى','maryam':'مريم','mariam':'مريم',
+  'mahmoodah':'محمودة','mohamad':'محمد','mohammed':'محمد','mohamed':'محمد','muhammad':'محمد','mubarak':'مبارك','murad':'مراد','musa':'موسى','mustafa':'مصطفى',
+  'noor':'نور','nora':'نورة','omar':'عمر','umar':'عمر','royhanah':'ريحانة','rayhana':'ريحانة','rayan':'ريان','ryan':'ريان','samra':'سمرة','sara':'سارة','sarah':'سارة',
+  'sofia':'صوفيا','sophia':'صوفيا','tamim':'تميم','williams':'ويليامز','yusuf':'يوسف','yousef':'يوسف','yasmin':'ياسمين','zayan':'زيان','zayd':'زيد','zainab':'زينب','zahra':'زهراء',
+  'hafsa':'حفصة','safiya':'صفية','sumaya':'سمية','salma':'سلمى','nadia':'نادية','nour':'نور','jana':'جنى','ibtisam':'ابتسام','ayesha':'عائشة','rahma':'رحمة','rumaisa':'رميصاء'
+};
+function arabicNameFor(en) {
+  const words = (en||'').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if(!words.length) return '';
+  const out = words.map(w => AR_NAMES[w.replace(/[^a-z]/g,'')]);
+  return out.every(Boolean) ? out.join(' ') : '';
+}
+
 async function translateToArabic(childId, btn) {
   const orig = btn ? btn.textContent : '';
   try {
     if(btn) { btn.disabled = true; btn.textContent = 'Translating…'; }
-    const { data: sd } = await db.auth.getSession();
-    const tok = sd?.session?.access_token;
-    if(!tok) throw new Error('Not logged in');
-    const resp = await fetch('https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/translate-child-ar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
-      body: JSON.stringify({ child_id: childId }),
-    });
-    const r = await resp.json();
-    if(!resp.ok || r.error) throw new Error(r.error || 'Translation failed');
-    const idx = allChildren.findIndex(c=>c.id===childId);
+    const c = allChildren.find(x=>x.id===childId);
+    if(!c) throw new Error('Child not found');
+    const shown = ((c.preferred_name||'').trim()) || (c.full_name||'').trim().split(/\s+/)[0] || '';
+    const nameAr = arabicNameFor(shown);
+    let aspAr = '';
+    const asp = (c.aspiration||'').trim();
+    if(asp) {
+      const resp = await fetch('https://api.mymemory.translated.net/get?langpair=en|ar&q=' + encodeURIComponent(asp.slice(0,450)));
+      const r = await resp.json();
+      const tx = r && r.responseData && r.responseData.translatedText;
+      if(!resp.ok || !tx || (r.responseStatus && Number(r.responseStatus) !== 200)) throw new Error('Translation service is busy — try again later or type it in');
+      aspAr = String(tx).trim();
+    }
     const upd = {};
-    if(r.name_ar) upd.display_name_ar = r.name_ar;
-    if(r.aspiration_ar) upd.aspiration_ar = r.aspiration_ar;
+    if(nameAr) upd.display_name_ar = nameAr;
+    if(aspAr) upd.aspiration_ar = aspAr;
     if(Object.keys(upd).length) {
       const { error } = await db.from('ll_children').update(upd).eq('id', childId);
       if(error) throw new Error(error.message);
-      if(idx>=0) Object.assign(allChildren[idx], upd);
+      Object.assign(c, upd);
     }
-    document.querySelectorAll('[data-arname="'+childId+'"]').forEach(i => { if(r.name_ar) i.value = r.name_ar; });
-    document.querySelectorAll('[data-arasp="'+childId+'"]').forEach(i => { if(r.aspiration_ar) i.value = r.aspiration_ar; });
-    showToast('✅ Arabic saved — please check it reads right');
+    document.querySelectorAll('[data-arname="'+childId+'"]').forEach(i => { if(nameAr) i.value = nameAr; });
+    document.querySelectorAll('[data-arasp="'+childId+'"]').forEach(i => { if(aspAr) i.value = aspAr; });
+    showToast(nameAr || !shown ? '✅ Arabic saved — please check it reads right' : '✅ Dream translated. Name "'+shown+'" isn\'t in the name list — please type the Arabic name');
   } catch(e) {
     showToast('Error: ' + e.message);
   } finally {
