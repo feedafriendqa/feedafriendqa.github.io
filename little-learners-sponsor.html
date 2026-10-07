@@ -430,6 +430,7 @@ const I18N = {
 let LANG = 'en';
 // child's name in the page language (falls back to the English name when no Arabic name is set)
 function nm(p) { return (LANG === 'ar' && p && p.display_name_ar) ? p.display_name_ar : (p ? p.display_name : ''); }
+function asp(p) { return (LANG === 'ar' && p && p.aspiration_ar) ? p.aspiration_ar : (p ? p.aspiration : ''); }
 function t(key, vars) {
   let str = (I18N[LANG] && I18N[LANG][key]) ?? I18N.en[key] ?? key;
   if(vars) Object.keys(vars).forEach(k => { str = str.split('{'+k+'}').join(vars[k]); });
@@ -614,7 +615,7 @@ function renderProfiles() {
           ${yg ? `<span class="yg">${escapeHtml(yg)}</span>` : ''}
         </div>
         <div class="qlabel">${t('qlabel')}</div>
-        <div class="quote" dir="auto">${escapeHtml(p.aspiration)}</div>
+        <div class="quote" dir="auto">${escapeHtml(asp(p))}</div>
         <button class="sponsor-btn" onclick="openPledgeModal('${p.child_id}')">${t('sponsor_btn', { name: escapeHtml(nm(p)) })}</button>
       </div>
     </div>`;

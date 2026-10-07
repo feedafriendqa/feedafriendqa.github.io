@@ -2470,6 +2470,15 @@ async function saveArabicName(childId, val) {
   showToast('✅ Arabic name saved');
 }
 
+async function saveAspirationAr(childId, val) {
+  const v = val.trim();
+  const {error} = await db.from('ll_children').update({aspiration_ar: v||null}).eq('id', childId);
+  if(error) { showToast('Error: '+error.message); return; }
+  const idx = allChildren.findIndex(c=>c.id===childId);
+  if(idx>=0) allChildren[idx].aspiration_ar = v||null;
+  showToast('✅ Arabic dream saved');
+}
+
 async function saveChildField(childId, field, val, refresh) {
   const value = (typeof val === 'string') ? val.trim() : val;
   const {error} = await db.from('ll_children').update({[field]: value||null}).eq('id', childId);
@@ -4627,6 +4636,10 @@ function renderLearnerProfile(f, children, focusChildId) {
           <input class="preferred-name-input" dir="rtl" placeholder="مثال: محمد" value="${(c.display_name_ar||'').replace(/"/g,'&quot;')}" onblur="saveArabicName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
         </div>
         ${c.aspiration_response?`<div class="note" style="margin-bottom:12px;">💭 "${c.aspiration_response}"</div>`:''}
+        <div class="fg" style="margin-bottom:12px;">
+          <label>Dream in Arabic <span style="font-weight:600;color:var(--muted);">(shown on the Arabic sponsor page)</span></label>
+          <textarea dir="rtl" rows="2" style="width:100%;border:2px solid var(--border);border-radius:10px;padding:8px 10px;font-family:Quicksand,sans-serif;font-size:13px;" placeholder="الحلم بالعربية" onblur="saveAspirationAr('${c.id}', this.value)">${(c.aspiration_ar||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
+        </div>
         ${lstatus==='archived'&&c.archived_reason?`<div class="warn-box">🗄 ${c.archived_reason}</div>`:''}
         <div class="info-grid" style="margin-bottom:14px;">
           <div class="irow"><div class="ikey">Learning Pack</div><div class="ival">${packStatus==='given'?'📦 Given — '+(c.material_level||'—')+' level':packStatus==='not_given'?'🚫 Not given':'⏳ Pending'}</div></div>
