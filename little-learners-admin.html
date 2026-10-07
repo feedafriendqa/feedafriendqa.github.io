@@ -2461,6 +2461,15 @@ async function savePreferredName(childId, val) {
   showToast('✅ Preferred name saved');
 }
 
+async function saveArabicName(childId, val) {
+  const name = val.trim();
+  const {error} = await db.from('ll_children').update({display_name_ar: name||null}).eq('id', childId);
+  if(error) { showToast('Error: '+error.message); return; }
+  const idx = allChildren.findIndex(c=>c.id===childId);
+  if(idx>=0) allChildren[idx].display_name_ar = name||null;
+  showToast('✅ Arabic name saved');
+}
+
 async function saveChildField(childId, field, val, refresh) {
   const value = (typeof val === 'string') ? val.trim() : val;
   const {error} = await db.from('ll_children').update({[field]: value||null}).eq('id', childId);
@@ -3451,6 +3460,10 @@ function renderChildren(children, f) {
           <div class="irow" style="grid-column:span 2;">
             <div class="ikey">Preferred Name <span style="text-transform:none;font-weight:600;color:var(--muted);">(what the child likes to be called, if different)</span></div>
             <input class="preferred-name-input" style="margin-top:4px;" placeholder="e.g. Bebo" value="${c.preferred_name||''}" onblur="savePreferredName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          </div>
+          <div class="irow" style="grid-column:span 2;">
+            <div class="ikey">Arabic Name <span style="text-transform:none;font-weight:600;color:var(--muted);">(shown on the Arabic sponsor page)</span></div>
+            <input class="preferred-name-input" dir="rtl" style="margin-top:4px;" placeholder="مثال: محمد" value="${(c.display_name_ar||'').replace(/"/g,'&quot;')}" onblur="saveArabicName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
           </div>
           <div class="irow" style="grid-column:span 2;">
             <div class="ikey">QID Number <span style="text-transform:none;font-weight:600;color:var(--muted);">(auto-filled by Scan QID, or enter/correct manually)</span></div>
@@ -4608,6 +4621,10 @@ function renderLearnerProfile(f, children, focusChildId) {
         <div class="fg" style="margin-bottom:12px;">
           <label>Preferred Name</label>
           <input class="preferred-name-input" placeholder="e.g. Bebo" value="${c.preferred_name||''}" onblur="savePreferredName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+        </div>
+        <div class="fg" style="margin-bottom:12px;">
+          <label>Arabic Name <span style="font-weight:600;color:var(--muted);">(shown on the Arabic sponsor page)</span></label>
+          <input class="preferred-name-input" dir="rtl" placeholder="مثال: محمد" value="${(c.display_name_ar||'').replace(/"/g,'&quot;')}" onblur="saveArabicName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
         </div>
         ${c.aspiration_response?`<div class="note" style="margin-bottom:12px;">💭 "${c.aspiration_response}"</div>`:''}
         ${lstatus==='archived'&&c.archived_reason?`<div class="warn-box">🗄 ${c.archived_reason}</div>`:''}

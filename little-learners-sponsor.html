@@ -428,6 +428,8 @@ const I18N = {
   }
 };
 let LANG = 'en';
+// child's name in the page language (falls back to the English name when no Arabic name is set)
+function nm(p) { return (LANG === 'ar' && p && p.display_name_ar) ? p.display_name_ar : (p ? p.display_name : ''); }
 function t(key, vars) {
   let str = (I18N[LANG] && I18N[LANG][key]) ?? I18N.en[key] ?? key;
   if(vars) Object.keys(vars).forEach(k => { str = str.split('{'+k+'}').join(vars[k]); });
@@ -493,7 +495,7 @@ function applyLang(lang) {
   renderLimit();
   showAmount(lastAmount);
   renderThanks();
-  if(currentPledgeChild) document.getElementById('pledge-title').textContent = t('pledge_title', { name: currentPledgeChild.display_name });
+  if(currentPledgeChild) document.getElementById('pledge-title').textContent = t('pledge_title', { name: nm(currentPledgeChild) });
   if(profilesLoaded) renderProfiles();
   // digits last, after everything is in the right language
   convertDigits(document.body, LANG === 'ar');
@@ -573,7 +575,7 @@ function renderProfiles() {
     let photoHtml;
     if(p.sponsor_photo_path) {
       const { data: urlData } = db.storage.from('donor-photos').getPublicUrl(p.sponsor_photo_path);
-      const img = `<img class="photo" src="${urlData?.publicUrl || ''}" alt="${escapeHtml(p.display_name)}" loading="lazy">`;
+      const img = `<img class="photo" src="${urlData?.publicUrl || ''}" alt="${escapeHtml(nm(p))}" loading="lazy">`;
       // blurred copies (no media consent) keep the padlock + label
       photoHtml = p.sponsor_photo_path.indexOf('little-learners/blurred/') === 0
         ? `<div class="photo-wrap">${img}<span class="lock">🔒 ${t('photo_private')}</span></div>`
@@ -586,14 +588,14 @@ function renderProfiles() {
     return `<div class="pcard">
       ${photoHtml}
       <div class="body">
-        <div class="pname">${escapeHtml(p.display_name)}</div>
+        <div class="pname">${escapeHtml(nm(p))}</div>
         <div class="meta">
           ${p.age != null ? `<span class="page" style="margin:0;">${t('age', { n: p.age })}</span>` : ''}
           ${yg ? `<span class="yg">${escapeHtml(yg)}</span>` : ''}
         </div>
         <div class="qlabel">${t('qlabel')}</div>
         <div class="quote" dir="auto">${escapeHtml(p.aspiration)}</div>
-        <button class="sponsor-btn" onclick="openPledgeModal('${p.child_id}')">${t('sponsor_btn', { name: escapeHtml(p.display_name) })}</button>
+        <button class="sponsor-btn" onclick="openPledgeModal('${p.child_id}')">${t('sponsor_btn', { name: escapeHtml(nm(p)) })}</button>
       </div>
     </div>`;
   });
@@ -795,7 +797,7 @@ function startPledgeDetailsStep(child) {
   spChoices = { meet: null, updates: null };
   document.querySelectorAll('#pledge-form-view .choice').forEach(x=>x.classList.remove('sel'));
   document.getElementById('pledge-err').style.display = 'none';
-  document.getElementById('pledge-title').textContent = t('pledge_title', { name: child.display_name });
+  document.getElementById('pledge-title').textContent = t('pledge_title', { name: nm(child) });
   showStep('pledge-form-view', 'st_questions');
   const btn = document.getElementById('pledge-submit-btn');
   btn.disabled = false;
