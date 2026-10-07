@@ -4802,14 +4802,16 @@ function renderStillNeedingSponsor() {
   if(!kids.length) { el.innerHTML = '<div class="empty"><div class="eicon">🎉</div><p>Every child has a sponsor.</p></div>'; return; }
   const rows = kids.map(c => {
     const blockers = [];
-    if(c.media_consent !== 'Yes') blockers.push('no social media consent');
+    const privatePhoto = c.media_consent === 'No';
+    if(c.media_consent !== 'Yes' && !privatePhoto) blockers.push('media consent not recorded');
     if(!c.aspiration) blockers.push('no aspiration');
-    if(!c.sponsor_photo_path) blockers.push(c.profile_photo_path ? 'photo not approved' : 'no photo');
+    if(privatePhoto) { if(!c.final_year_group) blockers.push('year group not confirmed'); }
+    else if(!c.sponsor_photo_path) blockers.push(c.profile_photo_path ? 'photo not approved' : 'no photo');
     return { c, blockers };
   }).sort((a, b) => a.blockers.length - b.blockers.length);
   el.innerHTML = rows.map(({ c, blockers }) => `<div class="sp-need">
     <div><b>${esc(c.preferred_name || c.full_name || 'Child')}</b>${c.final_year_group ? ' · ' + esc(c.final_year_group) : ''}</div>
-    <div>${blockers.length ? '<span>' + blockers.join(' · ') + '</span>' : '<span style="color:var(--lime);">✅ live on the sponsor page</span>'}</div>
+    <div>${blockers.length ? '<span>' + blockers.join(' · ') + '</span>' : '<span style="color:var(--lime);">' + (c.media_consent === 'No' ? '✅ live — photo kept private' : '✅ live on the sponsor page') + '</span>'}</div>
   </div>`).join('');
 }
 

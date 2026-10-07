@@ -21,6 +21,9 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:10px
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;}
 .pcard{background:white;border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;}
 .pcard .photo{width:100%;aspect-ratio:1;object-fit:cover;background:var(--lime-soft);}
+.pcard .photo.private{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(135deg,#dff3e4,#b6e0d4);}
+.pcard .photo.private svg{width:72%;height:72%;filter:blur(7px);opacity:.8;}
+.pcard .photo.private .lock{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(10,61,31,.88);color:#fff;font-size:11.5px;font-weight:800;border-radius:50px;padding:4px 12px;white-space:nowrap;}
 .pcard .body{padding:14px;flex:1;display:flex;flex-direction:column;}
 .pcard .pname{font-family:'Nunito',sans-serif;font-weight:900;font-size:16px;color:var(--forest);}
 .pcard .page{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px;}
@@ -328,6 +331,7 @@ const I18N = {
     e_no_account:'Could not create your account — please try again.',
     ok_created:'✅ Account created! Please check your email to confirm it, then log in to continue sponsoring.',
     e_generic:'Something went wrong — please try again.',
+    photo_private:'Photo kept private',
     e_already:"You've already sponsored, or are in the middle of sponsoring, a Little Learner for this assessment day. You can see it in My Payments, or contact us if you need a hand.",
     e_offline:"We couldn't connect — please check your internet and try again.",
     e_time_up:"⏱️ Time's up — please start again to sponsor this Little Learner.",
@@ -387,6 +391,7 @@ const I18N = {
     e_no_account:'تعذّر إنشاء حسابك — يُرجى المحاولة مجددًا.',
     ok_created:'✅ تم إنشاء الحساب! يُرجى التحقق من بريدك الإلكتروني لتأكيده، ثم سجّل الدخول لمتابعة الكفالة.',
     e_generic:'حدث خطأ — يُرجى المحاولة مجددًا.',
+    photo_private:'الصورة محجوبة للخصوصية',
     e_already:'لقد قمت بكفالة طفل لهذا اليوم، أو أنك في منتصف عملية الكفالة. يمكنك الاطلاع عليها في «مدفوعاتي»، أو تواصل معنا إن احتجت إلى مساعدة.',
     e_offline:'تعذّر الاتصال — يُرجى التحقق من الإنترنت والمحاولة مجددًا.',
     e_time_up:'⏱️ انتهى الوقت — يُرجى البدء من جديد لكفالة هذا المتعلّم الصغير.',
@@ -547,11 +552,19 @@ function renderProfiles() {
     return;
   }
   const cards = currentProfiles.map(p => {
-    const { data: urlData } = db.storage.from('donor-photos').getPublicUrl(p.sponsor_photo_path);
-    const photo = urlData?.publicUrl || '';
     const yg = ygLabel(p.year_group);
+    // No media consent: the server sends no photo at all — show a blurred placeholder instead
+    let photoHtml;
+    if(p.sponsor_photo_path) {
+      const { data: urlData } = db.storage.from('donor-photos').getPublicUrl(p.sponsor_photo_path);
+      photoHtml = `<img class="photo" src="${urlData?.publicUrl || ''}" alt="${escapeHtml(p.display_name)}" loading="lazy">`;
+    } else {
+      photoHtml = `<div class="photo private" role="img" aria-label="${t('photo_private')}">
+        <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="36" r="18" fill="#0A3D1F"/><path d="M14 92c0-20 16-34 36-34s36 14 36 34z" fill="#0A3D1F"/></svg>
+        <span class="lock">🔒 ${t('photo_private')}</span></div>`;
+    }
     return `<div class="pcard">
-      <img class="photo" src="${photo}" alt="${escapeHtml(p.display_name)}" loading="lazy">
+      ${photoHtml}
       <div class="body">
         <div class="pname">${escapeHtml(p.display_name)}</div>
         <div class="meta">
