@@ -70,7 +70,24 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:10px
 .bank-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid rgba(10,61,31,.1);font-size:13px;}
 .bank-row:last-child{border-bottom:none;}
 .bank-row span{color:var(--muted);font-weight:600;}
-.bank-row b{color:var(--forest);text-align:right;}
+.bank-row b{color:var(--forest);text-align:right;flex:1;user-select:text;-webkit-user-select:text;overflow-wrap:anywhere;}
+.bank-row b[data-latin]{font-size:11.5px;white-space:nowrap;min-width:0;}
+.bank-row span{flex:0 1 auto;min-width:0;}
+.bank-row{align-items:center;}
+.copy-btn{flex:none;background:#fff;border:1.5px solid rgba(10,61,31,.25);color:var(--forest);border-radius:50px;padding:4px 11px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:11.5px;cursor:pointer;}
+.copy-btn.done{background:var(--forest);color:#fff;border-color:var(--forest);}
+.amount-hero{background:var(--forest);color:#fff;border-radius:var(--rs);padding:14px 16px;margin:14px 0;text-align:center;}
+.amount-hero-lbl{font-size:12px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:.5px;}
+.amount-hero-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:4px;}
+.amount-hero-row b{font-family:'Nunito',sans-serif;font-size:30px;font-weight:900;color:#fff;}
+.amount-hero .copy-btn{background:transparent;border-color:rgba(255,255,255,.5);color:#fff;}
+.amount-hero .copy-btn.done{background:#fff;color:var(--forest);}
+.txn-box{background:#FFF7E0;border-left:4px solid var(--gold);border-radius:var(--rs);padding:12px 14px;margin:14px 0;color:#7A5000;}
+.txn-lbl{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;}
+.txn-val{font-size:15px;font-weight:800;margin-top:2px;}
+.txn-hint{font-size:12.5px;margin-top:4px;line-height:1.5;}
+.email-note{background:var(--lime-soft);border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:700;color:var(--forest);margin-bottom:10px;}
+html[dir=rtl] .txn-box{border-left:none;border-right:4px solid var(--gold);}
 .acct-chip{background:rgba(255,255,255,.12);border-radius:50px;padding:5px 12px;cursor:pointer;font-weight:700;}
 .acct-menu-wrap{position:relative;}
 .acct-menu-btn{background:rgba(255,255,255,.12);border-radius:50px;padding:6px 14px;cursor:pointer;font-weight:700;color:white;font-size:12px;white-space:nowrap;}
@@ -105,6 +122,7 @@ header{background:var(--forest);border-bottom:3px solid var(--gold);padding:10px
 html[dir=rtl] .pcard .qlabel{letter-spacing:0;text-transform:none;font-size:12px;}
 html[dir=rtl] body, html[dir=rtl] button, html[dir=rtl] input, html[dir=rtl] .logo-text, html[dir=rtl] .hero h1, html[dir=rtl] .pcard .pname, html[dir=rtl] .hiw-title, html[dir=rtl] .modal h3, html[dir=rtl] .ns-title, html[dir=rtl] .countdown-box b{font-family:'Cairo','Quicksand',sans-serif;}
 html[dir=rtl] .bank-row b{text-align:left;}
+.amount-hero-row b{text-align:center !important;}
 html[dir=rtl] .acct-dropdown{right:auto;left:0;}
 html[dir=rtl] .pcard .quote{font-style:normal;}
 .ltr{direction:ltr;unicode-bidi:isolate;}
@@ -221,47 +239,39 @@ html[dir=rtl] .pcard .quote{font-style:normal;}
 
     <div id="bank-transfer-view" style="display:none;">
       <h3 data-i18n="bank_h3">Send Your Sponsorship</h3>
-      <div class="sub" data-i18n-html="bank_sub">Please arrange your transfer within <b>2 working days</b> using the details below.</div>
-      <div class="bank-box" id="amount-box" style="display:none;"><div class="bank-row"><span data-i18n="amount_lbl">Amount to send</span><b id="amount-val"></b></div></div>
+      <div class="sub" data-i18n-html="bank_sub">We kindly ask that you send your transfer within <b>48 hours</b> using the details below.</div>
+      <div class="amount-hero" id="amount-box" style="display:none;">
+        <div class="amount-hero-lbl" data-i18n="amount_lbl">Amount to send</div>
+        <div class="amount-hero-row"><b id="amount-val"></b><button type="button" class="copy-btn" onclick="copyVal(this)" data-i18n="copy">Copy</button></div>
+      </div>
       <div class="bank-box">
-        <div class="bank-row"><span data-i18n="bank_name">Bank Name</span><b class="ltr">QNB</b></div>
-        <div class="bank-row"><span data-i18n="acct_name">Account Name</span><b class="ltr">Together for Good Events</b></div>
-        <div class="bank-row"><span data-i18n="acct_no">Account Number</span><b class="ltr" data-latin>0250227446001</b></div>
-        <div class="bank-row"><span data-i18n="iban">IBAN</span><b class="ltr" data-latin>QA21QNBA000000000250227446001</b></div>
-        <div class="bank-row"><span data-i18n="swift">SWIFT Code</span><b class="ltr" data-latin>QNBAQAQAXXX</b></div>
+        <div class="bank-row"><span data-i18n="bank_name">Bank Name</span><b class="ltr">QNB</b><button type="button" class="copy-btn" onclick="copyVal(this)" data-i18n="copy">Copy</button></div>
+        <div class="bank-row"><span data-i18n="acct_name">Account Name</span><b class="ltr">Together for Good Events</b><button type="button" class="copy-btn" onclick="copyVal(this)" data-i18n="copy">Copy</button></div>
+        <div class="bank-row"><span data-i18n="acct_no">Account Number</span><b class="ltr" data-latin>0250227446001</b><button type="button" class="copy-btn" onclick="copyVal(this)" data-i18n="copy">Copy</button></div>
+        <div class="bank-row"><span data-i18n="iban">IBAN</span><b class="ltr" data-latin>QA21QNBA000000000250227446001</b><button type="button" class="copy-btn" onclick="copyVal(this)" data-i18n="copy">Copy</button></div>
+        <div class="bank-row"><span data-i18n="swift">SWIFT Code</span><b class="ltr" data-latin>QNBAQAQAXXX</b><button type="button" class="copy-btn" onclick="copyVal(this)" data-i18n="copy">Copy</button></div>
       </div>
       <div class="bank-box">
         <div class="bank-row"><span data-i18n="fw_type">Fawran — Account Type</span><b data-i18n="fw_type_v">Corporate / Business</b></div>
-        <div class="bank-row"><span data-i18n="fw_cr">Fawran — CR Number</span><b class="ltr" data-latin>229085</b></div>
+        <div class="bank-row"><span data-i18n="fw_cr">Fawran — CR Number</span><b class="ltr" data-latin>229085</b><button type="button" class="copy-btn" onclick="copyVal(this)" data-i18n="copy">Copy</button></div>
       </div>
-      <div class="modal-err" style="display:block;background:#FFF7E0;border-left-color:var(--gold);color:#7A5000;" data-i18n-html="warn1">⚠️ On Fawran: select <b>Corporate/Business</b> (not Individual), then enter the Commercial Registration number above.</div>
-      <div class="modal-err" style="display:block;background:#FFF7E0;border-left-color:var(--gold);color:#7A5000;" data-i18n-html="warn2">⚠️ Important: if your payment method asks for a purpose or category, please select <b>"Goods and Services"</b> / <b>"Online Payment for Goods and Services"</b> — not Friends & Family or Personal.</div>
+      <div class="txn-box">
+        <div class="txn-lbl" data-i18n="tx_type">Transaction type</div>
+        <div class="txn-val" data-i18n="tx_type_v">Payment for goods/services (commercial transaction)</div>
+        <div class="txn-hint" data-i18n-html="tx_hint">Please choose this if you're asked — not Friends &amp; Family or Personal.</div>
+      </div>
+      <div class="email-note" id="email-note" style="display:none;" data-i18n="email_note">📧 We've also emailed these details to you.</div>
       <div class="modal-actions">
-        <button class="btn-cancel" onclick="closePledgeModal()" data-i18n="cancel">Cancel</button>
-        <button class="btn-submit" onclick="goToProofUpload()" data-i18n="sent_it">I've Sent It →</button>
-      </div>
-    </div>
-
-    <div id="proof-upload-view" style="display:none;">
-      <h3 data-i18n="proof_h3">Attach Your Transfer Receipt</h3>
-      <div class="sub" data-i18n="proof_sub">Upload a screenshot or photo of your transfer confirmation.</div>
-      <div class="fg">
-        <label data-i18n="proof_label">Proof of Transfer</label>
-        <input type="file" accept="image/*,.pdf" id="proof-file-input">
-      </div>
-      <div class="modal-err" id="proof-err"></div>
-      <div class="modal-actions">
-        <button class="btn-cancel" onclick="goBackToBankView()" data-i18n="back">Back</button>
-        <button class="btn-submit" id="proof-submit-btn" onclick="submitProof()" data-i18n="submit">Submit</button>
+        <button class="btn-submit" onclick="goToThanks()" data-i18n="sent_it">Done →</button>
       </div>
     </div>
 
     <div id="pledge-success-view" style="display:none;">
       <div class="pledge-success">
-        <div class="sicon">🎉</div>
+        <div class="sicon">💚</div>
         <h3 data-i18n="thanks_h3">Thank You!</h3>
-        <p style="font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.6;" data-i18n="thanks_p">You're now sponsoring this Little Learner. We've received your transfer proof and will confirm by email shortly.</p>
-        <button class="btn-submit" style="width:100%;margin-top:16px;" onclick="location.href='my-payments.html'" data-i18n="view_mine">View My Payments →</button>
+        <p style="font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.6;" id="thanks-p"></p>
+        <button class="btn-submit" style="width:100%;margin-top:16px;" onclick="location.href='my-payments.html'" data-i18n="view_mine">Go to My Payments →</button>
         <button class="btn-cancel" style="width:100%;margin-top:8px;" onclick="closePledgeModal()" data-i18n="keep_browsing">Keep Browsing</button>
       </div>
     </div>
@@ -299,15 +309,20 @@ const I18N = {
     q_meet:'Would you like to meet the Little Learner, should the parents agree?', q_updates:'Would you like updates on your Little Learner?',
     yes:'Yes', no:'No', pledge_note:'Next you will log in or create an account. Your Little Learner is reserved for you at that point, and your 48-hour payment window starts.',
     confirm:'Confirm Sponsorship →',
-    bank_h3:'Send Your Sponsorship', bank_sub:'Please arrange your transfer within <b>2 working days</b> using the details below.',
+    bank_h3:'Send Your Sponsorship', bank_sub:'We kindly ask that you send your transfer within <b>48 hours</b> using the details below.',
     bank_name:'Bank Name', acct_name:'Account Name', acct_no:'Account Number', iban:'IBAN', swift:'SWIFT Code',
     fw_type:'Fawran — Account Type', fw_type_v:'Corporate / Business', fw_cr:'Fawran — CR Number',
     warn1:'⚠️ On Fawran: select <b>Corporate/Business</b> (not Individual), then enter the Commercial Registration number above.',
     warn2:'⚠️ Important: if your payment method asks for a purpose or category, please select <b>"Goods and Services"</b> / <b>"Online Payment for Goods and Services"</b> — not Friends & Family or Personal.',
-    sent_it:"I've Sent It →",
+    sent_it:'Done →',
+    copy:'Copy', copied:'Copied ✓', tx_type:'Transaction type', tx_type_v:'Payment for goods/services (commercial transaction)',
+    tx_hint:"Please choose this if you're asked — not Friends & Family or Personal.",
+    email_note:"📧 We've also emailed these details to you.",
+    thanks_amt:"Thank you for sponsoring this Little Learner! Please send your transfer of {amount} within 48 hours, then upload your transfer receipt in My Payments so we can confirm it quickly. We'll be in touch by email.",
+    thanks_noamt:"Thank you for sponsoring this Little Learner! Please send your transfer within 48 hours, then upload your transfer receipt in My Payments so we can confirm it quickly. We'll be in touch by email.",
     proof_h3:'Attach Your Transfer Receipt', proof_sub:'Upload a screenshot or photo of your transfer confirmation.', proof_label:'Proof of Transfer', back:'Back', submit:'Submit',
-    thanks_h3:'Thank You!', thanks_p:"You're now sponsoring this Little Learner. We've received your transfer proof and will confirm by email shortly.",
-    view_mine:'View My Payments →', keep_browsing:'Keep Browsing',
+    thanks_h3:'Thank You!',
+    view_mine:'Go to My Payments →', keep_browsing:'Keep Browsing',
     e_need_login:'⚠️ Please enter your email and password.', e_need_fields:'Please fill in your first name, surname, and contact number.',
     e_no_account:'Could not create your account — please try again.',
     ok_created:'✅ Account created! Please check your email to confirm it, then log in to continue sponsoring.',
@@ -353,15 +368,20 @@ const I18N = {
     q_meet:'هل ترغب في لقاء المتعلّم الصغير، في حال موافقة الوالدين؟', q_updates:'هل ترغب في تلقّي أخبار عن متعلّمك الصغير؟',
     yes:'نعم', no:'لا', pledge_note:'بعد ذلك ستسجّل الدخول أو تنشئ حسابًا. عندها يُحجز المتعلّم الصغير لك وتبدأ مهلة الدفع البالغة 48 ساعة.',
     confirm:'تأكيد الكفالة ←',
-    bank_h3:'أرسل مبلغ الكفالة', bank_sub:'يُرجى إجراء التحويل خلال <b>يومَي عمل</b> باستخدام التفاصيل أدناه.',
-    bank_name:'اسم البنك', acct_name:'اسم الحساب', acct_no:'رقم الحساب', iban:'رقم الآيبان (IBAN)', swift:'رمز السويفت (SWIFT)',
+    bank_h3:'أرسل مبلغ الكفالة', bank_sub:'نرجو منك إرسال التحويل خلال <b>٤٨ ساعة</b> باستخدام التفاصيل أدناه.',
+    bank_name:'اسم البنك', acct_name:'اسم الحساب', acct_no:'رقم الحساب', iban:'الآيبان (IBAN)', swift:'رمز SWIFT',
     fw_type:'فوران — نوع الحساب', fw_type_v:'شركات / أعمال', fw_cr:'فوران — رقم السجل التجاري',
     warn1:'⚠️ في فوران: اختر <b>شركات/أعمال</b> (وليس أفراد)، ثم أدخل رقم السجل التجاري أعلاه.',
     warn2:'⚠️ مهم: إذا طلبت وسيلة الدفع تحديد الغرض أو الفئة، يُرجى اختيار <b>«سلع وخدمات»</b> / <b>«دفع إلكتروني مقابل سلع وخدمات»</b> — وليس «الأصدقاء والعائلة» أو «شخصي».',
-    sent_it:'لقد أرسلتُه ←',
+    sent_it:'تم ←',
+    copy:'نسخ', copied:'تم النسخ ✓', tx_type:'نوع المعاملة', tx_type_v:'دفع مقابل سلع/خدمات (معاملة تجارية)',
+    tx_hint:'يُرجى اختيار هذا الخيار عند الطلب — وليس «الأصدقاء والعائلة» أو «شخصي».',
+    email_note:'📧 أرسلنا هذه التفاصيل إلى بريدك الإلكتروني أيضًا.',
+    thanks_amt:'شكرًا لكفالتك هذا المتعلّم الصغير! يُرجى إرسال التحويل بمبلغ {amount} خلال ٤٨ ساعة، ثم ارفع إيصال التحويل في «مدفوعاتي» لنتمكن من تأكيده بسرعة. سنتواصل معك عبر البريد الإلكتروني.',
+    thanks_noamt:'شكرًا لكفالتك هذا المتعلّم الصغير! يُرجى إرسال التحويل خلال ٤٨ ساعة، ثم ارفع إيصال التحويل في «مدفوعاتي» لنتمكن من تأكيده بسرعة. سنتواصل معك عبر البريد الإلكتروني.',
     proof_h3:'أرفق إيصال التحويل', proof_sub:'ارفع لقطة شاشة أو صورة لتأكيد التحويل.', proof_label:'إثبات التحويل', back:'رجوع', submit:'إرسال',
-    thanks_h3:'شكرًا لك!', thanks_p:'أنت الآن تكفل هذا المتعلّم الصغير. استلمنا إثبات التحويل وسنؤكد لك عبر البريد الإلكتروني قريبًا.',
-    view_mine:'عرض مدفوعاتي ←', keep_browsing:'متابعة التصفح',
+    thanks_h3:'شكرًا لك!',
+    view_mine:'اذهب إلى مدفوعاتي ←', keep_browsing:'متابعة التصفح',
     e_need_login:'⚠️ يُرجى إدخال بريدك الإلكتروني وكلمة المرور.', e_need_fields:'يُرجى إدخال اسمك الأول واسم العائلة ورقم التواصل.',
     e_no_account:'تعذّر إنشاء حسابك — يُرجى المحاولة مجددًا.',
     ok_created:'✅ تم إنشاء الحساب! يُرجى التحقق من بريدك الإلكتروني لتأكيده، ثم سجّل الدخول لمتابعة الكفالة.',
@@ -450,6 +470,7 @@ function applyLang(lang) {
   if(pb && !pb.disabled) pb.textContent = pledgeBtnLabel();
   renderLimit();
   showAmount(lastAmount);
+  renderThanks();
   if(currentPledgeChild) document.getElementById('pledge-title').textContent = t('pledge_title', { name: currentPledgeChild.display_name });
   if(profilesLoaded) renderProfiles();
   // digits last, after everything is in the right language
@@ -810,13 +831,13 @@ let currentStepKey = '';
 function refreshStepIndicator() {
   const el = document.getElementById('step-indicator');
   if(!currentStepKey) { el.textContent = ''; return; }
-  const total = hadAuthStep ? 4 : 3;
-  const nums = { st_questions: 1, st_auth: 2, st_pay: hadAuthStep ? 3 : 2, st_receipt: hadAuthStep ? 4 : 3 };
+  const total = hadAuthStep ? 3 : 2;
+  const nums = { st_questions: 1, st_auth: 2, st_pay: hadAuthStep ? 3 : 2 };
   const n = nums[currentStepKey];
   el.textContent = n ? t('step_n', { n, total, title: t(currentStepKey) }) : t(currentStepKey);
 }
 function showStep(viewId, stepKey) {
-  ['auth-email-view','auth-signin-view','auth-register-view','limit-view','pledge-form-view','bank-transfer-view','proof-upload-view','pledge-success-view'].forEach(id => {
+  ['auth-email-view','auth-signin-view','auth-register-view','limit-view','pledge-form-view','bank-transfer-view','pledge-success-view'].forEach(id => {
     document.getElementById(id).style.display = (id === viewId) ? 'block' : 'none';
   });
   currentStepKey = stepKey || '';
@@ -882,7 +903,9 @@ async function createPledge() {
     currentPledgeId = data.pledge_id;
     stopReserveCountdown();
     showAmount(data.amount);
+    document.getElementById('email-note').style.display = 'none';
     showStep('bank-transfer-view', 'st_pay');
+    sendDetailsEmail(currentPledgeId);
   } catch(e) {
     backToQuestions('⚠️ ' + friendlyErr(e));
   }
@@ -897,46 +920,44 @@ function friendlyErr(e) {
   return m || t('e_generic');
 }
 
-function goToProofUpload() {
-  document.getElementById('proof-err').style.display = 'none';
-  document.getElementById('proof-file-input').value = '';
-  showStep('proof-upload-view', 'st_receipt');
+// ---- Bank screen helpers ----
+function copyVal(btn) {
+  const node = btn.previousElementSibling;
+  let text = (node ? node.textContent : '').trim();
+  if(node && node.id === 'amount-val' && lastAmount != null) text = String(lastAmount);
+  const done = () => {
+    const old = btn.textContent;
+    btn.textContent = btn.closest('.bank-row') ? '✓' : t('copied'); btn.classList.add('done');
+    setTimeout(() => { btn.textContent = t('copy'); btn.classList.remove('done'); }, 1600);
+  };
+  const fallback = () => {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      done();
+    } catch(e) {}
+  };
+  if(navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback);
+  else fallback();
 }
 
-function goBackToBankView() {
-  showStep('bank-transfer-view', 'st_pay');
-}
-
-async function submitProof() {
-  const err = document.getElementById('proof-err');
-  const file = document.getElementById('proof-file-input').files[0];
-  if(!file) {
-    err.textContent = t('e_attach');
-    err.style.display = 'block';
-    return;
-  }
-  err.style.display = 'none';
-  const btn = document.getElementById('proof-submit-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2.5px;border-color:rgba(10,61,31,.3);border-top-color:var(--forest);display:inline-block;"></div>';
+// Email the bank details to the sponsor (best effort — the screen already shows everything)
+async function sendDetailsEmail(pledgeId) {
   try {
-    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-    const path = `${currentPledgeId}/proof_${Date.now()}.${ext}`;
-    const { error: upErr } = await db.storage.from('sponsorship-proofs').upload(path, file, { upsert: true, contentType: file.type || 'application/octet-stream' });
-    if(upErr) throw new Error(upErr.message);
+    const { data, error } = await db.functions.invoke('ll-sponsor-email', { body: { pledge_id: pledgeId } });
+    if(!error && data && data.success) document.getElementById('email-note').style.display = 'block';
+  } catch(e) { /* non-fatal */ }
+}
 
-    const { data, error } = await db.rpc('attach_sponsor_proof', { p_pledge_id: currentPledgeId, p_proof_path: path });
-    if(error) throw new Error(error.message);
-    if(!data?.success) throw new Error(data?.error || t('e_proof'));
-
-    stopPaymentCountdown();
-    showStep('pledge-success-view', '');
-  } catch(e) {
-    err.textContent = '⚠️ ' + friendlyErr(e);
-    err.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = t('submit');
-  }
+function renderThanks() {
+  const amt = lastAmount != null ? (LANG === 'ar' ? `${lastAmount} ${t('qar')}` : `${t('qar')} ${lastAmount}`) : null;
+  document.getElementById('thanks-p').textContent = amt ? t('thanks_amt', { amount: amt }) : t('thanks_noamt');
+}
+function goToThanks() {
+  stopPaymentCountdown();
+  renderThanks();
+  showStep('pledge-success-view', '');
 }
 
 init();
