@@ -4708,6 +4708,8 @@ function renderLearnerProfile(f, children, focusChildId) {
           <button class="btn-small" onclick="jumpToTab('overview')">👪 Family Case File</button>
         </div>
         ${assessedSummaryHTML(c)}
+        <h3 style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:14px 0 8px;">Assessment Papers</h3>
+        <div id="ap-wrap-${c.id}"><div class="loading">Loading…</div></div>
         <h3 style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:14px 0 8px;">Event History</h3>
         ${events.length ? events.map(a=>`
           <div class="fam-card" style="margin-bottom:8px;">
@@ -4726,6 +4728,103 @@ function renderLearnerProfile(f, children, focusChildId) {
       if(data?.signedUrl) { const img = document.getElementById('lp-img-'+c.id); if(img) img.src = data.signedUrl; }
     });
   }
+  loadAssessmentPapers(c.id);
+}
+
+// ── ASSESSMENT PAPERS (files stay in Google Drive; only the link is stored) ──
+// Each record links to the child by internal id, never by URN or name, so renaming a
+// child or fixing a URN can never detach a paper.
+function driveFileIdFromUrl(url) {
+  const m = String(url||'').match(/\/(?:d|folders)\/([A-Za-z0-9_-]{10,})/) || String(url||'').match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+  return m ? m[1] : null;
+}
+function isDriveUrl(url) {
+  try { const h = new URL(url).hostname; return h === 'drive.google.com' || h === 'docs.google.com'; } catch(e) { return false; }
+}
+function assessmentFileNameHint(c, type, date) {
+  const parts = String(c.full_name||'Child').trim().split(/\s+/);
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  const name = parts.length > 1 ? cap(parts[0]) + '-' + cap(parts[parts.length-1]) : cap(parts[0]);
+  return `${name}_${String(c.id).slice(0,8)}_${type==='pre'?'Pre':'Final'}-Assessment_${date||'YYYY-MM-DD'}.pdf`;
+}
+
+async function loadAssessmentPapers(childId) {
+  const wrap = document.getElementById('ap-wrap-'+childId);
+  if(!wrap) return;
+  const { data, error } = await db.from('ll_assessment_records').select('*').eq('child_id', childId).order('assessment_date', {ascending:false, nullsFirst:false});
+  if(error) { wrap.innerHTML = `<div class="warn-box">Could not load assessment papers: ${esc(error.message)}</div>`; return; }
+  const c = (currentChildren||[]).find(x=>x.id===childId) || {};
+  const rows = (data||[]).map(r => {
+    const when = r.assessment_date ? new Date(r.assessment_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'Date not set';
+    const label = r.assessment_type === 'pre' ? 'Pre-assessment' : 'Final assessment';
+    const hasLink = r.drive_url && isDriveUrl(r.drive_url);
+    return `<div class="fam-card" style="margin-bottom:8px;">
+      <div class="fam-info">
+        <div class="fam-name">${esc(label)}</div>
+        <div class="fam-meta"><span>📆 ${esc(when)}</span>${hasLink?'':'<span>⚠️ No Drive link yet</span>'}</div>
+        ${r.notes?`<div class="fam-meta"><span>${esc(r.notes)}</span></div>`:''}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${hasLink?`<a class="btn-small" href="${esc(r.drive_url)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">📄 Open assessment</a>`:''}
+        <button class="btn-small" onclick="editAssessmentLink('${r.id}','${childId}')">🔗 ${hasLink?'Change':'Add'} link</button>
+        <button class="btn-small" onclick="deleteAssessmentRecord('${r.id}','${childId}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+  wrap.innerHTML = `${rows || '<div class="empty" style="padding:12px 0;"><p style="font-size:13px;">No assessment papers recorded yet</p></div>'}
+    <div class="fg" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div><label>Type</label>
+        <select id="ap-type-${childId}" class="assign-select" style="width:100%;"><option value="final">Final assessment</option><option value="pre">Pre-assessment</option></select></div>
+      <div><label>Assessment date</label>
+        <input id="ap-date-${childId}" type="date" class="ival-input" style="width:100%;"></div>
+      <div style="grid-column:span 2;"><label>Google Drive link <span style="font-weight:600;color:var(--muted);">(optional — can be added later)</span></label>
+        <input id="ap-url-${childId}" class="ival-input" style="width:100%;" placeholder="https://drive.google.com/file/d/…"></div>
+      <div style="grid-column:span 2;font-size:11px;color:var(--muted);">Save the file in Drive as <strong id="ap-hint-${childId}">${esc(assessmentFileNameHint(c,'final',null))}</strong></div>
+      <div style="grid-column:span 2;"><button class="btn-teal btn-sm" onclick="saveAssessmentRecord('${childId}')">Add assessment paper</button></div>
+    </div>`;
+  const refreshHint = () => {
+    const t = document.getElementById('ap-type-'+childId)?.value || 'final';
+    const d = document.getElementById('ap-date-'+childId)?.value || null;
+    const h = document.getElementById('ap-hint-'+childId);
+    if(h) h.textContent = assessmentFileNameHint(c, t, d);
+  };
+  document.getElementById('ap-type-'+childId)?.addEventListener('change', refreshHint);
+  document.getElementById('ap-date-'+childId)?.addEventListener('change', refreshHint);
+}
+
+async function saveAssessmentRecord(childId) {
+  const type = document.getElementById('ap-type-'+childId).value;
+  const date = document.getElementById('ap-date-'+childId).value || null;
+  const url = document.getElementById('ap-url-'+childId).value.trim();
+  if(!date) { showToast('Choose the assessment date'); return; }
+  if(url && !isDriveUrl(url)) { showToast('That doesn\'t look like a Google Drive link'); return; }
+  const { data: { user } } = await db.auth.getUser();
+  const { error } = await db.from('ll_assessment_records').insert({
+    child_id: childId, assessment_type: type, assessment_date: date,
+    drive_url: url || null, drive_file_id: url ? driveFileIdFromUrl(url) : null,
+    added_by: user?.email || null
+  });
+  if(error) { showToast('Could not save — '+error.message); return; }
+  showToast('Assessment paper added');
+  loadAssessmentPapers(childId);
+}
+
+async function editAssessmentLink(recordId, childId) {
+  const url = (prompt('Paste the Google Drive link for this assessment paper:') || '').trim();
+  if(!url) return;
+  if(!isDriveUrl(url)) { showToast('That doesn\'t look like a Google Drive link'); return; }
+  const { error } = await db.from('ll_assessment_records').update({ drive_url: url, drive_file_id: driveFileIdFromUrl(url) }).eq('id', recordId);
+  if(error) { showToast('Could not save — '+error.message); return; }
+  showToast('Link saved');
+  loadAssessmentPapers(childId);
+}
+
+async function deleteAssessmentRecord(recordId, childId) {
+  if(!confirm('Remove this assessment record? The file in Google Drive is not deleted.')) return;
+  const { error } = await db.from('ll_assessment_records').delete().eq('id', recordId);
+  if(error) { showToast('Could not remove — '+error.message); return; }
+  showToast('Removed');
+  loadAssessmentPapers(childId);
 }
 
 // ── SPONSORSHIPS (super admin only) ──
