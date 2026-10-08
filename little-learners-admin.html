@@ -3520,6 +3520,11 @@ function renderChildren(children, f) {
           <button class="btn-teal btn-sm" onclick="saveYGOverride('${c.id}')">Save Override</button>
         </div>
 
+        <div style="margin-top:14px;">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Assessment Papers</div>
+          <div class="ap-wrap" data-child="${c.id}" data-sfx="c"><div class="loading">Loading…</div></div>
+        </div>
+
         <div class="info-grid" style="margin-top:10px;">
           <div class="irow" style="grid-column:span 2;">
             <div class="ikey">Preferred Name <span style="text-transform:none;font-weight:600;color:var(--muted);">(what the child likes to be called, if different)</span></div>
@@ -3653,6 +3658,7 @@ function renderChildren(children, f) {
   // Load profile photos
   children.forEach(c=>{
     if(c.profile_photo_path) loadChildPhoto(c.id, c.profile_photo_path);
+    loadAssessmentPapers(c.id);
   });
 }
 
@@ -4709,7 +4715,7 @@ function renderLearnerProfile(f, children, focusChildId) {
         </div>
         ${assessedSummaryHTML(c)}
         <h3 style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:14px 0 8px;">Assessment Papers</h3>
-        <div id="ap-wrap-${c.id}"><div class="loading">Loading…</div></div>
+        <div class="ap-wrap" data-child="${c.id}" data-sfx="p"><div class="loading">Loading…</div></div>
         <h3 style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:14px 0 8px;">Event History</h3>
         ${events.length ? events.map(a=>`
           <div class="fam-card" style="margin-bottom:8px;">
@@ -4752,58 +4758,63 @@ function assessmentFileNameHint(c, type, date, subject) {
 }
 
 async function loadAssessmentPapers(childId) {
-  const wrap = document.getElementById('ap-wrap-'+childId);
-  if(!wrap) return;
+  // The same child can be on screen twice (family case file + Little Learner profile), so
+  // each copy gets its own element ids via a suffix.
+  const wraps = document.querySelectorAll('.ap-wrap[data-child="'+childId+'"]');
+  if(!wraps.length) return;
   const { data, error } = await db.from('ll_assessment_records').select('*').eq('child_id', childId).order('assessment_date', {ascending:false, nullsFirst:false});
-  if(error) { wrap.innerHTML = `<div class="warn-box">Could not load assessment papers: ${esc(error.message)}</div>`; return; }
   const c = (currentChildren||[]).find(x=>x.id===childId) || {};
-  const rows = (data||[]).map(r => {
-    const when = r.assessment_date ? new Date(r.assessment_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'Date not set';
-    const label = (r.assessment_type === 'pre' ? 'Pre-assessment' : 'Final assessment') + ' — ' + (AP_SUBJECTS[r.subject] || 'Subject not set');
-    const hasLink = r.drive_url && isDriveUrl(r.drive_url);
-    return `<div class="fam-card" style="margin-bottom:8px;">
-      <div class="fam-info">
-        <div class="fam-name">${esc(label)}</div>
-        <div class="fam-meta"><span>📆 ${esc(when)}</span>${hasLink?'':'<span>⚠️ No Drive link yet</span>'}</div>
-        ${r.notes?`<div class="fam-meta"><span>${esc(r.notes)}</span></div>`:''}
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        ${hasLink?`<a class="btn-small" href="${esc(r.drive_url)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">📄 Open assessment</a>`:''}
-        <button class="btn-small" onclick="editAssessmentLink('${r.id}','${childId}')">🔗 ${hasLink?'Change':'Add'} link</button>
-        <button class="btn-small" onclick="deleteAssessmentRecord('${r.id}','${childId}')">🗑</button>
-      </div>
-    </div>`;
-  }).join('');
-  wrap.innerHTML = `${rows || '<div class="empty" style="padding:12px 0;"><p style="font-size:13px;">No assessment papers recorded yet</p></div>'}
-    <div class="fg" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      <div><label>Type</label>
-        <select id="ap-type-${childId}" class="assign-select" style="width:100%;"><option value="final">Final assessment</option><option value="pre">Pre-assessment</option></select></div>
-      <div><label>Subject</label>
-        <select id="ap-subject-${childId}" class="assign-select" style="width:100%;"><option value="english">English</option><option value="maths">Maths</option><option value="other">Other</option></select></div>
-      <div><label>Assessment date</label>
-        <input id="ap-date-${childId}" type="date" class="ival-input" style="width:100%;"></div>
-      <div style="grid-column:span 2;"><label>Google Drive link <span style="font-weight:600;color:var(--muted);">(optional — can be added later)</span></label>
-        <input id="ap-url-${childId}" class="ival-input" style="width:100%;" placeholder="https://drive.google.com/file/d/…"></div>
-      <div style="grid-column:span 2;font-size:11px;color:var(--muted);">Save the file in that day's Drive folder as <strong id="ap-hint-${childId}">${esc(assessmentFileNameHint(c,'final',null,'english'))}</strong></div>
-      <div style="grid-column:span 2;"><button class="btn-teal btn-sm" onclick="saveAssessmentRecord('${childId}')">Add assessment paper</button></div>
-    </div>`;
-  const refreshHint = () => {
-    const t = document.getElementById('ap-type-'+childId)?.value || 'final';
-    const d = document.getElementById('ap-date-'+childId)?.value || null;
-    const sub = document.getElementById('ap-subject-'+childId)?.value || 'english';
-    const h = document.getElementById('ap-hint-'+childId);
-    if(h) h.textContent = assessmentFileNameHint(c, t, d, sub);
-  };
-  document.getElementById('ap-type-'+childId)?.addEventListener('change', refreshHint);
-  document.getElementById('ap-date-'+childId)?.addEventListener('change', refreshHint);
-  document.getElementById('ap-subject-'+childId)?.addEventListener('change', refreshHint);
+  wraps.forEach(wrap => {
+    if(error) { wrap.innerHTML = `<div class="warn-box">Could not load assessment papers: ${esc(error.message)}</div>`; return; }
+    const sfx = wrap.dataset.sfx || 'p';
+    const k = childId+'-'+sfx;
+    const rows = (data||[]).map(r => {
+      const when = r.assessment_date ? new Date(r.assessment_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'Date not set';
+      const label = (r.assessment_type === 'pre' ? 'Pre-assessment' : 'Final assessment') + ' — ' + (AP_SUBJECTS[r.subject] || 'Subject not set');
+      const hasLink = r.drive_url && isDriveUrl(r.drive_url);
+      return `<div class="fam-card" style="margin-bottom:8px;">
+        <div class="fam-info">
+          <div class="fam-name">${esc(label)}</div>
+          <div class="fam-meta"><span>📆 ${esc(when)}</span>${hasLink?'':'<span>⚠️ No Drive link yet</span>'}</div>
+          ${r.notes?`<div class="fam-meta"><span>${esc(r.notes)}</span></div>`:''}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${hasLink?`<a class="btn-small" href="${esc(r.drive_url)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">📄 Open assessment</a>`:''}
+          <button class="btn-small" onclick="editAssessmentLink('${r.id}','${childId}')">🔗 ${hasLink?'Change':'Add'} link</button>
+          <button class="btn-small" onclick="deleteAssessmentRecord('${r.id}','${childId}')">🗑</button>
+        </div>
+      </div>`;
+    }).join('');
+    wrap.innerHTML = `${rows || '<div class="empty" style="padding:12px 0;"><p style="font-size:13px;">No assessment papers recorded yet</p></div>'}
+      <div class="fg" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div><label>Type</label>
+          <select id="ap-type-${k}" class="assign-select" style="width:100%;"><option value="final">Final assessment</option><option value="pre">Pre-assessment</option></select></div>
+        <div><label>Subject</label>
+          <select id="ap-subject-${k}" class="assign-select" style="width:100%;"><option value="english">English</option><option value="maths">Maths</option><option value="other">Other</option></select></div>
+        <div><label>Assessment date</label>
+          <input id="ap-date-${k}" type="date" class="ival-input" style="width:100%;"></div>
+        <div style="grid-column:span 2;"><label>Google Drive link <span style="font-weight:600;color:var(--muted);">(optional — can be added later)</span></label>
+          <input id="ap-url-${k}" class="ival-input" style="width:100%;" placeholder="https://drive.google.com/file/d/…"></div>
+        <div style="grid-column:span 2;font-size:11px;color:var(--muted);">Save the file in that day's Drive folder as <strong id="ap-hint-${k}">${esc(assessmentFileNameHint(c,'final',null,'english'))}</strong></div>
+        <div style="grid-column:span 2;"><button class="btn-teal btn-sm" onclick="saveAssessmentRecord('${childId}','${sfx}')">Add assessment paper</button></div>
+      </div>`;
+    const refreshHint = () => {
+      const t = document.getElementById('ap-type-'+k)?.value || 'final';
+      const d = document.getElementById('ap-date-'+k)?.value || null;
+      const sub = document.getElementById('ap-subject-'+k)?.value || 'english';
+      const h = document.getElementById('ap-hint-'+k);
+      if(h) h.textContent = assessmentFileNameHint(c, t, d, sub);
+    };
+    ['type','date','subject'].forEach(n => document.getElementById('ap-'+n+'-'+k)?.addEventListener('change', refreshHint));
+  });
 }
 
-async function saveAssessmentRecord(childId) {
-  const type = document.getElementById('ap-type-'+childId).value;
-  const subject = document.getElementById('ap-subject-'+childId).value;
-  const date = document.getElementById('ap-date-'+childId).value || null;
-  const url = document.getElementById('ap-url-'+childId).value.trim();
+async function saveAssessmentRecord(childId, sfx) {
+  const k = childId+'-'+(sfx||'p');
+  const type = document.getElementById('ap-type-'+k).value;
+  const subject = document.getElementById('ap-subject-'+k).value;
+  const date = document.getElementById('ap-date-'+k).value || null;
+  const url = document.getElementById('ap-url-'+k).value.trim();
   if(!date) { showToast('Choose the assessment date'); return; }
   if(url && !isDriveUrl(url)) { showToast('That doesn\'t look like a Google Drive link'); return; }
   const { data: { user } } = await db.auth.getUser();
