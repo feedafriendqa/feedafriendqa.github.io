@@ -476,10 +476,12 @@ async function handleContinue(){
   try{
     var res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY },
       body: JSON.stringify({ type: "check_email_exists", email: email })
     });
     var json = await res.json();
+    // never guess: only an explicit true/false answer decides between log in and register
+    if(!res.ok || typeof json.exists !== "boolean") throw new Error("email check failed");
     checkedEmail = email;
     document.getElementById("step-email").style.display = "none";
     if(json.exists){
