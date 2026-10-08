@@ -4741,11 +4741,12 @@ function driveFileIdFromUrl(url) {
 function isDriveUrl(url) {
   try { const h = new URL(url).hostname; return h === 'drive.google.com' || h === 'docs.google.com'; } catch(e) { return false; }
 }
-function assessmentFileNameHint(c, type, date) {
+const AP_SUBJECTS = {english:'English', maths:'Maths', other:'Other'};
+function assessmentFileNameHint(c, type, date, subject) {
   const parts = String(c.full_name||'Child').trim().split(/\s+/);
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
   const name = parts.length > 1 ? cap(parts[0]) + '-' + cap(parts[parts.length-1]) : cap(parts[0]);
-  return `${name}_${String(c.id).slice(0,8)}_${type==='pre'?'Pre':'Final'}-Assessment_${date||'YYYY-MM-DD'}.pdf`;
+  return `${name}_${String(c.id).slice(0,8)}_${type==='pre'?'Pre':'Final'}-Assessment-${AP_SUBJECTS[subject]||'English'}_${date||'YYYY-MM-DD'}.pdf`;
 }
 
 async function loadAssessmentPapers(childId) {
@@ -4756,7 +4757,7 @@ async function loadAssessmentPapers(childId) {
   const c = (currentChildren||[]).find(x=>x.id===childId) || {};
   const rows = (data||[]).map(r => {
     const when = r.assessment_date ? new Date(r.assessment_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'Date not set';
-    const label = r.assessment_type === 'pre' ? 'Pre-assessment' : 'Final assessment';
+    const label = (r.assessment_type === 'pre' ? 'Pre-assessment' : 'Final assessment') + ' — ' + (AP_SUBJECTS[r.subject] || 'Subject not set');
     const hasLink = r.drive_url && isDriveUrl(r.drive_url);
     return `<div class="fam-card" style="margin-bottom:8px;">
       <div class="fam-info">
@@ -4775,32 +4776,37 @@ async function loadAssessmentPapers(childId) {
     <div class="fg" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div><label>Type</label>
         <select id="ap-type-${childId}" class="assign-select" style="width:100%;"><option value="final">Final assessment</option><option value="pre">Pre-assessment</option></select></div>
+      <div><label>Subject</label>
+        <select id="ap-subject-${childId}" class="assign-select" style="width:100%;"><option value="english">English</option><option value="maths">Maths</option><option value="other">Other</option></select></div>
       <div><label>Assessment date</label>
         <input id="ap-date-${childId}" type="date" class="ival-input" style="width:100%;"></div>
       <div style="grid-column:span 2;"><label>Google Drive link <span style="font-weight:600;color:var(--muted);">(optional — can be added later)</span></label>
         <input id="ap-url-${childId}" class="ival-input" style="width:100%;" placeholder="https://drive.google.com/file/d/…"></div>
-      <div style="grid-column:span 2;font-size:11px;color:var(--muted);">Save the file in Drive as <strong id="ap-hint-${childId}">${esc(assessmentFileNameHint(c,'final',null))}</strong></div>
+      <div style="grid-column:span 2;font-size:11px;color:var(--muted);">Save the file in Drive as <strong id="ap-hint-${childId}">${esc(assessmentFileNameHint(c,'final',null,'english'))}</strong></div>
       <div style="grid-column:span 2;"><button class="btn-teal btn-sm" onclick="saveAssessmentRecord('${childId}')">Add assessment paper</button></div>
     </div>`;
   const refreshHint = () => {
     const t = document.getElementById('ap-type-'+childId)?.value || 'final';
     const d = document.getElementById('ap-date-'+childId)?.value || null;
+    const sub = document.getElementById('ap-subject-'+childId)?.value || 'english';
     const h = document.getElementById('ap-hint-'+childId);
-    if(h) h.textContent = assessmentFileNameHint(c, t, d);
+    if(h) h.textContent = assessmentFileNameHint(c, t, d, sub);
   };
   document.getElementById('ap-type-'+childId)?.addEventListener('change', refreshHint);
   document.getElementById('ap-date-'+childId)?.addEventListener('change', refreshHint);
+  document.getElementById('ap-subject-'+childId)?.addEventListener('change', refreshHint);
 }
 
 async function saveAssessmentRecord(childId) {
   const type = document.getElementById('ap-type-'+childId).value;
+  const subject = document.getElementById('ap-subject-'+childId).value;
   const date = document.getElementById('ap-date-'+childId).value || null;
   const url = document.getElementById('ap-url-'+childId).value.trim();
   if(!date) { showToast('Choose the assessment date'); return; }
   if(url && !isDriveUrl(url)) { showToast('That doesn\'t look like a Google Drive link'); return; }
   const { data: { user } } = await db.auth.getUser();
   const { error } = await db.from('ll_assessment_records').insert({
-    child_id: childId, assessment_type: type, assessment_date: date,
+    child_id: childId, assessment_type: type, subject, assessment_date: date,
     drive_url: url || null, drive_file_id: url ? driveFileIdFromUrl(url) : null,
     added_by: user?.email || null
   });
