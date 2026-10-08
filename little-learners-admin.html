@@ -4743,10 +4743,12 @@ function isDriveUrl(url) {
 }
 const AP_SUBJECTS = {english:'English', maths:'Maths', other:'Other'};
 function assessmentFileNameHint(c, type, date, subject) {
+  // Simple on purpose: the folder carries the date, the portal records pre/final, and the
+  // link is stored against the child, so the name only needs to be easy for a person to spot.
   const parts = String(c.full_name||'Child').trim().split(/\s+/);
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-  const name = parts.length > 1 ? cap(parts[0]) + '-' + cap(parts[parts.length-1]) : cap(parts[0]);
-  return `${name}_${String(c.id).slice(0,8)}_${type==='pre'?'Pre':'Final'}-Assessment-${AP_SUBJECTS[subject]||'English'}_${date||'YYYY-MM-DD'}.pdf`;
+  const name = parts.length > 1 ? cap(parts[0]) + ' ' + cap(parts[parts.length-1]) : cap(parts[0]);
+  return `${name} - ${AP_SUBJECTS[subject]||'English'}.pdf`;
 }
 
 async function loadAssessmentPapers(childId) {
@@ -4782,7 +4784,7 @@ async function loadAssessmentPapers(childId) {
         <input id="ap-date-${childId}" type="date" class="ival-input" style="width:100%;"></div>
       <div style="grid-column:span 2;"><label>Google Drive link <span style="font-weight:600;color:var(--muted);">(optional — can be added later)</span></label>
         <input id="ap-url-${childId}" class="ival-input" style="width:100%;" placeholder="https://drive.google.com/file/d/…"></div>
-      <div style="grid-column:span 2;font-size:11px;color:var(--muted);">Save the file in Drive as <strong id="ap-hint-${childId}">${esc(assessmentFileNameHint(c,'final',null,'english'))}</strong></div>
+      <div style="grid-column:span 2;font-size:11px;color:var(--muted);">Save the file in that day's Drive folder as <strong id="ap-hint-${childId}">${esc(assessmentFileNameHint(c,'final',null,'english'))}</strong></div>
       <div style="grid-column:span 2;"><button class="btn-teal btn-sm" onclick="saveAssessmentRecord('${childId}')">Add assessment paper</button></div>
     </div>`;
   const refreshHint = () => {
