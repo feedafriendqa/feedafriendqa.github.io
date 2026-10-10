@@ -321,6 +321,7 @@ select.edit-field{cursor:pointer;}
       <button class="filter-btn" id="view-btn-sponsorships" onclick="showView('sponsorships')">🤝 Sponsors</button>
       <button class="filter-btn" id="view-btn-payments" onclick="showView('payments')">💰 Payments</button>
       <button class="filter-btn" id="view-btn-approvals" onclick="showView('approvals')">🚗 Approvals<span id="approvals-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
+      <button class="filter-btn" id="view-btn-topups" style="display:none;" onclick="showView('topups')">🍼 Top-ups<span id="topups-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
       <button class="filter-btn" id="view-btn-messages" onclick="showView('messages')">💌 Messages<span id="messages-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
     </div>
     <div id="cases-view">
@@ -554,6 +555,10 @@ select.edit-field{cursor:pointer;}
       </div>
     </div>
 
+    <div id="topups-view" style="display:none;">
+      <div style="margin-bottom:12px;"><div style="font-size:18px;font-weight:800;">🍼 WBB food box top-up requests</div><div style="font-size:13px;color:var(--muted);">A baby has been added to a Welcome Baby household. Approving adds boxes to the friend's limit (6 by default).</div></div>
+      <div id="topups-list"></div>
+    </div>
     <div id="messages-view" style="display:none;">
       <div class="welcome-banner">
         <div class="welcome-name">Thank-you Messages</div>
@@ -975,13 +980,14 @@ async function handleAdminSession(session) {
   // stay super-admin only, same as before.
   document.getElementById('view-switcher').style.display = 'flex';
   document.getElementById('view-btn-live').style.display = 'inline-block';
-  ['view-btn-distributions','view-btn-sponsorships','view-btn-payments','view-btn-approvals'].forEach(function(id){
+  ['view-btn-distributions','view-btn-sponsorships','view-btn-payments','view-btn-approvals','view-btn-topups'].forEach(function(id){
     var el = document.getElementById(id);
     if (el) el.style.display = (myRole === 'super_admin') ? 'inline-block' : 'none';
   });
   myCasesOnly = (myRole !== 'super_admin');
 
   loadCurrentDistribution();
+  loadTopupRequests();
 
   // Lightweight background check so the Approvals nav button shows a
   // pending-count badge the moment you log in, without paying the cost
@@ -1795,6 +1801,7 @@ function renderModal(app, members, urlMap) {
       }
       body += '</div>';
       body += '<button class="btn-comment" style="margin-top:8px;font-size:12px;padding:6px 12px;" onclick="toggleEditMemberPanel(\''+app.id+'\',\''+m.id+'\')">📷 Edit / rescan QID</button>';
+      body += topupButtonHtml(app, m);
       body += '<button class="btn-comment" style="margin-top:8px;margin-left:6px;font-size:12px;padding:6px 12px;background:white;color:var(--red);border:1.5px solid var(--red);" onclick="removeMember(\''+app.id+'\',\''+m.id+'\',\''+(m.full_name||'this person').toString().replace(/'/g,"\\'")+'\')">🗑 Remove</button>';
       body += '<div id="edit-member-' + m.id + '"></div>';
       body += '</div>';
@@ -2755,6 +2762,100 @@ function saveDeliveryLog(id, nextLog, onSuccess) {
 // Super admin only — case handlers never need this. The modal is a
 // separate overlay regardless of which view is underneath, so viewApp()
 // works the same from either.
+// ── WBB baby top-up requests ──
+// Ticking the WBB tag does NOT change a friend's allowance. Once the baby is
+// born and added as a household member, a case handler requests a top-up
+// here; only a super admin can approve it (enforced in the database too).
+var topupReqs = [];
+function appHasTag(app, key) {
+  try {
+    var t = Array.isArray(app.tags) ? app.tags : (app.tags ? JSON.parse(app.tags) : []);
+    return t.indexOf(key) !== -1;
+  } catch (e) { return false; }
+}
+function loadTopupRequests() {
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/allowance_topup_requests?select=*&order=requested_at.desc', { headers: headers });
+  }).then(function(r) { return r.ok ? r.json() : []; }).then(function(rows) {
+    topupReqs = Array.isArray(rows) ? rows : [];
+    var pending = topupReqs.filter(function(t){ return t.status === 'pending'; }).length;
+    var badge = document.getElementById('topups-badge');
+    if (badge) {
+      if (myRole === 'super_admin' && pending) { badge.textContent = pending; badge.style.display = 'inline-block'; }
+      else badge.style.display = 'none';
+    }
+    var v = document.getElementById('topups-view');
+    if (v && v.style.display !== 'none') renderTopupsView();
+  }).catch(function(){});
+}
+function topupButtonHtml(app, m) {
+  if (!appHasTag(app, 'wbb')) return '';
+  if (String(m.role || '').toLowerCase() !== 'child' || !m.dob) return '';
+  var cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - 1);
+  if (new Date(m.dob) < cutoff) return '';
+  var existing = topupReqs.filter(function(t){ return t.member_id === m.id && t.status !== 'rejected'; })[0];
+  if (existing) {
+    return '<span style="display:inline-block;margin-top:8px;margin-left:6px;font-size:12px;font-weight:700;color:var(--green-dark);">🍼 Top-up ' + (existing.status === 'approved' ? 'approved (+' + existing.boxes_added + ' boxes)' : 'requested — awaiting super admin') + '</span>';
+  }
+  return '<button class="btn-comment" style="margin-top:8px;margin-left:6px;font-size:12px;padding:6px 12px;" onclick="requestTopup(\'' + app.id + '\',\'' + m.id + '\')">🍼 Request food box top-up</button>';
+}
+function requestTopup(appId, memberId) {
+  if (!confirm('Send a food box top-up request for this baby to the super admin for review?')) return;
+  sb.rpc('request_allowance_topup', { p_application_id: appId, p_member_id: memberId }).then(function(res) {
+    if (res.error) { alert('Could not send request: ' + res.error.message); return; }
+    alert('✓ Top-up request sent to the super admin.');
+    loadTopupRequests();
+    var app = allApps.find(function(a){ return a.id === appId; });
+    if (app) setTimeout(function(){ renderModal(app, currentMembers, currentDocUrlMap); }, 700);
+  });
+}
+function loadTopupsView() { loadTopupRequests(); renderTopupsView(); }
+function renderTopupsView() {
+  var el = document.getElementById('topups-list');
+  if (!el) return;
+  var pending = topupReqs.filter(function(t){ return t.status === 'pending'; });
+  var done = topupReqs.filter(function(t){ return t.status !== 'pending'; }).slice(0, 20);
+  function card(t, isPending) {
+    var app = allApps.find(function(a){ return a.id === t.application_id; });
+    var name = app ? (app.full_name_en || app.full_name) : t.application_id;
+    var limit = app ? (app.boxes_received + ' of ' + app.max_boxes + ' boxes used · ' + app.status) : '';
+    var when = t.requested_at ? new Date(t.requested_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '';
+    var h = '<div class="table-wrap" style="padding:16px;margin-bottom:12px;">';
+    h += '<div style="font-weight:800;font-size:15px;">' + name + '</div>';
+    h += '<div style="font-size:13px;color:var(--muted);margin:4px 0;">Baby: ' + (t.baby_name || '–') + ' · born ' + (t.baby_dob || '–') + '</div>';
+    h += '<div style="font-size:13px;margin:4px 0;">' + limit + '</div>';
+    h += '<div style="font-size:12px;color:var(--muted);">Requested by ' + (t.requested_by_email || '–') + ' on ' + when + '</div>';
+    if (isPending) {
+      h += '<div style="margin-top:10px;">';
+      h += '<button class="btn-comment" onclick="reviewTopup(\'' + t.id + '\',true)">✓ Approve</button> ';
+      h += '<button class="btn-comment" style="background:white;color:var(--red);border:1.5px solid var(--red);" onclick="reviewTopup(\'' + t.id + '\',false)">✕ Reject</button> ';
+      h += '<a onclick="viewApp(\'' + t.application_id + '\');showView(\'cases\')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;margin-left:8px;font-size:13px;">Open case</a>';
+      h += '</div>';
+    } else {
+      h += '<div style="font-size:13px;font-weight:700;margin-top:8px;">' + (t.status === 'approved' ? '✓ Approved +' + t.boxes_added + ' boxes (limit ' + t.old_max_boxes + ' → ' + t.new_max_boxes + ')' : '✕ Rejected') + ' by ' + (t.reviewed_by_email || '–') + '</div>';
+    }
+    return h + '</div>';
+  }
+  var html = pending.length ? pending.map(function(t){ return card(t, true); }).join('') : '<div style="padding:20px;color:var(--muted);">No top-up requests waiting for review.</div>';
+  if (done.length) html += '<div style="font-weight:800;margin:18px 0 8px;">Recently reviewed</div>' + done.map(function(t){ return card(t, false); }).join('');
+  el.innerHTML = html;
+}
+function reviewTopup(id, approve) {
+  if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
+  var extra = 6;
+  if (approve) {
+    var v = prompt('How many boxes to add to this friend\'s limit?', '6');
+    if (v === null) return;
+    extra = parseInt(v, 10);
+    if (!(extra >= 1 && extra <= 12)) { alert('Enter a number between 1 and 12.'); return; }
+  } else if (!confirm('Reject this top-up request? Nothing will change for the friend.')) return;
+  sb.rpc('review_allowance_topup', { p_request_id: id, p_approve: approve, p_extra: extra }).then(function(res) {
+    if (res.error) { alert('Could not save: ' + res.error.message); return; }
+    loadApps();
+    loadTopupRequests();
+  });
+}
+
 function showView(view) {
   document.getElementById('live-view').style.display = (view === 'live') ? '' : 'none';
   document.getElementById('cases-view').style.display = (view === 'cases') ? '' : 'none';
@@ -2763,6 +2864,9 @@ function showView(view) {
   document.getElementById('payments-view').style.display = (view === 'payments') ? '' : 'none';
   document.getElementById('approvals-view').style.display = (view === 'approvals') ? '' : 'none';
   document.getElementById('messages-view').style.display = (view === 'messages') ? '' : 'none';
+  document.getElementById('topups-view').style.display = (view === 'topups') ? '' : 'none';
+  document.getElementById('view-btn-topups').classList.toggle('active', view === 'topups');
+  if (view === 'topups') loadTopupsView();
   document.getElementById('view-btn-live').classList.toggle('active', view === 'live');
   document.getElementById('view-btn-cases').classList.toggle('active', view === 'cases');
   document.getElementById('view-btn-distributions').classList.toggle('active', view === 'distributions');
