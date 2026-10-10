@@ -517,7 +517,29 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   const [celebrateHours,setCelebrateHours]=useState(0);
   const [no,setNo]=useState({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),type:"event",date:"",end_date:"",start_time:"",end_time:"",spots:"",hours:"",commitment_hours:"",commitment_frequency:"week",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[],event_admins:[]});
   const [aiLoading,setAiLoading]=useState(false);
+  const [adminSignupModal,setAdminSignupModal]=useState(null);
+  const [adminAnswers,setAdminAnswers]=useState({});
   const st=m=>{setToast(m);setTimeout(()=>setToast(null),3000);};
+  // Admins can also apply to events they don't manage, exactly like a volunteer.
+  const adminSignUp=o=>{
+    if(o.questions&&o.questions.length>0){setAdminSignupModal(o);setAdminAnswers({});}
+    else adminSubmitSignup(o,[]);
+  };
+  const adminSubmitSignup=async(o,answersArr)=>{
+    const existing=oppSignups[o.id]||[];
+    if(existing.find(s=>s.volunteer_id===profile.id)) return;
+    const isFull=existing.filter(s=>s.status==="approved").length>=(Number(o.spots)||10);
+    const status=isFull?"waitlist":"pending";
+    const {error}=await sb.from("signups").insert({volunteer_id:profile.id,opportunity_id:o.id,status,answers:answersArr});
+    if(error){st("Error: "+error.message);return;}
+    setAdminSignupModal(null); setAdminAnswers({});
+    st(isFull?"✓ Added to waitlist! You'll be notified if a spot opens.":"✓ Request sent! Awaiting admin approval."); load();
+  };
+  const adminCancelSignup=async o=>{
+    const {error}=await sb.from("signups").delete().eq("volunteer_id",profile.id).eq("opportunity_id",o.id);
+    if(error){st("Error: "+error.message);return;}
+    st("Signup cancelled."); load();
+  };
   // Super admins manage everything. Project admins manage events in their assigned
   // project categories, plus any individual event they've been added to as an
   // event-specific admin (used for the "General" category, which isn't owned by
@@ -1169,6 +1191,31 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
 
       {tab==="opps"&&<div>
         <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:12}}>Opportunities & Sign-ups</h2>
+        {adminSignupModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:999,display:"flex",alignItems:"flex-end"}}>
+          <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"24px 20px",width:"100%",maxHeight:"80vh",overflowY:"auto"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <h2 style={{fontFamily:HF,fontSize:18,fontWeight:900,textTransform:"uppercase",color:DK}}>Sign Up</h2>
+              <button onClick={()=>setAdminSignupModal(null)} style={{background:"#F3F4F6",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13}}>✕</button>
+            </div>
+            <p style={{fontSize:13,color:MT,marginBottom:16,fontFamily:BF}}>Please answer these questions to apply for <strong style={{color:DK}}>{adminSignupModal.title}</strong></p>
+            <div style={{display:"flex",flexDirection:"column",gap:16}}>
+              {adminSignupModal.questions.map((q,i)=><div key={i}>
+                <label style={{display:"block",fontWeight:700,fontSize:13,color:DK,marginBottom:6,fontFamily:BF}}>{i+1}. {q.q}</label>
+                {q.type==="yesno"
+                  ? <div style={{display:"flex",gap:10}}>
+                      <button onClick={()=>setAdminAnswers(a=>{return{...a,[i]:"Yes"};} )} style={{flex:1,padding:"10px",borderRadius:10,border:"2px solid "+(adminAnswers[i]==="Yes"?"#22C55E":BR),background:adminAnswers[i]==="Yes"?"#DCFCE7":"#fff",fontWeight:700,cursor:"pointer",fontSize:14}}>✓ Yes</button>
+                      <button onClick={()=>setAdminAnswers(a=>{return{...a,[i]:"No"};} )} style={{flex:1,padding:"10px",borderRadius:10,border:"2px solid "+(adminAnswers[i]==="No"?"#DC2626":"#E5E7EB"),background:adminAnswers[i]==="No"?"#FEE2E2":"#fff",fontWeight:700,cursor:"pointer",fontSize:14}}>✕ No</button>
+                    </div>
+                  : <input type="text" placeholder="Your answer..." value={adminAnswers[i]||""} onChange={e=>setAdminAnswers(a=>{return{...a,[i]:e.target.value};} )} style={inp}/>
+                }
+              </div>)}
+            </div>
+            <button onClick={()=>{
+              const arr=adminSignupModal.questions.map((q,i)=>{return{question:q.q,answer:adminAnswers[i]||""};} );
+              adminSubmitSignup(adminSignupModal,arr);
+            }} style={{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",width:"100%",marginTop:20,fontFamily:BF}}>Submit Application →</button>
+          </div>
+        </div>}
         {opps.map(o=>{
           const p=gp(o.project);
           const sups=oppSignups[o.id]||[];
@@ -1192,6 +1239,21 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                   {o.signups_closed&&<span style={{background:"#F1F5F9",color:MT,borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700}}>🔒 Applications closed</span>}
                 </div>
               </div>
+              {!manage&&(()=>{
+                const mine=sups.find(s=>s.volunteer_id===profile.id);
+                const cancelBtn=<button onClick={()=>adminCancelSignup(o)} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Cancel</button>;
+                if(mine){
+                  const badge=mine.status==="approved"?{bg:p.light,c:p.text,t:"✓ Approved"}:mine.status==="waitlist"?{bg:"#EDE9FE",c:"#5B21B6",t:"⏸ Waitlist"}:{bg:"#FEF3C7",c:"#D97706",t:"⏳ Pending"};
+                  return <div style={{display:"flex",gap:4,alignItems:"center",marginLeft:10,flexShrink:0}}>
+                    <span style={{background:badge.bg,color:badge.c,borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700}}>{badge.t}</span>
+                    {!mine.checked_in&&cancelBtn}
+                  </div>;
+                }
+                if(o.signups_closed||(o.students_only&&!profile.is_student)) return null;
+                return <div style={{marginLeft:10,flexShrink:0}}>
+                  <button onClick={()=>adminSignUp(o)} style={{background:o.type==="ongoing"?"#7C3AED":p.bg,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:BF}}>{o.type==="ongoing"?"Join the FAF Team →":"Sign Up →"}</button>
+                </div>;
+              })()}
               {manage&&<div style={{display:"flex",gap:6,marginLeft:10,flexShrink:0}}>
                 <button onClick={()=>setEditOpp({...o})} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:700}}>Edit</button>
                 <button onClick={()=>{
