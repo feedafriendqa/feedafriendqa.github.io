@@ -897,6 +897,21 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
             <input type="checkbox" checked={editOpp.students_only||false} onChange={e=>setEditOpp(o=>{return{...o,students_only:e.target.checked};} )} style={{width:18,height:18,accentColor:"#9B59B6"}}/>
             <div><div style={{fontWeight:700,fontSize:14,color:editOpp.students_only?"#5B21B6":DK}}>🎓 Students Only</div></div>
           </label>
+          <div style={{borderTop:"1px solid "+BR,paddingTop:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <label style={{fontWeight:700,fontSize:13,color:DK}}>Qualifying Questions</label>
+              <button onClick={()=>setEditOpp(o=>{return{...o,questions:[...(o.questions||[]),{q:"",type:"text"}]};} )} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"5px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>+ Add</button>
+            </div>
+            {(editOpp.questions||[]).map((q,i)=><div key={i} style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
+              <input type="text" placeholder={`Question ${i+1}...`} value={q.q} onChange={e=>setEditOpp(o=>{const qs=[...(o.questions||[])];qs[i]={...qs[i],q:e.target.value};return{...o,questions:qs};} )} style={{...inp,flex:1}}/>
+              <select value={q.type} onChange={e=>setEditOpp(o=>{const qs=[...(o.questions||[])];qs[i]={...qs[i],type:e.target.value};return{...o,questions:qs};} )} style={{...inp,width:"auto",padding:"12px 8px"}}>
+                <option value="text">Text</option>
+                <option value="yesno">Yes/No</option>
+              </select>
+              <button onClick={()=>setEditOpp(o=>{return{...o,questions:(o.questions||[]).filter((_,j)=>j!==i)};} )} style={{background:"#FEE2E2",color:"#DC2626",border:"none",borderRadius:8,padding:"10px 12px",cursor:"pointer",fontWeight:700}}>✕</button>
+            </div>)}
+            {(editOpp.questions||[]).length===0&&<p style={{fontSize:12,color:MT,fontStyle:"italic"}}>No questions — volunteers sign up directly.</p>}
+          </div>
           <button onClick={saveEditOpp} style={{background:DK,color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Save Changes</button>
         </div>
       </div>
