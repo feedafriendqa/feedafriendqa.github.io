@@ -1461,6 +1461,76 @@ function filterApps() {
   renderTable(filtered);
 }
 
+// ── Full activity timeline for a case ──
+// Merges what the system has recorded about a friend (status changes with who/when/how,
+// deliveries, driver trips, WBB top-up requests) with the team's own comments, oldest first.
+// Status changes were only recorded from 25 Sep 2026; anything earlier shows as a baseline.
+var currentActivity = { statusLog: [], trips: [] };
+
+function actEsc(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function actStatusWord(s) { return s ? String(s).replace(/_/g, ' ') : '–'; }
+
+function buildActivityEntries(app, statusLog, trips, topups) {
+  var out = [];
+  function add(ts, icon, text, who) {
+    var t = ts ? new Date(ts).getTime() : NaN;
+    if (isNaN(t)) return;
+    out.push({ t: t, icon: icon, text: text, who: who || '' });
+  }
+
+  (statusLog || []).forEach(function(r) {
+    var arrow = r.old_status ? (actStatusWord(r.old_status) + ' → ' + actStatusWord(r.new_status)) : actStatusWord(r.new_status);
+    var via = r.changed_via || '';
+    var wasDelivered = r.old_status === 'confirmed' && ['approved', 'archived', 'long_term'].indexOf(r.new_status) !== -1;
+    if (via === 'baseline') {
+      add(r.changed_at, '📌', 'Status on record when tracking began: ' + actStatusWord(r.new_status) + '. Who set it, and when, was not recorded before this date.', '');
+    } else if (via === 'admin CRM') {
+      add(r.changed_at, '🔄', 'Marked ' + actStatusWord(r.new_status) + ' by ' + (r.changed_by_email || 'an admin') + (r.old_status ? ' (was ' + actStatusWord(r.old_status) + ')' : ''), '');
+    } else if (via === 'public form') {
+      if (r.new_status === 'confirmed') add(r.changed_at, '🙋', 'Friend reapplied through the public form (' + arrow + ')', 'friend');
+      else add(r.changed_at, '📝', 'Status ' + arrow + ' (public form)', 'friend');
+    } else if (via === 'edge function / system') {
+      add(r.changed_at, wasDelivered ? '📦' : '⚙️', (wasDelivered ? 'Delivery recorded, status ' : 'Status changed ') + arrow + ' (automatic)', 'system');
+    } else if (via === 'SQL / dashboard') {
+      add(r.changed_at, '🛠', 'Status changed ' + arrow + ' (direct database change)', 'database');
+    } else {
+      add(r.changed_at, '🔄', 'Status changed ' + arrow + (via ? ' (' + via + ')' : ''), r.changed_by_email || '');
+    }
+  });
+
+  var srcLabel = { driver_confirm: 'confirmed by the driver', auto: 'logged with the admin button', backfill_25sep_distribution: 'backfilled' };
+  (Array.isArray(app.box_delivery_log) ? app.box_delivery_log : []).forEach(function(e) {
+    if (!e || e.source === 'legacy_import_v2' || e.source === 'inferred_last_delivered_at') return; // older history lives in "Delivery history"
+    var label = '📦';
+    var txt = 'Box delivered' + (e.date ? ' (' + e.date + ')' : '') + (srcLabel[e.source] ? ' — ' + srcLabel[e.source] : '') + (e.note ? '. ' + e.note : '');
+    add(e.logged_at || e.date, label, txt, '');
+  });
+
+  (trips || []).forEach(function(tr) {
+    var d = tr.distribution_trips && tr.distribution_trips.trip_date;
+    if (tr.status === 'not_delivered') {
+      add(tr.not_delivered_at || (d && d + 'T12:00:00'), '❌', 'Not delivered' + (d ? ' (trip ' + d + ')' : '') + (tr.not_delivered_reason ? ' — ' + tr.not_delivered_reason : ''), 'driver');
+    } else if (tr.status === 'pending' && d) {
+      add(d + 'T08:00:00', '🚚', 'On a driver trip for ' + d + ' — not yet delivered', '');
+    }
+  });
+
+  (topups || []).forEach(function(t) {
+    add(t.requested_at, '🍼', 'Food box top-up requested' + (t.baby_name ? ' for baby ' + t.baby_name : ''), t.requested_by_email || '');
+    if (t.status === 'approved') add(t.reviewed_at, '✅', 'Top-up approved: +' + t.boxes_added + ' boxes (limit ' + t.old_max_boxes + ' → ' + t.new_max_boxes + ')', t.reviewed_by_email || '');
+    if (t.status === 'rejected') add(t.reviewed_at, '✕', 'Top-up request rejected', t.reviewed_by_email || '');
+  });
+
+  return out;
+}
+
+function activityEntryHtml(e) {
+  var ts = new Date(e.t).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return '<div class="comment-entry" style="background:#f6f8f5;border-left:3px solid #b7c9b0;"><div class="comment-meta">' +
+    '<span class="comment-type" style="background:#e4ece0;color:#3d5a36;">' + e.icon + ' Activity</span>' + ts + (e.who ? ' · ' + actEsc(e.who) : '') +
+    '</div><div class="comment-text">' + actEsc(e.text) + '</div></div>';
+}
+
 function viewApp(id) {
   currentAppId = id;
   var app = allApps.find(function(a){return a.id===id;});
@@ -1468,6 +1538,7 @@ function viewApp(id) {
   currentMembers = [];
   currentDocUrlMap = {};
   currentSponsorship = null;
+  currentActivity = { statusLog: [], trips: [] };
   renderModal(app, [], {});
   // Fetch real members if not demo
   if (!id.startsWith('demo')) {
@@ -1487,6 +1558,21 @@ function viewApp(id) {
           currentDocUrlMap = urlMap;
           if (currentAppId === id) renderModal(app, members, urlMap);
         });
+      }).catch(function(){});
+
+      // Activity timeline sources: status-change log (who/when/how) and driver trips.
+      // Failures are ignored, the comments section still works without them.
+      fetch(SUPABASE_URL + '/rest/v1/food_box_status_log?application_id=eq.' + id + '&select=changed_at,old_status,new_status,changed_by_email,changed_via&order=changed_at.asc', {
+        headers: headers
+      }).then(function(r){ return r.ok ? r.json() : []; }).then(function(rows){
+        currentActivity.statusLog = Array.isArray(rows) ? rows : [];
+        if (currentAppId === id) renderModal(app, currentMembers, currentDocUrlMap);
+      }).catch(function(){});
+      fetch(SUPABASE_URL + '/rest/v1/trip_assignments?application_id=eq.' + id + '&select=status,not_delivered_reason,not_delivered_at,distribution_trips(trip_date)', {
+        headers: headers
+      }).then(function(r){ return r.ok ? r.json() : []; }).then(function(rows){
+        currentActivity.trips = Array.isArray(rows) ? rows : [];
+        if (currentAppId === id) renderModal(app, currentMembers, currentDocUrlMap);
       }).catch(function(){});
 
       // Sponsorship details (super admin only feature, but harmless to fetch
@@ -1853,8 +1939,22 @@ function renderModal(app, members, urlMap) {
   }
   body += accStart('comments', 'Comments & activity', comments.length ? '<span class="accordion-count">'+comments.length+'</span>' : '');
   body += '<div class="comment-log" id="comment-log">';
-  if (comments.length === 0) body += '<div style="font-size:12px;color:var(--muted);padding:6px 0;">No comments yet.</div>';
+  var activityEntries = [];
+  try {
+    activityEntries = buildActivityEntries(app, currentActivity.statusLog, currentActivity.trips,
+      (typeof topupReqs !== 'undefined' ? topupReqs : []).filter(function(t){ return t.application_id === app.id; }));
+  } catch (e) { activityEntries = []; }
+  // Comments and system activity interleaved, oldest first.
+  var timeline = activityEntries.map(function(a){ return { t: a.t, kind: 'act', a: a }; });
   comments.forEach(function(c) {
+    var t = c.ts ? new Date(c.ts).getTime() : 0;
+    timeline.push({ t: isNaN(t) ? 0 : t, kind: 'com', c: c });
+  });
+  timeline.sort(function(x, y){ return x.t - y.t; });
+  if (timeline.length === 0) body += '<div style="font-size:12px;color:var(--muted);padding:6px 0;">No comments yet.</div>';
+  timeline.forEach(function(item) {
+    if (item.kind === 'act') { body += activityEntryHtml(item.a); return; }
+    var c = item.c;
     var ts = c.ts ? new Date(c.ts).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
     var typeClass = c.type==='whatsapp'?'wa':c.type==='call'?'call':c.type==='merge'?'merge':'note';
     var typeLabel = c.type==='whatsapp'?'💬 WhatsApp':c.type==='call'?'📞 Call':c.type==='merge'?'🔗 Merge':'📝 Note';
