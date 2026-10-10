@@ -681,6 +681,10 @@ async function loadSponsorships(userId){
     .eq("sponsor_id", userId)
     .order("created_at", { ascending: false });
   var rows = result.data || [];
+  // Monthly pledges the sponsor has confirmed but we have not matched yet are
+  // not payable, so they stay out of this list (they show in the pledge section
+  // where the sponsor can still change the number of boxes).
+  rows = rows.filter(function(r){ return r.payment_status !== "pledged"; });
 
   // If any sponsorship is self-delivery, find out whether this sponsor has
   // already registered as a distributor (matched by email, case-insensitive,

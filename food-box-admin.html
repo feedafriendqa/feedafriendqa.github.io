@@ -510,6 +510,7 @@ select.edit-field{cursor:pointer;}
         <label style="font-size:13px;font-weight:700;color:var(--muted);margin-left:8px;">Status:</label>
         <select id="payment-status-filter" class="filter-btn" style="padding:8px 12px;" onchange="renderPaymentCards()">
           <option value="__all__">All</option>
+          <option value="pledged">📝 Pledged — awaiting matching</option>
           <option value="pending_payment">⏳ Pending payment</option>
           <option value="proof_uploaded">⏳ Proof uploaded</option>
           <option value="payment_received">✅ Payment received (awaiting confirm)</option>
@@ -3484,9 +3485,10 @@ function renderPaymentSummary() {
     var project = 'Food Box';
     var event = sp.distribution_event || CURRENT_DISTRIBUTION;
     var key = project + '||' + event;
-    if (!groups[key]) groups[key] = { project: project, event: event, outstanding: 0, uploaded: 0, received: 0, receivedAmount: 0, discrepancy: 0, rejected: 0 };
+    if (!groups[key]) groups[key] = { project: project, event: event, pledged: 0, outstanding: 0, uploaded: 0, received: 0, receivedAmount: 0, discrepancy: 0, rejected: 0 };
     var g = groups[key];
-    if (sp.payment_status === 'pending_payment') g.outstanding++;
+    if (sp.payment_status === 'pledged') g.pledged++;
+    else if (sp.payment_status === 'pending_payment') g.outstanding++;
     else if (sp.payment_status === 'proof_uploaded') g.uploaded++;
     else if (sp.payment_status === 'payment_received') { g.received++; g.receivedAmount += (sp.amount || 0); }
     else if (sp.payment_status === 'discrepancy') g.discrepancy++;
@@ -3511,6 +3513,7 @@ function renderPaymentSummary() {
     return '<div style="border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:12px;background:#fff;">' +
       '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;">' + g.project + ' \u2014 ' + g.event + rejectedNote + '</div>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+        tileHtml('Pledged \u2014 awaiting matching', g.pledged, 'var(--muted)', '#f1f1ee') +
         tileHtml('Outstanding', g.outstanding, 'var(--red)', 'var(--red-light)') +
         tileHtml('Proof uploaded', g.uploaded, '#2c5aa8', '#e5eefc') +
         tileHtml('Payment received', g.received + ' \u00b7 QAR ' + g.receivedAmount, 'var(--green-dark)', 'var(--green-light)') +
@@ -3789,7 +3792,7 @@ function openSpEditModal(spId) {
   var sn = function(id,v){ return '<input class="edit-field" type="number" id="'+id+'" value="'+(v!=null&&v!==''?v:'')+'">'; };
   var di = function(lbl,html){ return '<div class="detail-item" style="margin-bottom:10px;"><div class="lbl">'+lbl+'</div>'+html+'</div>'; };
   var alreadyReceived = sp.payment_status === 'payment_received';
-  var editableStatuses = ['pending_payment','proof_uploaded','discrepancy','rejected'];
+  var editableStatuses = ['pledged','pending_payment','proof_uploaded','discrepancy','rejected'];
   var paymentStatusField;
   if (alreadyReceived) {
     // Don't offer a dropdown that could silently downgrade a real bank
