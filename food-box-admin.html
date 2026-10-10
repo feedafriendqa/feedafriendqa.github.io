@@ -58,6 +58,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off-white);color:var(--tex
 .stat-card.sc-archived{background:linear-gradient(135deg,#546e7a,#90a4ae);}
 .stat-card.sc-review{background:linear-gradient(135deg,#7b5ea7,#a07fd4);}
 .stat-card.sc-wbb{background:linear-gradient(135deg,#ad1457,#f48fb1);}
+.stat-card.sc-topup{background:linear-gradient(135deg,#c2410c,#fb923c);}
 .stat-card .num{font-size:28px;font-weight:900;color:white;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,0.15);}
 .stat-card .lbl{font-size:12px;color:rgba(255,255,255,0.88);font-weight:700;margin-top:4px;}
 
@@ -339,6 +340,7 @@ select.edit-field{cursor:pointer;}
       <div class="stat-card sc-archived" onclick="setFilterFromTile('archived')"><div class="num" id="stat-archived">–</div><div class="lbl">Archived</div></div>
       <div class="stat-card sc-review" onclick="setFilterFromTile('review')"><div class="num" id="stat-translation">–</div><div class="lbl">Needs review</div></div>
       <div class="stat-card sc-wbb" onclick="setFilterFromTile('wbb_review')"><div class="num" id="stat-wbb-review">–</div><div class="lbl">🍼 Pregnant — verify WBB</div></div>
+      <div class="stat-card sc-topup" id="stat-card-topups" style="display:none;" onclick="showView('topups')"><div class="num" id="stat-topups">–</div><div class="lbl">🍼 WBB top-up — to review</div></div>
     </div>
 
     <div id="daily-quote" style="background:var(--green);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;color:white;"></div>
@@ -556,7 +558,7 @@ select.edit-field{cursor:pointer;}
     </div>
 
     <div id="topups-view" style="display:none;">
-      <div style="margin-bottom:12px;"><div style="font-size:18px;font-weight:800;">🍼 WBB food box top-up requests</div><div style="font-size:13px;color:var(--muted);">A baby has been added to a Welcome Baby household. Approving adds boxes to the friend's limit (6 by default).</div></div>
+      <div style="margin-bottom:12px;"><a onclick="showView('cases')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;font-size:13px;">← Back to cases</a><div style="font-size:18px;font-weight:800;margin-top:6px;">🍼 WBB food box top-up requests</div><div style="font-size:13px;color:var(--muted);">A baby has been added to a Welcome Baby household. Approving adds boxes to the friend's limit (6 by default).</div></div>
       <div id="topups-list"></div>
     </div>
     <div id="messages-view" style="display:none;">
@@ -980,7 +982,7 @@ async function handleAdminSession(session) {
   // stay super-admin only, same as before.
   document.getElementById('view-switcher').style.display = 'flex';
   document.getElementById('view-btn-live').style.display = 'inline-block';
-  ['view-btn-distributions','view-btn-sponsorships','view-btn-payments','view-btn-approvals','view-btn-topups'].forEach(function(id){
+  ['view-btn-distributions','view-btn-sponsorships','view-btn-payments','view-btn-approvals'].forEach(function(id){
     var el = document.getElementById(id);
     if (el) el.style.display = (myRole === 'super_admin') ? 'inline-block' : 'none';
   });
@@ -2779,10 +2781,10 @@ function loadTopupRequests() {
   }).then(function(r) { return r.ok ? r.json() : []; }).then(function(rows) {
     topupReqs = Array.isArray(rows) ? rows : [];
     var pending = topupReqs.filter(function(t){ return t.status === 'pending'; }).length;
-    var badge = document.getElementById('topups-badge');
-    if (badge) {
-      if (myRole === 'super_admin' && pending) { badge.textContent = pending; badge.style.display = 'inline-block'; }
-      else badge.style.display = 'none';
+    var tile = document.getElementById('stat-card-topups');
+    if (tile) {
+      tile.style.display = (myRole === 'super_admin') ? '' : 'none';
+      document.getElementById('stat-topups').textContent = pending;
     }
     var v = document.getElementById('topups-view');
     if (v && v.style.display !== 'none') renderTopupsView();
