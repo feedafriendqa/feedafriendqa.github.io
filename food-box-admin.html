@@ -3363,11 +3363,21 @@ function openPledgeRound() {
     });
   }).then(function(r) { return r.json().then(function(j) { if (!r.ok || j.error) throw new Error(j.error || ('status ' + r.status)); return j; }); })
     .then(function(json) {
-      alert('Distribution created — ' + json.pledges_drafted + ' pledge(s) drafted for it.');
-      document.getElementById('pledge-round-name').value = '';
-      document.getElementById('pledge-round-date').value = '';
-      loadPledgeRoundsAdmin();
-      loadCurrentDistribution();
+      var done = function(extra) {
+        alert('Distribution created — ' + json.pledges_drafted + ' pledge(s) drafted for it' + (extra || '') + '.');
+        document.getElementById('pledge-round-name').value = '';
+        document.getElementById('pledge-round-date').value = '';
+        loadPledgeRoundsAdmin();
+        loadCurrentDistribution();
+      };
+      if (!json.round_id) { done(''); return; }
+      // The server only reports the pledge count, so add up the boxes here.
+      apiHeadersAsync().then(function(h) {
+        return fetch(SUPABASE_URL + '/rest/v1/sponsorships?select=box_count&round_id=eq.' + json.round_id, { headers: h });
+      }).then(function(r) { return r.ok ? r.json() : []; }).then(function(rows) {
+        var boxes = (rows || []).reduce(function(t, x){ return t + (x.box_count || 0); }, 0);
+        done(boxes ? ' (' + boxes + ' boxes, QAR ' + (boxes * 100).toLocaleString('en-GB') + ')' : '');
+      }).catch(function() { done(''); });
     }).catch(function(e) { alert('Could not create distribution: ' + e.message); });
 }
 
