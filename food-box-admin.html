@@ -3371,8 +3371,88 @@ function openPledgeRound() {
     }).catch(function(e) { alert('Could not create distribution: ' + e.message); });
 }
 
+// ── Matching review ──
+// "Run matching" first shows exactly who would be matched to whom (a dry run
+// that changes nothing and emails nobody). Sponsors are only emailed when the
+// admin presses Approve. The preview follows the same rules as the live
+// matching: confirmed friends with no sponsor yet, preferred area first, a
+// friend needs ceil(household / 4) boxes, and a friend that does not fit the
+// sponsor's remaining boxes is skipped.
 function runPledgeMatching(roundId) {
-  if (!confirm('Run matching for this distribution now? This locks in real families for every pledge still pending, and emails sponsors their allocation. This should normally only be done after the edit cutoff has passed.')) return;
+  apiHeadersAsync().then(function(headers) {
+    return Promise.all([
+      fetch(SUPABASE_URL + '/rest/v1/sponsorships?select=id,sponsor_id,box_count,preferred_areas,sponsor_name,payment_status&round_id=eq.' + roundId + '&matched_family_ids=is.null', { headers: headers }),
+      fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=id,area,household_size,full_name_en,full_name&status=eq.confirmed&sponsorship_id=is.null', { headers: headers })
+    ]).then(function(rs) {
+      if (!rs[0].ok || !rs[1].ok) throw new Error('could not load data (' + rs[0].status + '/' + rs[1].status + ')');
+      return Promise.all([rs[0].json(), rs[1].json()]);
+    }).then(function(d) {
+      var ids = d[0].map(function(x){ return x.sponsor_id; }).filter(Boolean);
+      if (!ids.length) return d.concat([[]]);
+      return fetch(SUPABASE_URL + '/rest/v1/profiles?select=id,first_name,email&id=in.(' + ids.join(',') + ')', { headers: headers })
+        .then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; })
+        .then(function(p){ return d.concat([p]); });
+    });
+  }).then(function(d) { showMatchingReview(roundId, d[0], d[1], d[2]); })
+    .catch(function(e) { alert('Could not prepare the matching preview: ' + e.message); });
+}
+
+function showMatchingReview(roundId, sponsorships, friends, profiles) {
+  var esc = function(t){ return String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var prof = {}; (profiles || []).forEach(function(p){ prof[p.id] = p; });
+  var pool = friends.slice();
+  var plan = [], totalWanted = 0, totalGiven = 0;
+  sponsorships.forEach(function(sp) {
+    var prefs = sp.preferred_areas || [];
+    var ranked = pool.map(function(f){
+      return { f: f, need: Math.ceil((f.household_size || 1) / 4), areaMatch: prefs.length > 0 && prefs.indexOf(f.area) !== -1 };
+    }).sort(function(a, b){ return a.areaMatch === b.areaMatch ? 0 : (a.areaMatch ? -1 : 1); });
+    var picked = [], used = 0;
+    for (var k = 0; k < ranked.length; k++) {
+      var c = ranked[k];
+      if (used + c.need > sp.box_count) continue;
+      picked.push(c); used += c.need;
+      if (used >= sp.box_count) break;
+    }
+    picked.forEach(function(c){ pool = pool.filter(function(f){ return f.id !== c.f.id; }); });
+    totalWanted += sp.box_count; totalGiven += used;
+    plan.push({ sp: sp, picked: picked, used: used });
+  });
+  var rows = plan.map(function(x) {
+    var p = prof[x.sp.sponsor_id] || {};
+    var who = esc(p.first_name || x.sp.sponsor_name || ('Sponsor ' + String(x.sp.sponsor_id || '').slice(0, 8))) + (p.email ? ' <span style="color:var(--muted);font-size:11px;">' + esc(p.email) + '</span>' : '');
+    var short = x.sp.box_count - x.used;
+    var list = x.picked.length ? x.picked.map(function(c){
+      return esc(c.f.full_name_en || c.f.full_name || c.f.id) + ' <span style="color:var(--muted);font-size:11px;">(' + esc(c.f.area || 'no area') + ', ' + c.need + ' box' + (c.need === 1 ? '' : 'es') + (c.areaMatch ? ', preferred area' : '') + ')</span>';
+    }).join('<br>') : '<span style="color:var(--red);font-weight:700;">Nobody available</span>';
+    return '<tr style="border-bottom:1px solid var(--border);vertical-align:top;"><td style="padding:8px;">' + who + '</td><td style="padding:8px;text-align:center;">' + x.sp.box_count + '</td><td style="padding:8px;text-align:center;">' + x.used + '</td><td style="padding:8px;">' + list + '</td><td style="padding:8px;text-align:center;' + (short > 0 ? 'color:var(--red);font-weight:800;' : 'color:var(--green-dark);') + '">' + (short > 0 ? short + ' short' : '✓') + '</td></tr>';
+  }).join('');
+  var left = pool.length;
+  var html = '<div style="background:#fff;border-radius:14px;max-width:980px;width:94vw;max-height:88vh;overflow:auto;padding:22px 24px;">' +
+    '<div style="font-size:18px;font-weight:800;margin-bottom:4px;">Review matches before sponsors are emailed</div>' +
+    '<div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Nothing has been changed yet and no one has been emailed. This is what would happen if you approve.</div>' +
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;font-size:13px;">' +
+      '<div style="background:#f1f1ee;border-radius:8px;padding:8px 12px;"><b>' + plan.length + '</b> sponsors to match</div>' +
+      '<div style="background:#f1f1ee;border-radius:8px;padding:8px 12px;"><b>' + totalGiven + '</b> of <b>' + totalWanted + '</b> pledged boxes would be allocated</div>' +
+      '<div style="background:#f1f1ee;border-radius:8px;padding:8px 12px;"><b>' + left + '</b> confirmed friend' + (left === 1 ? '' : 's') + ' left without a sponsor</div>' +
+    '</div>' +
+    (plan.length ? '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="text-align:left;border-bottom:2px solid var(--border);"><th style="padding:8px;">Sponsor</th><th style="padding:8px;text-align:center;">Pledged</th><th style="padding:8px;text-align:center;">Allocated</th><th style="padding:8px;">Friends matched</th><th style="padding:8px;text-align:center;">Result</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<div style="padding:16px;color:var(--muted);">There are no pledges waiting to be matched for this distribution.</div>') +
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">' +
+      '<button class="btn-comment" style="background:#fff;color:var(--text);border:1.5px solid var(--border);" onclick="closeMatchingReview()">Cancel — change nothing</button>' +
+      (plan.length ? '<button class="btn-comment" onclick="approveMatching(\'' + roundId + '\')">✓ Approve and email sponsors</button>' : '') +
+    '</div></div>';
+  var ov = document.getElementById('matching-review-overlay');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'matching-review-overlay'; ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;'; document.body.appendChild(ov); }
+  ov.innerHTML = html; ov.style.display = 'flex';
+}
+function closeMatchingReview() { var ov = document.getElementById('matching-review-overlay'); if (ov) ov.style.display = 'none'; }
+function approveMatching(roundId) {
+  if (!confirm('Approve these matches? Friends are locked to their sponsors and each sponsor is emailed their allocation. This cannot be undone from here.')) return;
+  closeMatchingReview();
+  doRunPledgeMatching(roundId);
+}
+
+function doRunPledgeMatching(roundId) {
   apiHeadersAsync().then(function(headers) {
     return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
       method: 'POST', headers: headers,
