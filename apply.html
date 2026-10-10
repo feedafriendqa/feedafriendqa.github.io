@@ -384,7 +384,7 @@ body.ar{direction:rtl;}
 
       <p id="anticipated-date-note" style="font-size:12px;color:#5a7050;font-weight:700;margin:0 0 10px"></p>
 
-      <div class="field">
+      <div class="field" id="reapply-email-field" style="display:none;">
         <label for="inp-reapply-email" id="lbl-reapply-email">Email <span style="font-weight:600;text-transform:none;opacity:.8;">(optional — for updates about your food box)</span></label>
         <input type="email" id="inp-reapply-email" placeholder="you@email.com" autocomplete="email" dir="ltr" inputmode="email">
       </div>
@@ -1053,6 +1053,15 @@ function showStatusScreen(status, data, canReapply) {
   var reapplySection = document.getElementById('reapply-section');
   if (canReapply) {
     reapplySection.style.display = 'block';
+    // Only ask for an email if none is on file. Hidden unless the database says so
+    // (any failure leaves it hidden, so the reapply is never held up).
+    document.getElementById('reapply-email-field').style.display = 'none';
+    document.getElementById('inp-reapply-email').value = '';
+    if (data && data.id) {
+      sb.rpc('reapply_needs_email', { p_application_id: data.id }).then(function(r) {
+        if (r && r.data === true) document.getElementById('reapply-email-field').style.display = 'block';
+      }, function() {});
+    }
     var parts = [data.building, data.unit ? (ar ? 'وحدة ' : 'Unit ') + data.unit : null,
       data.street ? (ar ? 'ش.' : 'St.') + data.street : null,
       data.zone ? (ar ? 'م.' : 'Zone ') + data.zone : null].filter(Boolean);
