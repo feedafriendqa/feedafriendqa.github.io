@@ -1815,6 +1815,9 @@ function renderModal(app, members, urlMap) {
   body += dif('Flat','ef-flat',app.flat);
   body += '</div>';
   body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{zone:\'ef-zone\',area:\'ef-area\',street:\'ef-street\',building:\'ef-building\',unit:\'ef-unit\',flat:\'ef-flat\'})">Save address</button>';
+  // QNAS map pin (read-only; refreshed automatically when the address is saved)
+  body += '<div class="detail-item" style="margin-top:12px;"><div class="lbl">📌 Map pin (QNAS)</div>'
+        + '<div id="pin-box-'+app.id+'">'+renderPinBox(app)+'</div></div>';
   body += accEnd;
 
   // ── FINANCIAL (editable) ──
@@ -4830,6 +4833,47 @@ function saveSection(id, fieldMap) {
       }).catch(function(e) { console.error('QNAS re-geocode ping failed (non-fatal):', e); });
     }
   }).catch(function(e){ if (btn){btn.textContent=t;btn.disabled=false;} alert('Save failed: ' + e.message); });
+}
+
+
+// ── QNAS map pin display (Address section) ───────────────────────────────
+function renderPinBox(app) {
+  var la = parseFloat(app.lat), lo = parseFloat(app.lng);
+  var has = !isNaN(la) && !isNaN(lo);
+  var h = '';
+  if (has) {
+    var url = (app.map_url && /^https:\/\/(www\.)?google\.com\/maps/.test(app.map_url)) ? app.map_url
+      : 'https://www.google.com/maps/search/?api=1&query=' + la + ',' + lo;
+    h += '<a href="' + url + '" target="_blank" rel="noopener" style="font-weight:600;">Open in Google Maps</a>'
+      + ' <span style="font-size:11px;color:var(--muted);">' + la.toFixed(5) + ', ' + lo.toFixed(5) + '</span>';
+  } else {
+    h += '<span style="color:var(--muted);">No pin yet</span>';
+  }
+  h += ' <button type="button" class="section-save-btn" style="margin-left:8px;padding:4px 10px;" onclick="repinApplication(\'' + app.id + '\', this)">'
+    + (has ? 'Re-pin' : 'Find pin') + '</button>';
+  return h;
+}
+
+function repinApplication(id, btn) {
+  var app = (typeof allApps !== 'undefined' ? allApps : []).find(function(a){ return a.id === id; });
+  if (!app) return;
+  var label = btn.textContent; btn.disabled = true; btn.textContent = 'Locating…';
+  fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ANON_KEY },
+    body: JSON.stringify({ type: 'update_application_address', application_id: id,
+      zone: app.zone, street: app.street, building: app.building, unit: app.unit, area: app.area, flat: app.flat })
+  }).then(function() {
+    return apiHeadersAsync().then(function(h) {
+      return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id + '&select=lat,lng,map_url', { headers: h });
+    });
+  }).then(function(r){ return r.json(); }).then(function(rows) {
+    if (rows && rows[0]) { app.lat = rows[0].lat; app.lng = rows[0].lng; app.map_url = rows[0].map_url; }
+    var box = document.getElementById('pin-box-' + id);
+    if (box) box.innerHTML = renderPinBox(app);
+  }).catch(function(e) {
+    console.error('Re-pin failed:', e); btn.disabled = false; btn.textContent = label;
+  });
 }
 
 // ── TEMP: MAIN APPLICANT QID SCANNER ────────────────────────────────────

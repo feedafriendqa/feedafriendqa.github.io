@@ -359,6 +359,9 @@ async function renderProfile(bundle) {
       primaryFB.zone ? 'Zone '+primaryFB.zone : ''].filter(Boolean).join(', ');
   }
 
+  var pinSrc = (f.lat != null && f.lng != null) ? f : (primaryFB && primaryFB.lat != null ? primaryFB : null);
+  var pinRow = pinKvb(pinSrc && pinSrc.lat, pinSrc && pinSrc.lng, pinSrc && pinSrc.map_url);
+
   var memberDOBs = new Set(members.filter(function(m){ return m.dob; }).map(function(m){ return m.dob.substring(0,10); }));
   var uniqueBabies = babies.filter(function(b){ return !b.dob || !memberDOBs.has(b.dob.substring(0,10)); });
   var totalBoxes = allFoodBox.reduce(function(s,r){ return s + (r.boxes_received||0); }, 0);
@@ -405,12 +408,12 @@ async function renderProfile(bundle) {
         + (wbbRow.mother_name ? kvb('👩 Mother', wbbRow.mother_name) : '')
         + (wbbRow.father_name ? kvb('👨 Father', wbbRow.father_name) : '')
         + (wbbRow.language ? kvb('🗣️ Language', wbbRow.language) : '')
-        + (addr ? kvb('📍 Address', addr) : '')
+        + (addr ? kvb('📍 Address', addr) + pinRow : '')
         + '</div>';
     } else if (primaryFB) {
       // No WBB — pull address from Food Box
       html += '<div class="family-grid">'
-        + (addr ? kvb('📍 Address', addr) : '')
+        + (addr ? kvb('📍 Address', addr) + pinRow : '')
         + (primaryFB.area ? kvb('📍 Area', primaryFB.area) : '')
         + '</div>';
     }
@@ -486,6 +489,7 @@ async function renderProfile(bundle) {
       + '<div class="field-grid">'
       + kvb('📍 Area', row.area)
       + (fullAddr ? kvb('🏠 Address', fullAddr) : '')
+      + (fullAddr ? pinKvb(row.lat, row.lng, row.map_url) : '')
       + kvb('👥 Household size', row.household_size)
       + kvb('🧷 Diapers', displayDiaper)
       + kvb('🍼 Formula', row.formula)
@@ -610,6 +614,20 @@ function idChip(icon, val) {
 
 function kvb(label, val) {
   return '<div class="field-bg"><div class="k">' + label + '</div><div class="v">' + escapeHtml((val === 0 ? 0 : val) || '—') + '</div></div>';
+}
+
+// Map-pin row (QNAS-geocoded lat/lng). Shows a tappable Google Maps link,
+// or a quiet "No pin yet" when the address hasn't been geocoded.
+function pinKvb(lat, lng, mapUrl) {
+  var la = parseFloat(lat), lo = parseFloat(lng);
+  if (isNaN(la) || isNaN(lo)) {
+    return '<div class="field-bg"><div class="k">📌 Map pin</div><div class="v" style="color:var(--muted)">No pin yet</div></div>';
+  }
+  var url = (mapUrl && /^https:\/\/(www\.)?google\.com\/maps/.test(mapUrl)) ? mapUrl
+    : 'https://www.google.com/maps/search/?api=1&query=' + la + ',' + lo;
+  return '<div class="field-bg"><div class="k">📌 Map pin</div><div class="v">'
+    + '<a href="' + url + '" target="_blank" rel="noopener">Open in Maps</a>'
+    + '<div style="font-size:11px;color:var(--muted)">' + la.toFixed(5) + ', ' + lo.toFixed(5) + '</div></div></div>';
 }
 
 // Kept for backwards compat with any code that still calls kv()
