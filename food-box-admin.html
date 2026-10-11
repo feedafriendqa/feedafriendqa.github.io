@@ -3912,6 +3912,7 @@ function openSpEditModal(spId) {
   body += di('Amount (QAR)', sn('spe-amount', sp.amount));
   body += di('Payment method', sf('spe-payment_method', sp.payment_method));
   body += di('Payment status', paymentStatusField);
+  body += di('Admin notes', '<textarea class="edit-field" id="spe-admin_notes" rows="4" style="width:100%;resize:vertical;">' + String(sp.admin_notes || '').replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</textarea><div style="font-size:11px;color:var(--muted);margin-top:4px;">Internal only — sponsors never see this.</div>');
   body += di('Payment proof', proofRow + '<input type="file" id="spe-proof-file" accept="image/*,application/pdf" style="margin-top:8px;display:block;">');
   body += '<div style="display:flex;gap:8px;margin-top:16px;">';
   body += '<button class="btn-comment" style="flex:1;background:var(--green);color:white;" onclick="saveSponsorshipEdits(\''+sp.id+'\')">💾 Save changes</button>';
@@ -3938,7 +3939,8 @@ function saveSponsorshipEdits(spId) {
     box_count: val('spe-box_count') !== '' ? Number(val('spe-box_count')) : null,
     amount: val('spe-amount') !== '' ? Number(val('spe-amount')) : null,
     payment_method: val('spe-payment_method'),
-    payment_status: newStatus
+    payment_status: newStatus,
+    admin_notes: (val('spe-admin_notes') || '').trim() || null
   };
   var linkedApp = allApps.find(function(a){ return a.sponsorship_id === spId; });
   var fileInput = document.getElementById('spe-proof-file');
