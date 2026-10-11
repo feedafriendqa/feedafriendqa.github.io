@@ -684,7 +684,9 @@ const AGE_BANDS = [
   {key:'8', label:'Age 8', min:8, max:8},
   {key:'9', label:'Age 9', min:9, max:9},
   {key:'10', label:'Age 10', min:10, max:10},
-  {key:'11-13', label:'Ages 11–13', min:11, max:13},
+  {key:'11', label:'Age 11', min:11, max:11},
+  {key:'12', label:'Age 12', min:12, max:12},
+  {key:'13', label:'Age 13', min:13, max:13},
 ];
 // Older two-year bands — kept only so assessment days created before the change
 // still look up their band correctly. Not offered in any dropdown.
@@ -693,6 +695,7 @@ const LEGACY_AGE_BANDS = [
   {key:'5-6', label:'Ages 5–6', min:5, max:6},
   {key:'7-8', label:'Ages 7–8', min:7, max:8},
   {key:'9-10', label:'Ages 9–10', min:9, max:10},
+  {key:'11-13', label:'Ages 11–13', min:11, max:13},
 ];
 // An event's age_band can hold several band keys, comma-separated (e.g. '7,8').
 function eventBands(ev) {
@@ -1780,7 +1783,7 @@ function senAllergyConsentIcons(child, a) {
   return s;
 }
 
-const YEAR_GROUP_VALUES = ['FS1','FS2','Year 1','Year 2','Year 3','Year 4','Year 5','Year 6','11-13 Special'];
+const YEAR_GROUP_VALUES = ['FS1','FS2','Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'];
 function yearGroupOptions(selected, includeFurtherReview) {
   let opts = '<option value="">Select…</option>' +
     YEAR_GROUP_VALUES.map(v => `<option ${selected===v?'selected':''}>${v}</option>`).join('');
@@ -2705,8 +2708,7 @@ function daysSince(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000*60*60*24));
 }
 function packLevelOptions(selected) {
-  return YG_SEQUENCE.map(y=>`<option ${y===selected?'selected':''}>${y}</option>`).join('')
-    + `<option ${selected==='11-13 Special'?'selected':''}>11-13 Special</option>`;
+  return YG_SEQUENCE.map(y=>`<option ${y===selected?'selected':''}>${y}</option>`).join('');
 }
 
 function renderPackTab(f, children) {
@@ -3318,7 +3320,7 @@ function suggestYG(child) {
   if(years===8) return {yg:'Year 4',reason:`Age ${years}y ${rem}m`};
   if(years===9) return {yg:'Year 5',reason:`Age ${years}y ${rem}m`};
   if(years===10) return {yg:'Year 6',reason:`Age ${years}y ${rem}m`};
-  if(years>=11&&years<=13) return {yg:'11-13 Special',reason:`Age ${years}y ${rem}m — needs introductory call`};
+  if(years>=11&&years<=13) return {yg:'Not set',reason:`Age ${years}y ${rem}m — year group decided after assessment`};
   return {yg:'Over age limit',reason:`Age ${years}y — over 13`};
 }
 
@@ -3513,7 +3515,6 @@ function renderChildren(children, f) {
           <select id="ygs-${c.id}">
             <option>FS1</option><option>FS2</option><option>Year 1</option><option>Year 2</option>
             <option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option>
-            <option>11-13 Special</option>
           </select>
           <label>Justification (required)</label>
           <textarea id="ygj-${c.id}" placeholder="e.g. Child appears to be working at Year 3 level based on assessment…">${c.year_group_justification||''}</textarea>

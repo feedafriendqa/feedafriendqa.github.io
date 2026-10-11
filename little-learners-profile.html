@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Little Learners — Child Profile</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#0A3D1F;--forest-mid:#145C30;--lime:#5CB85C;--lime-soft:#EAF5EA;--gold:#3AAFA4;--coral:#E05252;--muted:#5A7A65;--border:#C8DFC8;--cream:#F4F9F4;--shadow:0 4px 20px rgba(10,61,31,.09);--r:14px;--rs:10px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Quicksand',sans-serif;background:var(--cream);color:var(--forest);min-height:100vh;}
+header{background:var(--forest);border-bottom:3px solid var(--gold);padding:0 14px;display:flex;align-items:center;height:56px;gap:10px;}
+.logo{display:flex;align-items:center;gap:9px;}
+.logo img{height:32px;width:auto;}
+.logo-text{font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:white;}
+.wrap{padding:16px 14px;max-width:520px;margin:0 auto;}
+.hero{background:var(--forest);border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:center;color:white;}
+.hero h1{font-family:'Nunito',sans-serif;font-weight:900;font-size:19px;}
+.hero p{font-size:13px;opacity:.85;margin-top:8px;line-height:1.5;}
+.card{background:white;border-radius:var(--r);padding:18px;box-shadow:var(--shadow);margin-bottom:14px;}
+.detail-row{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px;}
+.detail-row:last-child{border-bottom:none;}
+.detail-icon{font-size:16px;}
+.fg{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+.fg label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.choice-row{display:flex;gap:8px;}
+.choice{flex:1;padding:12px;border-radius:var(--rs);border:2px solid var(--border);text-align:center;cursor:pointer;font-weight:700;font-size:13.5px;color:var(--muted);background:white;transition:all .15s;}
+.choice.sel{border-color:var(--lime);background:var(--lime-soft);color:var(--forest);}
+.btn-gold{background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:13px 24px;width:100%;font-family:'Quicksand',sans-serif;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-gold:disabled{background:#ccc;cursor:not-allowed;}
+.err-msg{background:#FDEAEA;border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:600;color:#8B2020;margin-top:10px;border-left:4px solid var(--coral);display:none;}
+.success-pg{text-align:center;padding:40px 20px;}
+.success-pg .sicon{font-size:56px;margin-bottom:14px;}
+.success-pg h2{font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--forest);}
+.success-pg p{font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.6;}
+.spinner{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(10,61,31,.2);border-top-color:var(--forest);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.note{background:var(--lime-soft);border-radius:var(--rs);padding:10px 14px;font-size:12.5px;font-weight:600;color:var(--forest-mid);margin-bottom:14px;border-left:4px solid var(--lime);line-height:1.5;}
+.warn-note{background:#FEF3D6;border-radius:var(--rs);padding:10px 14px;font-size:12.5px;font-weight:700;color:#7A5000;margin-bottom:14px;border-left:4px solid var(--gold);line-height:1.5;}
+.upload-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.upload-side-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.file-input-styled{width:100%;padding:12px 8px;border-radius:var(--rs);border:2.5px dashed var(--border);background:var(--cream);font-family:'Quicksand',sans-serif;font-size:11.5px;font-weight:700;color:var(--muted);cursor:pointer;text-align:center;}
+.file-input-styled::-webkit-file-upload-button{background:var(--forest);color:white;border:none;padding:5px 12px;border-radius:50px;font-family:'Quicksand',sans-serif;font-weight:700;font-size:11px;cursor:pointer;margin-right:6px;}
+.scan-btn{width:100%;background:var(--gold);color:var(--forest);border:none;border-radius:50px;padding:12px;font-family:'Quicksand',sans-serif;font-weight:800;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;}
+.scan-btn:disabled{background:#ccc;color:#888;cursor:not-allowed;}
+.scan-result{background:var(--lime-soft);border-radius:var(--rs);border:2px solid var(--lime);padding:10px 12px;margin-bottom:12px;font-size:12.5px;}
+.scan-field{display:flex;justify-content:space-between;padding:3px 0;}
+.scan-field-key{color:var(--muted);font-weight:700;}
+.link-btn{background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;display:block;margin:0 auto;}
+.fg select{padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);background:white;}
+.fg input[type=text]{padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);}
+.day-pick{background:white;border-radius:var(--r);padding:16px;box-shadow:var(--shadow);margin-bottom:12px;cursor:pointer;transition:all .15s;}
+.day-pick:active{transform:scale(.98);}
+.day-pick h3{font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;color:var(--forest);}
+.day-pick p{font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.5;}
+</style>
+<style>
+.fg input[type=tel],.fg input[type=date],.fg input[type=email],.fg textarea{padding:12px;border-radius:var(--rs);border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:14px;color:var(--forest);background:white;width:100%;}
+.fg textarea{resize:vertical;}
+</style>
+</head>
+<body>
+<header><div class="logo"><img src="data:image/png;base64,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" alt="Feed a Friend"><div class="logo-text">Little Learners</div></div></header>
+<div class="wrap">
+
+  <!-- STEP 1: find the child -->
+  <div id="find-pg">
+    <div class="hero">
+      <h1>Little Learners — Child Profile</h1>
+      <p>Please complete your child's profile. It helps us find a sponsor for your child's learning.</p>
+    </div>
+    <div class="card">
+      <div class="note">To find your child, enter the phone number you registered with us and your child's date of birth.</div>
+      <div class="fg">
+        <label>Your phone number</label>
+        <input type="tel" id="find-phone" placeholder="e.g. 5012 3456" inputmode="tel" autocomplete="tel">
+      </div>
+      <div class="fg">
+        <label>Your child's date of birth</label>
+        <input type="date" id="find-dob">
+      </div>
+      <div id="find-err" class="err-msg"></div>
+      <button class="btn-gold" id="find-btn" onclick="findChild()">Continue →</button>
+    </div>
+  </div>
+
+  <!-- STEP 1b: twins / more than one match -->
+  <div id="pick-pg" style="display:none;">
+    <div class="hero"><h1>Which child?</h1><p>We found more than one child. Please choose who this profile is for.</p></div>
+    <div id="pick-list"></div>
+  </div>
+
+  <!-- STEP 2: the form -->
+  <div id="form-pg" style="display:none;">
+    <div class="hero">
+      <h1 id="form-title">Child Profile</h1>
+      <p>Thank you! This takes about 2 minutes.</p>
+    </div>
+    <div class="card">
+      <div class="fg">
+        <label>Who is filling in this form?</label>
+        <select id="guardian-select" onchange="document.getElementById('guardian-other-wrap').style.display=this.value.startsWith('Other')?'block':'none'">
+          <option value="">Select…</option>
+        </select>
+      </div>
+      <div class="fg" id="guardian-other-wrap" style="display:none;">
+        <label>Your name</label>
+        <input type="text" id="guardian-other-name" placeholder="Full name">
+      </div>
+
+      <div class="fg">
+        <label>Email <span style="text-transform:none;font-weight:600;">(optional)</span></label>
+        <input type="email" id="guardian-email" placeholder="you@example.com" inputmode="email">
+      </div>
+
+      <div class="fg">
+        <label>Preferred name for <span class="cn">your child</span></label>
+        <input type="text" id="preferred-name" placeholder="What does your child like to be called?">
+      </div>
+
+      <div class="fg">
+        <label>Photo of <span class="cn">your child</span></label>
+        <div class="note" style="margin-bottom:8px;">A recent, clear photo of your child's face. This becomes their profile photo.</div>
+        <input type="file" accept="image/*" class="file-input-styled" id="child-photo-input" onchange="previewPhoto(this)">
+        <div id="photo-preview" style="display:none;margin-top:8px;"><img id="photo-preview-img" style="width:90px;height:90px;object-fit:cover;border-radius:12px;border:2px solid var(--lime);"></div>
+      </div>
+
+      <div class="fg">
+        <label>What would <span class="cn">your child</span> like to be when they're older, and why?</label>
+        <textarea id="aspiration-input" rows="3" placeholder="e.g. A doctor, because she wants to help people"></textarea>
+      </div>
+
+      <div class="fg">
+        <label>Photo &amp; Media Consent</label>
+        <div class="note" style="margin-bottom:8px;">By selecting "Yes", you give <b>Feed a Friend</b> and <b>Together for Good</b> permission to photograph or film your child during Little Learners activities, and to use those photos (and the photo above) on our sponsor page, website and social media. If you select "No", your child's photo will never be shown publicly.</div>
+        <div class="choice-row">
+          <div class="choice" id="photo-yes" onclick="selectChoice('photo','Yes',this)">👍 Yes, I consent</div>
+          <div class="choice" id="photo-no" onclick="selectChoice('photo','No',this)">🚫 No, I don't consent</div>
+        </div>
+      </div>
+
+      <div class="fg">
+        <label>Does <span class="cn">your child</span> have any allergies?</label>
+        <div class="choice-row">
+          <div class="choice" id="allergy-yes" onclick="selectChoice('allergy','Yes',this)">⚠️ Yes</div>
+          <div class="choice" id="allergy-no" onclick="selectChoice('allergy','No',this)">✅ No</div>
+        </div>
+      </div>
+      <div class="fg" id="allergy-detail-wrap" style="display:none;">
+        <label>What is the allergy?</label>
+        <input type="text" id="allergy-detail-input" placeholder="e.g. peanuts, eggs, dairy…">
+      </div>
+
+      <div id="form-err" class="err-msg"></div>
+      <button class="btn-gold" id="submit-btn" onclick="submitForm()">Submit Profile</button>
+    </div>
+  </div>
+
+  <div id="success-pg" style="display:none;">
+    <div class="success-pg">
+      <div class="sicon">🎉</div>
+      <h2>Thank You!</h2>
+      <p>Your child's profile has been saved. Our team will be in touch.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+<script>
+const SUPA_URL = "https://xbxagukdvgyaoqvbqoic.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4";
+let db = null;
+let found = null;          // { phone, dob }
+let child = null;          // the selected match
+let photoFile = null;
+const choices = { photo: null, allergy: null };
+
+function init() {
+  if(window.supabase && window.supabase.createClient) db = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  else setTimeout(init, 100);
+}
+init();
+
+function show(id) {
+  ['find-pg','pick-pg','form-pg','success-pg'].forEach(p => document.getElementById(p).style.display = p===id ? 'block' : 'none');
+  window.scrollTo(0,0);
+}
+function showErr(id, msg) { const e = document.getElementById(id); e.textContent = msg; e.style.display = msg ? 'block' : 'none'; }
+function esc(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function firstName(n) { return (n||'').trim().split(/\s+/)[0].replace(/^./, c=>c.toUpperCase()).replace(/(?<=.)./g, c=>c.toLowerCase()); }
+
+async function findChild() {
+  const phone = document.getElementById('find-phone').value.trim();
+  const dob = document.getElementById('find-dob').value;
+  if(phone.replace(/\D/g,'').length < 8) return showErr('find-err', '⚠️ Please enter your full phone number.');
+  if(!dob) return showErr('find-err', '⚠️ Please enter your child\'s date of birth.');
+  showErr('find-err', '');
+  const btn = document.getElementById('find-btn');
+  btn.disabled = true; btn.innerHTML = '<div class="spinner"></div> Checking…';
+  try {
+    const { data, error } = await db.rpc('open_profile_form', { p_phone: phone, p_dob: dob });
+    if(error) throw error;
+    if(!data || !data.length) {
+      showErr('find-err', '⚠️ We couldn\'t find a match. Please check the phone number and date of birth. If it still doesn\'t work, please contact the Little Learners team.');
+      return;
+    }
+    found = { phone, dob };
+    if(data.length === 1) openForm(data[0]);
+    else {
+      document.getElementById('pick-list').innerHTML = data.map((c,i) =>
+        `<div class="day-pick" onclick='openForm(${JSON.stringify(c).replace(/'/g,"&#39;")})'><h3>${esc(firstName(c.child_name))}</h3><p>Tap to continue</p></div>`).join('');
+      show('pick-pg');
+    }
+  } catch(e) {
+    showErr('find-err', '⚠️ Something went wrong. Please try again.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Continue →';
+  }
+}
+
+function openForm(c) {
+  child = c;
+  const name = firstName(c.child_name) || 'your child';
+  document.getElementById('form-title').textContent = name + "'s Profile";
+  document.querySelectorAll('.cn').forEach(el => el.textContent = name);
+  const sel = document.getElementById('guardian-select');
+  sel.innerHTML = '<option value="">Select…</option>'
+    + (c.mother_name ? `<option value="Mother|${esc(c.mother_name)}">Mother — ${esc(c.mother_name)}</option>` : '')
+    + (c.father_name ? `<option value="Father|${esc(c.father_name)}">Father — ${esc(c.father_name)}</option>` : '')
+    + '<option value="Other|">Someone else</option>';
+  show('form-pg');
+}
+
+function selectChoice(group, val, el) {
+  choices[group] = val;
+  document.querySelectorAll(`#${group}-yes, #${group}-no`).forEach(x => x.classList.remove('sel'));
+  el.classList.add('sel');
+  if(group==='allergy') document.getElementById('allergy-detail-wrap').style.display = val==='Yes' ? 'block' : 'none';
+}
+
+function previewPhoto(input) {
+  const file = input.files && input.files[0];
+  photoFile = file || null;
+  if(!file) { document.getElementById('photo-preview').style.display='none'; return; }
+  const reader = new FileReader();
+  reader.onload = e => { document.getElementById('photo-preview-img').src = e.target.result; document.getElementById('photo-preview').style.display='block'; };
+  reader.readAsDataURL(file);
+}
+
+// Phone photos can be 5-15MB — resize before upload so it works on mobile data
+function compressImage(file, maxDim = 1280, quality = 0.82) {
+  return new Promise(resolve => {
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      if(w > maxDim || h > maxDim) { if(w > h) { h = Math.round(h*maxDim/w); w = maxDim; } else { w = Math.round(w*maxDim/h); h = maxDim; } }
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      cv.toBlob(b => resolve(b || file), 'image/jpeg', quality);
+    };
+    img.onerror = () => resolve(file);
+    img.src = url;
+  });
+}
+
+async function submitForm() {
+  const sel = document.getElementById('guardian-select').value;
+  if(!sel) return showErr('form-err', '⚠️ Please tell us who is filling in this form.');
+  const [relation, selName] = sel.split('|');
+  const guardianName = relation==='Other' ? document.getElementById('guardian-other-name').value.trim() : selName;
+  if(relation==='Other' && !guardianName) return showErr('form-err', '⚠️ Please enter your name.');
+  const email = document.getElementById('guardian-email').value.trim();
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr('form-err', '⚠️ That email doesn\'t look right — please check it.');
+  const preferred = document.getElementById('preferred-name').value.trim();
+  if(!preferred) return showErr('form-err', '⚠️ Please tell us your child\'s preferred name.');
+  if(!photoFile) return showErr('form-err', '⚠️ Please upload a clear photo of your child.');
+  const aspiration = document.getElementById('aspiration-input').value.trim();
+  if(!aspiration) return showErr('form-err', '⚠️ Please tell us what your child would like to be when they\'re older.');
+  if(!choices.photo) return showErr('form-err', '⚠️ Please answer the photo & media consent question.');
+  if(!choices.allergy) return showErr('form-err', '⚠️ Please tell us whether your child has any allergies.');
+  const allergyDetail = choices.allergy==='Yes' ? document.getElementById('allergy-detail-input').value.trim() : '';
+  if(choices.allergy==='Yes' && !allergyDetail) return showErr('form-err', '⚠️ Please tell us what the allergy is.');
+  showErr('form-err', '');
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.innerHTML = '<div class="spinner"></div> Uploading photo…';
+  try {
+    const blob = await compressImage(photoFile);
+    let photoPath = null, upErr = null;
+    for(let attempt = 0; attempt < 2 && !photoPath; attempt++) {
+      if(attempt) await new Promise(r => setTimeout(r, 700));
+      const path = `${child.family_id}/profile_form_photo_${child.child_id}_${Date.now()}_${Math.random().toString(36).slice(2,8)}.jpg`;
+      const res = await db.storage.from('ll-documents').upload(path, blob, { upsert: false, contentType: 'image/jpeg' });
+      if(!res.error) photoPath = path; else upErr = res.error;
+    }
+    if(!photoPath) throw new Error('Could not upload the photo (' + (upErr?.message || 'unknown error') + '). Please try again.');
+
+    btn.innerHTML = '<div class="spinner"></div> Saving…';
+    const { data, error } = await db.rpc('submit_profile_form', {
+      p_phone: found.phone, p_dob: found.dob, p_child_id: child.child_id,
+      p_preferred_name: preferred, p_aspiration: aspiration, p_media_consent: choices.photo,
+      p_has_allergies: choices.allergy, p_allergy_detail: allergyDetail || null,
+      p_guardian_relation: relation, p_guardian_name: guardianName, p_guardian_email: email || null,
+      p_photo_path: photoPath
+    });
+    if(error) throw error;
+    if(!data) throw new Error('This profile could not be saved — it may already have been submitted. Please contact the Little Learners team.');
+    show('success-pg');
+  } catch(e) {
+    showErr('form-err', '⚠️ ' + (e.message || 'Something went wrong. Please try again.'));
+    btn.disabled = false; btn.textContent = 'Submit Profile';
+  }
+}
+</script>
+</body>
+</html>
