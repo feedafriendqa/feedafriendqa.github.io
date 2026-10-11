@@ -357,6 +357,7 @@ select.edit-field{cursor:pointer;}
       <button class="filter-btn" data-status="rejected_reapply" onclick="setFilter('rejected_reapply',this)">🔁 Apply Again</button>
       <button class="filter-btn" data-status="blocked" onclick="setFilter('blocked',this)">Blocked</button>
       <button class="filter-btn" data-status="archived" onclick="setFilter('archived',this)">Archived</button>
+      <button class="filter-btn" data-status="lt_requests" onclick="setFilter('lt_requests',this)">♾ Long-term requests</button>
       <button class="filter-btn" id="my-cases-toggle" style="display:none;" onclick="toggleMyCases(this)">My cases only</button>
     </div>
 
@@ -1432,7 +1433,9 @@ function filterApps() {
   var filtered = allApps.filter(function(a) {
     var status = resolveStatus(a);
     if (!q) {
-      if (currentFilter === 'new_pending') {
+      if (currentFilter === 'lt_requests') {
+        if (!a.long_term_requested_at || isLongTermApp(a)) return false;
+      } else if (currentFilter === 'new_pending') {
         if (status !== 'new' && status !== 'pending') return false;
       } else if (currentFilter !== 'all' && status !== currentFilter) {
         return false;
@@ -1925,12 +1928,36 @@ function renderModal(app, members, urlMap) {
   body += '</div>' + accEnd;
 
   // ── TAGS ──
+  // Long-term support can only be granted by a super admin. Case handlers ask for it
+  // ("Request long-term") and a super admin approves or declines the request.
+  var ltIsSuper = (myRole === 'super_admin');
   body += accStart('tags', 'Tags') + '<div class="tag-checkboxes">';
   [{key:'long_term',label:'♾ Long Term',hint:'No box cap — ongoing support'},{key:'wbb',label:'🍼 Welcome Baby',hint:'Enrolled in Welcome Baby'},{key:'ll',label:'📚 Little Learners',hint:'Enrolled in Little Learners'}].forEach(function(t) {
     var checked = tags.indexOf(t.key) !== -1 ? ' checked' : '';
-    body += '<label class="tag-check-label" title="'+t.hint+'"><input type="checkbox" id="tag-'+t.key+'"'+checked+'> '+t.label+'</label>';
+    var ltLocked = (t.key === 'long_term' && !ltIsSuper) ? ' disabled' : '';
+    var ltHint = (t.key === 'long_term' && !ltIsSuper) ? ' (super admin only)' : '';
+    body += '<label class="tag-check-label" title="'+t.hint+ltHint+'"><input type="checkbox" id="tag-'+t.key+'"'+checked+ltLocked+'> '+t.label+'</label>';
   });
-  body += '</div><button class="btn-comment" style="margin-top:10px;" onclick="saveTags(\''+app.id+'\')">Save tags</button>' + accEnd;
+  body += '</div><button class="btn-comment" style="margin-top:10px;" onclick="saveTags(\''+app.id+'\')">Save tags</button>';
+  if (!isLongTermApp(app)) {
+    if (app.long_term_requested_at) {
+      var reqWhen = new Date(app.long_term_requested_at).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+      body += '<div style="margin-top:12px;padding:10px 12px;background:#fef3e2;border:1px solid #f4845f;border-radius:8px;font-size:13px;">'
+        + '♾ Long-term requested by <strong>' + ltEsc(app.long_term_requested_by || 'a case handler') + '</strong> on ' + reqWhen
+        + (app.long_term_request_reason ? '<div style="margin-top:4px;color:#555;">Reason: ' + ltEsc(app.long_term_request_reason) + '</div>' : '')
+        + (ltIsSuper
+            ? '<div style="margin-top:8px;"><button class="btn-comment" style="background:var(--green,#2e7d32);color:#fff;border:none;" onclick="decideLongTerm(\''+app.id+'\', true)">Approve long-term</button> '
+              + '<button class="btn-comment" onclick="decideLongTerm(\''+app.id+'\', false)">Decline</button></div>'
+            : '<div style="margin-top:4px;color:#8a6300;">Waiting for a super admin.</div>')
+        + '</div>';
+    } else {
+      body += '<div style="margin-top:12px;"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Long-term support (no box cap) is approved by a super admin only.</div>'
+        + '<textarea id="lt-reason" rows="2" style="width:100%;box-sizing:border-box;font-size:13px;" placeholder="Why does this friend need long-term support?"></textarea>'
+        + '<button class="btn-comment" style="margin-top:6px;" onclick="requestLongTerm(\''+app.id+'\')">'
+        + (ltIsSuper ? 'Approve as long-term now' : 'Request long-term') + '</button></div>';
+    }
+  }
+  body += accEnd;
 
   // ── COMMENT LOG ──
   var comments = [];
@@ -4550,6 +4577,62 @@ function addComment(id) {
   }).catch(function(e){ alert('Save failed: ' + e.message); });
 }
 
+
+function ltEsc(t){ return String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function isLongTermApp(a) {
+  var t = Array.isArray(a.tags) ? a.tags : (a.tags ? (function(){ try { return JSON.parse(a.tags); } catch (e) { return []; } })() : []);
+  return !!a.is_long_term || a.status === 'long_term' || t.indexOf('long_term') !== -1;
+}
+
+function ltPatch(id, body, done) {
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers), body: JSON.stringify(body)
+    });
+  }).then(function(r) {
+    if (!r.ok) return r.text().then(function(t) {
+      var m = ''; try { m = (JSON.parse(t).message || ''); } catch (e) {}
+      if (/LONG_TERM_SUPER_ADMIN/.test(m)) throw new Error('Only a super admin can approve long-term support.');
+      if (/long_term_request/.test(t)) throw new Error('The long-term request columns are missing. Run long_term_super_admin.sql in Supabase first.');
+      throw new Error('Save failed (' + r.status + ')');
+    });
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated.');
+    var app = allApps.find(function(a){ return a.id === id; });
+    if (app) Object.assign(app, rows[0]);
+    done();
+  }).catch(function(e){ alert(e.message); });
+}
+
+function requestLongTerm(id) {
+  var app = allApps.find(function(a){ return a.id === id; }); if (!app) return;
+  var reason = ((document.getElementById('lt-reason') || {}).value || '').trim();
+  if (!reason) { alert('Please say why this friend needs long-term support.'); return; }
+  if (myRole === 'super_admin') {
+    if (!confirm('Approve this friend as long-term now?')) return;
+    return applyLongTerm(id, reason);
+  }
+  ltPatch(id, { long_term_requested_by: myName || 'a case handler', long_term_requested_at: new Date().toISOString(), long_term_request_reason: reason },
+    function(){ alert('Request sent. A super admin will review it.'); filterApps(); closeModal(); });
+}
+
+function applyLongTerm(id, reason) {
+  var app = allApps.find(function(a){ return a.id === id; }); if (!app) return;
+  var tags = Array.isArray(app.tags) ? app.tags.slice() : (app.tags ? JSON.parse(app.tags) : []);
+  if (tags.indexOf('long_term') === -1) tags.push('long_term');
+  ltPatch(id, { tags: JSON.stringify(tags), is_long_term: true, long_term_requested_by: null, long_term_requested_at: null, long_term_request_reason: null },
+    function(){ alert('Long-term support approved.'); updateStats(); filterApps(); closeModal(); });
+}
+
+function decideLongTerm(id, approve) {
+  if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
+  if (approve) { if (confirm('Approve this friend as long-term (no box cap)?')) applyLongTerm(id); return; }
+  if (!confirm('Decline this long-term request?')) return;
+  ltPatch(id, { long_term_requested_by: null, long_term_requested_at: null, long_term_request_reason: null },
+    function(){ alert('Request declined.'); filterApps(); closeModal(); });
+}
 
 function saveTags(id) {
   var tagKeys = ['long_term','wbb','ll'];
