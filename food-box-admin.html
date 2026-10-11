@@ -1676,7 +1676,7 @@ function renderModal(app, members, urlMap) {
   body += '<div class="stat-band-item"><div class="stat-band-lbl">Household</div><div class="stat-band-val">' + householdCount + '</div></div>';
   body += '</div>';
 
-  if (app.translation_pending) body += '<div class="translation-alert" style="margin:14px 20px 0;">🌐 Submitted in Arabic — translation needs review before approving.</div>';
+  if (app.translation_pending) body += '<div class="translation-alert" style="margin:14px 20px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><span>🌐 Submitted in Arabic — translation needs review before approving.</span><button class="section-save-btn" style="margin:0;" onclick="markTranslationReviewed(\''+app.id+'\', this)">✓ Mark translation reviewed</button></div>';
 
   if (status === 'duplicate') {
     var original = app.duplicate_of ? allApps.find(function(a){ return a.id === app.duplicate_of; }) : null;
@@ -2601,7 +2601,7 @@ function confirmReject() {
     return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
       method: 'PATCH',
       headers: Object.assign({'Prefer':'return=representation'}, headers),
-      body: JSON.stringify({ status: 'rejected', rejection_reason: reason })
+      body: JSON.stringify({ status: 'rejected', rejection_reason: reason, translation_pending: false })
     });
   }).then(function(r) {
     if (!r.ok) return r.text().then(function(t) {
@@ -2614,7 +2614,7 @@ function confirmReject() {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on food_box_applications.');
     var idx = allApps.findIndex(function(a){return a.id===id;});
     var app = idx !== -1 ? allApps[idx] : null;
-    if (app) { app.status = 'rejected'; app.rejection_reason = reason; }
+    if (app) { app.status = 'rejected'; app.rejection_reason = reason; app.translation_pending = false; }
     closeRejectModal();
     updateStats(); filterApps(); closeModal();
   }).catch(function(e) {
@@ -2773,13 +2773,36 @@ function approveQidReapply(id) {
   });
 }
 
+function markTranslationReviewed(id, btn) {
+  if (id.startsWith('demo')) { var d = allApps.find(function(a){return a.id===id;}); if (d) d.translation_pending = false; updateStats(); filterApps(); closeModal(); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ translation_pending: false })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on food_box_applications.');
+    var app = allApps.find(function(a){return a.id===id;});
+    if (app) app.translation_pending = false;
+    updateStats(); filterApps(); closeModal();
+  }).catch(function(e){ if (btn) { btn.disabled = false; btn.textContent = '✓ Mark translation reviewed'; } alert('Could not save: ' + e.message); });
+}
+
 function updateStatus(id, status) {
+  // Moving a friend to any real decision (approve, reject, etc.) means the Arabic
+  // translation has been reviewed, so the "needs review" flag is cleared with it.
+  var decided = status !== 'new' && status !== 'pending';
   if (id.startsWith('demo')) { alert('This is demo data — connect to Supabase to save changes.'); return; }
   apiHeadersAsync().then(function(headers) {
     return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
       method: 'PATCH',
       headers: Object.assign({'Prefer':'return=representation'}, headers),
-      body: JSON.stringify({ status: status })
+      body: JSON.stringify(decided ? { status: status, translation_pending: false } : { status: status })
     });
   }).then(function(r) {
     if (!r.ok) return r.text().then(function(t) {
@@ -2792,7 +2815,7 @@ function updateStatus(id, status) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on food_box_applications.');
     var idx = allApps.findIndex(function(a){return a.id===id;});
     var app = idx !== -1 ? allApps[idx] : null;
-    if (app) app.status = status;
+    if (app) { app.status = status; if (decided) app.translation_pending = false; }
     updateStats(); filterApps(); closeModal();
   }).catch(function(e){ alert('Update failed: ' + e.message); });
 }
