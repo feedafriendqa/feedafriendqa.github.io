@@ -1785,6 +1785,7 @@ function renderModal(app, members, urlMap) {
   body += '<div class="detail-item"><div class="lbl">Gender</div><select class="edit-field" id="ef-gender"><option value="male"'+(app.gender==='male'?' selected':'')+'>Male</option><option value="female"'+(app.gender==='female'?' selected':'')+'>Female</option></select></div>';
   body += dif('Nationality','ef-nationality',app.nationality);
   body += dif('WhatsApp','ef-whatsapp',app.whatsapp);
+  body += dif('Email','ef-email',app.email);
   body += '<div class="detail-item"><div class="lbl">Preferred language</div><select class="edit-field" id="ef-preferred_lang"><option value="Arabic"'+(app.preferred_lang==='Arabic'?' selected':'')+'>Arabic</option><option value="English"'+(!app.preferred_lang||app.preferred_lang==='English'?' selected':'')+'>English</option><option value="Urdu"'+(app.preferred_lang==='Urdu'?' selected':'')+'>Urdu</option><option value="Bengali"'+(app.preferred_lang==='Bengali'?' selected':'')+'>Bengali</option><option value="Hindi"'+(app.preferred_lang==='Hindi'?' selected':'')+'>Hindi</option><option value="Tagalog"'+(app.preferred_lang==='Tagalog'?' selected':'')+'>Tagalog</option><option value="Other"'+(app.preferred_lang==='Other'?' selected':'')+'>Other</option></select></div>';
   body += dif('Sponsor / employer','ef-sponsor',app.sponsor);
   body += '<div class="detail-item"><div class="lbl">Working?</div><select class="edit-field" id="ef-is_working"><option value="true"'+(app.is_working?' selected':'')+'>Yes</option><option value="false"'+(!app.is_working?' selected':'')+'>No</option></select></div>';
@@ -1794,7 +1795,7 @@ function renderModal(app, members, urlMap) {
   body += dif('Diaper size','ef-diaper_size',app.diaper_size);
   body += dif('Formula needed','ef-formula',app.formula);
   body += '</div>';
-  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',preferred_name:\'ef-preferred_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',dob:\'ef-dob|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\',diaper_size:\'ef-diaper_size\',formula:\'ef-formula\'})">Save applicant</button>';
+  body += '<button class="section-save-btn" onclick="saveSection(\''+app.id+'\',{full_name_en:\'ef-full_name_en\',preferred_name:\'ef-preferred_name\',qid_number:\'ef-qid_number\',qid_expiry:\'ef-qid_expiry|date\',dob:\'ef-dob|date\',gender:\'ef-gender\',nationality:\'ef-nationality\',whatsapp:\'ef-whatsapp\',email:\'ef-email\',preferred_lang:\'ef-preferred_lang\',sponsor:\'ef-sponsor\',is_working:\'ef-is_working|bool\',is_muslim:\'ef-is_muslim|bool\',is_pregnant:\'ef-is_pregnant|bool\',due_date:\'ef-due_date|date\',diaper_size:\'ef-diaper_size\',formula:\'ef-formula\'})">Save applicant</button>';
   body += accEnd;
   // ── ADDRESS (editable) ──
   body += accStart('address', 'Address');
