@@ -1468,6 +1468,17 @@ async function doReapply() {
     var result = await sb.rpc('do_reapply', { p_application_id: currentApp.id });
     var data = result.data;
 
+    if (data && data.error === 'cutoff_passed') {
+      var nd = data.next_distribution ? new Date(data.next_distribution + 'T12:00:00') : null;
+      var ndTxt = nd ? nd.toLocaleDateString(ar ? 'ar-QA' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+      errEl.textContent = ar
+        ? 'انتهى التقديم لتوزيع هذا الشهر.' + (ndTxt ? ' التوزيع القادم الذي يمكنك التقدّم له هو ' + ndTxt + '.' : ' يرجى المحاولة عند فتح التوزيع القادم.')
+        : 'Applications for this month\'s distribution have closed.' + (ndTxt ? ' The next distribution you can apply for is ' + ndTxt + '.' : ' Please try again when the next distribution opens.');
+      errEl.classList.add('show');
+      btn.disabled = false;
+      document.getElementById('reapply-btn-text').textContent = ar ? 'طلب صندوق الطعام ←' : 'Request my food box →';
+      return;
+    }
     if (!data || !data.ok) {
       errEl.textContent = ar ? 'حدث خطأ. يرجى المحاولة مرة أخرى.' : 'Something went wrong. Please try again.';
       errEl.classList.add('show');

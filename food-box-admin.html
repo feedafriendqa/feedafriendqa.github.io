@@ -2472,7 +2472,11 @@ function saveCropEditor() {
       body: JSON.stringify({ profile_crop: cropStyle })
     });
   }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    if (!r.ok) return r.text().then(function(t) {
+      var m = ''; try { m = (JSON.parse(t).message || ''); } catch (e) {}
+      if (/APPLICATIONS_CLOSED/.test(m)) throw new Error(m.replace(/^.*APPLICATIONS_CLOSED:\s*/, ''));
+      throw new Error('Save failed (' + r.status + ')');
+    });
     return r.json();
   }).then(function(rows) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies, or the profile_crop column may not exist yet.');
@@ -2572,7 +2576,11 @@ function confirmReject() {
       body: JSON.stringify({ status: 'rejected', rejection_reason: reason })
     });
   }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    if (!r.ok) return r.text().then(function(t) {
+      var m = ''; try { m = (JSON.parse(t).message || ''); } catch (e) {}
+      if (/APPLICATIONS_CLOSED/.test(m)) throw new Error(m.replace(/^.*APPLICATIONS_CLOSED:\s*/, ''));
+      throw new Error('Save failed (' + r.status + ')');
+    });
     return r.json();
   }).then(function(rows) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on food_box_applications.');
@@ -2724,6 +2732,7 @@ function approveQidReapply(id) {
   sb.rpc('do_reapply', { p_application_id: id, p_no_qid: false }).then(function(result) {
     if (result.error || !result.data || !result.data.ok) {
       var msg = (result.error && result.error.message) || (result.data && result.data.error) || 'Unknown error';
+      if (result.data && result.data.error === 'cutoff_passed') msg = 'Applications for this distribution are closed (or no distribution is open). Please confirm this friend for the next distribution' + (result.data.next_distribution ? ' (' + result.data.next_distribution + ')' : '') + '.';
       throw new Error(msg);
     }
     app.status = 'confirmed';
@@ -2745,7 +2754,11 @@ function updateStatus(id, status) {
       body: JSON.stringify({ status: status })
     });
   }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    if (!r.ok) return r.text().then(function(t) {
+      var m = ''; try { m = (JSON.parse(t).message || ''); } catch (e) {}
+      if (/APPLICATIONS_CLOSED/.test(m)) throw new Error(m.replace(/^.*APPLICATIONS_CLOSED:\s*/, ''));
+      throw new Error('Save failed (' + r.status + ')');
+    });
     return r.json();
   }).then(function(rows) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on food_box_applications.');
@@ -2777,7 +2790,11 @@ function deliverBox(id) {
       body: JSON.stringify({ status: 'approved', boxes_received: nextCount, last_delivered_at: nowIso, box_delivery_log: nextLog })
     });
   }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    if (!r.ok) return r.text().then(function(t) {
+      var m = ''; try { m = (JSON.parse(t).message || ''); } catch (e) {}
+      if (/APPLICATIONS_CLOSED/.test(m)) throw new Error(m.replace(/^.*APPLICATIONS_CLOSED:\s*/, ''));
+      throw new Error('Save failed (' + r.status + ')');
+    });
     return r.json();
   }).then(function(rows) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on food_box_applications.');
@@ -2849,7 +2866,11 @@ function saveDeliveryLog(id, nextLog, onSuccess) {
       body: JSON.stringify({ box_delivery_log: nextLog })
     });
   }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    if (!r.ok) return r.text().then(function(t) {
+      var m = ''; try { m = (JSON.parse(t).message || ''); } catch (e) {}
+      if (/APPLICATIONS_CLOSED/.test(m)) throw new Error(m.replace(/^.*APPLICATIONS_CLOSED:\s*/, ''));
+      throw new Error('Save failed (' + r.status + ')');
+    });
     return r.json();
   }).then(function(rows) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on food_box_applications.');
@@ -4015,7 +4036,11 @@ function saveSponsorshipEdits(spId) {
       });
     });
   }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    if (!r.ok) return r.text().then(function(t) {
+      var m = ''; try { m = (JSON.parse(t).message || ''); } catch (e) {}
+      if (/APPLICATIONS_CLOSED/.test(m)) throw new Error(m.replace(/^.*APPLICATIONS_CLOSED:\s*/, ''));
+      throw new Error('Save failed (' + r.status + ')');
+    });
     return r.json();
   }).then(function(rows) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on sponsorships.');
@@ -4116,7 +4141,11 @@ function confirmSponsorshipPayment(id) {
       body: JSON.stringify({ is_sponsored: true, sponsored_at: new Date().toISOString() })
     });
   }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    if (!r.ok) return r.text().then(function(t) {
+      var m = ''; try { m = (JSON.parse(t).message || ''); } catch (e) {}
+      if (/APPLICATIONS_CLOSED/.test(m)) throw new Error(m.replace(/^.*APPLICATIONS_CLOSED:\s*/, ''));
+      throw new Error('Save failed (' + r.status + ')');
+    });
     return r.json();
   }).then(function(rows) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
@@ -4139,7 +4168,11 @@ function releaseSponsorship(id) {
       body: JSON.stringify({ is_sponsored: false, sponsored_at: null, sponsorship_id: null, reserved_until: null, reserved_by_sponsorship_id: null })
     });
   }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    if (!r.ok) return r.text().then(function(t) {
+      var m = ''; try { m = (JSON.parse(t).message || ''); } catch (e) {}
+      if (/APPLICATIONS_CLOSED/.test(m)) throw new Error(m.replace(/^.*APPLICATIONS_CLOSED:\s*/, ''));
+      throw new Error('Save failed (' + r.status + ')');
+    });
     return r.json();
   }).then(function(rows) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
@@ -4169,7 +4202,11 @@ function undoSponsorshipConfirmation(id) {
       body: JSON.stringify({ is_sponsored: false, sponsored_at: null })
     });
   }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    if (!r.ok) return r.text().then(function(t) {
+      var m = ''; try { m = (JSON.parse(t).message || ''); } catch (e) {}
+      if (/APPLICATIONS_CLOSED/.test(m)) throw new Error(m.replace(/^.*APPLICATIONS_CLOSED:\s*/, ''));
+      throw new Error('Save failed (' + r.status + ')');
+    });
     return r.json();
   }).then(function(rows) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
@@ -4500,7 +4537,11 @@ function addComment(id) {
       body: JSON.stringify({ admin_notes: notesJson })
     });
   }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    if (!r.ok) return r.text().then(function(t) {
+      var m = ''; try { m = (JSON.parse(t).message || ''); } catch (e) {}
+      if (/APPLICATIONS_CLOSED/.test(m)) throw new Error(m.replace(/^.*APPLICATIONS_CLOSED:\s*/, ''));
+      throw new Error('Save failed (' + r.status + ')');
+    });
     return r.json();
   }).then(function(rows) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
@@ -4536,7 +4577,11 @@ function saveTags(id) {
       body: JSON.stringify({ tags: JSON.stringify(tags) })
     });
   }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    if (!r.ok) return r.text().then(function(t) {
+      var m = ''; try { m = (JSON.parse(t).message || ''); } catch (e) {}
+      if (/APPLICATIONS_CLOSED/.test(m)) throw new Error(m.replace(/^.*APPLICATIONS_CLOSED:\s*/, ''));
+      throw new Error('Save failed (' + r.status + ')');
+    });
     return r.json();
   }).then(function(rows) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
@@ -4649,7 +4694,11 @@ function saveSection(id, fieldMap) {
       method: 'PATCH', headers: Object.assign({'Prefer':'return=representation'}, headers), body: JSON.stringify(payload)
     });
   }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    if (!r.ok) return r.text().then(function(t) {
+      var m = ''; try { m = (JSON.parse(t).message || ''); } catch (e) {}
+      if (/APPLICATIONS_CLOSED/.test(m)) throw new Error(m.replace(/^.*APPLICATIONS_CLOSED:\s*/, ''));
+      throw new Error('Save failed (' + r.status + ')');
+    });
     return r.json();
   }).then(function(rows) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
@@ -5613,6 +5662,7 @@ function confirmDuplicate(originalId) {
   sb.rpc('merge_applications', { p_source_id: dupId, p_target_id: originalId }).then(function(result) {
     if (result.error || !result.data || !result.data.ok) {
       var msg = (result.error && result.error.message) || (result.data && result.data.error) || 'Unknown error';
+      if (result.data && result.data.error === 'cutoff_passed') msg = 'Applications for this distribution are closed (or no distribution is open). Please confirm this friend for the next distribution' + (result.data.next_distribution ? ' (' + result.data.next_distribution + ')' : '') + '.';
       throw new Error(msg);
     }
     loadApps();
@@ -5761,7 +5811,11 @@ function saveAssignment(id) {
       body: JSON.stringify({ assigned_to: assignee })
     });
   }).then(function(r) {
-    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    if (!r.ok) return r.text().then(function(t) {
+      var m = ''; try { m = (JSON.parse(t).message || ''); } catch (e) {}
+      if (/APPLICATIONS_CLOSED/.test(m)) throw new Error(m.replace(/^.*APPLICATIONS_CLOSED:\s*/, ''));
+      throw new Error('Save failed (' + r.status + ')');
+    });
     return r.json();
   }).then(function(rows) {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies.');
