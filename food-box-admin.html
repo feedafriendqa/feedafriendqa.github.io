@@ -3388,8 +3388,52 @@ function openPledgeRound() {
 // matching: confirmed friends with no sponsor yet, preferred area first, a
 // friend needs ceil(household / 4) boxes, and a friend that does not fit the
 // sponsor's remaining boxes is skipped.
+// Before matching, make sure every active monthly pledge has an entry for this
+// distribution (entries are created on the matching day, after the deadline,
+// so sponsors only ever see them once they are matched). Safe to run twice:
+// pledges that already have an entry are skipped.
+function ensureRoundEntries(roundId) {
+  return apiHeadersAsync().then(function(headers) {
+    var jh = Object.assign({}, headers, { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' });
+    return Promise.all([
+      fetch(SUPABASE_URL + '/rest/v1/distribution_rounds?select=id,name,edit_cutoff_date&id=eq.' + roundId, { headers: headers }),
+      fetch(SUPABASE_URL + '/rest/v1/sponsor_pledges?select=*&status=eq.active', { headers: headers }),
+      fetch(SUPABASE_URL + '/rest/v1/sponsorships?select=pledge_id&round_id=eq.' + roundId, { headers: headers })
+    ]).then(function(rs) {
+      if (!rs[0].ok || !rs[1].ok || !rs[2].ok) throw new Error('could not load pledges (' + rs[0].status + '/' + rs[1].status + '/' + rs[2].status + ')');
+      return Promise.all([rs[0].json(), rs[1].json(), rs[2].json()]);
+    }).then(function(d) {
+      var round = d[0][0]; if (!round) throw new Error('distribution not found');
+      var today = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+      if (today <= round.edit_cutoff_date && d[1].some(function(p){ return !d[2].some(function(x){ return x.pledge_id === p.id; }); }) &&
+          !confirm('Sponsors can still change their pledges until ' + round.edit_cutoff_date + '. Creating entries now means later changes will not be picked up. Create them anyway?')) {
+        throw new Error('cancelled, nothing was created');
+      }
+      var have = {}; d[2].forEach(function(x){ if (x.pledge_id) have[x.pledge_id] = true; });
+      var missing = d[1].filter(function(p){ return !have[p.id]; });
+      if (!missing.length) return 0;
+      var rows = missing.map(function(p) { return {
+        ref_no: 'PLEDGE-' + roundId.slice(0, 8) + '-' + p.id.slice(0, 8),
+        sponsor_id: p.sponsor_id, delivery_method: p.delivery_method, preferred_areas: p.preferred_areas,
+        subscription_type: 'monthly', box_count: p.box_count, amount: p.box_count * 100,
+        payment_status: 'pledged', funnel_step: 'pledge_draft',
+        distribution_event: round.name, pledge_id: p.id, round_id: roundId
+      }; });
+      return fetch(SUPABASE_URL + '/rest/v1/sponsorships', { method: 'POST', headers: jh, body: JSON.stringify(rows) })
+        .then(function(r) { if (!r.ok) return r.text().then(function(t){ throw new Error('could not create entries: ' + t); }); return rows.length; });
+    });
+  });
+}
+
 function runPledgeMatching(roundId) {
-  apiHeadersAsync().then(function(headers) {
+  ensureRoundEntries(roundId).then(function(created) {
+    if (created) alert(created + ' entr' + (created === 1 ? 'y was' : 'ies were') + ' created from the monthly pledges. Next: the matching review.');
+    return runPledgeMatchingReview(roundId);
+  }).catch(function(e) { alert('Could not prepare the matching: ' + e.message); });
+}
+
+function runPledgeMatchingReview(roundId) {
+  return apiHeadersAsync().then(function(headers) {
     return Promise.all([
       fetch(SUPABASE_URL + '/rest/v1/sponsorships?select=id,sponsor_id,box_count,preferred_areas,sponsor_name,payment_status&round_id=eq.' + roundId + '&matched_family_ids=is.null', { headers: headers }),
       fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=id,area,household_size,full_name_en,full_name&status=eq.confirmed&sponsorship_id=is.null', { headers: headers })
