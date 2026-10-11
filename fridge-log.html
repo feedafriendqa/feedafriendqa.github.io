@@ -362,6 +362,24 @@ function App() {
   const fridgeLabel = (f) => (isAr && f.name_ar ? f.name_ar : f.name_en);
   const zoneLabel = (f) => (isAr && f.zone_name_ar ? f.zone_name_ar : f.zone_name);
 
+  // Shrink phone photos before upload (max 1600px, JPEG 80%) to keep storage small.
+  // Falls back to the original file if anything goes wrong.
+  async function shrinkPhoto(file) {
+    try {
+      if (!file || !/^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type || "")) return file;
+      const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+      const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+      const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(bmp, 0, 0, w, h);
+      const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.8));
+      if (!blob || blob.size >= file.size) return file;
+      const name = (file.name || "photo").replace(/\.[^.]+$/, "") + ".jpg";
+      return new File([blob], name, { type: "image/jpeg" });
+    } catch (e) { return file; }
+  }
+
   async function handleSubmit() {
     setError("");
     if (!selectedFridge) {
@@ -373,10 +391,11 @@ function App() {
       let photo_url = null;
       let photoFailed = false;
       if (photoFile) {
-        const path = `${Date.now()}_${photoFile.name}`;
+        const smallPhoto = await shrinkPhoto(photoFile);
+        const path = `${Date.now()}_${smallPhoto.name}`;
         const { error: upErr } = await sb.storage
           .from("fridge-activity-photos")
-          .upload(path, photoFile);
+          .upload(path, smallPhoto);
         if (!upErr) {
           const { data: pub } = sb.storage
             .from("fridge-activity-photos")
