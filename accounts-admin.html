@@ -566,7 +566,7 @@ function renderRow(r){
   if(r.match_status !== "unknown"){
     actions += '<button class="btn ghost small" onclick="flagUnknown(\'' + r.id + '\')">Flag unknown</button>';
   }
-  actions += '<button class="btn ghost small" title="Add or edit a note on this transaction" onclick="editNote(\'' + r.id + '\', ' + JSON.stringify(r.notes || "") + ')">📝 Note</button>';
+  actions += '<button class="btn ghost small" title="Add or edit a note on this transaction" onclick="editNote(\'' + r.id + '\', ' + escapeHtml(JSON.stringify(r.notes || "")) + ')">📝 Note</button>';
   actions += '</div>';
 
   return '<tr>' +
@@ -623,7 +623,7 @@ function renderEventModalList(){
   }
   list.innerHTML = matches.map(function(e){
     var label = (e.project ? escapeHtml(e.project) + " — " : "") + escapeHtml(e.name) + (e.event_date ? " (" + e.event_date + ")" : "");
-    return '<div style="padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border,#eee)" onclick="assignEvent(' + JSON.stringify(e.id) + ')" onmouseover="this.style.background=\'var(--hover-bg,#f3f3f3)\'" onmouseout="this.style.background=\'\'">' +
+    return '<div style="padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border,#eee)" data-eid="' + escapeHtml(String(e.id)) + '" onclick="assignEvent(this.dataset.eid)" onmouseover="this.style.background=\'var(--hover-bg,#f3f3f3)\'" onmouseout="this.style.background=\'\'">' +
       label + ' <span style="color:var(--muted-2);font-size:12px">(' + e.count + ')</span></div>';
   }).join("");
 }
