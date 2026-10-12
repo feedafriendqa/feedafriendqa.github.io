@@ -346,7 +346,13 @@ const EMPTY_FRIDGE = {
 };
 
 function FridgeForm({initial,onCancel,onSaved}){
-  const [f,setF]=useState(initial);
+  // Fridges saved with blank optional fields come back from the database as null;
+  // the form's text handling expects strings, so turn nulls into "" up front.
+  const [f,setF]=useState(()=>{
+    const o={...initial};
+    Object.keys(o).forEach(k=>{ if(o[k]===null && k!=="id") o[k]=(k==="faf_owned"?false:""); });
+    return o;
+  });
   const [saving,setSaving]=useState(false);
   const [err,setErr]=useState("");
   const [photoFile,setPhotoFile]=useState(null);
