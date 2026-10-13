@@ -91,6 +91,9 @@ tr:last-child td{border-bottom:none;}
 tr:hover td{background:#fafcfa;cursor:pointer;}
 .name-cell{font-weight:700;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .sub-cell{font-size:11px;color:var(--muted);margin-top:2px;}
+.wa-link{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin-left:6px;border-radius:50%;background:#25D366;vertical-align:middle;text-decoration:none;flex-shrink:0;}
+.wa-link:hover{background:#1ebe5a;}
+.wa-link svg{width:13px;height:13px;fill:#fff;display:block;}
 .boxes-big{font-size:20px;font-weight:900;color:var(--green);line-height:1.1;}
 .boxes-cap{font-size:10px;color:var(--muted);font-weight:700;}
 /* Editable fields in modal */
@@ -722,6 +725,21 @@ function toWesternDigits(val) {
   return String(val).replace(/[٠-٩]/g, function(d) { return d.charCodeAt(0) - 0x0660; });
 }
 
+// Builds a small green WhatsApp icon that opens a chat (wa.me) with the
+// given number. Numbers are stored in all sorts of shapes ("+974 5512 3456",
+// "55123456", "00974…"), so normalise to full international digits first:
+// 8-digit local numbers get Qatar's 974 prefix. Returns '' when there is no
+// usable number. stopPropagation stops the click also opening the table row.
+function waLink(num) {
+  if (!num) return '';
+  var d = toWesternDigits(num).replace(/\D/g, '');
+  if (d.indexOf('00') === 0) d = d.slice(2);
+  if (d.length === 8) d = '974' + d;
+  if (d.length < 10) return '';
+  return '<a class="wa-link" href="https://wa.me/' + d + '" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" onclick="event.stopPropagation()">' +
+    '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 18.15c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 0 1 2.41 5.83c0 4.54-3.7 8.22-8.23 8.22zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.87.85-.87 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.23-.16-.48-.29z"/></svg></a>';
+}
+
 // Converts the scan-qid function's DD/MM/YYYY dates into the YYYY-MM-DD
 // format <input type="date"> requires. Returns null on anything
 // unparseable rather than silently setting a bad value.
@@ -1343,7 +1361,7 @@ function renderTable(apps) {
     var tr = document.createElement('tr');
     tr.onclick = function() { viewApp(app.id); };
     tr.innerHTML = '<td><div class="name-cell">' + name + '</div><div class="sub-cell">' + qid + '</div>' + (tagHtml ? '<div style="margin-top:4px;">' + tagHtml + '</div>' : '') + '</td>' +
-      '<td style="white-space:nowrap;font-size:12px;">' + (app.whatsapp || '–') + '</td>' +
+      '<td style="white-space:nowrap;font-size:12px;">' + (app.whatsapp || '–') + waLink(app.whatsapp) + '</td>' +
       '<td>' + (app.area||'–') + '</td>' +
       '<td>' + (app.household_size||1) + ' people</td>' +
       '<td><span style="font-weight:800;font-size:13px;' + dispColor + '">QAR ' + Math.round(disp).toLocaleString() + '</span></td>' +
@@ -1784,7 +1802,7 @@ function renderModal(app, members, urlMap) {
   body += '<div class="detail-item"><div class="lbl">Date of birth</div>'+sd('ef-dob',app.dob)+'</div>';
   body += '<div class="detail-item"><div class="lbl">Gender</div><select class="edit-field" id="ef-gender"><option value="male"'+(app.gender==='male'?' selected':'')+'>Male</option><option value="female"'+(app.gender==='female'?' selected':'')+'>Female</option></select></div>';
   body += dif('Nationality','ef-nationality',app.nationality);
-  body += dif('WhatsApp','ef-whatsapp',app.whatsapp);
+  body += '<div class="detail-item"><div class="lbl">WhatsApp</div><div style="display:flex;align-items:center;gap:2px;">' + sf('ef-whatsapp',app.whatsapp) + waLink(app.whatsapp) + '</div></div>';
   body += dif('Email','ef-email',app.email);
   body += '<div class="detail-item"><div class="lbl">Preferred language</div><select class="edit-field" id="ef-preferred_lang"><option value="Arabic"'+(app.preferred_lang==='Arabic'?' selected':'')+'>Arabic</option><option value="English"'+(!app.preferred_lang||app.preferred_lang==='English'?' selected':'')+'>English</option><option value="Urdu"'+(app.preferred_lang==='Urdu'?' selected':'')+'>Urdu</option><option value="Bengali"'+(app.preferred_lang==='Bengali'?' selected':'')+'>Bengali</option><option value="Hindi"'+(app.preferred_lang==='Hindi'?' selected':'')+'>Hindi</option><option value="Tagalog"'+(app.preferred_lang==='Tagalog'?' selected':'')+'>Tagalog</option><option value="Other"'+(app.preferred_lang==='Other'?' selected':'')+'>Other</option></select></div>';
   body += dif('Sponsor / employer','ef-sponsor',app.sponsor);
@@ -1880,7 +1898,7 @@ function renderModal(app, members, urlMap) {
       body += di('Date of birth', m.dob ? (m.dob + (displayAge(m.dob) ? ' <span style="color:var(--muted);font-weight:600;">(' + displayAge(m.dob) + ')</span>' : '')) : '–');
       body += di('Role',m.role||'–');
       body += di('Gender',m.gender||'–');
-      body += di('WhatsApp',m.whatsapp||'–');
+      body += di('WhatsApp',(m.whatsapp||'–') + waLink(m.whatsapp));
       body += di('Sponsor / employer',m.sponsor||'–');
       body += di('Diaper size',(m.diaper_size!=null&&m.diaper_size!=='')?('Size '+m.diaper_size):'–');
       if (m.needs_formula) body += di('Needs formula',m.needs_formula==='yes'?'🍼 Yes':'No');
