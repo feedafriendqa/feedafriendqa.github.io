@@ -602,7 +602,16 @@ var giveState = { boxes: 3, freq: "monthly", custom: false };
 // already covered by pending, not-yet-matched sponsor pledges -- see
 // checkFamilyAvailability() below). Starts false (not sold out) so the
 // button behaves normally before the check resolves or if it fails.
-var faf_soldOut = false;
+// ── SPONSORSHIPS PAUSE SWITCH ────────────────────────────────────────────
+// true  = public sponsorship is paused: the picker is hidden, visitors see a
+//         "sponsorships open soon" card with the notify-me form, and the
+//         funnel pages (Preferences / Choose family / Payment) bounce back here.
+// false = normal behaviour (open whenever confirmed friends still need a sponsor).
+// To reopen, set this to false here AND in the same-named flag at the top of
+// Faf-FoodBox-Preferences / ChooseFamily / Payment and faf-preferences /
+// faf-choose-family.
+var FAF_SPONSORSHIPS_PAUSED = true;
+var faf_soldOut = FAF_SPONSORSHIPS_PAUSED;
 
 function setFreq(f){
   giveState.freq = f;
@@ -757,7 +766,7 @@ function checkFamilyAvailability(){
     .select("id", { count: "exact", head: true })
     .then(function(res){
       if(res.error) throw res.error;
-      faf_soldOut = (res.count || 0) === 0;
+      faf_soldOut = FAF_SPONSORSHIPS_PAUSED || (res.count || 0) === 0;
       renderGiveCard();
     })
     .catch(function(e){
@@ -771,6 +780,18 @@ function checkFamilyAvailability(){
 // come after renderGiveCard/giveState are defined above, since setLang()
 // calls renderGiveCard() immediately.
 (function(){
+  if(FAF_SPONSORSHIPS_PAUSED){
+    var card = document.getElementById("giveSoldOut");
+    var setCopy = function(el, en, ar){ if(el){ el.setAttribute("data-en", en); el.setAttribute("data-ar", ar); } };
+    if(card){
+      setCopy(card.querySelector("h3"), "Sponsorships open soon", "باب الكفالة سيُفتح قريباً");
+      setCopy(card.querySelector("p"),
+        "We're finalising this month's list of friends and will open sponsorships shortly. Leave your details and we'll message you the moment they open.",
+        "نقوم حالياً بإنهاء قائمة الأصدقاء لهذا الشهر وسنفتح باب الكفالة قريباً. اترك بياناتك وسنراسلك فور فتحه.");
+      setCopy(card.querySelector("#waitlistBtn span"), "Notify me when sponsorships open →", "أعلمني عند فتح الكفالة ←");
+      setCopy(card.querySelector("#waitlistSuccess"), "✅ Thanks! We'll message you as soon as sponsorships open.", "✅ شكراً لك! سنراسلك فور فتح باب الكفالة.");
+    }
+  }
   var savedLang = sessionStorage.getItem("faf_lang") || "en";
   setLang(savedLang);
 })();
@@ -778,6 +799,12 @@ function checkFamilyAvailability(){
 async function startSponsorFlow(){
   if(faf_soldOut){
     var isArNow = document.body.classList.contains("lang-ar");
+    if(FAF_SPONSORSHIPS_PAUSED){
+      alert(isArNow
+        ? "باب الكفالة مغلق مؤقتاً وسيُفتح قريباً. يرجى التمرير لأعلى لترك بياناتك."
+        : "Sponsorships are paused for now and will open soon. Please scroll up to leave your details.");
+      return;
+    }
     alert(isArNow
       ? "جميع الصناديق نفدت لهذا التوزيع. يرجى التمرير لأعلى للتسجيل في قائمة الانتظار."
       : "All boxes are sold out for this distribution. Please scroll up to join the waitlist.");
