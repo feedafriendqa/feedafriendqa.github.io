@@ -4,6 +4,8 @@
 <script>
 /* SPONSORSHIPS PAUSED — set to false (and in foodbox.html) to reopen. */
 var FAF_SPONSORSHIPS_PAUSED = true;
+/* Pledge mode (see Faf-FoodBox-Payment.html): skip Choose-family, go straight to the pledge step. */
+var FAF_PLEDGE_MODE = true;
 if (FAF_SPONSORSHIPS_PAUSED) { window.location.replace('foodbox.html'); }
 </script>
 <meta charset="UTF-8">
@@ -160,6 +162,16 @@ body.lang-ar .hero-h1,body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .sub
     <div class="seg"></div>
   </div>
   <div class="progress-label" data-en="Step 1 of 3 · Your preferences" data-ar="الخطوة ١ من ٣ · تفضيلاتك">Step 1 of 3 · Your preferences</div>
+  <script>
+  if(FAF_PLEDGE_MODE){
+    var _pl = document.querySelector(".progress-label");
+    _pl.setAttribute("data-en", "Step 1 of 2 · Your preferences");
+    _pl.setAttribute("data-ar", "الخطوة ١ من ٢ · تفضيلاتك");
+    _pl.textContent = "Step 1 of 2 · Your preferences";
+    var _sg = document.querySelectorAll(".progress .seg");
+    if(_sg.length === 3) _sg[2].parentNode.removeChild(_sg[2]);
+  }
+  </script>
 
   <div class="header">
     <div class="h1" data-en="How would you like to <em>help?</em>" data-ar="كيف تريد <em>المساعدة؟</em>">How would you like to <em>help?</em></div>
@@ -420,7 +432,7 @@ async function goNext(){
     // Don't block the funnel on a save failure — sessionStorage still has the data
   }
 
-  window.location.href = "Faf-FoodBox-ChooseFamily.html";
+  window.location.href = FAF_PLEDGE_MODE ? "Faf-FoodBox-Payment.html" : "Faf-FoodBox-ChooseFamily.html";
 }
 
 // If someone lands here without a sponsorship row (e.g. direct link, or

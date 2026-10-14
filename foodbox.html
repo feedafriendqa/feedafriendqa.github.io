@@ -611,6 +611,12 @@ var giveState = { boxes: 3, freq: "monthly", custom: false };
 // Faf-FoodBox-Preferences / ChooseFamily / Payment and faf-preferences /
 // faf-choose-family.
 var FAF_SPONSORSHIPS_PAUSED = true;
+// Pledge mode: when open, sponsors pledge boxes for the current round (no family
+// picking, no payment yet — matching happens after the cut-off). The "sold out"
+// check against the pool of unsponsored families is therefore skipped; the pause
+// switch above is the only thing that closes the page. Keep in sync with the same
+// flag on the Preferences / Choose-family / Payment pages.
+var FAF_PLEDGE_MODE = true;
 var faf_soldOut = FAF_SPONSORSHIPS_PAUSED;
 
 function setFreq(f){
@@ -761,6 +767,7 @@ function joinWaitlist(){
 // as the other best-effort stats loaders on this page.
 function checkFamilyAvailability(){
   if(!window.sbClient) return;
+  if(FAF_PLEDGE_MODE){ faf_soldOut = FAF_SPONSORSHIPS_PAUSED; renderGiveCard(); return; }
   window.sbClient
     .from("food_box_public_pool")
     .select("id", { count: "exact", head: true })

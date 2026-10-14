@@ -4,6 +4,9 @@
 <script>
 /* SPONSORSHIPS PAUSED — set to false (and in foodbox.html) to reopen. */
 var FAF_SPONSORSHIPS_PAUSED = true;
+/* Pledge mode: sponsors pledge now; families are matched after the round's cut-off;
+   payment is only asked for once matched. false = old pick-families-and-pay-now flow. */
+var FAF_PLEDGE_MODE = true;
 if (FAF_SPONSORSHIPS_PAUSED) { window.location.replace('foodbox.html'); }
 </script>
 <meta charset="UTF-8">
@@ -382,7 +385,7 @@ function renderSummary(){
   var givingLabel = isAr ? "التكفّل" : "Giving";
   var deliveryLabel = isAr ? "التوصيل" : "Delivery";
   var boxesLabel = isAr ? "الصناديق" : "Boxes";
-  var amountLabel = isAr ? "المبلغ" : "Amount";
+  var amountLabel = FAF_PLEDGE_MODE ? (isAr ? "المبلغ (يُستحق بعد المطابقة)" : "Amount (due after matching)") : (isAr ? "المبلغ" : "Amount");
 
   rows.push([givingLabel, prefs.subscription === "monthly" ? (isAr ? "🔁 تعهد شهري" : "🔁 Monthly pledge") : (isAr ? "📦 مرة واحدة" : "📦 One-off")]);
   if(prefs.delivery === "self"){
@@ -405,6 +408,7 @@ function renderSummary(){
 
   var pledgeNoteEl = document.getElementById("pledge-note");
   pledgeNoteEl.style.display = prefs.subscription === "monthly" ? "flex" : "none";
+  if(typeof renderPledgeHow === "function") renderPledgeHow();
 }
 
 function setPayMethod(m){
@@ -439,7 +443,7 @@ function copyText(text, btn){
 function checkReady(){
   var name = document.getElementById("pay-name").value.trim();
   var email = document.getElementById("pay-email").value.trim();
-  var confirmed = document.getElementById("confirm-transferred").checked;
+  var confirmed = FAF_PLEDGE_MODE ? true : document.getElementById("confirm-transferred").checked;
   var btn = document.getElementById("continue-btn");
   var hint = document.getElementById("cta-hint");
   var isAr = document.body.classList.contains("lang-ar");
@@ -466,7 +470,7 @@ function checkReady(){
   } else if(!confirmed){
     hint.textContent = isAr ? "أكّد أنك قمت أو ستقوم بالتحويل" : "Confirm you've made or will make the transfer";
   } else {
-    hint.textContent = isAr ? "جاهز لتأكيد تكفّلك" : "Ready to confirm your sponsorship";
+    hint.textContent = FAF_PLEDGE_MODE ? (isAr ? "جاهز لتأكيد تعهدك" : "Ready to confirm your pledge") : (isAr ? "جاهز لتأكيد تكفّلك" : "Ready to confirm your sponsorship");
   }
 }
 
@@ -476,6 +480,7 @@ function checkReady(){
 document.getElementById("confirm-transferred").addEventListener("change", checkReady);
 
 async function submitSponsorship(){
+  if(FAF_PLEDGE_MODE){ return submitPledge(); }
   var btn = document.getElementById("continue-btn");
   var hint = document.getElementById("cta-hint");
   var isArSubmit = document.body.classList.contains("lang-ar");
@@ -712,6 +717,202 @@ async function submitSponsorship(){
   sessionStorage.removeItem("faf_hold_expires_at");
 }
 
+// ── PLEDGE MODE ───────────────────────────────────────────────────────────────
+// Instead of holding specific families and asking for payment straight away,
+// the sponsor pledges a number of boxes for the current round. They can change
+// or cancel the pledge from My Payments until the round's cut-off; after the
+// cut-off an admin runs matching (food-box-admin), the pledge flips to
+// "pending_payment" automatically (DB trigger pledge_matched_becomes_payable),
+// and only then are they emailed the amount and how to pay. This is the same
+// row shape the admin's pledge round creates (payment_status "pledged",
+// funnel_step "pledge_draft", round_id, pledge_id).
+var pledgeRound = null;       // {id, name, status, edit_cutoff_date} once loaded
+var pledgeCutoffText = null;  // e.g. "22 Oct"
+
+function applyPledgeModeUI(){
+  if(!FAF_PLEDGE_MODE) return;
+  var setCopy = function(sel, en, ar){
+    var el = document.querySelector(sel);
+    if(el){ el.setAttribute("data-en", en); el.setAttribute("data-ar", ar); }
+  };
+  setCopy(".progress-label", "Step 2 of 2 · Confirm your pledge", "الخطوة ٢ من ٢ · تأكيد تعهدك");
+  var segs = document.querySelectorAll(".progress .seg");
+  if(segs.length === 3){ segs[1].className = "seg active"; segs[2].parentNode.removeChild(segs[2]); }
+  setCopy(".header .sub", "Sign in to confirm your pledge — you'll manage it, and pay once it's matched, from My Payments.", "سجّل الدخول لتأكيد تعهدك — ستديره وتدفع بعد المطابقة من صفحة مدفوعاتي.");
+  setCopy("#contact-section .section-sub", "So we can email you once your boxes are matched", "لنراسلك عند مطابقة صناديقك");
+  setCopy("#continue-btn", "Confirm pledge →", "تأكيد التعهد ←");
+  setCopy("#cta-hint", "Fill in your details to continue", "أدخل بياناتك للمتابعة");
+  setCopy(".success-t", "Pledge received!", "تم استلام تعهدك!");
+  setCopy("#success-d", "Thank you! There's nothing to pay yet. After the cut-off we'll match your boxes to friends in need and email you the amount and how to pay. You can change or cancel your pledge until then from My Payments.", "شكراً لك! لا يوجد شيء للدفع الآن. بعد الموعد النهائي سنطابق صناديقك مع الأصدقاء المحتاجين ونراسلك بالمبلغ وطريقة الدفع. يمكنك تعديل تعهدك أو إلغاؤه حتى ذلك الحين من صفحة مدفوعاتي.");
+  setCopy("#success-account-btn", "Go to My Payments →", "الذهاب إلى مدفوعاتي ←");
+  ["payment-method-section", "hold-timer"].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.style.display = "none";
+  });
+  var sum = document.getElementById("summary");
+  if(sum && !document.getElementById("pledge-how")){
+    var note = document.createElement("div");
+    note.className = "pledge-note";
+    note.id = "pledge-how";
+    note.style.display = "flex";
+    note.innerHTML = '<span class="ic">💚</span><div id="pledge-how-text"></div>';
+    sum.parentNode.insertBefore(note, sum.nextSibling);
+  }
+}
+
+function renderPledgeHow(){
+  var el = document.getElementById("pledge-how-text");
+  if(!el) return;
+  var isAr = document.body.classList.contains("lang-ar");
+  var until = pledgeCutoffText || (isAr ? "الموعد النهائي" : "the cut-off date");
+  el.innerHTML = isAr
+    ? "<strong>كيف يعمل:</strong> أنت تتعهد الآن، فلا يوجد شيء للدفع بعد. يمكنك تعديل تعهدك أو إلغاؤه من صفحة مدفوعاتي حتى " + until + ". بعد ذلك نطابق صناديقك مع الأصدقاء المحتاجين ونراسلك بالمبلغ وطريقة الدفع."
+    : "<strong>How it works:</strong> you're pledging now, so there's nothing to pay yet. You can change or cancel your pledge in My Payments until " + until + ". After that we match your boxes to friends in need and email you the amount and how to pay.";
+}
+
+// Signed-in sponsors can read distribution_rounds; look up the current round's
+// status and cut-off so we can show the date and refuse a pledge into a round
+// that is closed or past its cut-off.
+async function loadPledgeRound(){
+  try{
+    var cur = await window.sbClient.from("current_distribution_public").select("id,name").maybeSingle();
+    if(!cur || !cur.data) return;
+    var r = await window.sbClient.from("distribution_rounds").select("id,name,status,edit_cutoff_date").eq("id", cur.data.id).maybeSingle();
+    if(!r || !r.data) return;
+    pledgeRound = r.data;
+    if(r.data.edit_cutoff_date){
+      var d = new Date(r.data.edit_cutoff_date + "T00:00:00");
+      var isAr = document.body.classList.contains("lang-ar");
+      pledgeCutoffText = d.toLocaleDateString(isAr ? "ar-QA" : "en-GB", { day: "numeric", month: "short" });
+    }
+    renderPledgeHow();
+  }catch(e){
+    console.warn("Could not load the pledge round (non-fatal):", e);
+  }
+}
+
+async function submitPledge(){
+  var btn = document.getElementById("continue-btn");
+  var hint = document.getElementById("cta-hint");
+  var isAr = document.body.classList.contains("lang-ar");
+  var t = function(en, ar){ return isAr ? ar : en; };
+  var fail = function(msg){ btn.disabled = false; hint.textContent = msg; };
+  var EDGE = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder";
+  btn.disabled = true;
+  hint.textContent = t("Saving your pledge…", "جاري حفظ تعهدك…");
+
+  var name = document.getElementById("pay-name").value.trim();
+  var wa = document.getElementById("pay-wa").value.trim();
+  var email = document.getElementById("pay-email").value.trim();
+  var boxCount = prefs.boxCount || 1;
+  var delivery = prefs.delivery === "self" ? "self" : "vol";
+  var areas = delivery === "self" ? (prefs.areas || []) : null;
+  var monthly = prefs.subscription === "monthly";
+
+  // Fresh session (the token captured at sign-in can be stale by now).
+  var sessionRes = await window.sbClient.auth.getSession();
+  var liveSession = sessionRes && sessionRes.data ? sessionRes.data.session : null;
+  if(!liveSession){
+    fail(t("Your session has expired — please sign in again to confirm your pledge", "انتهت صلاحية جلستك — يرجى تسجيل الدخول مرة أخرى لتأكيد تعهدك"));
+    setTimeout(function(){ window.location.reload(); }, 2500);
+    return;
+  }
+  var uid = liveSession.user.id;
+  var token = liveSession.access_token;
+
+  try{
+    // 1. The current round must be open and before its cut-off.
+    var cur = await window.sbClient.from("current_distribution_public").select("id,name").maybeSingle();
+    var rr = cur && cur.data ? await window.sbClient.from("distribution_rounds").select("id,name,status,edit_cutoff_date").eq("id", cur.data.id).maybeSingle() : null;
+    var round = rr && rr.data ? rr.data : null;
+    var todayQ = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10); // Doha date
+    if(!round || round.status !== "open" || (round.edit_cutoff_date && todayQ > round.edit_cutoff_date)){
+      return fail(t("Sponsorships aren't open right now — please check back soon.", "باب الكفالة غير مفتوح حالياً — يرجى المحاولة لاحقاً."));
+    }
+
+    // 2. Already pledged for this round? Don't create a second allocation.
+    var leadId = sessionStorage.getItem("faf_sponsorship_id");
+    var dupRes = await window.sbClient.from("sponsorships").select("id,payment_status,funnel_step")
+      .eq("sponsor_id", uid).eq("round_id", round.id)
+      .in("funnel_step", ["pledge_draft", "payment_pending"]).neq("payment_status", "cancelled");
+    var dups = (dupRes && dupRes.data ? dupRes.data : []).filter(function(r){ return r.id !== leadId; });
+    if(dups.length){
+      hint.textContent = t("You already have a pledge for this round — opening My Payments…", "لديك تعهد بالفعل لهذه الجولة — جاري فتح مدفوعاتي…");
+      setTimeout(function(){ window.location.href = "my-payments.html"; }, 1500);
+      return;
+    }
+
+    // 3. Monthly sponsors also get a standing pledge (one per sponsor), via the
+    //    same server action the Sept check-in page uses.
+    var pledgeId = null;
+    if(monthly){
+      var pr = await fetch(EDGE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ type: "create_pledge", box_count: boxCount, delivery_method: delivery, preferred_areas: areas })
+      });
+      var pj = await pr.json().catch(function(){ return {}; });
+      if(pr.ok && pj && pj.pledge){
+        pledgeId = pj.pledge.id;
+      } else if(pr.status === 409){
+        var ex = await window.sbClient.from("sponsor_pledges").select("id,box_count,delivery_method")
+          .eq("sponsor_id", uid).in("status", ["active", "paused"]).maybeSingle();
+        if(!ex || !ex.data) throw new Error("Could not find your existing monthly pledge");
+        pledgeId = ex.data.id;
+        if(ex.data.box_count !== boxCount || ex.data.delivery_method !== delivery){
+          await fetch(EDGE, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+            body: JSON.stringify({ type: "update_pledge", pledge_id: pledgeId, box_count: boxCount, delivery_method: delivery })
+          });
+        }
+      } else {
+        throw new Error((pj && pj.error) || "Could not save your monthly pledge");
+      }
+    }
+
+    // 4. This round's entry — same shape as the admin's pledge-round entries.
+    var fields = {
+      sponsor_id: uid, sponsor_name: name, whatsapp: wa || null, email: email,
+      delivery_method: delivery, preferred_areas: areas,
+      subscription_type: monthly ? "monthly" : "once",
+      box_count: boxCount, amount: boxCount * 100,
+      payment_status: "pledged", funnel_step: "pledge_draft", payment_method: null, admin_notes: null,
+      distribution_event: round.name, round_id: round.id, pledge_id: pledgeId,
+      pref_save_details: true, pref_delivery_alerts: true, pref_wants_account: true
+    };
+    var saved = null;
+    if(leadId){
+      var up = await window.sbClient.from("sponsorships").update(fields).eq("id", leadId).select().maybeSingle();
+      if(up.error) throw up.error;
+      saved = up.data;
+    }
+    if(!saved){
+      var ins = await window.sbClient.from("sponsorships").insert(Object.assign({ source: "web_form" }, fields)).select().single();
+      if(ins.error) throw ins.error;
+      saved = ins.data;
+    }
+
+    // 5. Done — show the confirmation.
+    localStorage.setItem("faf_saved_name", name);
+    localStorage.setItem("faf_saved_email", email);
+    if(wa) localStorage.setItem("faf_saved_wa", wa);
+    document.getElementById("success-ref").textContent = (isAr ? "المرجع: " : "Ref: ") + ((saved && saved.ref_no) || "SP-PENDING");
+    document.getElementById("main-shell").style.display = "none";
+    document.getElementById("success-wrap").classList.add("show");
+    if(window.confetti){
+      confetti({ particleCount: 140, spread: 80, origin: { y: 0.35 }, colors: ["#1D7A47", "#F5C330", "#a9df49", "#EBF7F0"] });
+    }
+    sessionStorage.removeItem("faf_sponsorship_id");
+    sessionStorage.removeItem("faf_ref_no");
+    sessionStorage.removeItem("faf_prefs");
+    sessionStorage.removeItem("faf_hold_expires_at");
+  }catch(e){
+    console.error("Pledge could not be saved:", e);
+    fail(t("Something went wrong saving your pledge — please try again.", "حدث خطأ أثناء حفظ تعهدك — يرجى المحاولة مرة أخرى."));
+  }
+}
+
 // ── Language toggle: EN/AR with RTL support, persisted across the funnel ──
 function setLang(lang){
   document.body.classList.toggle("lang-ar", lang === "ar");
@@ -733,6 +934,7 @@ function setLang(lang){
   setPayMethod(payMethod);
 }
 
+applyPledgeModeUI();
 renderSummary();
 
 // Restore saved language choice from earlier in the funnel (defaults to English)
@@ -791,6 +993,7 @@ function revealPaymentContent(user, profile){
   document.getElementById("signed-in-as").textContent = (isAr ? "مسجّل الدخول باسم: " : "Signed in as: ") + user.email;
   checkReady();
   startHoldTimer();
+  if(FAF_PLEDGE_MODE) loadPledgeRound();
 }
 
 // ── 10-minute family hold countdown ──
@@ -801,6 +1004,7 @@ function revealPaymentContent(user, profile){
 // mid-checkout with no warning.
 var holdTimerInterval = null;
 function startHoldTimer(){
+  if(FAF_PLEDGE_MODE) return; // no families are held in pledge mode
   var expiresAtRaw = sessionStorage.getItem("faf_hold_expires_at");
   if(!expiresAtRaw) return; // no hold on record (e.g. re-visited page) — nothing to count down
   var expiresAt = parseInt(expiresAtRaw, 10);
