@@ -2093,10 +2093,12 @@ function submitApplication() {
     body: JSON.stringify({ type: 'submit_application', application: application, members: members, submission_lang: currentLang, resubmit_application_id: resubmitApplicationId || undefined })
   }).then(function(r) { return r.json(); }).then(function(data) {
     if (data.ok) {
-      showSuccessScreen(application.qid_number, application.whatsapp);
-      // The application is safely saved at this point — document uploads run
-      // in the background and don't block or risk the confirmation above.
-      uploadAllApplicationDocuments(data.id, data.member_ids || [], memberFormIndices);
+      // The application is saved at this point, but the confirmation screen
+      // waits until the document photos have actually been uploaded (see
+      // runDocumentUploadStep) so a closed tab can't silently drop them.
+      runDocumentUploadStep(function() {
+        return uploadAllApplicationDocuments(data.id, data.member_ids || [], memberFormIndices);
+      }, application, btn);
     } else {
       var ar = currentLang === 'ar';
       showSubmitErrors([{
@@ -2177,8 +2179,12 @@ function attemptDocumentUpload(applicationId, memberId, docKey, file) {
   });
 }
 
+// Resolves to {ok:true} on success (or when there was no file to send) and to
+// {ok:false, applicationId, memberId, docKey, file} after the retry also
+// fails, so the caller can tell the applicant and re-run just the failures.
+// It never rejects.
 function uploadOneDocument(applicationId, memberId, docKey, file) {
-  if (!file) return Promise.resolve();
+  if (!file) return Promise.resolve({ ok: true, skipped: true });
   return compressDocumentFile(file).then(function(compressed) {
     return attemptDocumentUpload(applicationId, memberId, docKey, compressed).catch(function(firstErr) {
       console.warn('Document upload failed once (' + docKey + '), retrying:', firstErr);
@@ -2186,29 +2192,119 @@ function uploadOneDocument(applicationId, memberId, docKey, file) {
         return attemptDocumentUpload(applicationId, memberId, docKey, compressed);
       });
     });
+  }).then(function() {
+    return { ok: true };
   }).catch(function(e) {
     console.error('Document upload failed after retry (' + docKey + '):', e);
+    return { ok: false, applicationId: applicationId, memberId: memberId, docKey: docKey, file: file };
   });
 }
 
-function uploadAllApplicationDocuments(applicationId, memberIds, memberFormIndices) {
-  var jobs = [];
-  var fileOf = function(id) { var el = document.getElementById(id); return el && el.files ? el.files[0] : null; };
+// Runs the task functions with at most `limit` in flight at once and resolves
+// to their results in order. Firing ~10 multi-MB photo uploads simultaneously
+// is what tends to time out on mobile data; a few at a time is far steadier.
+function runWithConcurrency(tasks, limit) {
+  var results = new Array(tasks.length);
+  var next = 0;
+  function worker() {
+    if (next >= tasks.length) return Promise.resolve();
+    var i = next++;
+    return tasks[i]().then(function(r) { results[i] = r; return worker(); });
+  }
+  var workers = [];
+  for (var w = 0; w < Math.min(limit, tasks.length); w++) workers.push(worker());
+  return Promise.all(workers).then(function() { return results; });
+}
 
-  jobs.push(uploadOneDocument(applicationId, null, 'qid_front', fileOf('qid-front')));
-  jobs.push(uploadOneDocument(applicationId, null, 'qid_back', fileOf('qid-back')));
-  jobs.push(uploadOneDocument(applicationId, null, 'blue_plate', fileOf('blue-plate-upload')));
-  jobs.push(uploadOneDocument(applicationId, null, 'salary_proof', fileOf('pz-salary')));
+function uploadAllApplicationDocuments(applicationId, memberIds, memberFormIndices) {
+  var tasks = [];
+  var fileOf = function(id) { var el = document.getElementById(id); return el && el.files ? el.files[0] : null; };
+  var add = function(memberId, docKey, file) {
+    if (!file) return;
+    tasks.push(function() { return uploadOneDocument(applicationId, memberId, docKey, file); });
+  };
+
+  add(null, 'qid_front', fileOf('qid-front'));
+  add(null, 'qid_back', fileOf('qid-back'));
+  add(null, 'blue_plate', fileOf('blue-plate-upload'));
+  add(null, 'salary_proof', fileOf('pz-salary'));
 
   memberFormIndices.forEach(function(formIdx, pos) {
     var memberId = memberIds[pos];
     if (!memberId) return; // that member's row failed to save — nothing to attach documents to
-    jobs.push(uploadOneDocument(applicationId, memberId, 'qid_front', fileOf('m' + formIdx + '-qid-front')));
-    jobs.push(uploadOneDocument(applicationId, memberId, 'qid_back', fileOf('m' + formIdx + '-qid-back')));
-    jobs.push(uploadOneDocument(applicationId, memberId, 'birth_cert', fileOf('m' + formIdx + '-birth-cert')));
+    add(memberId, 'qid_front', fileOf('m' + formIdx + '-qid-front'));
+    add(memberId, 'qid_back', fileOf('m' + formIdx + '-qid-back'));
+    add(memberId, 'birth_cert', fileOf('m' + formIdx + '-birth-cert'));
   });
 
-  return Promise.all(jobs);
+  return runWithConcurrency(tasks, 3);
+}
+
+// ── DOCUMENT UPLOAD STEP (between "saved" and the success screen) ─────────────
+// The application row is saved first, but the success screen is NOT shown
+// until the document photos have actually reached the server. Previously the
+// uploads ran in the background after the success screen, so an applicant who
+// closed the tab / locked their phone on seeing "received" silently lost their
+// QID photos (the name and QID number were already read from them, so the
+// record looked complete while having no images). Now: keep the page open
+// with a clear message, warn on leave, and let them retry any that fail.
+function warnBeforeLeavingDuringUpload(e) {
+  e.preventDefault();
+  e.returnValue = '';
+  return '';
+}
+
+function setSubmitBtnText(btn, text) {
+  btn.textContent = text;
+}
+
+function runDocumentUploadStep(uploadPromiseFactory, application, btn) {
+  var ar = currentLang === 'ar';
+  var oldNote = document.getElementById('doc-upload-continue');
+  if (oldNote && oldNote.parentNode) oldNote.parentNode.removeChild(oldNote);
+  var banner = document.getElementById('submit-error-banner');
+  if (banner) banner.style.display = 'none';
+  btn.disabled = true;
+  setSubmitBtnText(btn, ar ? '⏳ جاري رفع المستندات… يرجى إبقاء هذه الصفحة مفتوحة' : '⏳ Uploading your documents… please keep this page open');
+  window.addEventListener('beforeunload', warnBeforeLeavingDuringUpload);
+
+  uploadPromiseFactory().then(function(results) {
+    window.removeEventListener('beforeunload', warnBeforeLeavingDuringUpload);
+    var failed = (results || []).filter(function(r) { return r && !r.ok; });
+    if (!failed.length) {
+      showSuccessScreen(application.qid_number, application.whatsapp);
+      return;
+    }
+    // Some photos didn't make it: say so, and offer retry or continue.
+    var titleEl = document.getElementById('submit-error-title');
+    if (titleEl) titleEl.textContent = ar
+      ? '⚠️ تم حفظ طلبك، لكن تعذّر رفع بعض المستندات'
+      : '⚠️ Your application is saved, but some documents did not upload';
+    showSubmitErrors([{
+      label: ar
+        ? 'لم يتم رفع ' + failed.length + ' ملف(ات). تحقق من اتصالك بالإنترنت ثم اضغط «إعادة المحاولة».'
+        : failed.length + ' file(s) did not upload. Check your internet connection, then tap "Retry upload".',
+      target: null
+    }]);
+    btn.disabled = false;
+    setSubmitBtnText(btn, ar ? 'إعادة رفع المستندات' : 'Retry upload');
+    btn.onclick = function() {
+      runDocumentUploadStep(function() {
+        return Promise.all(failed.map(function(f) {
+          return uploadOneDocument(f.applicationId, f.memberId, f.docKey, f.file);
+        }));
+      }, application, btn);
+    };
+    if (banner) {
+      var cont = document.createElement('button');
+      cont.type = 'button';
+      cont.id = 'doc-upload-continue';
+      cont.style.cssText = 'margin-top:10px;background:none;border:none;color:var(--muted);text-decoration:underline;font-size:13px;cursor:pointer;padding:0;display:block;';
+      cont.textContent = ar ? 'المتابعة بدون هذه الملفات (سنطلبها منك لاحقاً)' : 'Continue without these files (we may ask you to send them later)';
+      cont.onclick = function() { showSuccessScreen(application.qid_number, application.whatsapp); };
+      banner.appendChild(cont);
+    }
+  });
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
