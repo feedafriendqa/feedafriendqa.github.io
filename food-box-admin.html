@@ -928,6 +928,7 @@ async function doForgotPassword() {
 }
 
 async function doLogout() {
+  _adminInitEmail = null;
   await sb.auth.signOut();
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('admin-app').style.display = 'none';
@@ -944,7 +945,13 @@ document.addEventListener('DOMContentLoaded', async function() {
   if (pwField) pwField.addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
 });
 
+var _adminInitEmail = null;
 async function handleAdminSession(session) {
+  // Supabase fires SIGNED_IN / TOKEN_REFRESHED every time the tab regains
+  // focus or the token refreshes. Re-running the whole start-up each time
+  // reset "My cases only", reloaded every case and bounced you off your
+  // view. Only do the full init once per signed-in user.
+  if (session && session.user && _adminInitEmail === session.user.email) return;
   var result = await sb.from('faf_user_roles').select('role,portals,languages,display_name').eq('email', session.user.email).maybeSingle();
   var role = result.data;
 
@@ -963,6 +970,7 @@ async function handleAdminSession(session) {
     return;
   }
 
+  _adminInitEmail = session.user.email;
   myRole = role.role;
   myLanguages = role.languages;
 
@@ -1008,6 +1016,11 @@ async function handleAdminSession(session) {
     if (el) el.style.display = (myRole === 'super_admin') ? 'inline-block' : 'none';
   });
   myCasesOnly = (myRole !== 'super_admin');
+  if (myRole === 'super_admin') {
+    try { myCasesOnly = localStorage.getItem('fba_my_cases_only') === '1'; } catch (e) {}
+    var _mcBtn = document.getElementById('my-cases-toggle');
+    if (_mcBtn) _mcBtn.classList.toggle('active', myCasesOnly);
+  }
 
   loadCurrentDistribution();
   loadTopupRequests();
@@ -1443,6 +1456,7 @@ function setFilter(status, btn) {
 function toggleMyCases(btn) {
   myCasesOnly = !myCasesOnly;
   btn.classList.toggle('active', myCasesOnly);
+  try { localStorage.setItem('fba_my_cases_only', myCasesOnly ? '1' : '0'); } catch (e) {}
   updateStats();
   filterApps();
 }
