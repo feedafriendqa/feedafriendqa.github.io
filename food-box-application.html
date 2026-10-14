@@ -1870,6 +1870,9 @@ function collectMembers() {
       role: getRadio('m' + i + '-role'),
       doc_type: getRadio('m' + i + '-doctype') || 'qid',
       is_attending_school: getRadio('m' + i + '-school'),
+      // Little Learners tick: only counts while the child is marked out of school (box is hidden otherwise)
+      // Arabic applicants never see the tick box: for now every out-of-school child is referred without asking.
+      ll_consent: getRadio('m' + i + '-school') === 'no' && (currentLang === 'ar' || !!(document.getElementById('m' + i + '-ll-consent') || {}).checked),
       diaper_size: get('m' + i + '-diaper-val'),
       is_pregnant: getRadio('m' + i + '-pregnant') === 'yes',
       due_date: get('m' + i + '-duedate') || null,
