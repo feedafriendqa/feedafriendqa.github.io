@@ -805,6 +805,7 @@ var membersByApp = {}; // application_id -> [members], used so search can match 
 var currentFilter = 'new_pending';
 var currentAppId = null;
 var currentMembers = [];
+var currentLLStatus = {};
 var currentDocUrlMap = {};
 var currentSponsorship = null;
 var allSponsorships = [];
@@ -1553,11 +1554,18 @@ function activityEntryHtml(e) {
     '</div><div class="comment-text">' + actEsc(e.text) + '</div></div>';
 }
 
+function isChildMember(m) {
+  if (!m.dob) return (m.role||'').toLowerCase().indexOf('child') >= 0;
+  var d = new Date(m.dob); if (isNaN(d)) return false;
+  return (Date.now() - d.getTime()) / 31557600000 < 18;
+}
+
 function viewApp(id) {
   currentAppId = id;
   var app = allApps.find(function(a){return a.id===id;});
   if (!app) return;
   currentMembers = [];
+  currentLLStatus = {};
   currentDocUrlMap = {};
   currentSponsorship = null;
   currentActivity = { statusLog: [], trips: [] };
@@ -1582,6 +1590,15 @@ function viewApp(id) {
         });
       }).catch(function(){});
 
+      // School / Little Learners status per child (RPC; ignored if unavailable)
+      fetch(SUPABASE_URL + '/rest/v1/rpc/get_application_ll_status', {
+        method: 'POST', headers: headers, body: JSON.stringify({ p_application_id: id })
+      }).then(function(r){ return r.ok ? r.json() : []; }).then(function(rows){
+        var map = {};
+        (Array.isArray(rows) ? rows : []).forEach(function(x){ map[x.member_id] = x; });
+        currentLLStatus = map;
+        if (currentAppId === id) renderModal(app, currentMembers, currentDocUrlMap);
+      }).catch(function(){});
       // Activity timeline sources: status-change log (who/when/how) and driver trips.
       // Failures are ignored, the comments section still works without them.
       fetch(SUPABASE_URL + '/rest/v1/food_box_status_log?application_id=eq.' + id + '&select=changed_at,old_status,new_status,changed_by_email,changed_via&order=changed_at.asc', {
@@ -1900,6 +1917,17 @@ function renderModal(app, members, urlMap) {
       body += di('Gender',m.gender||'–');
       body += di('WhatsApp',(m.whatsapp||'–') + waLink(m.whatsapp));
       body += di('Sponsor / employer',m.sponsor||'–');
+      if (isChildMember(m)) {
+        var sch = m.is_attending_school;
+        body += di('In school?', sch==='yes' ? '🏫 Yes' : sch==='no' ? '❌ No' : '<span style="color:var(--muted);">Not stated</span>');
+        var ll = currentLLStatus[m.id];
+        var llTxt = '';
+        if (ll && ll.ll_year_group) llTxt = '✅ In Little Learners (' + ll.ll_year_group + (ll.ll_learner_status ? ', ' + ll.ll_learner_status : '') + ')';
+        else if (ll && ll.referral_status) llTxt = '📨 Referred (' + ll.referral_status + ')';
+        else if (m.ll_consent) llTxt = 'Consented, not referred yet';
+        else llTxt = sch==='no' ? 'Not referred' : '–';
+        body += di('Little Learners', llTxt);
+      }
       body += di('Diaper size',(m.diaper_size!=null&&m.diaper_size!=='')?('Size '+m.diaper_size):'–');
       if (m.needs_formula) body += di('Needs formula',m.needs_formula==='yes'?'🍼 Yes':'No');
       if (m.is_pregnant) {
