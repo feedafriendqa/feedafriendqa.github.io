@@ -893,7 +893,20 @@ async function submitPledge(){
       saved = ins.data;
     }
 
-    // 5. Done — show the confirmation.
+    // 5. "Pledge received" email (no payment details). Fire-and-forget: a
+    //    failure here must never block or undo the pledge.
+    try{
+      if(saved && saved.id){
+        fetch("https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/pledge-received-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+          body: JSON.stringify({ sponsorship_id: saved.id, lang: isAr ? "ar" : "en" }),
+          keepalive: true
+        }).catch(function(e){ console.warn("pledge email not sent", e); });
+      }
+    }catch(e){ console.warn("pledge email not sent", e); }
+
+    // 6. Done — show the confirmation.
     localStorage.setItem("faf_saved_name", name);
     localStorage.setItem("faf_saved_email", email);
     if(wa) localStorage.setItem("faf_saved_wa", wa);
