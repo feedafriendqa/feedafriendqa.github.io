@@ -1501,6 +1501,20 @@ function addMember() {
   wireZone('m' + n + '-qid-front-zone', 'm' + n + '-qid-front');
   wireZone('m' + n + '-qid-back-zone', 'm' + n + '-qid-back');
   wireZone('m' + n + '-birth-cert-upload', 'm' + n + '-birth-cert');
+  // Show that the birth certificate was picked (it has no scan step, so without
+  // this the zone looked unchanged and applicants couldn't tell it had worked).
+  (function() {
+    var bcInp = document.getElementById('m' + n + '-birth-cert');
+    var bcZone = document.getElementById('m' + n + '-birth-cert-upload');
+    if (!bcInp || !bcZone) return;
+    bcInp.addEventListener('change', function() {
+      var f = bcInp.files && bcInp.files[0];
+      if (!f) { bcZone.classList.remove('uploaded'); return; }
+      bcZone.classList.add('uploaded');
+      var ps = bcZone.querySelectorAll('p');
+      if (ps[1]) ps[1].textContent = '\u2713 ' + f.name;
+    });
+  })();
   var addBtn = document.getElementById('add-member-btn');
   if (addBtn) addBtn.style.display = 'none';
 
