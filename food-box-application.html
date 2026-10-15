@@ -2090,11 +2090,14 @@ function submitApplication() {
     monthly_rent: toNum('inp-rent')
   };
 
+  var submitCtl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var submitTimer = submitCtl ? setTimeout(function() { submitCtl.abort(); }, 120000) : null;
   fetch(EDGE_URL, {
     method: 'POST',
+    signal: submitCtl ? submitCtl.signal : undefined,
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
     body: JSON.stringify({ type: 'submit_application', application: application, members: members, submission_lang: currentLang, resubmit_application_id: resubmitApplicationId || undefined })
-  }).then(function(r) { return r.json(); }).then(function(data) {
+  }).then(function(r) { if (submitTimer) clearTimeout(submitTimer); return r.json(); }).then(function(data) {
     if (data.ok) {
       // The application is saved at this point, but the confirmation screen
       // waits until the document photos have actually been uploaded (see
@@ -2162,8 +2165,14 @@ function showSuccessScreen(qid, whatsapp) {
 // had already seen the "application received" screen by the time this ran.
 function attemptDocumentUpload(applicationId, memberId, docKey, file) {
   return fileToBase64(file).then(function(b64) {
+    // Give up on a single attempt after 60s so a stalled upload can't leave
+    // the applicant staring at "Uploading…" forever (the upload step now
+    // blocks the confirmation screen); the failure then shows Retry/Continue.
+    var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = ctl ? setTimeout(function() { ctl.abort(); }, 60000) : null;
     return fetch(EDGE_URL, {
       method: 'POST',
+      signal: ctl ? ctl.signal : undefined,
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
       body: JSON.stringify({
         type: 'upload_document',
@@ -2173,7 +2182,7 @@ function attemptDocumentUpload(applicationId, memberId, docKey, file) {
         file_base64: b64,
         media_type: file.type || 'image/jpeg'
       })
-    });
+    }).then(function(resp) { if (timer) clearTimeout(timer); return resp; }, function(err) { if (timer) clearTimeout(timer); throw err; });
   }).then(function(r) {
     return r.json().then(function(data) {
       if (!r.ok || !data || !data.ok) throw new Error((data && data.error) || ('HTTP ' + r.status));
