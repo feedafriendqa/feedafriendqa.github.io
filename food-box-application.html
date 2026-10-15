@@ -1748,6 +1748,26 @@ function handleDocType(n) {
   if (qidUp) qidUp.style.display = doctype === 'qid' ? 'block' : 'none';
   if (bcUp) bcUp.style.display = doctype === 'birth-cert' ? 'block' : 'none';
   if (expField) expField.style.display = doctype === 'qid' ? 'block' : 'none';
+
+  // The member's name field is locked ("Auto-filled from QID") and only unlocked
+  // by a QID scan. A baby on a birth certificate has no QID to scan, so the name
+  // could never be typed and the page sat on the QID "scanning" spinner. Unlock
+  // it for birth certificates, hide that spinner, and re-lock if they go back to QID.
+  var ar = currentLang === 'ar';
+  var mName = document.getElementById('m' + n + '-name');
+  var mScan = document.getElementById('m' + n + '-scan-status');
+  if (doctype === 'birth-cert') {
+    if (mName) {
+      mName.removeAttribute('readonly');
+      mName.style.background = ''; mName.style.color = ''; mName.style.cursor = '';
+      mName.placeholder = ar ? 'اكتب الاسم الكامل كما في شهادة الميلاد' : 'Type full name as on the birth certificate';
+    }
+    if (mScan) mScan.classList.remove('visible');
+  } else if (mName && !mName.value.trim()) {
+    mName.setAttribute('readonly', 'readonly');
+    mName.style.background = '#f0f4f0'; mName.style.color = '#9cbfa2'; mName.style.cursor = 'not-allowed';
+    mName.placeholder = ar ? 'يُملأ تلقائياً من الهوية' : 'Auto-filled from QID';
+  }
 }
 
 function selectDiaper(n, el) {
