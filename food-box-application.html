@@ -588,6 +588,7 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
     <p style="font-size:13px;color:var(--muted);line-height:1.5;" id="members-intro">This application is for your whole household, not just yourself. Add <strong>every other person who lives in your household</strong> — husband/wife, children, parents and other relatives. <strong>2 people is the minimum, not the maximum</strong> — please don't leave anyone out. Everyone aged 1 and over needs a valid QID. Babies under 1 year may use a Qatar birth certificate.</p>
     <div id="members-list"></div>
     <button type="button" class="add-member-btn" id="add-member-btn" onclick="addMember()">＋ <span id="btn-add-member">Add household member</span></button>
+    <div class="err-msg" id="members-count-warning" style="display:none;margin-top:8px;"></div>
     <div class="err-msg" id="members-min-warning" style="display:none;margin-top:8px;" data-en="Please add at least 1 more household member — applications need to cover your entire household, not just you." data-ar="يرجى إضافة فرد واحد على الأقل من أفراد أسرتك — يجب أن يشمل الطلب أسرتك بالكامل، وليس أنت فقط."></div>
   </div>
 </div>
@@ -641,6 +642,14 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
   </div>
 </div>
 
+<div id="members-prompt" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:16px;max-width:420px;width:100%;padding:22px;font-family:'Nunito',sans-serif;box-shadow:0 10px 40px rgba(0,0,0,0.25);">
+    <div style="font-size:18px;font-weight:900;color:var(--green-dark);margin-bottom:8px;" id="mp-title">Any other members living with you?</div>
+    <p style="font-size:14px;line-height:1.5;margin:0 0 16px;" id="mp-body"></p>
+    <button type="button" onclick="membersPromptAnswer(true)" id="mp-yes" style="width:100%;padding:14px;border:none;border-radius:12px;background:var(--green);color:#fff;font-size:15px;font-weight:800;font-family:inherit;margin-bottom:8px;cursor:pointer;">Yes — add members</button>
+    <button type="button" onclick="membersPromptAnswer(false)" id="mp-no" style="width:100%;padding:14px;border:2px solid var(--green);border-radius:12px;background:#fff;color:var(--green-dark);font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;">No — that's everyone</button>
+  </div>
+</div>
 </div><!-- /main-form -->
 </div><!-- /main -->
 
@@ -997,6 +1006,7 @@ function adjustHH(delta) {
   hhCount = Math.max(1, hhCount + delta);
   document.getElementById('elig-hh-count').textContent = hhCount;
   calcEligibility();
+  if (typeof updateSubmitBtn === 'function') updateSubmitBtn();
 }
 
 function calcEligibility() {
@@ -1881,6 +1891,70 @@ function updateProgress() {
   updateSubmitBtn();
 }
 
+// ── HOUSEHOLD COUNT CHECK ─────────────────────────────────────────────────────
+// The eligibility stepper (hhCount) and the members actually listed must agree.
+// Listing MORE people than stated silently raises hhCount (never makes the
+// applicant worse off). Listing FEWER blocks submission until they add the
+// missing people or correct the number at the top.
+var membersPromptShown = false;
+function syncHouseholdCount() {
+  var listed = collectMembers().members.length + 1; // + the applicant
+  if (listed > hhCount) {
+    hhCount = listed;
+    var c = document.getElementById('elig-hh-count');
+    if (c) c.textContent = hhCount;
+  }
+  return { listed: listed, stated: hhCount, missing: Math.max(0, hhCount - listed) };
+}
+function householdMismatchText(st) {
+  var ar = currentLang === 'ar';
+  return ar
+    ? 'ذكرت أن ' + st.stated + ' أشخاص يعيشون في أسرتك، لكنك أضفت ' + st.listed + ' فقط (مع نفسك). يرجى إضافة ' + st.missing + ' ' + (st.missing === 1 ? 'فرد' : 'أفراد') + ' آخرين، أو تصحيح العدد في أعلى الصفحة.'
+    : 'You told us ' + st.stated + ' people live in your household, but you\'ve only added ' + st.listed + ' (including yourself). Please add the other ' + st.missing + ', or correct the number at the top of the page.';
+}
+function showMembersPrompt() {
+  var st = syncHouseholdCount();
+  var ar = currentLang === 'ar';
+  var body = document.getElementById('mp-body');
+  var title = document.getElementById('mp-title');
+  var yes = document.getElementById('mp-yes');
+  var no = document.getElementById('mp-no');
+  var base = ar
+    ? 'هل يعيش معك أي أفراد آخرين (الزوج/الزوجة، الأطفال، الوالدان، الأقارب)؟ يجب إضافة جميع أفراد الأسرة، وليس شخصين فقط.'
+    : 'Do you have any other members living with you — husband/wife, children, parents or other relatives? Please add everyone in your household, not just 2 people.';
+  var added = ar ? ('أضفت حتى الآن ' + st.listed + ' شخص (مع نفسك).') : ('So far you\'ve listed ' + st.listed + ' ' + (st.listed === 1 ? 'person' : 'people') + ' (including yourself).');
+  if (title) title.textContent = ar ? 'هل يعيش معك أفراد آخرون؟' : 'Any other members living with you?';
+  if (body) body.textContent = added + ' ' + base;
+  if (yes) yes.textContent = ar ? 'نعم — إضافة أفراد' : 'Yes — add members';
+  if (no) no.textContent = ar ? 'لا — هؤلاء هم الجميع' : "No — that's everyone";
+  var m = document.getElementById('members-prompt');
+  if (m) m.style.display = 'flex';
+}
+function membersPromptAnswer(wantsToAdd) {
+  var m = document.getElementById('members-prompt');
+  if (m) m.style.display = 'none';
+  var st = syncHouseholdCount();
+  if (wantsToAdd) {
+    addMember();
+  }
+  var target = document.getElementById(wantsToAdd ? 'members-list' : 'add-member-btn');
+  var sec = document.getElementById('sec2-title');
+  var scrollTo = (wantsToAdd && target && target.lastElementChild) ? target.lastElementChild : (sec ? sec.closest('.section') : null);
+  if (scrollTo && scrollTo.scrollIntoView) scrollTo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  updateSubmitBtn();
+}
+(function() {
+  var t = document.getElementById('sec3-title');
+  var sec = t ? t.closest('.section') : null;
+  if (!sec) return;
+  sec.addEventListener('focusin', function(e) {
+    if (membersPromptShown) return;
+    membersPromptShown = true;
+    if (e.target && e.target.blur) e.target.blur();
+    showMembersPrompt();
+  });
+})();
+
 // ── SUBMIT ────────────────────────────────────────────────────────────────────
 function updateSubmitBtn() {
   var c1 = document.getElementById('consent1');
@@ -1889,11 +1963,18 @@ function updateSubmitBtn() {
   var btn = document.getElementById('submit-btn');
   var warning = document.getElementById('members-min-warning');
   var hasMinMembers = collectMembers().members.length >= 1;
+  var hhSt = syncHouseholdCount();
   if (warning) {
     warning.style.display = hasMinMembers ? 'none' : 'block';
     warning.textContent = warning.getAttribute('data-' + (currentLang === 'ar' ? 'ar' : 'en'));
   }
-  if (btn) btn.disabled = !(hasMinMembers && c1 && c1.checked && c2 && c2.checked && c3 && c3.checked);
+  var cw = document.getElementById('members-count-warning');
+  var countOk = !(hasMinMembers && hhSt.missing > 0);
+  if (cw) {
+    if (!countOk) { cw.textContent = householdMismatchText(hhSt); cw.style.display = 'block'; }
+    else cw.style.display = 'none';
+  }
+  if (btn) btn.disabled = !(hasMinMembers && countOk && c1 && c1.checked && c2 && c2.checked && c3 && c3.checked);
 }
 
 function collectMembers() {
@@ -1985,6 +2066,13 @@ function validateApplication(members, memberFormIndices) {
 
   checkVal('inp-salary', ar ? 'إجمالي دخل الأسرة الشهري' : 'Total household monthly salary');
   checkVal('inp-rent', ar ? 'الإيجار الشهري' : 'Monthly rent');
+
+  var hhCheck = syncHouseholdCount();
+  if (members.length >= 1 && hhCheck.missing > 0) {
+    var cw2 = document.getElementById('members-count-warning');
+    if (cw2) { cw2.textContent = householdMismatchText(hhCheck); cw2.style.display = 'block'; }
+    errors.push({ label: householdMismatchText(hhCheck), target: document.getElementById('add-member-btn') });
+  }
 
   if (members.length < 1) {
     var warning = document.getElementById('members-min-warning');
