@@ -2190,6 +2190,41 @@ function showSubmitErrors(errors) {
   banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
+// Checks the whole database (applicants AND household members on every other
+// application) for each QID on this form, via the member_qid_in_use() SQL
+// function. Resolves to a list of { label, target } problems; fails open on a
+// network error (the database also refuses duplicate members as a backstop).
+function checkQidsInDatabase(members, memberFormIndices) {
+  var ar = currentLang === 'ar';
+  var items = [];
+  var applicantQid = toWesternDigits((document.getElementById('inp-qidnum') || {}).value || '').replace(/\D/g, '');
+  if (applicantQid) items.push({ qid: applicantQid, label: ar ? 'هويتك' : 'Your QID', target: document.getElementById('inp-qidnum') });
+  members.forEach(function(m, k) {
+    var q = toWesternDigits(m.qid_number || '').replace(/\D/g, '');
+    if (!q) return;
+    var idx = memberFormIndices[k];
+    items.push({ qid: q, label: (ar ? 'الفرد ' : 'Member ') + idx + (m.full_name ? ' (' + m.full_name + ')' : ''), target: document.getElementById('member-' + idx) });
+  });
+  return Promise.all(items.map(function(it) {
+    return fetch(SUPABASE_URL + '/rest/v1/rpc/member_qid_in_use', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+      body: JSON.stringify({ p_qid: it.qid, p_resubmit_id: resubmitApplicationId || null })
+    }).then(function(r) { return r.ok ? r.json() : false; }).then(function(inUse) {
+      return inUse === true ? it : null;
+    }).catch(function() { return null; });
+  })).then(function(results) {
+    return results.filter(Boolean).map(function(it) {
+      return {
+        label: it.label + (ar
+          ? ' — هذه الهوية مسجلة بالفعل في طلب آخر. يرجى التواصل معنا بدلاً من إضافتها مجدداً.'
+          : ' — this QID is already registered on another application. Please contact us instead of adding them again.'),
+        target: it.target
+      };
+    });
+  });
+}
+
 function submitApplication() {
   var btn = document.getElementById('submit-btn');
   if (!btn) return;
@@ -2208,6 +2243,20 @@ function submitApplication() {
   }
   if (banner) banner.style.display = 'none';
 
+  btn.textContent = currentLang === 'ar' ? '⏳ جاري التحقق…' : '⏳ Checking…';
+  btn.disabled = true;
+  checkQidsInDatabase(members, memberFormIndices).then(function(dbErrors) {
+    if (dbErrors.length) {
+      btn.textContent = currentLang === 'ar' ? 'تقديم الطلب / Submit application' : 'Submit application / تقديم الطلب';
+      btn.disabled = false;
+      showSubmitErrors(dbErrors);
+      return;
+    }
+    doSubmitApplication(btn, members, memberFormIndices);
+  });
+}
+
+function doSubmitApplication(btn, members, memberFormIndices) {
   btn.textContent = currentLang === 'ar' ? '⏳ جاري الإرسال…' : '⏳ Submitting…';
   btn.disabled = true;
 
