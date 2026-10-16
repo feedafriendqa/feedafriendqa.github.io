@@ -984,13 +984,14 @@ function setLang(lang) {
 // ── ELIGIBILITY ───────────────────────────────────────────────────────────────
 // Households of exactly 2 have a lower disposable-income cap (QAR 1,000);
 // every other household size (3+) keeps the standard QAR 1,500 cap.
-// For a household of 2 the limit is exclusive: disposable income of QAR 1,000
-// or more is NOT eligible. For 3+ the QAR 1,500 cap stays inclusive.
+// Household of 2: judged on SALARY alone (rent is ignored, many get
+// accommodation provided) — QAR 1,000 or more is NOT eligible.
+// Household of 3+: disposable income (salary - rent) must be QAR 1,500 or less.
 function incomeLimitForHH(hh) {
   return hh === 2 ? 1000 : 1500;
 }
-function isOverIncomeLimit(disp, hh) {
-  return hh === 2 ? disp >= 1000 : disp > 1500;
+function isOverIncomeLimit(salary, disp, hh) {
+  return hh === 2 ? salary >= 1000 : disp > 1500;
 }
 function adjustHH(delta) {
   hhCount = Math.max(1, hhCount + delta);
@@ -1062,13 +1063,13 @@ function calcEligibility() {
     return;
   }
   var incomeLimit = incomeLimitForHH(hh);
-  if (isOverIncomeLimit(disp, hh)) {
+  if (isOverIncomeLimit(salary, disp, hh)) {
     var over = Math.round(disp - incomeLimit);
     if (icon) icon.textContent = '⛔';
     if (hh === 2) {
       if (msg) msg.textContent = ar
-        ? 'عذراً، لأسرة من شخصين يجب أن يكون الدخل المتاح أقل من ١٬٠٠٠ ريال. الدخل المتاح لأسرتك ' + Math.round(disp) + ' ريال. إذا كان يعيش معك أشخاص آخرون (أطفال أو أقارب)، يرجى تعديل العدد أعلاه.'
-        : 'Sorry — for a household of 2, disposable income must be under QAR 1,000. Yours is QAR ' + Math.round(disp) + '. If other people live with you (children or relatives), please update the number above to include them.';
+        ? 'عذراً، لأسرة من شخصين يجب أن يكون إجمالي الراتب الشهري أقل من ١٬٠٠٠ ريال. راتب أسرتك ' + Math.round(salary) + ' ريال. إذا كان يعيش معك أشخاص آخرون (أطفال أو أقارب)، يرجى تعديل العدد أعلاه.'
+        : 'Sorry — for a household of 2, total monthly salary must be under QAR 1,000. Yours is QAR ' + Math.round(salary) + '. If other people live with you (children or relatives), please update the number above to include them.';
     } else if (msg) msg.textContent = ar
       ? 'عذراً، الدخل المتاح للأسرة ' + Math.round(disp) + ' ريال، يتجاوز الحد بمقدار ' + over + ' ريال.'
       : 'Sorry — household disposable income of QAR ' + Math.round(disp) + ' is QAR ' + over + ' above our QAR ' + incomeLimit.toLocaleString() + ' limit.';
@@ -1097,7 +1098,7 @@ function updateFinancialCalc() {
   if (!salary && !rent) { result.className = 'elig-result'; return; }
   var disp = salary - rent;
   var ar = currentLang === 'ar';
-  if (!isOverIncomeLimit(disp, hhCount)) {
+  if (!isOverIncomeLimit(salary, disp, hhCount)) {
     result.className = 'elig-result eligible';
     document.getElementById('fin-icon').textContent = '✅';
     document.getElementById('fin-msg').textContent = ar
