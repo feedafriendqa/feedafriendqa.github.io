@@ -2067,6 +2067,27 @@ function validateApplication(members, memberFormIndices) {
   checkVal('inp-salary', ar ? 'إجمالي دخل الأسرة الشهري' : 'Total household monthly salary');
   checkVal('inp-rent', ar ? 'الإيجار الشهري' : 'Monthly rent');
 
+  // The same person can't be listed twice (or listed as a member when they're
+  // the applicant): match on QID, or on name + date of birth when there's no QID.
+  (function() {
+    var applicantQid = toWesternDigits((document.getElementById('inp-qidnum') || {}).value || '').replace(/\D/g, '');
+    var seen = {};
+    members.forEach(function(m, k) {
+      var qid = toWesternDigits(m.qid_number || '').replace(/\D/g, '');
+      var key = qid ? 'q' + qid : (m.full_name && m.dob ? 'n' + m.full_name.trim().toLowerCase().replace(/\s+/g, ' ') + '|' + m.dob : '');
+      var idx = memberFormIndices[k];
+      var card = document.getElementById('member-' + idx);
+      var label = ar ? ('الفرد ' + idx) : ('Member ' + idx);
+      if (qid && applicantQid && qid === applicantQid) {
+        errors.push({ label: label + (ar ? ' — نفس رقم هويتك. أضف الأفراد الآخرين فقط، وليس نفسك.' : ' — has the same QID as you. Only add the other people in your household, not yourself.'), target: card });
+      } else if (key && seen[key] !== undefined) {
+        errors.push({ label: label + (ar ? ' — مكرر (نفس الشخص مضاف من قبل في الفرد ' + seen[key] + '). يرجى حذف المكرر.' : ' — is a duplicate of Member ' + seen[key] + ' (same person added twice). Please remove one.'), target: card });
+      } else if (key) {
+        seen[key] = idx;
+      }
+    });
+  })();
+
   var hhCheck = syncHouseholdCount();
   if (members.length >= 1 && hhCheck.missing > 0) {
     var cw2 = document.getElementById('members-count-warning');
