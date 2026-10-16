@@ -1350,7 +1350,7 @@ function renderTable(apps) {
   tbody.innerHTML = '';
   apps.forEach(function(app) {
     var disp = (app.monthly_salary||0) - (app.monthly_rent||0);
-    var dispColor = disp <= (app.household_size === 2 ? 1000 : 1500) ? 'color:var(--green);' : 'color:var(--red);';
+    var dispColor = (app.household_size === 2 ? disp < 1000 : disp <= 1500) ? 'color:var(--green);' : 'color:var(--red);';
     var date = app.created_at ? new Date(app.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '–';
     var status = resolveStatus(app);
     var statusLabel = status === 'confirmed' ? 'Confirmed' : status === 'rejected_reapply' ? '🔁 Apply Again' : status;
@@ -1677,7 +1677,7 @@ function renderModal(app, members, urlMap) {
   var name = app.full_name_en || app.full_name || '–';
   var disp = (app.monthly_salary||0) - (app.monthly_rent||0);
   var date = app.created_at ? new Date(app.created_at).toLocaleString('en-GB') : '–';
-  var dispColor = disp <= (app.household_size === 2 ? 1000 : 1500) ? 'color:var(--green)' : 'color:var(--red)';
+  var dispColor = (app.household_size === 2 ? disp < 1000 : disp <= 1500) ? 'color:var(--green)' : 'color:var(--red)';
   var status = resolveStatus(app);
   var qidFrontUrl = app.qid_front_path ? urlMap[app.qid_front_path] : null;
   var tags = Array.isArray(app.tags) ? app.tags : (app.tags ? (() => { try { return JSON.parse(app.tags); } catch(e) { return []; } })() : []);
@@ -2160,7 +2160,7 @@ function renderModal(app, members, urlMap) {
 // and never updated until the page was reloaded after saving, so an admin
 // editing salary/rent would keep seeing the OLD disposable income (and its
 // old green/red color) right up until they hit Save and re-opened the case.
-// Households of exactly 2 use the QAR 1,000 cap; everyone else uses QAR 1,500
+// Households of exactly 2 must be UNDER QAR 1,000 (1,000+ is ineligible); everyone else uses QAR 1,500 (inclusive)
 // (matches incomeLimitForHH() in food-box-application.html).
 function recalcDisposableIncome(appId) {
   var salaryField = document.getElementById('ef-monthly_salary');
@@ -2172,8 +2172,8 @@ function recalcDisposableIncome(appId) {
   var rent = parseFloat(rentField.value) || 0;
   var hh = hhField ? parseInt(hhField.value, 10) : NaN;
   var disp = salary - rent;
-  var limit = hh === 2 ? 1000 : 1500;
-  display.style.color = disp <= limit ? 'var(--green)' : 'var(--red)';
+  var withinLimit = hh === 2 ? disp < 1000 : disp <= 1500;
+  display.style.color = withinLimit ? 'var(--green)' : 'var(--red)';
   display.textContent = 'QAR ' + Math.round(disp).toLocaleString();
 }
 

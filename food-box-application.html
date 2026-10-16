@@ -413,8 +413,8 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
       <div class="elig-step" id="elig-s3">
         <div class="elig-step-num">3</div>
         <div class="elig-step-content">
-          <div class="elig-step-title" id="lbl-hh">How many people need food support?</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;" id="elig-hh-note">Including yourself — must be 2 or more</div>
+          <div class="elig-step-title" id="lbl-hh">How many people live in your household?</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;" id="elig-hh-note">Count everyone — you, your husband/wife, children, parents and any relatives living with you. 2 is the minimum, not the maximum.</div>
           <div class="elig-hh-stepper">
             <button type="button" class="elig-hh-btn" id="hh-minus" aria-label="decrease">−</button>
             <span class="elig-hh-num" id="elig-hh-count">1</span>
@@ -585,7 +585,7 @@ body.ar .badge { margin-left: 0; margin-right: 6px; }
 <div class="section">
   <div class="section-title"><div class="s-icon">👨‍👩‍👧</div><span id="sec2-title">Household members</span></div>
   <div class="section-body">
-    <p style="font-size:13px;color:var(--muted);line-height:1.5;" id="members-intro">This application is for your whole household, not just yourself. Add every other person who needs food support — <strong>at least 1 more person (2 total including you)</strong> is required. Everyone aged 1 and over needs a valid QID. Babies under 1 year may use a Qatar birth certificate.</p>
+    <p style="font-size:13px;color:var(--muted);line-height:1.5;" id="members-intro">This application is for your whole household, not just yourself. Add <strong>every other person who lives in your household</strong> — husband/wife, children, parents and other relatives. <strong>2 people is the minimum, not the maximum</strong> — please don't leave anyone out. Everyone aged 1 and over needs a valid QID. Babies under 1 year may use a Qatar birth certificate.</p>
     <div id="members-list"></div>
     <button type="button" class="add-member-btn" id="add-member-btn" onclick="addMember()">＋ <span id="btn-add-member">Add household member</span></button>
     <div class="err-msg" id="members-min-warning" style="display:none;margin-top:8px;" data-en="Please add at least 1 more household member — applications need to cover your entire household, not just you." data-ar="يرجى إضافة فرد واحد على الأقل من أفراد أسرتك — يجب أن يشمل الطلب أسرتك بالكامل، وليس أنت فقط."></div>
@@ -653,8 +653,8 @@ const T = {
     'elig-title':'Check your eligibility','elig-header-sub':'Three quick questions',
     'lbl-salary':'What is your household\'s total monthly salary?',
     'lbl-rent':'How much do you pay in rent each month?',
-    'lbl-hh':'How many people need food support?',
-    'elig-hh-note':'Including yourself — must be 2 or more',
+    'lbl-hh':'How many people live in your household?',
+    'elig-hh-note':'Count everyone — you, your husband/wife, children, parents and any relatives living with you. 2 is the minimum, not the maximum.',
     'lbl-salary-note':'Include all earners in the household — e.g. husband + wife combined',
     'sec1-title':'About you',
     'lbl-qid-upload':'Upload your QID — front and back',
@@ -677,7 +677,7 @@ const T = {
     'lbl-pregnant':'Are you pregnant?',
     'lbl-duedate':'Approximate due date','lbl-baby-gender':"Baby's gender — if known",
     'sec2-title':'Household members',
-    'members-intro':'Add every person in your household. Everyone aged 1+ needs a valid QID. Babies under 1 may use a Qatar birth certificate.',
+    'members-intro':'Add every other person who lives in your household — husband/wife, children, parents and other relatives. 2 people is the minimum, not the maximum — please don\'t leave anyone out. Everyone aged 1+ needs a valid QID. Babies under 1 may use a Qatar birth certificate.',
     'btn-add-member':'Add household member',
     'sec3-title':'Financial information',
     'lbl-salary2':'Total household monthly salary (QAR)','lbl-rent2':'Monthly rent / accommodation (QAR)',
@@ -712,8 +712,8 @@ const T = {
     'elig-title':'تحقق من أهليتك','elig-header-sub':'ثلاثة أسئلة سريعة',
     'lbl-salary':'ما هو إجمالي دخل أسرتك الشهري؟',
     'lbl-rent':'كم تدفع إيجاراً شهرياً؟',
-    'lbl-hh':'كم عدد الأشخاص الذين يحتاجون دعماً غذائياً؟',
-    'elig-hh-note':'بما فيهم أنت — يجب أن يكونوا ٢ على الأقل',
+    'lbl-hh':'كم عدد الأشخاص الذين يعيشون في أسرتك؟',
+    'elig-hh-note':'احسب الجميع — أنت وزوجك/زوجتك والأطفال والوالدين وأي أقارب يعيشون معك. ٢ هو الحد الأدنى وليس الأقصى.',
     'lbl-salary-note':'يشمل جميع من لديه دخل في الأسرة — مثال: دخل الزوج + الزوجة مجتمعين',
     'sec1-title':'معلوماتك الشخصية',
     'lbl-qid-upload':'ارفع الهوية القطرية — الوجهان',
@@ -736,7 +736,7 @@ const T = {
     'lbl-pregnant':'هل أنتِ حامل؟',
     'lbl-duedate':'تاريخ الولادة المتوقع','lbl-baby-gender':'جنس المولود — إن عُرف',
     'sec2-title':'أفراد الأسرة',
-    'members-intro':'أضف جميع أفراد الأسرة. كل من عمره سنة فأكثر يحتاج هوية قطرية. يُقبل للرضع أقل من سنة شهادة الميلاد.',
+    'members-intro':'أضف جميع من يعيش معك في الأسرة — الزوج/الزوجة والأطفال والوالدين والأقارب الآخرين. شخصان هو الحد الأدنى وليس الأقصى — يرجى عدم ترك أي فرد. كل من عمره سنة فأكثر يحتاج هوية قطرية. يُقبل للرضع أقل من سنة شهادة الميلاد.',
     'btn-add-member':'إضافة فرد من الأسرة',
     'sec3-title':'المعلومات المالية',
     'lbl-salary2':'إجمالي دخل الأسرة الشهري (ريال)','lbl-rent2':'الإيجار الشهري (ريال)',
@@ -984,8 +984,13 @@ function setLang(lang) {
 // ── ELIGIBILITY ───────────────────────────────────────────────────────────────
 // Households of exactly 2 have a lower disposable-income cap (QAR 1,000);
 // every other household size (3+) keeps the standard QAR 1,500 cap.
+// For a household of 2 the limit is exclusive: disposable income of QAR 1,000
+// or more is NOT eligible. For 3+ the QAR 1,500 cap stays inclusive.
 function incomeLimitForHH(hh) {
   return hh === 2 ? 1000 : 1500;
+}
+function isOverIncomeLimit(disp, hh) {
+  return hh === 2 ? disp >= 1000 : disp > 1500;
 }
 function adjustHH(delta) {
   hhCount = Math.max(1, hhCount + delta);
@@ -1057,10 +1062,14 @@ function calcEligibility() {
     return;
   }
   var incomeLimit = incomeLimitForHH(hh);
-  if (disp > incomeLimit) {
+  if (isOverIncomeLimit(disp, hh)) {
     var over = Math.round(disp - incomeLimit);
     if (icon) icon.textContent = '⛔';
-    if (msg) msg.textContent = ar
+    if (hh === 2) {
+      if (msg) msg.textContent = ar
+        ? 'عذراً، لأسرة من شخصين يجب أن يكون الدخل المتاح أقل من ١٬٠٠٠ ريال. الدخل المتاح لأسرتك ' + Math.round(disp) + ' ريال. إذا كان يعيش معك أشخاص آخرون (أطفال أو أقارب)، يرجى تعديل العدد أعلاه.'
+        : 'Sorry — for a household of 2, disposable income must be under QAR 1,000. Yours is QAR ' + Math.round(disp) + '. If other people live with you (children or relatives), please update the number above to include them.';
+    } else if (msg) msg.textContent = ar
       ? 'عذراً، الدخل المتاح للأسرة ' + Math.round(disp) + ' ريال، يتجاوز الحد بمقدار ' + over + ' ريال.'
       : 'Sorry — household disposable income of QAR ' + Math.round(disp) + ' is QAR ' + over + ' above our QAR ' + incomeLimit.toLocaleString() + ' limit.';
     verdict.className = 'elig-verdict ineligible show';
@@ -1088,8 +1097,7 @@ function updateFinancialCalc() {
   if (!salary && !rent) { result.className = 'elig-result'; return; }
   var disp = salary - rent;
   var ar = currentLang === 'ar';
-  var incomeLimit = incomeLimitForHH(hhCount);
-  if (disp <= incomeLimit) {
+  if (!isOverIncomeLimit(disp, hhCount)) {
     result.className = 'elig-result eligible';
     document.getElementById('fin-icon').textContent = '✅';
     document.getElementById('fin-msg').textContent = ar
