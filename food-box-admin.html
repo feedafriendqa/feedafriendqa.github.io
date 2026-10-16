@@ -629,11 +629,11 @@ select.edit-field{cursor:pointer;}
 <div class="modal-overlay" id="reject-modal">
   <div class="modal" style="max-width:440px;">
     <div class="modal-header">
-      <div style="font-weight:800;font-size:15px;">Reject application</div>
+      <div style="font-weight:800;font-size:15px;" id="reject-modal-title">Reject application</div>
       <button class="modal-close" onclick="closeRejectModal()">×</button>
     </div>
     <div class="modal-body" style="padding:20px;">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">This is shown to the friend on their status page, so they know why. Please keep it clear and respectful.</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;" id="reject-modal-help">Optional. If you add a reason it is shown to the friend on their status page, so they know why. Please keep it clear and respectful.</div>
       <textarea id="reject-reason-input" rows="4" placeholder="e.g. Household income is above the eligibility threshold for this programme." style="width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-family:Nunito,sans-serif;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
       <div id="reject-reason-err" style="display:none;color:var(--red);font-size:12px;font-weight:700;margin-top:8px;"></div>
       <div style="display:flex;gap:8px;margin-top:16px;">
@@ -2081,13 +2081,13 @@ function renderModal(app, members, urlMap) {
   body += '</select>';
   body += '<button class="btn-comment" onclick="handleStatusDropdownUpdate(\''+app.id+'\')">Update status</button>';
   body += '</div>';
-  // Rejections need a reason on file (shown back to the friend on their
-  // status page), so surface whatever's currently saved here — and let an
+  // Rejections can carry an OPTIONAL reason (shown back to the friend on
+  // their status page), so surface whatever's currently saved here — and let an
   // admin re-open the reject modal to change it, without having to flip
   // the status away and back just to edit the wording.
   if (status === 'rejected' || status === 'rejected_reapply') {
     body += '<div style="margin-top:10px;background:var(--red-light);border-radius:8px;padding:10px 12px;font-size:12px;">';
-    body += '<div style="font-weight:800;color:var(--red);margin-bottom:2px;">Rejection reason' + (app.rejection_reason ? '' : ' — none on file') + '</div>';
+    body += '<div style="font-weight:800;color:var(--red);margin-bottom:2px;">Reason shown to the friend' + (app.rejection_reason ? '' : ' — none (optional)') + '</div>';
     if (app.rejection_reason) body += '<div style="color:var(--text);margin-bottom:6px;">' + app.rejection_reason.replace(/</g,'&lt;') + '</div>';
     body += '<button class="btn-comment" style="padding:4px 10px;font-size:11px;" onclick="openRejectModal(\''+app.id+'\')">' + (app.rejection_reason ? 'Edit reason' : 'Add reason') + '</button>';
     body += '</div>';
@@ -2592,8 +2592,8 @@ document.getElementById('duplicate-picker').addEventListener('click', function(e
 // no explanation, the same as the dedicated Reject button does.
 function handleStatusDropdownUpdate(id) {
   var status = document.getElementById('status-dropdown').value;
-  if (status === 'rejected') {
-    openRejectModal(id);
+  if (status === 'rejected' || status === 'rejected_reapply') {
+    openRejectModal(id, status);
     return;
   }
   if (status === 'blocked') {
@@ -2625,9 +2625,25 @@ function unblockThenSet(id, targetStatus) {
 
 var rejectModalAppId = null;
 
-function openRejectModal(id) {
+var rejectModalTarget = 'rejected';
+
+// targetStatus: 'rejected' or 'rejected_reapply'. When omitted, keep the
+// case's current rejected/apply-again status (e.g. "Edit reason"), else
+// default to plain 'rejected'. The reason is OPTIONAL for both.
+function openRejectModal(id, targetStatus) {
   rejectModalAppId = id;
   var app = allApps.find(function(a){ return a.id === id; });
+  var cur = app ? resolveStatus(app) : '';
+  rejectModalTarget = targetStatus || ((cur === 'rejected' || cur === 'rejected_reapply') ? cur : 'rejected');
+  var isReapply = rejectModalTarget === 'rejected_reapply';
+  var t = document.getElementById('reject-modal-title');
+  if (t) t.textContent = isReapply ? 'Reject – Apply Again' : 'Reject application';
+  var h = document.getElementById('reject-modal-help');
+  if (h) h.textContent = isReapply
+    ? 'Optional. The friend will be cleared to submit a brand-new application. If you add a reason, it is shown on their status page so they know what to fix. Please keep it clear and respectful.'
+    : 'Optional. If you add a reason it is shown to the friend on their status page, so they know why. Please keep it clear and respectful.';
+  var cb = document.getElementById('reject-confirm-btn');
+  if (cb) cb.textContent = isReapply ? 'Mark as Apply Again' : 'Reject application';
   document.getElementById('reject-reason-input').value = (app && app.rejection_reason) || '';
   var errEl = document.getElementById('reject-reason-err');
   errEl.style.display = 'none';
@@ -2643,16 +2659,12 @@ function closeRejectModal() {
 function confirmReject() {
   var id = rejectModalAppId;
   if (!id) return;
-  var reason = document.getElementById('reject-reason-input').value.trim();
+  var reason = document.getElementById('reject-reason-input').value.trim() || null; // optional
+  var targetStatus = rejectModalTarget || 'rejected';
   var errEl = document.getElementById('reject-reason-err');
-  if (!reason) {
-    errEl.textContent = 'Please give a reason — this is shown to the friend so they know why.';
-    errEl.style.display = 'block';
-    return;
-  }
   if (id.startsWith('demo')) {
     var demoApp = allApps.find(function(a){ return a.id === id; });
-    if (demoApp) { demoApp.status = 'rejected'; demoApp.rejection_reason = reason; }
+    if (demoApp) { demoApp.status = targetStatus; demoApp.rejection_reason = reason; }
     closeRejectModal();
     updateStats(); filterApps(); closeModal();
     return;
@@ -2664,7 +2676,7 @@ function confirmReject() {
     return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
       method: 'PATCH',
       headers: Object.assign({'Prefer':'return=representation'}, headers),
-      body: JSON.stringify({ status: 'rejected', rejection_reason: reason, translation_pending: false })
+      body: JSON.stringify({ status: targetStatus, rejection_reason: reason, translation_pending: false })
     });
   }).then(function(r) {
     if (!r.ok) return r.text().then(function(t) {
@@ -2677,7 +2689,7 @@ function confirmReject() {
     if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on food_box_applications.');
     var idx = allApps.findIndex(function(a){return a.id===id;});
     var app = idx !== -1 ? allApps[idx] : null;
-    if (app) { app.status = 'rejected'; app.rejection_reason = reason; app.translation_pending = false; }
+    if (app) { app.status = targetStatus; app.rejection_reason = reason; app.translation_pending = false; }
     closeRejectModal();
     updateStats(); filterApps(); closeModal();
   }).catch(function(e) {
@@ -2685,7 +2697,7 @@ function confirmReject() {
     errEl.style.display = 'block';
   }).finally(function() {
     btn.disabled = false;
-    btn.textContent = 'Reject application';
+    btn.textContent = targetStatus === 'rejected_reapply' ? 'Mark as Apply Again' : 'Reject application';
   });
 }
 document.getElementById('reject-modal').addEventListener('click', function(e){ if (e.target===this) closeRejectModal(); });

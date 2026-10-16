@@ -1026,10 +1026,10 @@ function showStatusScreen(status, data, canReapply) {
   // set from the admin console's reject flow) so the friend isn't just
   // left with "not approved" and no explanation. Older rejections made
   // before this existed have no reason on file, so the block stays hidden.
-  // rejected_reapply cases keep this hidden too — that status is about a
-  // fresh start, not about relitigating why the old one was rejected.
+  // rejected_reapply ("Apply Again") cases show the optional reason too, so
+  // the friend knows what to fix when they submit a fresh application.
   var reasonEl = document.getElementById('status-reason');
-  if (status === 'rejected' && data.rejection_reason) {
+  if ((status === 'rejected' || status === 'rejected_reapply') && data.rejection_reason) {
     reasonEl.textContent = (ar ? 'السبب: ' : 'Reason: ') + data.rejection_reason;
     reasonEl.style.display = 'block';
   } else {
