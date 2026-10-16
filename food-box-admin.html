@@ -1926,7 +1926,7 @@ function renderModal(app, members, urlMap) {
       body += '<div class="member-card-grid">';
       body += di('Full name',m.full_name||'–');
       body += di('QID number',m.qid_number||'–');
-      body += di('Date of birth', m.dob ? (m.dob + (displayAge(m.dob) ? ' <span style="color:var(--muted);font-weight:600;">(' + displayAge(m.dob) + ')</span>' : '')) : '–');
+      body += di('Date of birth', m.dob ? (m.dob + (displayAge(m.dob) ? ' <span style="color:var(--muted);font-weight:600;">(' + displayAge(m.dob) + ')</span>' : '')) : '<span style="color:#b42318;font-weight:700;">Missing – please add</span>');
       body += di('Role',m.role||'–');
       body += di('Gender',m.gender||'–');
       body += di('WhatsApp',(m.whatsapp||'–') + waLink(m.whatsapp));
@@ -5147,7 +5147,7 @@ function toggleEditMemberPanel(appId, memberId) {
   h += '<div class="add-member-field-grid">';
   h += '<div><label>Full name *</label><input id="' + s + '-name" value="'+(member.full_name||'').toString().replace(/"/g,'&quot;')+'"></div>';
   h += '<div><label>QID number</label><input id="' + s + '-qidnum" value="'+(member.qid_number||'').toString().replace(/"/g,'&quot;')+'"></div>';
-  h += '<div><label>Date of birth</label><input type="date" id="' + s + '-dob" value="'+(member.dob||'')+'" onchange="updateEditMemberAgeFields(\''+memberId+'\')"></div>';
+  h += '<div><label>Date of birth *</label><input type="date" id="' + s + '-dob" value="'+(member.dob||'')+'" onchange="updateEditMemberAgeFields(\''+memberId+'\')"></div>';
   h += '<div><label>QID expiry</label><input type="date" id="' + s + '-expiry" value="'+(member.qid_expiry||'')+'"></div>';
   var memberPhoneRequired = ageInYears(member.dob) !== null && ageInYears(member.dob) >= 18;
   h += '<div><label id="' + s + '-whatsapp-label">'+(memberPhoneRequired?'WhatsApp *':'WhatsApp')+'</label><input id="' + s + '-whatsapp" value="'+(member.whatsapp||'').toString().replace(/"/g,'&quot;')+'"></div>';
@@ -5371,6 +5371,7 @@ function saveEditedMember(appId, memberId) {
   errEl.style.display = 'none';
   if (!name) { errEl.textContent = 'Full name is required.'; errEl.style.display = 'block'; return; }
   if (!role) { errEl.textContent = 'Relationship to the main applicant is required.'; errEl.style.display = 'block'; return; }
+  if (!dob) { errEl.textContent = 'Date of birth is required for every household member (it decides the food box allowance).'; errEl.style.display = 'block'; return; }
   if (age !== null && age >= 18 && !whatsapp) { errEl.textContent = 'A WhatsApp/phone number is required for household members 18 or older.'; errEl.style.display = 'block'; return; }
 
   if (memberId.toString().startsWith('demo')) { alert('This is demo data — connect to Supabase to save changes.'); return; }
@@ -5493,7 +5494,7 @@ function renderAddMemberPanel(appId) {
   h += '<div class="add-member-field-grid">';
   h += '<div><label>Full name *</label><input id="' + s + '-name"></div>';
   h += '<div><label>QID number</label><input id="' + s + '-qidnum"></div>';
-  h += '<div><label>Date of birth</label><input type="date" id="' + s + '-dob" onchange="updateAddMemberAgeFields(\'' + appId + '\')"></div>';
+  h += '<div><label>Date of birth *</label><input type="date" id="' + s + '-dob" onchange="updateAddMemberAgeFields(\'' + appId + '\')"></div>';
   h += '<div><label>QID expiry</label><input id="' + s + '-expiry" type="date"></div>';
   h += '<div><label id="' + s + '-whatsapp-label">WhatsApp</label><input id="' + s + '-whatsapp"></div>';
   h += '<div><label>Gender</label><select id="' + s + '-gender" onchange="updateAddMemberPregnancyFields(\'' + appId + '\')"><option value="">–</option><option value="male">Male</option><option value="female">Female</option></select></div>';
@@ -5698,6 +5699,7 @@ function saveNewMember(appId) {
   errEl.style.display = 'none';
   if (!name) { errEl.textContent = 'Full name is required.'; errEl.style.display = 'block'; return; }
   if (!role) { errEl.textContent = 'Relationship to the main applicant is required.'; errEl.style.display = 'block'; return; }
+  if (!dob) { errEl.textContent = 'Date of birth is required for every household member (it decides the food box allowance).'; errEl.style.display = 'block'; return; }
   if (age !== null && age >= 18 && !whatsapp) { errEl.textContent = 'A WhatsApp/phone number is required for household members 18 or older.'; errEl.style.display = 'block'; return; }
 
   var saveBtn = document.getElementById(s + '-save-btn');
