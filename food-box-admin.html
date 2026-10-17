@@ -1976,6 +1976,9 @@ function renderModal(app, members, urlMap) {
         else if (m.ll_consent) llTxt = 'Consented, not referred yet';
         else llTxt = sch==='no' ? 'Not referred' : '–';
         body += di('Little Learners', llTxt);
+        if (sch==='no' && !m.ll_consent && !(ll && (ll.ll_year_group || ll.referral_status))) {
+          body += '<div style="grid-column:1/-1;"><button class="btn-comment" style="font-size:12px;padding:6px 12px;" onclick="setLLConsent(\''+app.id+'\',\''+m.id+'\',\''+String(m.full_name||'this child').replace(/\\/g,'').replace(/'/g,'').replace(/"/g,'')+'\')">📚 Parent now consents to Little Learners</button></div>';
+        }
       }
       body += di('Diaper size',(m.diaper_size!=null&&m.diaper_size!=='')?('Size '+m.diaper_size):'–');
       if (m.needs_formula) body += di('Needs formula',m.needs_formula==='yes'?'🍼 Yes':'No');
@@ -5466,6 +5469,47 @@ function saveEditedMember(appId, memberId) {
   });
 }
 // ── END EDIT / RESCAN EXISTING MEMBER ───────────────────────────────────
+
+// ── LITTLE LEARNERS CONSENT (case handlers record a parent's consent given
+// after the application). Setting ll_consent=true fires the DB trigger
+// trg_create_ll_referral_for_member, which creates the ll_referrals row.
+function setLLConsent(appId, memberId, memberName) {
+  if (!confirm('Confirm the parent has agreed to ' + memberName + ' being referred to Little Learners?\n\nThis will create the referral.')) return;
+  var who = (typeof myName !== 'undefined' && myName) ? myName : 'Admin';
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_members?id=eq.' + memberId, {
+      method: 'PATCH',
+      headers: Object.assign({'Content-Type':'application/json','Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ ll_consent: true })
+    }).then(function(r) {
+      if (!r.ok) throw new Error('Update failed (' + r.status + ')');
+      return r.json();
+    }).then(function(rows) {
+      if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row updated — check permissions.');
+      (currentMembers || []).forEach(function(m){ if (m.id === memberId) m.ll_consent = true; });
+      return fetch(SUPABASE_URL + '/rest/v1/rpc/get_application_ll_status', {
+        method: 'POST', headers: headers, body: JSON.stringify({ p_application_id: appId })
+      });
+    }).then(function(r) { return r.ok ? r.json() : []; }).then(function(rows) {
+      var map = {};
+      (Array.isArray(rows) ? rows : []).forEach(function(x){ map[x.member_id] = x; });
+      currentLLStatus = map;
+      var app = allApps.find(function(a){ return a.id === appId; });
+      if (app) {
+        // Record who made the change in the case notes
+        var comments = [];
+        try { comments = JSON.parse(app.admin_notes || '[]'); if (!Array.isArray(comments)) throw 0; } catch(e) { comments = app.admin_notes ? [{type:'note',text:app.admin_notes,ts:app.created_at||new Date().toISOString(),author:'Admin'}] : []; }
+        comments.push({type:'note', text:'Little Learners consent recorded for ' + memberName + ' (parent agreed after application).', ts:new Date().toISOString(), author:who});
+        var notesJson = JSON.stringify(comments);
+        fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + appId, {
+          method: 'PATCH', headers: Object.assign({'Content-Type':'application/json'}, headers), body: JSON.stringify({ admin_notes: notesJson })
+        }).then(function(){ app.admin_notes = notesJson; renderModal(app, currentMembers, currentDocUrlMap); }).catch(function(){ renderModal(app, currentMembers, currentDocUrlMap); });
+      }
+    });
+  }).catch(function(e) {
+    alert('Could not record consent for ' + memberName + ': ' + e.message);
+  });
+}
 
 // ── REMOVE HOUSEHOLD MEMBER ──────────────────────────────────────────────
 // For correcting mistakes (someone added in error, a duplicate entry,
