@@ -1672,6 +1672,30 @@ function docLink(label, path, urlMap) {
   return '<div class="detail-item"><div class="lbl">' + label + '</div><div class="val">' + inner + '</div></div>';
 }
 
+// Lists every QID photo that should be on this file but isn't: the applicant's
+// own front/back, plus each household member's (members using a birth
+// certificate instead of a QID are skipped, as are people with no QID number
+// recorded yet). Used to show a red "QID photo missing" notice at the top of the
+// file so it is caught at review instead of being noticed later.
+function missingQidPhotos(app, members) {
+  var out = [];
+  var appName = app.full_name_en || app.full_name || 'Applicant';
+  if (app.qid_number) {
+    var aSides = [];
+    if (!app.qid_front_path) aSides.push('front');
+    if (!app.qid_back_path) aSides.push('back');
+    if (aSides.length) out.push({ who: appName + ' (applicant)', sides: aSides });
+  }
+  (members || []).forEach(function(m) {
+    if (m.doc_type === 'birth-cert' || !m.qid_number) return;
+    var mSides = [];
+    if (!m.qid_front_path) mSides.push('front');
+    if (!m.qid_back_path) mSides.push('back');
+    if (mSides.length) out.push({ who: (m.full_name_en || m.full_name || 'Household member'), sides: mSides });
+  });
+  return out;
+}
+
 function renderModal(app, members, urlMap) {
   urlMap = urlMap || {};
   var name = app.full_name_en || app.full_name || '–';
@@ -1726,6 +1750,17 @@ function renderModal(app, members, urlMap) {
   body += '</div>';
 
   if (app.translation_pending) body += '<div class="translation-alert" style="margin:14px 20px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><span>🌐 Submitted in Arabic — translation needs review before approving.</span><button class="section-save-btn" style="margin:0;" onclick="markTranslationReviewed(\''+app.id+'\', this)">✓ Mark translation reviewed</button></div>';
+
+  var missingQids = (status === 'duplicate' || status === 'archived') ? [] : missingQidPhotos(app, members);
+  if (missingQids.length) {
+    body += '<div style="margin:14px 20px 0;background:#FEF3F2;border:1px solid #FDA29B;border-radius:10px;padding:12px 14px;">';
+    body += '<div style="font-weight:800;font-size:12px;color:#B42318;margin-bottom:4px;">📷 QID PHOTO MISSING</div>';
+    missingQids.forEach(function(mq) {
+      body += '<div style="font-size:13px;color:#7A271A;">' + String(mq.who).replace(/</g, '&lt;') + ' — ' + mq.sides.join(' &amp; ') + '</div>';
+    });
+    body += '<div style="font-size:12px;color:#7A271A;margin-top:6px;">Ask them to send the photos, then add them under Submitted documents / Edit &amp; rescan QID.</div>';
+    body += '</div>';
+  }
 
   if (status === 'duplicate') {
     var original = app.duplicate_of ? allApps.find(function(a){ return a.id === app.duplicate_of; }) : null;

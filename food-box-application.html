@@ -2048,6 +2048,17 @@ function validateApplication(members, memberFormIndices) {
 
   checkVal('inp-fullname', ar ? 'الاسم الكامل (ارفع الهوية أولاً)' : 'Full name (upload your QID above first)');
   checkVal('inp-qidnum', ar ? 'رقم الهوية القطرية (ارفع الهوية أولاً)' : 'QID number (upload your QID above first)');
+  // The applicant's own QID photos are mandatory, exactly like each household
+  // member's below. Previously only the typed/scanned number was checked, so an
+  // application could be saved with a QID number and no QID images on file.
+  var aqFront = document.getElementById('qid-front');
+  if (!aqFront || !aqFront.files || !aqFront.files[0]) {
+    errors.push({ label: ar ? 'صورة الوجه الأمامي لهويتك' : 'Front of your QID photo', target: document.getElementById('qz-front') });
+  }
+  var aqBack = document.getElementById('qid-back');
+  if (!aqBack || !aqBack.files || !aqBack.files[0]) {
+    errors.push({ label: ar ? 'صورة الوجه الخلفي لهويتك' : 'Back of your QID photo', target: document.getElementById('qz-back') });
+  }
   checkVal('inp-expiry', ar ? 'تاريخ انتهاء الهوية' : 'QID expiry date');
   checkVal('inp-dob', ar ? 'تاريخ الميلاد' : 'Date of birth');
   checkVal('inp-whatsapp', ar ? 'رقم واتساب' : 'WhatsApp number');
@@ -2243,6 +2254,12 @@ function submitApplication() {
   }
   if (banner) banner.style.display = 'none';
 
+  // Hold on to the exact files that passed validation. The uploads happen
+  // several network round-trips later (duplicate check, save), and reading the
+  // file inputs again at that point meant a document that had been present at
+  // validation could silently be missing at upload time.
+  var docSnapshot = snapshotDocumentFiles();
+
   btn.textContent = currentLang === 'ar' ? '⏳ جاري التحقق…' : '⏳ Checking…';
   btn.disabled = true;
   checkQidsInDatabase(members, memberFormIndices).then(function(dbErrors) {
@@ -2252,11 +2269,23 @@ function submitApplication() {
       showSubmitErrors(dbErrors);
       return;
     }
-    doSubmitApplication(btn, members, memberFormIndices);
+    doSubmitApplication(btn, members, memberFormIndices, docSnapshot);
   });
 }
 
-function doSubmitApplication(btn, members, memberFormIndices) {
+// Map of file-input id -> the File currently chosen in it, for every file
+// input on the form.
+function snapshotDocumentFiles() {
+  var snap = {};
+  var inputs = document.querySelectorAll('input[type="file"]');
+  for (var i = 0; i < inputs.length; i++) {
+    var el = inputs[i];
+    if (el.id && el.files && el.files[0]) snap[el.id] = el.files[0];
+  }
+  return snap;
+}
+
+function doSubmitApplication(btn, members, memberFormIndices, docSnapshot) {
   btn.textContent = currentLang === 'ar' ? '⏳ جاري الإرسال…' : '⏳ Submitting…';
   btn.disabled = true;
 
@@ -2304,7 +2333,7 @@ function doSubmitApplication(btn, members, memberFormIndices) {
       // waits until the document photos have actually been uploaded (see
       // runDocumentUploadStep) so a closed tab can't silently drop them.
       runDocumentUploadStep(function() {
-        return uploadAllApplicationDocuments(data.id, data.member_ids || [], memberFormIndices);
+        return uploadAllApplicationDocuments(data.id, data.member_ids || [], memberFormIndices, docSnapshot);
       }, application, btn);
     } else {
       var ar = currentLang === 'ar';
@@ -2429,28 +2458,53 @@ function runWithConcurrency(tasks, limit) {
   return Promise.all(workers).then(function() { return results; });
 }
 
-function uploadAllApplicationDocuments(applicationId, memberIds, memberFormIndices) {
+function uploadAllApplicationDocuments(applicationId, memberIds, memberFormIndices, docSnapshot) {
   var tasks = [];
-  var fileOf = function(id) { var el = document.getElementById(id); return el && el.files ? el.files[0] : null; };
-  var add = function(memberId, docKey, file) {
-    if (!file) return;
+  var missing = []; // required documents that could not even be attempted
+  // Prefer the files captured at the moment the form was submitted; fall back
+  // to reading the inputs directly only if no snapshot was passed in.
+  var fileOf = function(id) {
+    if (docSnapshot) return docSnapshot[id] || null;
+    var el = document.getElementById(id);
+    return el && el.files ? el.files[0] : null;
+  };
+  var add = function(memberId, docKey, file, required) {
+    if (!file) {
+      // A QID photo that should exist but doesn't is reported as a failure
+      // rather than silently skipped, so the applicant is told and the
+      // success screen doesn't claim everything was received.
+      if (required) missing.push({ ok: false, unrecoverable: true, applicationId: applicationId, memberId: memberId, docKey: docKey, file: null });
+      return;
+    }
     tasks.push(function() { return uploadOneDocument(applicationId, memberId, docKey, file); });
   };
 
-  add(null, 'qid_front', fileOf('qid-front'));
-  add(null, 'qid_back', fileOf('qid-back'));
-  add(null, 'blue_plate', fileOf('blue-plate-upload'));
-  add(null, 'salary_proof', fileOf('pz-salary'));
+  add(null, 'qid_front', fileOf('qid-front'), true);
+  add(null, 'qid_back', fileOf('qid-back'), true);
+  add(null, 'blue_plate', fileOf('blue-plate-upload'), false);
+  add(null, 'salary_proof', fileOf('pz-salary'), false);
 
   memberFormIndices.forEach(function(formIdx, pos) {
     var memberId = memberIds[pos];
-    if (!memberId) return; // that member's row failed to save — nothing to attach documents to
-    add(memberId, 'qid_front', fileOf('m' + formIdx + '-qid-front'));
-    add(memberId, 'qid_back', fileOf('m' + formIdx + '-qid-back'));
-    add(memberId, 'birth_cert', fileOf('m' + formIdx + '-birth-cert'));
+    var docTypeEl = document.querySelector('input[name="m' + formIdx + '-doctype"]:checked');
+    var usesBirthCert = docTypeEl && docTypeEl.value === 'birth-cert';
+    if (!memberId) {
+      // That member's row failed to save, so there is nothing to attach their
+      // documents to. Count their photos as failed instead of dropping them.
+      if (!usesBirthCert) {
+        missing.push({ ok: false, unrecoverable: true, applicationId: applicationId, memberId: null, docKey: 'qid_front', file: null });
+        missing.push({ ok: false, unrecoverable: true, applicationId: applicationId, memberId: null, docKey: 'qid_back', file: null });
+      }
+      return;
+    }
+    add(memberId, 'qid_front', fileOf('m' + formIdx + '-qid-front'), !usesBirthCert);
+    add(memberId, 'qid_back', fileOf('m' + formIdx + '-qid-back'), !usesBirthCert);
+    add(memberId, 'birth_cert', fileOf('m' + formIdx + '-birth-cert'), false);
   });
 
-  return runWithConcurrency(tasks, 3);
+  return runWithConcurrency(tasks, 3).then(function(results) {
+    return (results || []).concat(missing);
+  });
 }
 
 // ── DOCUMENT UPLOAD STEP (between "saved" and the success screen) ─────────────
@@ -2500,10 +2554,28 @@ function runDocumentUploadStep(uploadPromiseFactory, application, btn) {
       target: null
     }]);
     btn.disabled = false;
+    var anyRetryable = failed.some(function(f) { return !f.unrecoverable && f.file; });
+    if (!anyRetryable) {
+      // Nothing here can be re-sent from this page (e.g. a household member's
+      // row didn't save). Say so plainly and let them carry on; the team will
+      // ask for the missing photos.
+      showSubmitErrors([{
+        label: ar
+          ? 'تم حفظ طلبك، لكن لم نتمكن من حفظ بعض صور الهوية. سيتواصل معك فريقنا لطلبها.'
+          : 'Your application is saved, but we could not save some QID photos. Our team will contact you to collect them.',
+        target: null
+      }]);
+      setSubmitBtnText(btn, ar ? 'متابعة' : 'Continue');
+      btn.onclick = function() { showSuccessScreen(application.qid_number, application.whatsapp); };
+      return;
+    }
     setSubmitBtnText(btn, ar ? 'إعادة رفع المستندات' : 'Retry upload');
     btn.onclick = function() {
+      // Only entries that still have their file can be retried; ones that
+      // never had a file to send can't be fixed from this screen.
+      var retryable = failed.filter(function(f) { return !f.unrecoverable && f.file; });
       runDocumentUploadStep(function() {
-        return Promise.all(failed.map(function(f) {
+        return Promise.all(retryable.map(function(f) {
           return uploadOneDocument(f.applicationId, f.memberId, f.docKey, f.file);
         }));
       }, application, btn);
