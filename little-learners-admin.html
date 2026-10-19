@@ -4885,12 +4885,12 @@ function spFollowUp(r) {
   if(st === 'sent')    return { cls:'confirm', badge:'Confirm payment', fu:'🧾 Receipt uploaded' + (daysOld >= 2 ? ' ' + Math.floor(daysOld) + ' days ago' : '') + ' — check it against the bank and mark received.', group:'followup', card:'fu-confirm' };
   if(st === 'flagged') return { cls:'issue', badge:'Issue flagged', fu:'🚩 ' + (r.staff_note ? esc(r.staff_note) : 'Flagged — follow up with the sponsor.'), group:'followup', card:'fu-issue' };
   if(st === 'pending') {
-    const left = hoursLeft != null ? Math.max(0, Math.floor(hoursLeft)) + 'h left on the hold' : '';
+    const left = hoursLeft == null ? '' : (hoursLeft > 0 ? Math.floor(hoursLeft) + 'h left to send payment' : 'Past the 48h send-by date (child still reserved)');
     const urgent = hoursLeft != null && hoursLeft < 12;
     return { cls:'chase', badge:'Awaiting payment', fu:(urgent ? '⏰ Chase today — ' : '⏳ ') + left + '. No receipt yet.', group: urgent ? 'followup' : 'waiting', card:'fu-chase' };
   }
   if(st === 'received') return { cls:'done', badge:'Paid', fu:'✅ Payment confirmed' + (r.resolved_at ? ' on ' + new Date(r.resolved_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '') + '.', group:'paid', card:'fu-done' };
-  return { cls:'released', badge:'Released', fu:'The 48-hour hold lapsed or it was released — the child is back on the sponsor page.', group:'released', card:'fu-released' };
+  return { cls:'released', badge:'Released', fu:'Released by an admin — the child is back on the sponsor page.', group:'released', card:'fu-released' };
 }
 
 async function loadSponsorshipsAdmin() {
