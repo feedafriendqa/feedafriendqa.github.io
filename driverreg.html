@@ -57,7 +57,6 @@ body.lang-ar .nav-right{flex-direction:row-reverse}
 .choice-card .radio{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line-2);background:#fff;flex-shrink:0;margin-left:auto;position:relative}
 .choice-card.selected .radio{border-color:var(--forest);background:var(--forest)}
 .choice-card.selected .radio::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:900}
-body.lang-ar .choice-card{flex-direction:row-reverse}
 body.lang-ar .choice-card .radio{margin-left:0;margin-right:auto}
 body.lang-ar .choice-t,body.lang-ar .choice-s{text-align:right}
 
@@ -82,7 +81,6 @@ body.lang-ar .choice-t,body.lang-ar .choice-s{text-align:right}
 .photo-btn-text{text-align:left}
 .photo-btn-t{font-size:14px;font-weight:700;color:var(--ink);font-family:"League Spartan",sans-serif}
 .photo-btn-s{font-size:11px;color:var(--muted-2);font-weight:600;margin-top:2px}
-body.lang-ar .photo-btn{flex-direction:row-reverse}
 body.lang-ar .photo-btn-text{text-align:right}
 
 /* scan states */
@@ -99,8 +97,7 @@ body.lang-ar .photo-btn-text{text-align:right}
 .sf-l{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;color:var(--muted-2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding-top:1px}
 .sf-v{font-size:13px;color:var(--ink);font-weight:700;font-family:"League Spartan",sans-serif;text-align:right;max-width:65%;line-height:1.4}
 body.lang-ar .sf-v{text-align:left}
-body.lang-ar .scan-ok-row{flex-direction:row-reverse}
-body.lang-ar .scan-ok-lbl{letter-spacing:normal}
+body.lang-ar .scan-ok-lbl,body.lang-ar .sf-l,body.lang-ar .lbl,body.lang-ar .section-lbl,body.lang-ar .cap-lbl,body.lang-ar .rev-eye,body.lang-ar .h1,body.lang-ar .cta,body.lang-ar .photo-btn-t{letter-spacing:normal;text-transform:none}
 .retake-btn{display:block;width:100%;text-align:center;font-size:12px;color:var(--muted-2);font-weight:700;margin-top:12px;background:none;border:1.5px dashed var(--line-2);border-radius:12px;padding:9px;cursor:pointer;font-family:"Manrope",sans-serif}
 .retake-btn:hover{border-color:var(--forest);color:var(--forest)}
 .fail-t{font-family:"League Spartan",sans-serif;font-size:14px;font-weight:800;color:var(--ink);margin-bottom:6px;text-align:center}
@@ -131,7 +128,6 @@ body.lang-ar .scan-ok-lbl{letter-spacing:normal}
 .co-ic-badge svg{width:17px;height:17px}
 .co-name{font-family:"League Spartan",sans-serif;font-size:13px;font-weight:700;color:var(--ink)}
 .co-sub{font-size:11px;color:var(--muted-2);font-weight:600;margin-top:1px}
-body.lang-ar .car-opt{flex-direction:row-reverse}
 body.lang-ar .co-name,body.lang-ar .co-sub{text-align:right}
 .cap-card{background:var(--forest-deep);border-radius:20px;padding:22px;margin-top:12px}
 .cap-top{display:flex;align-items:flex-end;justify-content:space-between}
@@ -139,7 +135,6 @@ body.lang-ar .co-name,body.lang-ar .co-sub{text-align:right}
 .cap-big{font-family:"League Spartan",sans-serif;font-size:58px;font-weight:800;color:var(--lime);line-height:1;letter-spacing:-2px}
 .cap-unit{font-size:13px;color:rgba(255,255,255,.45);font-weight:700;margin-left:3px}
 .bxgrid{display:flex;flex-wrap:wrap;gap:4px;max-width:150px;justify-content:flex-end}
-body.lang-ar .cap-top{flex-direction:row-reverse}
 body.lang-ar .cap-lbl{letter-spacing:normal}
 body.lang-ar .cap-unit{margin-left:0;margin-right:3px}
 body.lang-ar .bxgrid{justify-content:flex-start}
@@ -151,7 +146,6 @@ body.lang-ar .bxgrid{justify-content:flex-start}
 .bs-toggle input{width:20px;height:20px;accent-color:var(--forest);cursor:pointer;flex-shrink:0}
 .bst-t{font-family:"League Spartan",sans-serif;font-size:13px;font-weight:700;color:var(--ink)}
 .bst-s{font-size:12px;color:var(--muted);font-weight:500;margin-top:3px}
-body.lang-ar .bs-toggle{flex-direction:row-reverse}
 body.lang-ar .bst-t,body.lang-ar .bst-s{text-align:right}
 
 /* AREAS */
@@ -856,10 +850,13 @@ function recalc(){
 
 // ── STEP 5: AREAS ────────────────────────────────────────────────────
 function v5(){clearErr("e5");if(D.areas.length<3){showErr("e5",t("err_areas"));return false;}return true;}
+var AREA_AR={"Abu Hamour": "أبو هامور", "Abu Nakhla": "أبو نخلة", "Ain Khaled": "عين خالد", "Al Asiri": "العسيري", "Al Aziziya": "العزيزية", "Al Bidda": "البدع", "Al Dafna": "الدفنة", "Al Ebb": "العب", "Al Egla": "العقلة", "Al Gharafa": "الغرافة", "Al Kharaitiyat": "الخريطيات", "Al Kheesa": "الخيسة", "Al Khor": "الخور", "Al Khulaifat": "الخليفات", "Al Maamoura": "المعمورة", "Al Mansoura": "المنصورة", "Al Markhiya": "المرخية", "Al Mearad": "المعراض", "Al Mukainis": "المكينس", "Al Muntazah": "المنتزه", "Al Murra": "المرة", "Al Najada": "النجادة", "Al Nasr": "النصر", "Al Ruwais": "الرويس", "Al Sadd": "السد", "Al Sakhama": "الصخامة", "Al Souq": "السوق", "Al Waab": "الوعب", "Al Wajba": "الوجبة", "Bani Hajer": "بني هاجر", "Bin Mahmoud": "بن محمود", "Bin Omran": "بن عمران", "Bu Samra": "بو سمرة", "Bu Sidra": "بو سدرة", "Daayen": "الضعاين", "Doha al Jadidah": "الدوحة الجديدة", "Duhail": "الدحيل", "Dukhan": "دخان", "Fereej Abdel Aziz": "فريج عبد العزيز", "Fereej Kulaib": "فريج كليب", "Fuwairit": "فويرط", "Hilal": "الهلال", "Hitmi": "الحتمي", "Industrial Area": "المنطقة الصناعية", "Izghawa": "إزغوى", "Leabaib": "لعبيب", "Luaib": "لعيب", "Luqta": "لقطة", "Lusail": "لوسيل", "Madinat Khalifa North": "مدينة خليفة الشمالية", "Madinat Khalifa South": "مدينة خليفة الجنوبية", "Mesaieed": "مسيعيد", "Mesaimeer": "مسيمير", "Messila": "المسيلة", "Muaither": "معيذر", "Muraikh": "المريخ", "Musheirib": "مشيرب", "Najma": "نجمة", "New Rayyan": "الريان الجديد", "New Salata": "السلاطة الجديدة", "Nuaija": "النعيجة", "Old Airport": "المطار القديم", "Old Al Ghanim": "الغانم القديم", "Old Rayyan": "الريان القديم", "Old Salata": "السلاطة القديمة", "Onaiza": "عنيزة", "Pearl": "اللؤلؤة", "Ras Abu Aboud": "راس أبو عبود", "Rawdat Al Khail": "روضة الخيل", "Sailiya": "السيلية", "Shahaniya": "الشحانية", "Soudan": "السودان", "Thakhira": "الذخيرة", "Themaid": "الثميد", "Thumama": "الثمامة", "Umm Bab": "أم باب", "Umm Ghuwailina": "أم غويلينة", "Umm Lekhba": "أم لخبا", "Umm Qarn": "أم قرن", "Umm Salal Ali": "أم صلال علي", "Umm Salal Mohammed": "أم صلال محمد", "Wakrah": "الوكرة", "Wukair": "الوكير"};
+// Display only: D.areas / the database keep the English name so driver-family matching is unchanged.
+function areaLabel(a){return(LANG==="ar"&&AREA_AR[a])||a;}
 function buildGrid(){
   AREAS_LOADED.then(function(){
     document.getElementById("agrid").innerHTML=AREAS.map(function(a){
-      return'<div class="chip'+(D.areas.includes(a)?" on":"")+'" onclick="togA(this,\''+ a +'\')">'+a+'</div>';
+      return'<div class="chip'+(D.areas.includes(a)?" on":"")+'" onclick="togA(this,\''+ a +'\')">'+areaLabel(a)+'</div>';
     }).join("");updStat();updAreaAllBtn();
   });
 }
@@ -906,7 +903,7 @@ function buildReview(){
   document.getElementById("r-exp").textContent=D.lic_exp||"—";
   document.getElementById("r-car").textContent=D.car?D.car.make+" "+D.car.model:"—";
   document.getElementById("r-cap").textContent=D.total_b+t("review_boxes")+(D.use_back?t("review_incl_back"):"");
-  document.getElementById("r-areas").textContent=D.areas.join(", ");
+  document.getElementById("r-areas").textContent=D.areas.map(areaLabel).join(LANG==="ar"?"، ":", ");
   if(D.driver_mode==="them"){
     document.getElementById("r-contact-name").textContent=D.contact_name;
     document.getElementById("r-contact-phone").textContent=D.contact_phone;
