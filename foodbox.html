@@ -296,6 +296,22 @@ body.lang-ar .waitlist-row input{text-align:right}
 .bar-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--green),var(--lime));width:0%;transition:width .6s ease}
 body.lang-ar .progress-top{flex-direction:row-reverse}
 
+/* Arabic: letter-spacing and uppercase break Arabic letter joining, and the
+   Latin display fonts (League Spartan / monospace) have no Arabic glyphs, so
+   force Cairo and zero tracking on everything in Arabic mode. */
+body.lang-ar, body.lang-ar *{letter-spacing:0 !important;text-transform:none !important}
+body.lang-ar .eyebrow,body.lang-ar .proof-eyebrow,body.lang-ar .ed-step,body.lang-ar .ed-h2,
+body.lang-ar .ed-t,body.lang-ar .ed-link,body.lang-ar .proof-h2,body.lang-ar .proof-btn,
+body.lang-ar .logistics .t,body.lang-ar .sold-out-card h3,body.lang-ar .cta-btn,
+body.lang-ar .give-row .price-out,body.lang-ar .stat .n,body.lang-ar .stat .l,
+body.lang-ar .dist-date .label,body.lang-ar .dist-date .date,body.lang-ar .box-btn .num,
+body.lang-ar .how-n,body.lang-ar .progress-top .big b,body.lang-ar .photo-ph .cap,
+body.lang-ar .proof-right .cap,body.lang-ar .freq-btn,body.lang-ar .lang-btn{font-family:"Cairo",sans-serif}
+body.lang-ar .stat .n.stat-price{font-size:15px;line-height:1.3}
+/* long Arabic button text must wrap instead of being cut off on phones */
+.cta-btn span{white-space:normal;text-align:center;line-height:1.35}
+body.lang-ar .cta-btn{font-size:14px;padding:15px 16px}
+
 /* ── DISTRIBUTION DATE ── */
 .dist-date{
   margin:0 20px 28px;
@@ -407,8 +423,8 @@ body.lang-ar .progress-top{flex-direction:row-reverse}
 
   <div class="hero-copy">
     <div class="eyebrow" data-en="Monthly Food Box Program" data-ar="برنامج الصندوق الغذائي الشهري">Monthly Food Box Program</div>
-    <h1 class="headline" data-en="Feed a <em>friend</em> this month." data-ar="غذِّ <em>صديقاً</em> هذا الشهر.">Feed a <em>friend</em> this month.</h1>
-    <p class="hero-sub" data-en="QAR 100 is the cost of one food box for 3–4 friends in need in Qatar." data-ar="١٠٠ ريال هي تكلفة صندوق غذائي واحد لـ ٣-٤ أصدقاء محتاجين في قطر.">QAR 100 is the cost of one food box for 3–4 friends in need in Qatar.</p>
+    <h1 class="headline" data-en="Feed a <em>friend</em> this month." data-ar="أطعم <em>صديقاً</em> هذا الشهر.">Feed a <em>friend</em> this month.</h1>
+    <p class="hero-sub" data-en="QAR 100 is the cost of one food box for 3–4 friends in need in Qatar." data-ar="١٠٠ ريال قطري هي تكلفة صندوق طعام واحد ل٣-٤ أصدقاء متعففين في قطر">QAR 100 is the cost of one food box for 3–4 friends in need in Qatar.</p>
     <a class="deliver-link" href="foodbox-deliver.html" data-en="Prefer to give your time instead? <span>Become a volunteer driver →</span>" data-ar="تفضّل أن تعطي وقتك بدلاً من ذلك؟ <span>كن سائقاً متطوعاً ←</span>">Prefer to give your time instead? <span>Become a volunteer driver →</span></a>
   </div>
 
@@ -471,7 +487,7 @@ body.lang-ar .progress-top{flex-direction:row-reverse}
   <div class="stats-card">
     <div class="stats">
       <div class="stat"><div class="n" id="stat-boxes">8</div><div class="l" data-en="Boxes<br>needed" data-ar="صناديق<br>مطلوبة">Boxes<br>needed</div></div>
-      <div class="stat"><div class="n">QAR 100</div><div class="l" data-en="Per box<br>monthly" data-ar="للصندوق<br>شهرياً">Per box<br>monthly</div></div>
+      <div class="stat"><div class="n stat-price" data-en="QAR 100" data-ar="١٠٠ ريال قطري">QAR 100</div><div class="l" data-en="Per box<br>monthly" data-ar="للصندوق<br>شهرياً">Per box<br>monthly</div></div>
       <div class="stat"><div class="n" id="stat-friends">22</div><div class="l" data-en="Friends<br>need food" data-ar="أصدقاء<br>يحتاجون طعام">Friends<br>need food</div></div>
     </div>
     <div class="progress-wrap" id="progress-wrap" style="display:none">
@@ -492,19 +508,19 @@ body.lang-ar .progress-top{flex-direction:row-reverse}
   </div>
 
   <div class="section">
-    <div class="section-h" data-en="How sponsoring works" data-ar="كيف يعمل التكفّل">How sponsoring works</div>
+    <div class="section-h" data-en="How sponsoring works" data-ar="خطوات كفالة الصناديق">How sponsoring works</div>
     <div class="section-sub" data-en="Three steps, about a minute" data-ar="ثلاث خطوات، حوالي دقيقة واحدة">Three steps, about a minute</div>
     <div class="how-step">
-      <div class="how-n">1</div>
+      <div class="how-n" data-en="1" data-ar="١">1</div>
       <div><div class="how-t" data-en="Pick your boxes" data-ar="اختر صناديقك">Pick your boxes</div><div class="how-s" data-en="1, 3, 5 or 10 boxes — monthly or a one-time gift, plus how you'd like it delivered" data-ar="١ أو ٣ أو ٥ أو ١٠ صناديق — شهرياً أو كهدية لمرة واحدة، وكيف تريد توصيلها">1, 3, 5 or 10 boxes — monthly or a one-time gift, plus how you'd like it delivered</div></div>
     </div>
     <div class="how-step">
-      <div class="how-n">2</div>
-      <div><div class="how-t" data-en="Choose a friend" data-ar="اختر صديقاً">Choose a friend</div><div class="how-s" data-en="Pick real, anonymised families — or let us surprise you" data-ar="اختر عائلة حقيقية بدون أسماء — أو اتركنا نختار لك">Pick real, anonymised families — or let us surprise you</div></div>
+      <div class="how-n" data-en="2" data-ar="٢">2</div>
+      <div><div class="how-t" data-en="Choose a friend" data-ar="اختر صديقاً">Choose a friend</div><div class="how-s" data-en="Pick real, anonymised families — or let us surprise you" data-ar="اختر عائلات حقيقية مع الحفاظ على خصوصية هويتها - أو اتركنا نفاجئك">Pick real, anonymised families — or let us surprise you</div></div>
     </div>
     <div class="how-step">
-      <div class="how-n">3</div>
-      <div><div class="how-t" data-en="Pay via Fawran or bank transfer" data-ar="ادفع عبر فوران أو حوالة بنكية">Pay via Fawran or bank transfer</div><div class="how-s" data-en="Pay for your boxes for your distribution event directly to Together for Good Events, with Fawran or bank transfer" data-ar="ادفع ثمن صناديقك لحدث التوزيع الخاص بك مباشرة إلى Together for Good Events، عبر فوران أو حوالة بنكية">Pay for your boxes for your distribution event directly to Together for Good Events, with Fawran or bank transfer</div></div>
+      <div class="how-n" data-en="3" data-ar="٣">3</div>
+      <div><div class="how-t" data-en="Pay via Fawran or bank transfer" data-ar="ادفع عبر فوران أو تحويل بنكي">Pay via Fawran or bank transfer</div><div class="how-s" data-en="Pay for your boxes for your distribution event directly to Together for Good Events, with Fawran or bank transfer" data-ar="ادفع قيمة صناديقك الخاصة بفعالية التوزيع مباشرةً إلى Together for Good Events عبر فوران أو تحويل بنكي.">Pay for your boxes for your distribution event directly to Together for Good Events, with Fawran or bank transfer</div></div>
     </div>
   </div>
 
@@ -520,7 +536,7 @@ body.lang-ar .progress-top{flex-direction:row-reverse}
     <button class="cta-btn" id="giveCta2" onclick="startSponsorFlow()">
       <span id="giveBtnText2">Give QAR 300 monthly →</span>
     </button>
-    <div class="cta-hint" id="giveHint2" data-en="You'll create a free account to confirm your payment — takes about a minute" data-ar="ستنشئ حساباً مجانياً لتأكيد دفعتك — يستغرق حوالي دقيقة واحدة">You'll create a free account to confirm your payment — takes about a minute</div>
+    <div class="cta-hint" id="giveHint2" data-en="You'll create a free account to confirm your payment — takes about a minute" data-ar="أنشئ حساباً مجانياً لمتابعة قيمة مدفوعاتك - سيستغرق حوالي دقيقة">You'll create a free account to confirm your payment — takes about a minute</div>
   </div>
 
 </div>
@@ -529,22 +545,22 @@ body.lang-ar .progress-top{flex-direction:row-reverse}
 <section class="editorial">
   <div class="ed-wrap">
     <div class="ed-head">
-      <h2 class="ed-h2" data-en="Packed with the essentials" data-ar="مُعبأ بالأساسيات">Packed with the essentials</h2>
-      <a class="ed-link" href="Faf-FoodBox-Account.html" data-en="See a real delivery →" data-ar="شاهد توصيلاً حقيقياً ←">See a real delivery →</a>
+      <h2 class="ed-h2" data-en="Packed with the essentials" data-ar="معبئة بالمواد الغذائية الأساسية">Packed with the essentials</h2>
+      <a class="ed-link" href="Faf-FoodBox-Account.html" data-en="See a real delivery →" data-ar="شاهد عملية توصيل حقيقية ←">See a real delivery →</a>
     </div>
     <div class="ed-grid">
       <div class="ed-card">
         <div class="photo-ph"><span class="cap" data-en="photo: box contents flat-lay" data-ar="صورة: محتويات الصندوق">photo: box contents flat-lay</span></div>
         <div class="ed-card-body">
-          <div class="ed-step">STEP 01</div>
+          <div class="ed-step" data-en="STEP 01" data-ar="الخطوة ١">STEP 01</div>
           <div class="ed-t" data-en="Rice, oil, lentils, dates" data-ar="أرز، زيت، عدس، تمر">Rice, oil, lentils, dates</div>
-          <div class="ed-d" data-en="QAR 100 provides one box of basic groceries for a group of 3–4 friends in need for a month." data-ar="١٠٠ ريال قطري يوفر صندوقاً واحداً من المواد الغذائية الأساسية لمجموعة من ٣ إلى ٤ أصدقاء محتاجين لمدة شهر.">QAR 100 provides one box of basic groceries for a group of 3–4 friends in need for a month.</div>
+          <div class="ed-d" data-en="QAR 100 provides one box of basic groceries for a group of 3–4 friends in need for a month." data-ar="١٠٠ ريال قطري يوفر صندوقاً واحداً من المواد الغذائية الأساسية لمجموعة من ٣ إلى ٤ أصدقاء متعففين لمدة شهر.">QAR 100 provides one box of basic groceries for a group of 3–4 friends in need for a month.</div>
         </div>
       </div>
       <div class="ed-card">
         <div class="photo-ph"><span class="cap" data-en="photo: packing line" data-ar="صورة: خط التعبئة">photo: packing line</span></div>
         <div class="ed-card-body">
-          <div class="ed-step">STEP 02</div>
+          <div class="ed-step" data-en="STEP 02" data-ar="الخطوة ٢">STEP 02</div>
           <div class="ed-t" data-en="Packed the day before distribution" data-ar="تُعبأ قبل يوم من التوزيع">Packed the day before distribution</div>
           <div class="ed-d" data-en="Boxes are packed the day before each distribution, not days in advance, so everything stays as fresh as possible." data-ar="تُعبأ الصناديق قبل يوم واحد من كل توزيع، وليس قبل أيام، لتبقى المحتويات طازجة قدر الإمكان.">Boxes are packed the day before each distribution, not days in advance, so everything stays as fresh as possible.</div>
         </div>
@@ -552,9 +568,9 @@ body.lang-ar .progress-top{flex-direction:row-reverse}
       <div class="ed-card">
         <div class="photo-ph"><span class="cap" data-en="photo: handover + signature" data-ar="صورة: التسليم + التوقيع">photo: handover + signature</span></div>
         <div class="ed-card-body">
-          <div class="ed-step">STEP 03</div>
-          <div class="ed-t" data-en="Handed over, signed for" data-ar="تُسلّم بتوقيع">Handed over, signed for</div>
-          <div class="ed-d" data-en="Distribution takes place once a month. Collection is at Al Waab, or a volunteer hands it over directly — no estimates." data-ar="يتم التوزيع مرة واحدة شهرياً. الاستلام من الوعب، أو يُسلّمه أحد المتطوعين مباشرة — دون تقديرات.">Distribution takes place once a month. Collection is at Al Waab, or a volunteer hands it over directly — no estimates.</div>
+          <div class="ed-step" data-en="STEP 03" data-ar="الخطوة ٣">STEP 03</div>
+          <div class="ed-t" data-en="Handed over, signed for" data-ar="يتم التسليم، مُهدى إلى عائلة">Handed over, signed for</div>
+          <div class="ed-d" data-en="Distribution takes place once a month. Collection is at Al Waab, or a volunteer hands it over directly — no estimates." data-ar="يتم التوزيع مرة واحدة شهرياً. الاستلام من الوعب، أو يسلّمه أحد المتطوعين مباشرةً - دون أي تقديرات">Distribution takes place once a month. Collection is at Al Waab, or a volunteer hands it over directly — no estimates.</div>
         </div>
       </div>
     </div>
@@ -564,13 +580,13 @@ body.lang-ar .progress-top{flex-direction:row-reverse}
 <!-- ════ PROOF, NOT PROMISE (dark split, full-bleed) ════ -->
 <section class="proof-split">
   <div class="proof-left">
-    <div class="proof-eyebrow" data-en="THE PROOF, NOT THE PROMISE" data-ar="الإثبات، لا الوعد">THE PROOF, NOT THE PROMISE</div>
-    <h2 class="proof-h2" data-en="Every box you purchase is real — sponsored, packed and collected, on record." data-ar="كل صندوق تشتريه حقيقي — مُكفَّل ومُعبأ ومُستلم، وموثّق.">Every box you purchase is real — sponsored, packed and collected, on record.</h2>
-    <p class="proof-p" data-en="Your account fills up as sponsorships land — how many boxes, when, and their status. Nothing rounded, nothing estimated." data-ar="يمتلئ حسابك مع كل تكفّل — عدد الصناديق، متى، وحالتها. لا تقريب ولا تقدير.">Your account fills up as sponsorships land — how many boxes, when, and their status. Nothing rounded, nothing estimated.</p>
+    <div class="proof-eyebrow" data-en="THE PROOF, NOT THE PROMISE" data-ar="الدليل لا الوعود">THE PROOF, NOT THE PROMISE</div>
+    <h2 class="proof-h2" data-en="Every box you purchase is real — sponsored, packed and collected, on record." data-ar="كل صندوق تشتريه هو صندوق حقيقي - تتم كفالته وتعبئته وتسليمه، وكل خطوة موثّقة على حسابك">Every box you purchase is real — sponsored, packed and collected, on record.</h2>
+    <p class="proof-p" data-en="Your account fills up as sponsorships land — how many boxes, when, and their status. Nothing rounded, nothing estimated." data-ar="يتم تحديث حسابك تلقائياً مع كل كفالة - لتتمكن من متابعة عدد الصناديق وتواريخ كفالتها وحالتها. أرقام دقيقة دون تقديرات">Your account fills up as sponsorships land — how many boxes, when, and their status. Nothing rounded, nothing estimated.</p>
     <button class="proof-btn" onclick="document.querySelector('.give-card').scrollIntoView({behavior:'smooth',block:'center'})" data-en="Sponsor your first box" data-ar="تكفّل بصندوقك الأول">Sponsor your first box</button>
   </div>
   <div class="proof-right">
-    <span class="cap" data-en="your account:<br>sponsorship history + running totals" data-ar="حسابك:<br>سجل التكفّلات + الإجماليات">your account:<br>sponsorship history + running totals</span>
+    <span class="cap" data-en="your account:<br>sponsorship history + running totals" data-ar="حسابك:<br>سجل الكفالات السابقة + الإجماليات">your account:<br>sponsorship history + running totals</span>
   </div>
 </section>
 
@@ -587,6 +603,7 @@ function setLang(lang){
   });
   sessionStorage.setItem("faf_lang", lang);
   renderGiveCard();
+  localizeNumbers();
 }
 
 // ── Give Now picker ── (defined before the language-restore call below,
@@ -595,6 +612,29 @@ var EASTERN_ARABIC_DIGITS = ["٠","١","٢","٣","٤","٥","٦","٧","٨","٩"];
 function toEasternArabicDigits(n){
   return String(n).replace(/[0-9]/g, function(d){ return EASTERN_ARABIC_DIGITS[+d]; });
 }
+function toWesternDigits(n){
+  return String(n).replace(/[٠-٩]/g, function(d){ return String(EASTERN_ARABIC_DIGITS.indexOf(d)); })
+                  .replace(/٬/g, ",");
+}
+// Keeps numbers that are filled in by JS (stats, progress, box buttons) in
+// the right numeral set for the current language.
+var FAF_NUM_SELECTORS = "#stat-boxes,#stat-friends,#progress-pledged,#progress-needed-1,#progress-remaining,.box-btn .num,.box-btn .price";
+function localizeNumbers(){
+  var ar = (sessionStorage.getItem("faf_lang") || "en") === "ar";
+  document.querySelectorAll(FAF_NUM_SELECTORS).forEach(function(el){
+    var cur = el.textContent;
+    var next = ar ? toEasternArabicDigits(toWesternDigits(cur)).replace(/,/g, "٬") : toWesternDigits(cur);
+    if(next !== cur) el.textContent = next;
+  });
+}
+document.addEventListener("DOMContentLoaded", function(){
+  if(!window.MutationObserver) return;
+  var mo = new MutationObserver(localizeNumbers);
+  document.querySelectorAll("#stat-boxes,#stat-friends,#progress-pledged,#progress-needed-1,#progress-remaining").forEach(function(el){
+    mo.observe(el, { childList: true, characterData: true, subtree: true });
+  });
+  localizeNumbers();
+});
 var giveState = { boxes: 3, freq: "monthly", custom: false };
 
 // Whether there's currently at least one confirmed family still needing a
@@ -673,17 +713,17 @@ function renderGiveCard(){
   var feedsDisplay = lang === "ar" ? toEasternArabicDigits(feeds) : feeds;
 
   document.getElementById("feedsText").textContent = lang === "ar"
-    ? ("يغذي حوالي " + feedsDisplay + " شخصاً")
+    ? ("يطعم حوالي " + feedsDisplay + " شخصاً")
     : ("Feeds about " + feedsDisplay + " people");
   document.getElementById("priceText").textContent = lang === "ar"
-    ? (priceDisplay + " ريال")
+    ? (priceDisplay + " ريال قطري")
     : ("QAR " + priceDisplay);
 
   var giveLabel;
   if(lang === "ar"){
     giveLabel = freq === "monthly"
-      ? ("امنح " + priceDisplay + " ريال شهرياً ←")
-      : ("امنح " + priceDisplay + " ريال الآن ←");
+      ? ("ساهم بـ " + priceDisplay + " ريال قطري شهرياً ←")
+      : ("ساهم بـ " + priceDisplay + " ريال قطري الآن ←");
   } else {
     giveLabel = freq === "monthly"
       ? ("Give QAR " + priceDisplay + " monthly →")
