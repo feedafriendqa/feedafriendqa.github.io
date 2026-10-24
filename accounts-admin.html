@@ -87,7 +87,9 @@ table{width:100%;border-collapse:collapse;font-size:13px;}
 th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-2);font-weight:800;padding:8px 8px;border-bottom:2px solid var(--line);white-space:nowrap;}
 td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top;}
 tr:hover td{background:#fafcfa;}
-.desc{max-width:250px;color:var(--muted);font-size:12px;white-space:pre-line;line-height:1.4;}
+.desc{max-width:340px;color:var(--muted);font-size:12px;line-height:1.4;word-break:break-word;}
+.desc .sender{display:block;color:var(--charcoal);font-weight:800;font-size:13px;margin-bottom:2px;}
+.desc .rawdesc{display:block;font-size:11px;color:var(--muted-2);}
 .amt{font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .amt.in{color:var(--forest);}
 .amt.out{color:var(--red);}
@@ -571,7 +573,7 @@ function renderRow(r){
 
   return '<tr>' +
     '<td>' + r.transaction_date + '</td>' +
-    '<td class="desc">' + escapeHtml(firstLines(r.description, 2)) + '</td>' +
+    '<td class="desc">' + descCell(r.description) + '</td>' +
     '<td class="amt ' + amt.cls + '">' + amt.text + '</td>' +
     '<td>' + badge + '</td>' +
     '<td>' + matchCell + '</td>' +
@@ -586,6 +588,22 @@ function categoryOptions(isIncome){
     .sort(function(a,b){ return a.sort_order - b.sort_order; })
     .map(function(c){ return '<option value="' + c.code + '">' + c.label + '</option>'; })
     .join("");
+}
+// Sender name for Fawran transfers: the line right after the IBAN (QA## …).
+function senderName(desc){
+  var lines = (desc||"").split("\n").map(function(l){ return l.trim(); }).filter(Boolean);
+  for(var i=0;i<lines.length-1;i++){
+    if(/^QA\d{2}[A-Z]{4}/.test(lines[i]) && !/^\d{8}[A-Z]{4}/.test(lines[i+1])){ return lines[i+1]; }
+  }
+  return "";
+}
+// Show the sender name in bold plus the FULL bank description (reference,
+// IBAN, etc.) so nothing on the statement is hidden.
+function descCell(desc){
+  var name = senderName(desc);
+  var lines = (desc||"").split("\n").map(function(l){ return l.trim(); }).filter(Boolean);
+  return (name ? '<span class="sender">' + escapeHtml(name) + '</span>' : '') +
+    '<span class="rawdesc">' + lines.map(escapeHtml).join('<br>') + '</span>';
 }
 function firstLines(desc, n){ return (desc||"").split("\n").filter(Boolean).slice(0,n).join(" · "); }
 function escapeHtml(s){ return (s||"").replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
