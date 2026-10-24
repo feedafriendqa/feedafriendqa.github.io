@@ -3529,12 +3529,61 @@ function loadPledgeRoundsAdmin() {
       var pastCutoff = todayStr > r.edit_cutoff_date;
       var statusLabel = r.status === 'matching_done' ? '✅ Matched' : r.status === 'completed' ? '📦 Completed' : (pastCutoff ? '⏰ Cutoff passed — ready to match' : '📝 Open for edits until ' + r.edit_cutoff_date);
       var matchBtn = (r.status === 'open') ? ('<button class="btn-comment" style="background:' + (pastCutoff ? 'var(--green)' : '#ccc') + ';color:#fff;border:none;margin-left:8px;" onclick="runPledgeMatching(\'' + r.id + '\')">Run matching' + (pastCutoff ? '' : ' (early)') + '</button>') : '';
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">' +
+      var whoBtn = '<button class="btn-comment" style="margin-left:8px;" onclick="toggleRoundSponsors(\'' + r.id + '\')">👥 Who sponsored what</button>';
+      return '<div style="padding:8px 0;border-bottom:1px solid var(--border);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
         '<div><strong>' + r.name + '</strong> — ' + r.distribution_date + '<br><span style="font-size:12px;">' + statusLabel + '</span></div>' +
-        matchBtn +
+        '<div>' + whoBtn + matchBtn + '</div></div>' +
+        '<div id="round-sponsors-' + r.id + '" style="display:none;margin-top:10px;"></div>' +
       '</div>';
     }).join('');
   }).catch(function(e) { listEl.textContent = 'Could not load distributions: ' + e.message; });
+}
+
+// "Who sponsored what" — expands under a round to list every sponsor, their
+// boxes and payment status, and the families their boxes were matched to.
+function toggleRoundSponsors(roundId) {
+  var el = document.getElementById('round-sponsors-' + roundId);
+  if (!el) return;
+  if (el.style.display === 'block') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = '<span style="font-size:12px;color:var(--muted);">Loading…</span>';
+  var esc = function(t){ return String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var statusText = { pledged:'Pledged', pending_payment:'Payment due', proof_uploaded:'Proof uploaded', payment_received:'Paid', discrepancy:'Discrepancy', rejected:'Rejected' };
+  apiHeadersAsync().then(function(h) {
+    return fetch(SUPABASE_URL + '/rest/v1/sponsorships?select=id,sponsor_id,sponsor_name,box_count,payment_status,delivery_method,matched_family_ids&round_id=eq.' + roundId + '&payment_status=neq.cancelled&order=created_at', { headers: h }).then(function(r) {
+      if (!r.ok) throw new Error('status ' + r.status);
+      return r.json();
+    }).then(function(sps) {
+      var sponsorIds = sps.map(function(x){ return x.sponsor_id; }).filter(Boolean);
+      var famIds = [];
+      sps.forEach(function(x){ (x.matched_family_ids || []).forEach(function(i){ famIds.push(i); }); });
+      var pf = sponsorIds.length ? fetch(SUPABASE_URL + '/rest/v1/profiles?select=id,first_name,surname&id=in.(' + sponsorIds.join(',') + ')', { headers: h }).then(function(r){ return r.ok ? r.json() : []; }) : Promise.resolve([]);
+      var ff = famIds.length ? fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=id,full_name,full_name_en,area,household_size&id=in.(' + famIds.join(',') + ')', { headers: h }).then(function(r){ return r.ok ? r.json() : []; }) : Promise.resolve([]);
+      return Promise.all([pf, ff]).then(function(res) { return { sps: sps, profiles: res[0], fams: res[1] }; });
+    });
+  }).then(function(d) {
+    if (!d.sps.length) { el.innerHTML = '<span style="font-size:12px;color:var(--muted);">No sponsors in this distribution yet.</span>'; return; }
+    var pmap = {}; d.profiles.forEach(function(p){ pmap[p.id] = p; });
+    var fmap = {}; d.fams.forEach(function(f){ fmap[f.id] = f; });
+    var totalBoxes = 0, totalFams = 0;
+    var rows = d.sps.map(function(x) {
+      var p = pmap[x.sponsor_id] || {};
+      var name = ((p.first_name || '') + ' ' + (p.surname || '')).trim() || x.sponsor_name || 'Sponsor';
+      var ids = x.matched_family_ids || [];
+      var used = 0;
+      var famHtml = ids.length ? ids.map(function(i) {
+        var f = fmap[i] || {}; var need = Math.max(1, Math.ceil((f.household_size || 1) / 4)); used += need;
+        return '<div style="font-size:12px;padding:2px 0;">' + esc(f.full_name_en || f.full_name || 'Family') + ' · ' + esc(f.area || '–') + ' · ' + (f.household_size || 1) + ' people · ' + need + ' box' + (need === 1 ? '' : 'es') + '</div>';
+      }).join('') : '<div style="font-size:12px;color:var(--muted);">Not matched yet</div>';
+      totalBoxes += (x.box_count || 0); totalFams += ids.length;
+      return '<div style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:#fff;">' +
+        '<div style="display:flex;justify-content:space-between;gap:8px;"><strong style="font-size:13px;">' + esc(name) + '</strong>' +
+        '<span style="font-size:12px;color:var(--muted);">' + (x.box_count || 0) + ' box' + (x.box_count === 1 ? '' : 'es') + ' · ' + esc(statusText[x.payment_status] || x.payment_status) + (x.delivery_method ? ' · ' + esc(x.delivery_method) : '') + '</span></div>' +
+        famHtml + '</div>';
+    }).join('');
+    el.innerHTML = '<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">' + d.sps.length + ' sponsors · ' + totalBoxes + ' boxes · ' + totalFams + ' families matched</div>' + rows;
+  }).catch(function(e) { el.innerHTML = '<span style="font-size:12px;color:var(--red);">Could not load sponsors: ' + esc(e.message) + '</span>'; });
 }
 
 function openPledgeRound() {
