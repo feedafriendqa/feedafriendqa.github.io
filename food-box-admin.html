@@ -322,7 +322,6 @@ select.edit-field{cursor:pointer;}
       <button class="filter-btn" id="view-btn-live" onclick="showView('live')">📊 Live</button>
       <button class="filter-btn active" id="view-btn-cases" onclick="showView('cases')">📋 Cases<span id="driver-notes-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;" title="Cases with unread driver notes"></span></button>
       <button class="filter-btn" id="view-btn-distributions" onclick="showView('distributions')">📅 Distributions</button>
-      <button class="filter-btn" id="view-btn-sponsorships" onclick="showView('sponsorships')">🤝 Sponsors</button>
       <button class="filter-btn" id="view-btn-payments" onclick="showView('payments')">💰 Payments</button>
       <button class="filter-btn" id="view-btn-approvals" onclick="showView('approvals')">🚗 Approvals<span id="approvals-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
       <button class="filter-btn" id="view-btn-topups" style="display:none;" onclick="showView('topups')">🍼 Top-ups<span id="topups-badge" style="display:none;margin-left:6px;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;"></span></button>
@@ -452,6 +451,10 @@ select.edit-field{cursor:pointer;}
       </div>
 
       <div id="distributions-subtab-rounds-panel">
+        <details style="border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;background:#fff;">
+          <summary id="unmatched-summary" style="cursor:pointer;font-size:14px;font-weight:700;color:var(--text);">👋 Families awaiting a sponsor</summary>
+          <div id="unmatched-panel" style="font-size:13px;color:var(--muted);margin-top:12px;">Loading…</div>
+        </details>
         <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
           <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;">
             <div>
@@ -482,15 +485,7 @@ select.edit-field{cursor:pointer;}
         <div class="welcome-scope">Every confirmed case matched to a sponsor — who's feeding whom, by distribution.</div>
       </div>
 
-      <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
-        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px;">👋 Awaiting a sponsor</div>
-        <div id="unmatched-panel" style="font-size:13px;color:var(--muted);">Loading…</div>
-      </div>
-
-      <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
-        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px;">🎁 Donors with unmatched capacity</div>
-        <div id="unmatched-donors-panel" style="font-size:13px;color:var(--muted);">Loading…</div>
-      </div>
+      <div style="display:none;"><div id="unmatched-donors-panel"></div></div>
 
       <div class="filters">
         <label style="font-size:13px;font-weight:700;color:var(--muted);">Distribution:</label>
@@ -3158,7 +3153,6 @@ function showView(view) {
   document.getElementById('view-btn-live').classList.toggle('active', view === 'live');
   document.getElementById('view-btn-cases').classList.toggle('active', view === 'cases');
   document.getElementById('view-btn-distributions').classList.toggle('active', view === 'distributions');
-  document.getElementById('view-btn-sponsorships').classList.toggle('active', view === 'sponsorships');
   document.getElementById('view-btn-payments').classList.toggle('active', view === 'payments');
   document.getElementById('view-btn-approvals').classList.toggle('active', view === 'approvals');
   document.getElementById('view-btn-messages').classList.toggle('active', view === 'messages');
