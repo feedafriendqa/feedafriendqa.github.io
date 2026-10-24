@@ -470,17 +470,17 @@ body.lang-ar .cta-btn{font-size:14px;padding:15px 16px}
     <div id="giveSoldOut" class="sold-out-card" style="display:none">
       <div class="ic">🎉</div>
       <h3 data-en="All boxes are sold out!" data-ar="جميع الصناديق نفدت!">All boxes are sold out!</h3>
-      <p data-en="Every friend for this distribution now has a sponsor — thank you! Leave your details and we'll message you the moment the next distribution opens for sign-ups." data-ar="كل صديق في هذا التوزيع لديه الآن كفيل — شكراً لكم! اترك بياناتك وسنراسلك فور فتح التسجيل للتوزيع القادم.">Every friend for this distribution now has a sponsor — thank you! Leave your details and we'll message you the moment the next distribution opens for sign-ups.</p>
+      <p data-en="Every friend for this distribution now has a sponsor — thank you! Leave your details and we'll email you the moment the next distribution opens for sign-ups." data-ar="كل صديق في هذا التوزيع لديه الآن كفيل — شكراً لكم! اترك بياناتك وسنراسلك عبر البريد الإلكتروني فور فتح التسجيل للتوزيع القادم.">Every friend for this distribution now has a sponsor — thank you! Leave your details and we'll email you the moment the next distribution opens for sign-ups.</p>
       <div id="waitlistForm">
         <div class="waitlist-row">
           <input type="text" id="waitlistName" data-en-ph="Your name" data-ar-ph="اسمك" placeholder="Your name">
-          <input type="tel" id="waitlistWhatsapp" data-en-ph="WhatsApp number" data-ar-ph="رقم واتساب" placeholder="WhatsApp number">
+          <input type="email" id="waitlistEmail" autocomplete="email" data-en-ph="Your email" data-ar-ph="بريدك الإلكتروني" placeholder="Your email">
         </div>
         <button class="cta-btn" id="waitlistBtn" onclick="joinWaitlist()">
           <span data-en="Notify me for the next distribution →" data-ar="أعلمني بالتوزيع القادم ←">Notify me for the next distribution →</span>
         </button>
       </div>
-      <div id="waitlistSuccess" class="waitlist-success" style="display:none" data-en="✅ Thanks! We'll message you as soon as the next distribution opens." data-ar="✅ شكراً لك! سنراسلك فور فتح التوزيع القادم.">✅ Thanks! We'll message you as soon as the next distribution opens.</div>
+      <div id="waitlistSuccess" class="waitlist-success" style="display:none" data-en="✅ Thanks! We'll email you as soon as the next distribution opens." data-ar="✅ شكراً لك! سنراسلك فور فتح التوزيع القادم.">✅ Thanks! We'll email you as soon as the next distribution opens.</div>
     </div>
   </div>
 
@@ -700,9 +700,9 @@ function renderGiveCard(){
   document.getElementById("customSuffix").textContent = lang === "ar" ? "صندوق" : "boxes";
 
   var waitlistNameEl = document.getElementById("waitlistName");
-  var waitlistWaEl = document.getElementById("waitlistWhatsapp");
+  var waitlistEmailEl = document.getElementById("waitlistEmail");
   if(waitlistNameEl) waitlistNameEl.placeholder = lang === "ar" ? "اسمك" : "Your name";
-  if(waitlistWaEl) waitlistWaEl.placeholder = lang === "ar" ? "رقم واتساب" : "WhatsApp number";
+  if(waitlistEmailEl) waitlistEmailEl.placeholder = lang === "ar" ? "بريدك الإلكتروني" : "Your email";
 
   var boxLabelEl = document.getElementById("boxLabel");
   boxLabelEl.innerHTML = freq === "monthly"
@@ -764,11 +764,11 @@ function renderGiveCard(){
 function joinWaitlist(){
   var isAr = document.body.classList.contains("lang-ar");
   var nameEl = document.getElementById("waitlistName");
-  var waEl = document.getElementById("waitlistWhatsapp");
+  var emailEl = document.getElementById("waitlistEmail");
   var name = (nameEl.value || "").trim();
-  var wa = (waEl.value || "").trim();
-  if(!name || wa.replace(/[^0-9]/g, "").length < 7){
-    alert(isAr ? "الرجاء إدخال الاسم ورقم واتساب صحيح" : "Please enter your name and a valid WhatsApp number");
+  var email = (emailEl.value || "").trim();
+  if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    alert(isAr ? "الرجاء إدخال الاسم وبريد إلكتروني صحيح" : "Please enter your name and a valid email address");
     return;
   }
   if(!window.sbClient){
@@ -781,7 +781,7 @@ function joinWaitlist(){
     .from("sponsorships")
     .insert({
       sponsor_name: name,
-      whatsapp: wa,
+      email: email,
       funnel_step: "waitlist_next_round",
       source: "web_sold_out"
     })
@@ -836,7 +836,7 @@ function checkFamilyAvailability(){
         "We're finalising this month's list of friends and will open sponsorships shortly. Leave your details and we'll message you the moment they open.",
         "نقوم حالياً بإنهاء قائمة الأصدقاء لهذا الشهر وسنفتح باب الكفالة قريباً. اترك بياناتك وسنراسلك فور فتحه.");
       setCopy(card.querySelector("#waitlistBtn span"), "Notify me when sponsorships open →", "أعلمني عند فتح الكفالة ←");
-      setCopy(card.querySelector("#waitlistSuccess"), "✅ Thanks! We'll message you as soon as sponsorships open.", "✅ شكراً لك! سنراسلك فور فتح باب الكفالة.");
+      setCopy(card.querySelector("#waitlistSuccess"), "✅ Thanks! We'll email you as soon as sponsorships open.", "✅ شكراً لك! سنراسلك فور فتح باب الكفالة.");
     }
   }
   var savedLang = sessionStorage.getItem("faf_lang") || "en";
