@@ -3850,8 +3850,11 @@ function renderPaymentSummary() {
     var project = 'Food Box';
     var event = sp.distribution_event || CURRENT_DISTRIBUTION;
     var key = project + '||' + event;
-    if (!groups[key]) groups[key] = { project: project, event: event, pledged: 0, outstanding: 0, uploaded: 0, received: 0, receivedAmount: 0, discrepancy: 0, rejected: 0 };
+    if (!groups[key]) groups[key] = { project: project, event: event, pledged: 0, outstanding: 0, uploaded: 0, received: 0, receivedAmount: 0, discrepancy: 0, rejected: 0, waitlist: 0 };
     var g = groups[key];
+    // Sold-out waitlist sign-ups (foodbox.html) are contact requests, not pledges:
+    // nobody owes anything, so keep them out of every payment tile.
+    if (sp.funnel_step === 'waitlist_next_round' && sp.payment_status !== 'payment_received') { g.waitlist++; return; }
     if (sp.payment_status === 'pledged') g.pledged++;
     else if (sp.payment_status === 'pending_payment') g.outstanding++;
     else if (sp.payment_status === 'proof_uploaded') g.uploaded++;
@@ -3875,6 +3878,7 @@ function renderPaymentSummary() {
 
   document.getElementById('payment-summary').innerHTML = groupList.map(function(g) {
     var rejectedNote = g.rejected ? ('<span style="font-size:12px;color:var(--red);font-weight:700;margin-left:10px;">' + g.rejected + ' rejected</span>') : '';
+    rejectedNote += g.waitlist ? ('<span style="font-size:12px;color:var(--muted);font-weight:700;margin-left:10px;">' + g.waitlist + ' on waitlist (not counted)</span>') : '';
     return '<div style="border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:12px;background:#fff;">' +
       '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;">' + g.project + ' \u2014 ' + g.event + rejectedNote + '</div>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
