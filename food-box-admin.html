@@ -3591,7 +3591,7 @@ function openPledgeRound() {
   var date = document.getElementById('pledge-round-date').value;
   if (!name || !date) { alert('Please enter both a name and distribution date.'); return; }
   apiHeadersAsync().then(function(headers) {
-    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+    return fetch(SUPABASE_URL + '/functions/v1/pledge-language', {
       method: 'POST', headers: headers,
       body: JSON.stringify({ type: 'admin_open_pledge_round', name: name, distribution_date: date })
     });
@@ -3648,7 +3648,7 @@ function ensureRoundEntries(roundId) {
       if (!missing.length) return 0;
       var rows = missing.map(function(p) { return {
         ref_no: 'PLEDGE-' + roundId.slice(0, 8) + '-' + p.id.slice(0, 8),
-        sponsor_id: p.sponsor_id, delivery_method: p.delivery_method, preferred_areas: p.preferred_areas,
+        sponsor_id: p.sponsor_id, delivery_method: p.delivery_method, preferred_areas: p.preferred_areas, preferred_family_language: p.preferred_family_language || 'any',
         subscription_type: 'monthly', box_count: p.box_count, amount: p.box_count * 100,
         payment_status: 'pledged', funnel_step: 'pledge_draft',
         distribution_event: round.name, pledge_id: p.id, round_id: roundId
@@ -3669,8 +3669,8 @@ function runPledgeMatching(roundId) {
 function runPledgeMatchingReview(roundId) {
   return apiHeadersAsync().then(function(headers) {
     return Promise.all([
-      fetch(SUPABASE_URL + '/rest/v1/sponsorships?select=id,sponsor_id,box_count,preferred_areas,sponsor_name,payment_status&round_id=eq.' + roundId + '&matched_family_ids=is.null', { headers: headers }),
-      fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=id,area,household_size,full_name_en,full_name&status=eq.confirmed&sponsorship_id=is.null', { headers: headers })
+      fetch(SUPABASE_URL + '/rest/v1/sponsorships?select=id,sponsor_id,box_count,preferred_areas,preferred_family_language,sponsor_name,payment_status&round_id=eq.' + roundId + '&payment_status=neq.cancelled&matched_family_ids=is.null', { headers: headers }),
+      fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=id,area,household_size,full_name_en,full_name,language,preferred_lang&status=eq.confirmed&sponsorship_id=is.null', { headers: headers })
     ]).then(function(rs) {
       if (!rs[0].ok || !rs[1].ok) throw new Error('could not load data (' + rs[0].status + '/' + rs[1].status + ')');
       return Promise.all([rs[0].json(), rs[1].json()]);
@@ -3693,8 +3693,11 @@ function showMatchingReview(roundId, sponsorships, friends, profiles) {
   sponsorships.forEach(function(sp) {
     var prefs = sp.preferred_areas || [];
     var ranked = pool.map(function(f){
-      return { f: f, need: Math.ceil((f.household_size || 1) / 4), areaMatch: prefs.length > 0 && prefs.indexOf(f.area) !== -1 };
-    }).sort(function(a, b){ return a.areaMatch === b.areaMatch ? 0 : (a.areaMatch ? -1 : 1); });
+      var wantLang = sp.preferred_family_language;
+      var pl = (f.preferred_lang || '').toLowerCase(); var fLang = pl === 'arabic' ? 'ar' : pl === 'english' ? 'en' : (f.language || '');
+      return { f: f, need: Math.ceil((f.household_size || 1) / 4), areaMatch: prefs.length > 0 && prefs.indexOf(f.area) !== -1,
+               langMatch: (wantLang === 'ar' || wantLang === 'en') && fLang === wantLang };
+    }).sort(function(a, b){ return ((b.areaMatch ? 2 : 0) + (b.langMatch ? 1 : 0)) - ((a.areaMatch ? 2 : 0) + (a.langMatch ? 1 : 0)); });
     var picked = [], used = 0;
     for (var k = 0; k < ranked.length; k++) {
       var c = ranked[k];
@@ -3711,7 +3714,7 @@ function showMatchingReview(roundId, sponsorships, friends, profiles) {
     var who = esc(p.first_name || x.sp.sponsor_name || ('Sponsor ' + String(x.sp.sponsor_id || '').slice(0, 8))) + (p.email ? ' <span style="color:var(--muted);font-size:11px;">' + esc(p.email) + '</span>' : '');
     var short = x.sp.box_count - x.used;
     var list = x.picked.length ? x.picked.map(function(c){
-      return esc(c.f.full_name_en || c.f.full_name || c.f.id) + ' <span style="color:var(--muted);font-size:11px;">(' + esc(c.f.area || 'no area') + ', ' + c.need + ' box' + (c.need === 1 ? '' : 'es') + (c.areaMatch ? ', preferred area' : '') + ')</span>';
+      return esc(c.f.full_name_en || c.f.full_name || c.f.id) + ' <span style="color:var(--muted);font-size:11px;">(' + esc(c.f.area || 'no area') + ', ' + c.need + ' box' + (c.need === 1 ? '' : 'es') + (c.areaMatch ? ', preferred area' : '') + (c.langMatch ? ', preferred language' : '') + ')</span>';
     }).join('<br>') : '<span style="color:var(--red);font-weight:700;">Nobody available</span>';
     return '<tr style="border-bottom:1px solid var(--border);vertical-align:top;"><td style="padding:8px;">' + who + '</td><td style="padding:8px;text-align:center;">' + x.sp.box_count + '</td><td style="padding:8px;text-align:center;">' + x.used + '</td><td style="padding:8px;">' + list + '</td><td style="padding:8px;text-align:center;' + (short > 0 ? 'color:var(--red);font-weight:800;' : 'color:var(--green-dark);') + '">' + (short > 0 ? short + ' short' : '✓') + '</td></tr>';
   }).join('');
@@ -3742,7 +3745,7 @@ function approveMatching(roundId) {
 
 function doRunPledgeMatching(roundId) {
   apiHeadersAsync().then(function(headers) {
-    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+    return fetch(SUPABASE_URL + '/functions/v1/pledge-language', {
       method: 'POST', headers: headers,
       body: JSON.stringify({ type: 'admin_run_pledge_matching', round_id: roundId })
     });
