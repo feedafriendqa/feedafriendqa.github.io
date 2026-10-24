@@ -847,7 +847,7 @@ async function submitPledge(){
     //    same server action the Sept check-in page uses.
     var pledgeId = null;
     if(monthly){
-      var pr = await fetch(EDGE, {
+      var pr = await fetch(EDGE.replace("clever-responder","pledge-language"), {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
         body: JSON.stringify({ type: "create_pledge", box_count: boxCount, delivery_method: delivery, preferred_areas: areas, preferred_family_language: famLang })
@@ -861,10 +861,10 @@ async function submitPledge(){
         if(!ex || !ex.data) throw new Error("Could not find your existing monthly pledge");
         pledgeId = ex.data.id;
         if(ex.data.box_count !== boxCount || ex.data.delivery_method !== delivery){
-          await fetch(EDGE, {
+          await fetch(EDGE.replace("clever-responder","pledge-language"), {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-            body: JSON.stringify({ type: "update_pledge", pledge_id: pledgeId, box_count: boxCount, delivery_method: delivery })
+            body: JSON.stringify({ type: "update_pledge", pledge_id: pledgeId, box_count: boxCount, delivery_method: delivery, preferred_family_language: famLang })
           });
         }
       } else {

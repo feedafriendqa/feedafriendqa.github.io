@@ -3542,7 +3542,7 @@ function openPledgeRound() {
   var date = document.getElementById('pledge-round-date').value;
   if (!name || !date) { alert('Please enter both a name and distribution date.'); return; }
   apiHeadersAsync().then(function(headers) {
-    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+    return fetch(SUPABASE_URL + '/functions/v1/pledge-language', {
       method: 'POST', headers: headers,
       body: JSON.stringify({ type: 'admin_open_pledge_round', name: name, distribution_date: date })
     });
@@ -3696,7 +3696,7 @@ function approveMatching(roundId) {
 
 function doRunPledgeMatching(roundId) {
   apiHeadersAsync().then(function(headers) {
-    return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+    return fetch(SUPABASE_URL + '/functions/v1/pledge-language', {
       method: 'POST', headers: headers,
       body: JSON.stringify({ type: 'admin_run_pledge_matching', round_id: roundId })
     });
