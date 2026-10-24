@@ -69,6 +69,11 @@ body.lang-ar .hero-h1,body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .sub
 .section-sub{font-size:12.5px;color:var(--muted-2);font-weight:600;margin-bottom:16px}
 
 .choice-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+.famlang{margin-top:18px}
+.famlang-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.famlang-opt{border:1.5px solid var(--line-2);border-radius:14px;padding:11px 8px;text-align:center;cursor:pointer;background:#fbfcfa;font-family:"League Spartan",sans-serif;font-size:13px;font-weight:700;color:var(--ink);transition:all .15s}
+.famlang-opt:hover{border-color:var(--forest)}
+.famlang-opt.sel{border-color:var(--forest);background:var(--mint)}
 .choice{border:1.5px solid var(--line-2);border-radius:20px;padding:18px 15px;cursor:pointer;transition:all .15s;background:#fbfcfa;position:relative}
 .choice:hover{border-color:var(--forest);box-shadow:0 10px 26px rgba(11,47,32,.08)}
 .choice.sel{border-color:var(--forest);background:var(--mint)}
@@ -208,6 +213,14 @@ body.lang-ar .hero-h1,body.lang-ar .h1,body.lang-ar .section-h,body.lang-ar .sub
         </div>
         <div class="selected-areas" id="selected-areas"></div>
         <div class="loc-count" id="loc-count" data-en="0 of 3 selected" data-ar="0 من 3 محددة">0 of 3 selected</div>
+        <div class="famlang" id="famlang">
+          <div class="loc-hint" data-en="Is there a language you'd prefer the family to speak?" data-ar="هل تفضّل أن تتحدث العائلة لغة معيّنة؟">Is there a language you'd prefer the family to speak?</div>
+          <div class="famlang-row">
+            <div class="famlang-opt" id="famlang-en" onclick="selectFamilyLang('en')" data-en="English" data-ar="الإنجليزية">English</div>
+            <div class="famlang-opt" id="famlang-ar" onclick="selectFamilyLang('ar')" data-en="Arabic" data-ar="العربية">Arabic</div>
+            <div class="famlang-opt sel" id="famlang-any" onclick="selectFamilyLang('any')" data-en="Don't mind" data-ar="لا يهم">Don't mind</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -224,6 +237,11 @@ var QATAR_DISTRICTS = [{"name": "Al Jasrah", "muni": "Doha"}, {"name": "Al Bidda
 
 var deliveryMethod = null;
 var selectedAreas = []; // array of district name strings, in order
+var familyLang = "any"; // self-delivery only: preferred family language (en / ar / any)
+function selectFamilyLang(v){
+  familyLang = v;
+  ["en","ar","any"].forEach(function(k){ document.getElementById("famlang-" + k).classList.toggle("sel", k === v); });
+}
 // Box count and giving frequency were already chosen on the landing page's
 // "Give Now" picker -- read them back instead of asking again here.
 var boxCount = parseInt(sessionStorage.getItem("faf_box_count"), 10) || 1;
@@ -267,6 +285,7 @@ function selectDelivery(type){
   } else {
     locWrap.classList.remove("open");
     selectedAreas = [];
+    selectFamilyLang("any");
     renderSelectedAreas();
     document.getElementById("loc-search").value = "";
     hideResults();
@@ -403,6 +422,7 @@ async function goNext(){
   var prefs = {
     delivery: deliveryMethod,
     areas: selectedAreas,
+    familyLang: deliveryMethod === "self" ? familyLang : "any",
     subscription: subType,
     boxCount: boxCount
   };
@@ -421,6 +441,7 @@ async function goNext(){
         .update({
           delivery_method: deliveryMethod,
           preferred_areas: selectedAreas,
+          preferred_family_language: deliveryMethod === "self" ? familyLang : "any",
           subscription_type: subType,
           box_count: boxCount,
           funnel_step: "prefs_set"

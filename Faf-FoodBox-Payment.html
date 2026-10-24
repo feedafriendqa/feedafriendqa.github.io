@@ -807,6 +807,7 @@ async function submitPledge(){
   var boxCount = prefs.boxCount || 1;
   var delivery = prefs.delivery === "self" ? "self" : "vol";
   var areas = delivery === "self" ? (prefs.areas || []) : null;
+  var famLang = delivery === "self" && (prefs.familyLang === "en" || prefs.familyLang === "ar") ? prefs.familyLang : "any";
   var monthly = prefs.subscription === "monthly";
 
   // Fresh session (the token captured at sign-in can be stale by now).
@@ -849,7 +850,7 @@ async function submitPledge(){
       var pr = await fetch(EDGE, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ type: "create_pledge", box_count: boxCount, delivery_method: delivery, preferred_areas: areas })
+        body: JSON.stringify({ type: "create_pledge", box_count: boxCount, delivery_method: delivery, preferred_areas: areas, preferred_family_language: famLang })
       });
       var pj = await pr.json().catch(function(){ return {}; });
       if(pr.ok && pj && pj.pledge){
@@ -874,7 +875,7 @@ async function submitPledge(){
     // 4. This round's entry — same shape as the admin's pledge-round entries.
     var fields = {
       sponsor_id: uid, sponsor_name: name, whatsapp: wa || null, email: email,
-      delivery_method: delivery, preferred_areas: areas,
+      delivery_method: delivery, preferred_areas: areas, preferred_family_language: famLang,
       subscription_type: monthly ? "monthly" : "once",
       box_count: boxCount, amount: boxCount * 100,
       payment_status: "pledged", funnel_step: "pledge_draft", payment_method: null, admin_notes: null,
