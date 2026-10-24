@@ -3688,7 +3688,7 @@ function showMatchingReview(roundId, sponsorships, friends, profiles) {
     var prefs = sp.preferred_areas || [];
     var ranked = pool.map(function(f){
       var wantLang = sp.preferred_family_language;
-      var pl = (f.preferred_lang || '').toLowerCase(); var fLang = pl === 'arabic' ? 'ar' : pl === 'english' ? 'en' : (f.language || '');
+      var pl = (f.preferred_lang || '').toLowerCase(); var fLang = pl === 'arabic' ? 'ar' : (pl === 'english' || pl === 'bengali' || f.language === 'bn') ? 'en' : (f.language || '');
       return { f: f, need: Math.ceil((f.household_size || 1) / 4), areaMatch: prefs.length > 0 && prefs.indexOf(f.area) !== -1,
                langMatch: (wantLang === 'ar' || wantLang === 'en') && fLang === wantLang };
     }).sort(function(a, b){ return ((b.areaMatch ? 2 : 0) + (b.langMatch ? 1 : 0)) - ((a.areaMatch ? 2 : 0) + (a.langMatch ? 1 : 0)); });
