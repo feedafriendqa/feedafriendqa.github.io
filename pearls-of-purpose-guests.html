@@ -186,6 +186,17 @@ select[data-v="Declined"]{color:var(--crit);background:var(--crit-soft)}
 .tk .nm{font-weight:700;line-height:1.3;overflow-wrap:anywhere}
 .tk select{width:auto;flex:none;font:inherit;font-size:11.5px;font-weight:700;border:1px solid transparent;padding:3px 8px;cursor:pointer}
 .tk .ln{font-size:12.5px;color:var(--muted);line-height:1.35;overflow-wrap:anywhere}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip2{font:inherit;font-size:13px;font-weight:700;border:1px solid var(--line);background:var(--surface);color:var(--accent);border-radius:999px;padding:6px 14px;cursor:pointer}
+.chip2[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.hint2{color:var(--muted);margin:0 0 10px;font-size:13px}
+.mc .lab{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.mc .ghead strong{font-size:15px}
+.mc .sm2{font-size:12px;color:var(--muted)}
+.miss{font-size:11px;font-weight:700;color:var(--warn);background:var(--warn-soft);border-radius:999px;padding:3px 10px}
+.tk input{width:100%;font:inherit;color:var(--fg);background:var(--field);border:1px solid var(--line);border-radius:6px;padding:5px 8px;min-width:0}
+.tabs{flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -231,6 +242,8 @@ select[data-v="Declined"]{color:var(--crit);background:var(--crit-soft)}
     <div class="tabs" role="group" aria-label="View">
       <button id="tabList" aria-pressed="true">Guest list</button>
       <button id="tabRuns" aria-pressed="false">Driver board</button>
+      <button id="tabMissing" aria-pressed="false">Missing info</button>
+      <button id="tabRsvp" aria-pressed="false">RSVPs</button>
     </div>
     <input type="search" id="q" placeholder="Search guests by name, organisation, area…" aria-label="Search guests">
     <select id="fMethod" aria-label="Method"><option value="">All methods</option><option>Physical</option><option>E-invite</option><option>TBC</option></select>
@@ -257,7 +270,7 @@ const sb=supabase.createClient(SUPABASE_URL,ANON_KEY);
 const METHODS=["Physical","E-invite","TBC"], STATUSES=["Not sent","Sent","Delivered","Confirmed received"], RSVPS=["Pending","Attending","Declined"];
 const STATUS_COLOR={"Not sent":"var(--idle)","Sent":"var(--info)","Delivered":"var(--ok)","Confirmed received":"var(--accent)"};
 const open=new Set();
-let canWrite=true, loaded=false, guests=new Map(), view="list", pendingDelete=null, focusNew=null;
+let missFilter="", canWrite=true, loaded=false, guests=new Map(), view="list", pendingDelete=null, focusNew=null;
 const F={q:"",method:"",area:"",status:""};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -361,13 +374,67 @@ function renderRuns(){
     </section>`}).join("")}</div>`;
 }
 
+
+function missingOf(g){
+  const m=[];
+  if(!(g.name||"").trim()||/name\(?s?\)? needed/i.test(g.notes||""))m.push("name");
+  if(!g.phone&&!g.email)m.push("contact");
+  if(!Number.isFinite(g.guests))m.push("count");
+  if((g.method||"TBC")==="TBC")m.push("method");
+  if(g.method==="Physical"&&!g.address)m.push("address");
+  return m;
+}
+const MISS_LABEL={name:"Name",contact:"Phone or email",count:"Guest count",method:"Method",address:"Address"};
+const ta2=(g,f,label,cls="")=>`<label class="f ${cls}"><span class="lab">${label}</span><textarea rows="1" data-f="${f}" placeholder="${label}"${dis()}>${esc(val(g,f))}</textarea></label>`;
+const inp2=(g,f,label,cls="",o={})=>`<label class="f ${cls}"><span class="lab">${label}</span><input data-f="${f}" type="${o.type||"text"}"${o.mode?` inputmode="${o.mode}"`:""} placeholder="${label}" value="${esc(val(g,f))}"${dis()}></label>`;
+function renderMissing(){
+  if(!sorted().length)return `<div class="empty">No guests yet.</div>`;
+  const base=filtered().map(g=>({g,m:missingOf(g)})).filter(x=>x.m.length);
+  const counts={};Object.keys(MISS_LABEL).forEach(k=>counts[k]=base.filter(x=>x.m.includes(k)).length);
+  const list=missFilter?base.filter(x=>x.m.includes(missFilter)):base;
+  const chips=`<div class="chips"><button class="chip2" data-miss="" aria-pressed="${!missFilter}">All (${base.length})</button>${Object.keys(MISS_LABEL).map(k=>`<button class="chip2" data-miss="${k}" aria-pressed="${missFilter===k}">${MISS_LABEL[k]} (${counts[k]})</button>`).join("")}</div>`;
+  if(!list.length)return chips+`<div class="empty">${filtered().length?"Nothing missing here. Every guest shown has what is needed.":"No guests match these filters."}</div>`;
+  return chips+`<p class="hint2">Fill in the boxes and the guest drops off this list once their details are complete. Address is only asked for physical invitations.</p><div class="glist">${list.map(({g,m})=>`<article class="gc mc" data-id="${g.id}">
+    <div class="ghead"><span class="no">#${esc(g.order??"")}</span><strong>${esc(g.name||"Unnamed guest")}</strong><span class="sm2">${[g.org,g.area].filter(Boolean).map(esc).join(" · ")}</span><span class="grow"></span><span class="miss">${m.map(k=>MISS_LABEL[k]).join(" · ")}</span></div>
+    <div class="grid">
+      ${m.includes("name")?ta2(g,"name","Guest name","w2"):""}
+      ${m.includes("contact")?inp2(g,"phone","Phone","",{type:"tel",mode:"tel"})+inp2(g,"email","Email","w2",{type:"email",mode:"email"}):""}
+      ${m.includes("count")?`<label class="f"><span class="lab">Number of guests</span><input data-f="guests" type="number" min="0" inputmode="numeric" placeholder="Guests" value=""${dis()}></label>`:""}
+      ${m.includes("method")?`<label class="f"><span class="lab">Method</span>${sel(g,"method",METHODS,"TBC")}</label>`:""}
+      ${m.includes("address")?ta2(g,"address","Address / map pin","w3"):""}
+    </div></article>`).join("")}</div>`;
+}
+function renderRsvp(){
+  const rows=filtered();
+  if(!rows.length)return `<div class="empty">${sorted().length?"No guests match these filters.":"No guests yet."}</div>`;
+  const grp={Pending:[],Attending:[],Declined:[]};
+  rows.forEach(g=>grp[grp[g.rsvp]?g.rsvp:"Pending"].push(g));
+  grp.Pending.sort((a,b)=>(RANK[b.status||"Not sent"]-RANK[a.status||"Not sent"])||((a.order??1e9)-(b.order??1e9)));
+  const head=sorted().reduce((s,g)=>s+((g.rsvp==="Attending"&&Number.isFinite(g.guests))?g.guests:0),0);
+  const unk=grp.Attending.filter(g=>!Number.isFinite(g.guests)).length;
+  const tiles=`<div class="stats" style="margin-bottom:14px">
+    <div class="stat"><b>${head}</b><span>Confirmed headcount${unk?` · ${unk} attending without a number`:""}</span></div>
+    <div class="stat"><b>${grp.Attending.length}</b><span>Attending invitations</span></div>
+    <div class="stat"><b>${grp.Pending.length}</b><span>No reply yet</span></div>
+    <div class="stat"><b>${grp.Declined.length}</b><span>Declined</span></div></div>`;
+  const card=g=>`<div class="tk" data-id="${g.id}">
+    <div class="top"><div class="nm">${esc(g.name||"Unnamed")}</div>${sel(g,"rsvp",RSVPS,"Pending")}</div>
+    <div class="ln">${[g.org,g.area].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div>
+    <div class="ln">${[g.phone,g.email].filter(Boolean).map(esc).join(" · ")||"No phone or email yet"}</div>
+    <div class="ln">Invite: ${esc(g.status||"Not sent")}</div>
+    <label class="f"><span class="lab" style="display:block">Number of guests</span><input data-f="guests" type="number" min="0" inputmode="numeric" placeholder="Guests" value="${Number.isFinite(g.guests)?g.guests:""}"${dis()}></label></div>`;
+  return tiles+`<div class="lanes">${["Pending","Attending","Declined"].map(k=>`<section class="lane"><h2>${k==="Pending"?"No reply yet":k}<small>${grp[k].length} invitation${grp[k].length===1?"":"s"}</small></h2>${k==="Pending"?`<small class="hint">Delivered invitations are at the top, so you can chase them first.</small>`:""}${grp[k].map(card).join("")||`<small class="hint">None</small>`}</section>`).join("")}</div>`;
+}
+
 function render(){
   if(!loaded)return;
   const ae=document.activeElement, keep=ae&&ae.closest&&ae.dataset&&ae.dataset.f&&ae.closest("[data-id]")?{id:ae.closest("[data-id]").dataset.id,f:ae.dataset.f,v:ae.value,s:ae.selectionStart,e:ae.selectionEnd}:null;
   const ctx=ae&&ae.hasAttribute&&ae.hasAttribute("data-rundriver")?{area:ae.closest("[data-area]").dataset.area,v:ae.value}:null;
   renderStats(); syncLists();
   const shown=filtered().length,all=guests.size;$("#count").textContent=(F.q||F.method||F.area||F.status)?`Showing ${shown} of ${all} guests`:`${all} guests`;
-  $("#main").innerHTML=view==="list"?renderList():renderRuns();
+  const nMiss=sorted().filter(g=>missingOf(g).length).length;
+  $("#tabMissing").textContent="Missing info"+(nMiss?` (${nMiss})`:"");
+  $("#main").innerHTML=({list:renderList,runs:renderRuns,missing:renderMissing,rsvp:renderRsvp}[view]||renderList)();
   if(keep){const el=document.querySelector(`[data-id="${keep.id}"] [data-f="${keep.f}"]`);if(el){if(el.value!==keep.v&&el.tagName!=="SELECT")el.value=keep.v;el.focus();try{el.setSelectionRange(keep.s,keep.e)}catch{}}}
   if(ctx){const el=[...document.querySelectorAll("[data-area]")].find(c=>c.dataset.area===ctx.area)?.querySelector("[data-rundriver]");if(el){el.value=ctx.v;el.focus()}}
   autosizeAll();
@@ -397,7 +464,9 @@ function parse(f,v,type){if(f==="guests")return v===""?null:Math.max(0,Math.roun
 async function commit(id,f,raw,type){
   const g=guests.get(id)||{}, nv=parse(f,raw,type), old=g[f]??(f==="guests"?null:"");
   if(nv===old||(old===""&&nv==="")||(f==="guests"&&nv===null&&(g.guests==null)))return;
-  await write(id,{[f]:nv});
+  const patch={[f]:nv};
+  if(f==="name"&&nv&&/name\(?s?\)? needed/i.test(g.notes||""))patch.notes=(g.notes||"").replace(/name\(?s?\)? needed\.?/i,"").trim();
+  await write(id,patch);
 }
 
 document.addEventListener("change",e=>{
@@ -405,6 +474,8 @@ document.addEventListener("change",e=>{
   if(row&&el.dataset.f)commit(row.dataset.id,el.dataset.f,el.value,el.type);
 });
 document.addEventListener("click",async e=>{
+  const mc=e.target.closest("[data-miss]");
+  if(mc){missFilter=mc.dataset.miss;render();return}
   const mo=e.target.closest("[data-more]");
   if(mo){const id=mo.dataset.more;open.has(id)?open.delete(id):open.add(id);render();return}
   const d=e.target.closest("[data-del]");
@@ -426,9 +497,11 @@ $("#add").addEventListener("click",async()=>{
   if(error)return toast("Could not add a guest.");
   guests.set(data.id,fromRow(data));focusNew=data.id;view="list";syncTabs();
 });
-function syncTabs(){$("#tabList").setAttribute("aria-pressed",view==="list");$("#tabRuns").setAttribute("aria-pressed",view==="runs");render()}
+function syncTabs(){[["list","#tabList"],["runs","#tabRuns"],["missing","#tabMissing"],["rsvp","#tabRsvp"]].forEach(([v,id])=>$(id).setAttribute("aria-pressed",view===v));render()}
 $("#tabList").onclick=()=>{view="list";syncTabs()};
 $("#tabRuns").onclick=()=>{view="runs";syncTabs()};
+$("#tabMissing").onclick=()=>{view="missing";syncTabs()};
+$("#tabRsvp").onclick=()=>{view="rsvp";syncTabs()};
 $("#q").addEventListener("input",e=>{F.q=e.target.value;render()});
 $("#fMethod").onchange=e=>{F.method=e.target.value;render()};
 $("#fArea").onchange=e=>{F.area=e.target.value;render()};
