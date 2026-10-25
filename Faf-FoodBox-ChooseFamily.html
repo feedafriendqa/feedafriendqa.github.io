@@ -197,6 +197,7 @@ body.lang-ar .fam-delivery-btn{font-family:"Cairo","Manrope",sans-serif}
       <span data-en="Matched to your preferences" data-ar="مطابقة لتفضيلاتك">Matched to your preferences</span>
       <span class="match-count" id="match-count">10 friends</span>
     </div>
+    <div id="match-notice" style="display:none;margin:10px 0 0;padding:12px 14px;background:#FFF7E6;border:1px solid #F5D9A0;border-radius:10px;font-size:13px;line-height:1.5;color:#7A4B00"></div>
   </div>
 
   <div class="fam-grid" id="fam-grid"></div>
@@ -548,6 +549,42 @@ function renderFamilies(){
   // area match then box-size fit when the pool was loaded. Re-sorting on
   // every render (e.g. on language toggle) would've fought that ordering.
   var list = visibleFamilies;
+
+  // Tell the sponsor when we couldn't honour their language / area exactly.
+  (function(){
+    var box = document.getElementById("match-notice");
+    var wl = wantedFamilyLang();
+    var hasArea = prefs.delivery === "self" && prefs.areas && prefs.areas.length;
+    var msg = "";
+    if(wl || hasArea){
+      var langOk = function(f){ return !wl || effLangCode(f) === wl; };
+      var areaOk = function(f){ return !hasArea || prefAreaRank(f.area) < 99; };
+      var langName = wl === "ar" ? "Arabic-speaking" : "English-speaking";
+      var langNameAr = wl === "ar" ? "ناطقة بالعربية" : "ناطقة بالإنجليزية";
+      var areas = (prefs.areas || []);
+      var areaTxt = areas.join(", ");
+      var areaTxtAr = areas.map(function(a){ return AREA_AR[a] || a; }).join("، ");
+      var anyBoth = list.some(function(f){ return langOk(f) && areaOk(f); });
+      var anyLang = list.some(langOk);
+      if(!anyBoth){
+        if(wl && anyLang){
+          msg = isAr
+            ? "لم نجد أسرة " + langNameAr + " في " + areaTxtAr + "، لذا نعرض أسراً " + langNameAr + " من مناطق أخرى."
+            : "We couldn't find an " + langName + " family in " + areaTxt + ", so here are " + langName + " families from other areas.";
+        } else if(wl){
+          msg = isAr
+            ? "لم نجد أسرة " + langNameAr + " متاحة حالياً، لذا نعرض أسراً أخرى بحسب توفرها."
+            : "We couldn't find an available " + langName + " family right now, so here are other families who need a sponsor.";
+        } else if(hasArea){
+          msg = isAr
+            ? "لم نجد أسراً في " + areaTxtAr + "، لذا نعرض أسراً من مناطق أخرى."
+            : "We couldn't find a family in " + areaTxt + ", so here are families from other areas.";
+        }
+      }
+    }
+    if(msg){ box.textContent = msg; box.style.display = "block"; }
+    else { box.style.display = "none"; }
+  })();
 
   document.getElementById("match-count").textContent = isAr
     ? list.length + " صديق"
