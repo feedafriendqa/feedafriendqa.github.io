@@ -197,6 +197,8 @@ select[data-v="Declined"]{color:var(--crit);background:var(--crit-soft)}
 .miss{font-size:11px;font-weight:700;color:var(--warn);background:var(--warn-soft);border-radius:999px;padding:3px 10px}
 .tk input{width:100%;font:inherit;color:var(--fg);background:var(--field);border:1px solid var(--line);border-radius:6px;padding:5px 8px;min-width:0}
 .tabs{flex-wrap:wrap}
+
+@media (min-width:1241px){.gl{grid-template-columns:minmax(220px,1.6fr) minmax(130px,.9fr) minmax(190px,1.2fr) 80px 150px 112px 84px}}
 </style>
 </head>
 <body>
@@ -231,7 +233,6 @@ select[data-v="Declined"]{color:var(--crit);background:var(--crit-soft)}
   <div class="head">
     <div>
       <h2 class="list">Guest list &amp; invitations</h2>
-      <p class="sub">Who is invited, how each invitation goes out, where it is delivered and which driver takes it. Everyone with access can edit; changes appear for all.</p>
     </div>
     <div class="sync"><span class="dot" id="dot"></span><span id="syncText">Connecting…</span><button class="lnk" id="signout" type="button">Sign out</button></div>
   </div>
@@ -279,7 +280,9 @@ const val=(g,k)=>g[k]??"";
 function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3200)}
 function setSync(kind,text){$("#dot").className="dot "+kind;$("#syncText").textContent=text}
 
-function sorted(){return [...guests].map(([id,g])=>({id,...g})).sort((a,b)=>(a.order??1e9)-(b.order??1e9))}
+const nameKey=g=>String(g.name||"").trim().replace(/^(h\.?e\.?|sheikha|dr\.?|lady|mrs?\.?|ms\.?)\s+/i,"").toLowerCase()||"\uffff";
+const cmpName=(a,b)=>nameKey(a).localeCompare(nameKey(b))||((a.order??1e9)-(b.order??1e9));
+function sorted(){return [...guests].map(([id,g])=>({id,...g})).sort(cmpName)}
 function filtered(){
   const q=F.q.trim().toLowerCase();
   return sorted().filter(g=>(!F.method||g.method===F.method)&&(!F.area||g.area===F.area)&&(!F.status||(g.status||"Not sent")===F.status)&&
@@ -290,15 +293,11 @@ function renderStats(){
   const all=sorted(), n=all.length;
   const total=all.reduce((s,g)=>s+(Number.isFinite(g.guests)?g.guests:0),0);
   const noCount=all.filter(g=>!Number.isFinite(g.guests)).length;
-  const c=m=>all.filter(g=>g.method===m).length;
   const sc=s=>all.filter(g=>(g.status||"Not sent")===s).length;
   const segs=STATUSES.map(s=>({s,n:sc(s)}));
   $("#stats").innerHTML=`
     <div class="stat"><b>${n}</b><span>Invitations</span></div>
-    <div class="stat"><b>${total}</b><span>Guests counted · ${noCount} still without a number</span></div>
-    <div class="stat"><b>${c("Physical")}</b><span>Physical</span></div>
-    <div class="stat"><b>${c("E-invite")}</b><span>E-invites</span></div>
-    <div class="stat"><b>${c("TBC")}</b><span>Method to decide</span></div>
+    <div class="stat"><b>${total}</b><span>Guests counted${noCount?` · ${noCount} without a number`:""}</span></div>
     <div class="stat wide"><b>${sc("Delivered")+sc("Confirmed received")} <span style="display:inline;font-family:var(--body);font-size:13px">of ${n} delivered or received</span></b>
       <div class="bar" role="img" aria-label="Invite status">${segs.map(x=>`<i style="width:${n?x.n/n*100:0}%;background:${STATUS_COLOR[x.s]}"></i>`).join("")}</div>
       <div class="legend">${segs.map(x=>`<em style="--c:${STATUS_COLOR[x.s]}">${x.s} ${x.n}</em>`).join("")}</div></div>`;
@@ -322,36 +321,31 @@ const RANK={"Not sent":0,"Sent":1,"Delivered":2,"Confirmed received":3};
 function groupByArea(rows){
   const by=new Map();
   rows.forEach(g=>{const a=g.area||"No area yet";if(!by.has(a))by.set(a,[]);by.get(a).push(g)});
-  by.forEach(list=>list.sort((a,b)=>(RANK[a.status||"Not sent"]-RANK[b.status||"Not sent"])||((a.order??1e9)-(b.order??1e9))));
+  by.forEach(list=>list.sort((a,b)=>(RANK[a.status||"Not sent"]-RANK[b.status||"Not sent"])||cmpName(a,b)));
   return by;
 }
 function renderList(){
-  const rows=filtered();
+  const rows=filtered().sort((a,b)=>(RANK[a.status||"Not sent"]-RANK[b.status||"Not sent"])||cmpName(a,b));
   if(!sorted().length) return `<div class="empty">No guests yet. Choose Add guest to enter the first one.</div>`;
   if(!rows.length) return `<div class="empty">No guests match these filters.</div>`;
-  const ta=(g,f,label,cls="",ph="")=>`<label class="f ${cls}"><span class="lab">${label}</span><textarea rows="1" data-f="${f}" placeholder="${ph||label}"${dis()}>${esc(val(g,f))}</textarea></label>`;
-  const inp=(g,f,label,cls="",o={})=>`<label class="f ${cls}"><span class="lab">${label}</span><input data-f="${f}" type="${o.type||"text"}"${o.mode?` inputmode="${o.mode}"`:""}${o.list?` list="${o.list}"`:""} placeholder="${o.ph||label}" value="${esc(val(g,f))}"${dis()}></label>`;
+  const ta=(g,f,label,cls="")=>`<label class="f ${cls}"><span class="lab">${label}</span><textarea rows="1" data-f="${f}" placeholder="${label}"${dis()}>${esc(val(g,f))}</textarea></label>`;
+  const inp=(g,f,label,cls="",o={})=>`<label class="f ${cls}"><span class="lab">${label}</span><input data-f="${f}" type="${o.type||"text"}"${o.mode?` inputmode="${o.mode}"`:""}${o.list?` list="${o.list}"`:""} placeholder="${label}" value="${esc(val(g,f))}"${dis()}></label>`;
   const sl=(g,f,label,opts,def)=>`<label class="f"><span class="lab">${label}</span>${sel(g,f,opts,def)}</label>`;
-  const by=groupByArea(rows);
-  const head=`<div class="gr gh" aria-hidden="true"><span>#</span><span>Guest</span><span>Phone</span><span>Email</span><span>Method</span><span>Guests</span><span>Invite status</span><span>RSVP</span><span></span></div>`;
-  return head+[...by].map(([area,list])=>{
-    const done=list.filter(g=>["Delivered","Confirmed received"].includes(g.status)).length;
-    return `<section class="ar"><h3>${esc(area)}<small>${list.length} guest${list.length>1?"s":""} · ${done} delivered</small></h3>${list.map(g=>{
-      const isOpen=open.has(g.id), filled=["day","sub","driver","address","notes"].filter(f=>g[f]).length;
-      return `<article class="gc" data-id="${g.id}">
-        <div class="gr">
-          <span class="no">${esc(g.order??"")}</span>
-          <div class="who">${ta(g,"name","Guest name","nm")}${inp(g,"org","Organisation / role","sm",{ph:"Organisation / role"})}</div>
-          ${inp(g,"phone","Phone","",{type:"tel",mode:"tel"})}
-          ${inp(g,"email","Email","",{type:"email",mode:"email"})}
-          ${sl(g,"method","Method",METHODS,"TBC")}
-          <label class="f"><span class="lab">Guests</span><input data-f="guests" type="number" min="0" inputmode="numeric" placeholder="Guests" value="${Number.isFinite(g.guests)?g.guests:""}"${dis()}></label>
-          ${sl(g,"status","Invite status",STATUSES,"Not sent")}${sl(g,"rsvp","RSVP",RSVPS,"Pending")}
-          <div class="acts"><button class="lnk" data-more="${g.id}" aria-expanded="${isOpen}">${isOpen?"Hide":"Details"}${filled&&!isOpen?` (${filled})`:""}</button>
-            <button class="del${pendingDelete===g.id?" sure":""}" data-del="${g.id}"${dis()}>${pendingDelete===g.id?"Delete?":"Remove"}</button></div>
-        </div>
-        ${isOpen?`<div class="gd"><div class="grid">${inp(g,"area","Area","w2",{list:"areas"})}${inp(g,"day","Day / handover","w2")}${inp(g,"sub","Group")}${inp(g,"driver","Driver","",{list:"drivers"})}${ta(g,"address","Address / map pin","w2")}${ta(g,"notes","Notes","w3")}</div></div>`:""}
-      </article>`}).join("")}</section>`}).join("");
+  const head=`<div class="gr gl gh" aria-hidden="true"><span>Guest</span><span>Phone</span><span>Email</span><span>Guests</span><span>Invite status</span><span>RSVP</span><span></span></div>`;
+  return head+`<div class="glist">${rows.map(g=>{
+    const isOpen=open.has(g.id), filled=["area","day","sub","driver","address","notes"].filter(f=>g[f]).length;
+    return `<article class="gc" data-id="${g.id}">
+      <div class="gr gl">
+        <div class="who">${ta(g,"name","Guest name","nm")}${inp(g,"org","Organisation / role","sm")}</div>
+        ${inp(g,"phone","Phone","",{type:"tel",mode:"tel"})}
+        ${inp(g,"email","Email","",{type:"email",mode:"email"})}
+        <label class="f"><span class="lab">Guests</span><input data-f="guests" type="number" min="0" inputmode="numeric" placeholder="Guests" value="${Number.isFinite(g.guests)?g.guests:""}"${dis()}></label>
+        ${sl(g,"status","Invite status",STATUSES,"Not sent")}${sl(g,"rsvp","RSVP",RSVPS,"Pending")}
+        <div class="acts"><button class="lnk" data-more="${g.id}" aria-expanded="${isOpen}">${isOpen?"Hide":"More"}${filled&&!isOpen?` (${filled})`:""}</button>
+          <button class="del${pendingDelete===g.id?" sure":""}" data-del="${g.id}"${dis()}>${pendingDelete===g.id?"Delete?":"Remove"}</button></div>
+      </div>
+      ${isOpen?`<div class="gd"><div class="grid">${sl(g,"method","Method",METHODS,"TBC")}${inp(g,"area","Area","w2",{list:"areas"})}${inp(g,"day","Day / handover","w2")}${inp(g,"sub","Group")}${inp(g,"driver","Driver","",{list:"drivers"})}${ta(g,"address","Address / map pin","w2")}${ta(g,"notes","Notes","w3")}</div></div>`:""}
+    </article>`}).join("")}</div>`;
 }
 
 function renderRuns(){
@@ -409,7 +403,7 @@ function renderRsvp(){
   if(!rows.length)return `<div class="empty">${sorted().length?"No guests match these filters.":"No guests yet."}</div>`;
   const grp={Pending:[],Attending:[],Declined:[]};
   rows.forEach(g=>grp[grp[g.rsvp]?g.rsvp:"Pending"].push(g));
-  grp.Pending.sort((a,b)=>(RANK[b.status||"Not sent"]-RANK[a.status||"Not sent"])||((a.order??1e9)-(b.order??1e9)));
+  grp.Pending.sort((a,b)=>(RANK[b.status||"Not sent"]-RANK[a.status||"Not sent"])||cmpName(a,b));
   const head=sorted().reduce((s,g)=>s+((g.rsvp==="Attending"&&Number.isFinite(g.guests))?g.guests:0),0);
   const unk=grp.Attending.filter(g=>!Number.isFinite(g.guests)).length;
   const tiles=`<div class="stats" style="margin-bottom:14px">
