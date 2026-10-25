@@ -473,6 +473,18 @@ function renderRecap(){
 // ones; a 1-box sponsor needs an exact 1-box match, not an overshoot).
 // Random jitter only breaks ties between otherwise-equal candidates — it's
 // not the primary driver anymore, unlike the original "Lucky picker" pass.
+// Sponsor's chosen family language (self-delivery only): 'en' | 'ar' | ''.
+// Bengali-speaking families count as English.
+function wantedFamilyLang(){
+  if(prefs.delivery !== "self") return "";
+  var l = (prefs.familyLang || "").toLowerCase();
+  return (l === "en" || l === "ar") ? l : "";
+}
+function effLangCode(f){
+  var raw = (f.languageEn || "").toLowerCase();
+  if(raw.indexOf("bengali") === 0) return "en";
+  return f.langCode || "";
+}
 function pickVisibleFamilies(pool){
   if(!pool.length) return [];
   var hasAreaPref = prefs.delivery === "self" && prefs.areas && prefs.areas.length;
@@ -480,16 +492,19 @@ function pickVisibleFamilies(pool){
   // boxesNeeded actually takes (1-4, since it's ceil(household_size/4)).
   var idealSize = Math.min(4, Math.max(1, Math.round(targetBoxes / 3)));
 
+  var wantLang = wantedFamilyLang();
   var ranked = pool.map(function(f){
     return {
       f: f,
-      areaRank: hasAreaPref ? prefAreaRank(f.area) : 0,
+      areaRank: hasAreaPref ? (prefAreaRank(f.area) < 99 ? 0 : 1) : 0,
+      langRank: (wantLang && effLangCode(f) !== wantLang) ? 1 : 0,
       sizeDiff: Math.abs(f.boxesNeeded - idealSize),
       jitter: Math.random()
     };
   });
   ranked.sort(function(a, b){
     if(a.areaRank !== b.areaRank) return a.areaRank - b.areaRank;
+    if(a.langRank !== b.langRank) return a.langRank - b.langRank;
     if(a.sizeDiff !== b.sizeDiff) return a.sizeDiff - b.sizeDiff;
     return a.jitter - b.jitter;
   });
@@ -729,10 +744,10 @@ async function surpriseMe(){
   // back to the rest of the pool only when there isn't enough matching
   // supply to reach targetBoxes. This is a soft nudge, never a hard filter.
   var isArLang = document.body.classList.contains("lang-ar");
-  var currentLangCode = isArLang ? "ar" : "en";
+  var currentLangCode = wantedFamilyLang() || (isArLang ? "ar" : "en");
   var matching = [], other = [];
   visibleFamilies.forEach(function(f){
-    (f.langCode === currentLangCode ? matching : other).push(f);
+    (effLangCode(f) === currentLangCode ? matching : other).push(f);
   });
   matching.sort(function(){ return Math.random() - 0.5; });
   other.sort(function(){ return Math.random() - 0.5; });
