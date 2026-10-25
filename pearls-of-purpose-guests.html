@@ -148,6 +148,31 @@ select[data-v="Declined"]{color:var(--crit);background:var(--crit-soft)}
 .chip{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:0 5px;margin-right:6px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:9px 14px;border-radius:8px;font-weight:600;z-index:20;max-width:90vw}
 @media (prefers-reduced-motion:no-preference){.dot.live{animation:p 2.4s ease-in-out infinite}@keyframes p{50%{opacity:.45}}}
+
+/* v3 list layout: grouped by area, one row per guest on wide screens, labelled cards on narrow ones */
+.ar{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+.ar h3{font-family:var(--display);font-size:22px;font-weight:600;margin:0;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.ar h3 small{font-family:var(--body);font-size:12px;font-weight:500;color:var(--muted)}
+.gr{display:grid;grid-template-columns:30px minmax(200px,1.5fr) minmax(130px,.8fr) minmax(190px,1.1fr) 104px 72px 150px 112px 84px;gap:8px;align-items:start}
+.gh{padding:0 10px 4px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted);position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:3;padding-top:4px}
+.gc{padding:7px 10px}
+.gc .no{padding-top:8px;text-align:center;font-size:12px;font-weight:700;color:var(--gold)}
+.who{display:flex;flex-direction:column;gap:3px;min-width:0}
+.gc textarea.nm,.gc textarea[data-f="name"]{font-weight:700}
+.gc .sm input{font-size:12px;padding:4px 8px;color:var(--muted)}
+.lab{display:none}
+.acts{display:flex;flex-direction:column;align-items:stretch}
+.acts .lnk,.acts .del{text-align:center;padding:3px 6px;font-size:12px}
+.gd{border-top:1px dashed var(--line);margin-top:6px;padding-top:8px}
+@media (max-width:1240px){
+  .gh{display:none}
+  .gr{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .gr .no{text-align:left;padding:0;grid-column:1/-1}
+  .who{grid-column:span 2}
+  .lab{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .acts{flex-direction:row;justify-content:flex-end;grid-column:1/-1}
+}
+@media (max-width:420px){.who{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -232,7 +257,7 @@ function sorted(){return [...guests].map(([id,g])=>({id,...g})).sort((a,b)=>(a.o
 function filtered(){
   const q=F.q.trim().toLowerCase();
   return sorted().filter(g=>(!F.method||g.method===F.method)&&(!F.area||g.area===F.area)&&(!F.status||(g.status||"Not sent")===F.status)&&
-    (!q||[g.name,g.org,g.notes,g.area,g.contact,g.address,g.driver].some(x=>String(x||"").toLowerCase().includes(q))));
+    (!q||[g.name,g.org,g.notes,g.area,g.phone,g.email,g.address,g.driver].some(x=>String(x||"").toLowerCase().includes(q))));
 }
 
 function renderStats(){
@@ -271,22 +296,30 @@ function renderList(){
   const rows=filtered();
   if(!sorted().length) return `<div class="empty">No guests yet. Choose Add guest to enter the first one.</div>`;
   if(!rows.length) return `<div class="empty">No guests match these filters.</div>`;
-  const ta=(g,f,label,cls="")=>`<label class="f ${cls}"><span>${label}</span><textarea rows="1" data-f="${f}"${dis()}>${esc(val(g,f))}</textarea></label>`;
-  const inp=(g,f,label,cls="",list="")=>`<label class="f ${cls}"><span>${label}</span><input data-f="${f}" value="${esc(val(g,f))}"${list?` list="${list}"`:""}${dis()}></label>`;
-  const sl=(g,f,label,opts,def)=>`<label class="f"><span>${label}</span>${sel(g,f,opts,def)}</label>`;
-  return `<div class="glist">${rows.map(g=>{
-    const isOpen=open.has(g.id), filled=["day","sub","driver","address","contact","notes"].filter(f=>g[f]).length;
-    return `<article class="gc" data-id="${g.id}">
-      <div class="ghead"><span class="no">#${esc(g.order??"")}</span><span class="grow"></span>
-        <button class="lnk" data-more="${g.id}" aria-expanded="${isOpen}">${isOpen?"Hide details":"Details"}${filled&&!isOpen?` (${filled})`:""}</button>
-        <button class="del${pendingDelete===g.id?" sure":""}" data-del="${g.id}"${dis()}>${pendingDelete===g.id?"Delete?":"Remove"}</button></div>
-      <div class="grid">
-        ${ta(g,"name","Guest","w2")}${ta(g,"org","Organisation / role","w2")}${sl(g,"method","Method",METHODS,"TBC")}${inp(g,"area","Area","w2","areas")}
-        <label class="f"><span>No. of guests</span><input data-f="guests" type="number" min="0" inputmode="numeric" value="${Number.isFinite(g.guests)?g.guests:""}"${dis()}></label>
-        ${sl(g,"status","Invite status",STATUSES,"Not sent")}${sl(g,"rsvp","RSVP",RSVPS,"Pending")}
-      </div>
-      ${isOpen?`<div class="grid">${inp(g,"day","Day / handover","w2")}${inp(g,"sub","Group")}${inp(g,"driver","Driver","","drivers")}${ta(g,"address","Address / map pin","w2")}${inp(g,"contact","Phone / email","w2")}${ta(g,"notes","Notes","w3")}</div>`:""}
-    </article>`}).join("")}</div>`;
+  const ta=(g,f,label,cls="",ph="")=>`<label class="f ${cls}"><span class="lab">${label}</span><textarea rows="1" data-f="${f}" placeholder="${ph||label}"${dis()}>${esc(val(g,f))}</textarea></label>`;
+  const inp=(g,f,label,cls="",o={})=>`<label class="f ${cls}"><span class="lab">${label}</span><input data-f="${f}" type="${o.type||"text"}"${o.mode?` inputmode="${o.mode}"`:""}${o.list?` list="${o.list}"`:""} placeholder="${o.ph||label}" value="${esc(val(g,f))}"${dis()}></label>`;
+  const sl=(g,f,label,opts,def)=>`<label class="f"><span class="lab">${label}</span>${sel(g,f,opts,def)}</label>`;
+  const by=new Map();
+  rows.forEach(g=>{const a=g.area||"No area yet";if(!by.has(a))by.set(a,[]);by.get(a).push(g)});
+  const head=`<div class="gr gh" aria-hidden="true"><span>#</span><span>Guest</span><span>Phone</span><span>Email</span><span>Method</span><span>Guests</span><span>Invite status</span><span>RSVP</span><span></span></div>`;
+  return head+[...by].map(([area,list])=>{
+    const done=list.filter(g=>["Delivered","Confirmed received"].includes(g.status)).length;
+    return `<section class="ar"><h3>${esc(area)}<small>${list.length} guest${list.length>1?"s":""} · ${done} delivered</small></h3>${list.map(g=>{
+      const isOpen=open.has(g.id), filled=["day","sub","driver","address","notes"].filter(f=>g[f]).length;
+      return `<article class="gc" data-id="${g.id}">
+        <div class="gr">
+          <span class="no">${esc(g.order??"")}</span>
+          <div class="who">${ta(g,"name","Guest name","nm")}${inp(g,"org","Organisation / role","sm",{ph:"Organisation / role"})}</div>
+          ${inp(g,"phone","Phone","",{type:"tel",mode:"tel"})}
+          ${inp(g,"email","Email","",{type:"email",mode:"email"})}
+          ${sl(g,"method","Method",METHODS,"TBC")}
+          <label class="f"><span class="lab">Guests</span><input data-f="guests" type="number" min="0" inputmode="numeric" placeholder="Guests" value="${Number.isFinite(g.guests)?g.guests:""}"${dis()}></label>
+          ${sl(g,"status","Invite status",STATUSES,"Not sent")}${sl(g,"rsvp","RSVP",RSVPS,"Pending")}
+          <div class="acts"><button class="lnk" data-more="${g.id}" aria-expanded="${isOpen}">${isOpen?"Hide":"Details"}${filled&&!isOpen?` (${filled})`:""}</button>
+            <button class="del${pendingDelete===g.id?" sure":""}" data-del="${g.id}"${dis()}>${pendingDelete===g.id?"Delete?":"Remove"}</button></div>
+        </div>
+        ${isOpen?`<div class="gd"><div class="grid">${inp(g,"area","Area","w2",{list:"areas"})}${inp(g,"day","Day / handover","w2")}${inp(g,"sub","Group")}${inp(g,"driver","Driver","",{list:"drivers"})}${ta(g,"address","Address / map pin","w2")}${ta(g,"notes","Notes","w3")}</div></div>`:""}
+      </article>`}).join("")}</section>`}).join("");
 }
 
 function renderRuns(){
@@ -309,7 +342,7 @@ function renderRuns(){
       </header>${list.map(g=>`<div class="stop" data-id="${g.id}">
         <div class="who">${g.sub?`<span class="chip">${esc(g.sub)}</span>`:""}${esc(g.name||"Unnamed")}${Number.isFinite(g.guests)?` · ${g.guests}`:""}</div>
         ${sel(g,"status",STATUSES,"Not sent")}
-        <div class="meta">${[g.org,g.day,g.address,g.contact,g.driver&&("Driver: "+g.driver)].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div></div>`).join("")}</article>`}).join("")}</div>`;
+        <div class="meta">${[g.org,g.day,g.address,g.phone,g.email,g.driver&&("Driver: "+g.driver)].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div></div>`).join("")}</article>`}).join("")}</div>`;
 }
 
 function render(){
@@ -331,7 +364,7 @@ window.addEventListener("resize",autosizeAll);
 document.fonts?.ready?.then(autosizeAll);
 document.addEventListener("input",e=>{if(e.target.tagName==="TEXTAREA")autosize(e.target)});
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.tagName==="TEXTAREA"){e.preventDefault();e.target.blur()}});
-function fromRow(r){return {order:r.sort_order,name:r.name,org:r.org,method:r.method,area:r.area,day:r.day,sub:r.sub,driver:r.driver,address:r.address,contact:r.contact,guests:r.guests,status:r.status,rsvp:r.rsvp,notes:r.notes}}
+function fromRow(r){return {order:r.sort_order,name:r.name,org:r.org,method:r.method,area:r.area,day:r.day,sub:r.sub,driver:r.driver,address:r.address,phone:r.phone,email:r.email,guests:r.guests,status:r.status,rsvp:r.rsvp,notes:r.notes}}
 async function loadGuests(){
   const {data,error}=await sb.from("event_guests").select("*").eq("event",EVENT).order("sort_order");
   if(error){setSync("err","Connection lost");return}
