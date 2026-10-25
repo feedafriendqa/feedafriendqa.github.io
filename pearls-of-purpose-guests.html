@@ -9,24 +9,13 @@
 <style>
 /* Layout: a working sheet. Summary strip on top, filter toolbar, then either an editable guest table or per-area driver run cards. */
 :root{
-  color-scheme:light;
-  --bg:#F7F3EF; --surface:#FFFFFF; --fg:#2B1519; --muted:#745F62; --line:#E6DAD6; --field:#FBF8F5;
-  --accent:#6E1426; --accent-fg:#FFFFFF; --accent-soft:#F4E7E5;
-  --gold:#B39367; --hero-a:#4F0B19; --hero-b:#7A1A2E; --hero-fg:#FBF5EE;
-  --ok:#2C7A4B; --ok-soft:#DDF0E4; --warn:#9A6212; --warn-soft:#F8EBCF; --crit:#A8364A; --crit-soft:#F7DFE3; --info:#2A5F9E; --info-soft:#DFEAF7; --idle:#745F62; --idle-soft:#EFE7E4;
+  color-scheme:dark;
+  --bg:#26060E; --surface:#380B18; --fg:#F6EDE6; --muted:#CDB7B1; --line:#562030; --field:#2C0912;
+  --accent:#E2C79F; --accent-fg:#2A0E15; --accent-soft:#4A1425;
+  --gold:#C9AE8A; --hero-a:#5B0E1D; --hero-b:#8A2038; --hero-fg:#FBF5EE;
+  --ok:#74D19A; --ok-soft:#1F3B2B; --warn:#EBB962; --warn-soft:#4A3516; --crit:#F59AA9; --crit-soft:#5A2230; --info:#8DBBF0; --info-soft:#1F3552; --idle:#CDB7B1; --idle-soft:#4A2431;
   --display:"Cormorant Garamond",Georgia,"Times New Roman",serif; --body:"Quicksand",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#150A0D; --surface:#221116; --fg:#F3E9E4; --muted:#B49FA0; --line:#3A2229; --field:#1A0D11;
-  --accent:#E2C79F; --accent-fg:#2A0E15; --accent-soft:#3A1D26;
-  --gold:#C9AE8A; --hero-a:#3E0813; --hero-b:#611425; --hero-fg:#FBF5EE;
-  --ok:#6FCB94; --ok-soft:#1C3326; --warn:#E3B05B; --warn-soft:#3A2D14; --crit:#F08A9B; --crit-soft:#4A2029; --info:#82B4EC; --info-soft:#1B2D44; --idle:#B49FA0; --idle-soft:#2E1F24; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#150A0D; --surface:#221116; --fg:#F3E9E4; --muted:#B49FA0; --line:#3A2229; --field:#1A0D11;
-  --accent:#E2C79F; --accent-fg:#2A0E15; --accent-soft:#3A1D26;
-  --gold:#C9AE8A; --hero-a:#3E0813; --hero-b:#611425; --hero-fg:#FBF5EE;
-  --ok:#6FCB94; --ok-soft:#1C3326; --warn:#E3B05B; --warn-soft:#3A2D14; --crit:#F08A9B; --crit-soft:#4A2029; --info:#82B4EC; --info-soft:#1B2D44; --idle:#B49FA0; --idle-soft:#2E1F24; color-scheme:dark}
-
 html{-webkit-text-size-adjust:100%}
 body{margin:0}
 [hidden]{display:none!important}
@@ -199,6 +188,15 @@ select[data-v="Declined"]{color:var(--crit);background:var(--crit-soft)}
 .tabs{flex-wrap:wrap}
 
 @media (min-width:1241px){.gl{grid-template-columns:minmax(220px,1.6fr) minmax(130px,.9fr) minmax(190px,1.2fr) 80px 150px 112px 84px}}
+
+.sum{display:flex;flex-direction:column;gap:8px}
+.sumline{display:flex;flex-wrap:wrap;gap:2px 24px;color:var(--muted);font-size:13px}
+.sumline b{font-family:var(--display);font-size:28px;font-weight:600;color:var(--fg);margin-right:6px;font-variant-numeric:tabular-nums}
+.sum .bar{margin:0;height:6px}
+@media (min-width:1241px){.gl{grid-template-columns:minmax(260px,2fr) 170px 130px 70px}}
+@media (max-width:1240px){.gl .acts{grid-column:1/-1;justify-content:flex-start}}
+.glist .gc{border-color:var(--line)}
+@media (max-width:640px){.hero{padding-top:16px!important;padding-bottom:18px!important}.hero .tag,.hero .pearl,.hero .rule{display:none}.hero .logo{width:64px!important;padding:6px!important}h1{font-size:34px}.facts{gap:6px 18px;margin-top:10px}.facts dd{font-size:12px;letter-spacing:.08em}.facts dt{font-size:9px}.head{margin-top:14px}h2.list{font-size:26px}}
 </style>
 </head>
 <body>
@@ -237,7 +235,7 @@ select[data-v="Declined"]{color:var(--crit);background:var(--crit-soft)}
     <div class="sync"><span class="dot" id="dot"></span><span id="syncText">Connecting…</span><button class="lnk" id="signout" type="button">Sign out</button></div>
   </div>
 
-  <section class="stats" id="stats" aria-label="Summary"></section>
+  <section class="sum" id="stats" aria-label="Summary"></section>
 
   <div class="toolbar">
     <div class="tabs" role="group" aria-label="View">
@@ -247,8 +245,6 @@ select[data-v="Declined"]{color:var(--crit);background:var(--crit-soft)}
       <button id="tabRsvp" aria-pressed="false">RSVPs</button>
     </div>
     <input type="search" id="q" placeholder="Search guests by name, organisation, area…" aria-label="Search guests">
-    <select id="fMethod" aria-label="Method"><option value="">All methods</option><option>Physical</option><option>E-invite</option><option>TBC</option></select>
-    <select id="fArea" aria-label="Area"><option value="">All areas</option></select>
     <select id="fStatus" aria-label="Invite status"><option value="">All statuses</option><option>Not sent</option><option>Sent</option><option>Delivered</option><option>Confirmed received</option></select>
     <span class="spacer"></span>
     <button class="btn" id="add">Add guest</button>
@@ -292,15 +288,10 @@ function filtered(){
 function renderStats(){
   const all=sorted(), n=all.length;
   const total=all.reduce((s,g)=>s+(Number.isFinite(g.guests)?g.guests:0),0);
-  const noCount=all.filter(g=>!Number.isFinite(g.guests)).length;
   const sc=s=>all.filter(g=>(g.status||"Not sent")===s).length;
-  const segs=STATUSES.map(s=>({s,n:sc(s)}));
-  $("#stats").innerHTML=`
-    <div class="stat"><b>${n}</b><span>Invitations</span></div>
-    <div class="stat"><b>${total}</b><span>Guests counted${noCount?` · ${noCount} without a number`:""}</span></div>
-    <div class="stat wide"><b>${sc("Delivered")+sc("Confirmed received")} <span style="display:inline;font-family:var(--body);font-size:13px">of ${n} delivered or received</span></b>
-      <div class="bar" role="img" aria-label="Invite status">${segs.map(x=>`<i style="width:${n?x.n/n*100:0}%;background:${STATUS_COLOR[x.s]}"></i>`).join("")}</div>
-      <div class="legend">${segs.map(x=>`<em style="--c:${STATUS_COLOR[x.s]}">${x.s} ${x.n}</em>`).join("")}</div></div>`;
+  const done=sc("Delivered")+sc("Confirmed received");
+  $("#stats").innerHTML=`<div class="sumline"><span><b>${n}</b>invitations</span><span><b>${total}</b>guests counted</span><span><b>${done}</b>delivered or received</span></div>
+    <div class="bar" role="img" aria-label="Invite status">${STATUSES.map(x=>`<i style="width:${n?sc(x)/n*100:0}%;background:${STATUS_COLOR[x]}"></i>`).join("")}</div>`;
 }
 
 function syncLists(){
@@ -309,8 +300,6 @@ function syncLists(){
   const drivers=[...new Set(all.map(g=>g.driver).filter(Boolean))];
   $("#areas").innerHTML=areas.map(a=>`<option value="${esc(a)}">`).join("");
   $("#drivers").innerHTML=drivers.map(a=>`<option value="${esc(a)}">`).join("");
-  const sel=$("#fArea"), cur=F.area;
-  sel.innerHTML=`<option value="">All areas</option>`+areas.map(a=>`<option${a===cur?" selected":""}>${esc(a)}</option>`).join("");
 }
 
 const dis=()=>canWrite?"":" disabled";
@@ -327,24 +316,20 @@ function groupByArea(rows){
 function renderList(){
   const rows=filtered().sort((a,b)=>(RANK[a.status||"Not sent"]-RANK[b.status||"Not sent"])||cmpName(a,b));
   if(!sorted().length) return `<div class="empty">No guests yet. Choose Add guest to enter the first one.</div>`;
-  if(!rows.length) return `<div class="empty">No guests match these filters.</div>`;
+  if(!rows.length) return `<div class="empty">No guests match.</div>`;
   const ta=(g,f,label,cls="")=>`<label class="f ${cls}"><span class="lab">${label}</span><textarea rows="1" data-f="${f}" placeholder="${label}"${dis()}>${esc(val(g,f))}</textarea></label>`;
   const inp=(g,f,label,cls="",o={})=>`<label class="f ${cls}"><span class="lab">${label}</span><input data-f="${f}" type="${o.type||"text"}"${o.mode?` inputmode="${o.mode}"`:""}${o.list?` list="${o.list}"`:""} placeholder="${label}" value="${esc(val(g,f))}"${dis()}></label>`;
   const sl=(g,f,label,opts,def)=>`<label class="f"><span class="lab">${label}</span>${sel(g,f,opts,def)}</label>`;
-  const head=`<div class="gr gl gh" aria-hidden="true"><span>Guest</span><span>Phone</span><span>Email</span><span>Guests</span><span>Invite status</span><span>RSVP</span><span></span></div>`;
-  return head+`<div class="glist">${rows.map(g=>{
-    const isOpen=open.has(g.id), filled=["area","day","sub","driver","address","notes"].filter(f=>g[f]).length;
+  return `<div class="glist">${rows.map(g=>{
+    const isOpen=open.has(g.id), filled=["phone","email","guests","area","day","sub","driver","address","notes"].filter(f=>f==="guests"?Number.isFinite(g[f]):g[f]).length;
     return `<article class="gc" data-id="${g.id}">
       <div class="gr gl">
         <div class="who">${ta(g,"name","Guest name","nm")}${inp(g,"org","Organisation / role","sm")}</div>
-        ${inp(g,"phone","Phone","",{type:"tel",mode:"tel"})}
-        ${inp(g,"email","Email","",{type:"email",mode:"email"})}
-        <label class="f"><span class="lab">Guests</span><input data-f="guests" type="number" min="0" inputmode="numeric" placeholder="Guests" value="${Number.isFinite(g.guests)?g.guests:""}"${dis()}></label>
         ${sl(g,"status","Invite status",STATUSES,"Not sent")}${sl(g,"rsvp","RSVP",RSVPS,"Pending")}
-        <div class="acts"><button class="lnk" data-more="${g.id}" aria-expanded="${isOpen}">${isOpen?"Hide":"More"}${filled&&!isOpen?` (${filled})`:""}</button>
-          <button class="del${pendingDelete===g.id?" sure":""}" data-del="${g.id}"${dis()}>${pendingDelete===g.id?"Delete?":"Remove"}</button></div>
+        <div class="acts"><button class="lnk" data-more="${g.id}" aria-expanded="${isOpen}">${isOpen?"Hide":"More"}${filled&&!isOpen?` (${filled})`:""}</button></div>
       </div>
-      ${isOpen?`<div class="gd"><div class="grid">${sl(g,"method","Method",METHODS,"TBC")}${inp(g,"area","Area","w2",{list:"areas"})}${inp(g,"day","Day / handover","w2")}${inp(g,"sub","Group")}${inp(g,"driver","Driver","",{list:"drivers"})}${ta(g,"address","Address / map pin","w2")}${ta(g,"notes","Notes","w3")}</div></div>`:""}
+      ${isOpen?`<div class="gd"><div class="grid">${inp(g,"phone","Phone","",{type:"tel",mode:"tel"})}${inp(g,"email","Email","w2",{type:"email",mode:"email"})}<label class="f"><span class="lab">Number of guests</span><input data-f="guests" type="number" min="0" inputmode="numeric" placeholder="Guests" value="${Number.isFinite(g.guests)?g.guests:""}"${dis()}></label>${sl(g,"method","Method",METHODS,"TBC")}${inp(g,"area","Area","w2",{list:"areas"})}${inp(g,"day","Day / handover","w2")}${inp(g,"sub","Group")}${inp(g,"driver","Driver","",{list:"drivers"})}${ta(g,"address","Address / map pin","w2")}${ta(g,"notes","Notes","w3")}
+        <div class="w3" style="display:flex;justify-content:flex-end"><button class="del${pendingDelete===g.id?" sure":""}" data-del="${g.id}"${dis()}>${pendingDelete===g.id?"Delete this guest?":"Remove guest"}</button></div></div></div>`:""}
     </article>`}).join("")}</div>`;
 }
 
@@ -432,7 +417,7 @@ function render(){
   const ae=document.activeElement, keep=ae&&ae.closest&&ae.dataset&&ae.dataset.f&&ae.closest("[data-id]")?{id:ae.closest("[data-id]").dataset.id,f:ae.dataset.f,v:ae.value,s:ae.selectionStart,e:ae.selectionEnd}:null;
   const ctx=ae&&ae.hasAttribute&&ae.hasAttribute("data-rundriver")?{area:ae.closest("[data-area]").dataset.area,v:ae.value}:null;
   renderStats(); syncLists();
-  const shown=filtered().length,all=guests.size;$("#count").textContent=(F.q||F.method||F.area||F.status)?`Showing ${shown} of ${all} guests`:`${all} guests`;
+  const shown=filtered().length,all=guests.size;$("#count").textContent=(F.q||F.status)?`Showing ${shown} of ${all} guests`:`${all} guests`;
   const nMiss=sorted().filter(g=>missingOf(g).length).length;
   $("#tabMissing").textContent="Missing info"+(nMiss?` (${nMiss})`:"");
   $("#main").innerHTML=({list:renderList,runs:renderRuns,missing:renderMissing,rsvp:renderRsvp}[view]||renderList)();
@@ -493,7 +478,7 @@ document.addEventListener("click",async e=>{
 const click={};
 $("#add").addEventListener("click",async()=>{
   const order=Math.max(0,...sorted().map(g=>g.order||0))+1;
-  F.q=F.method=F.area=F.status="";$("#q").value="";$("#fMethod").value="";$("#fStatus").value="";
+  F.q=F.method=F.area=F.status="";$("#q").value="";$("#fStatus").value="";
   const {data,error}=await sb.from("event_guests").insert({event:EVENT,sort_order:order}).select().single();
   if(error)return toast("Could not add a guest.");
   guests.set(data.id,fromRow(data));focusNew=data.id;view="list";syncTabs();
@@ -504,8 +489,6 @@ $("#tabRuns").onclick=()=>{view="runs";syncTabs()};
 $("#tabMissing").onclick=()=>{view="missing";syncTabs()};
 $("#tabRsvp").onclick=()=>{view="rsvp";syncTabs()};
 $("#q").addEventListener("input",e=>{F.q=e.target.value;render()});
-$("#fMethod").onchange=e=>{F.method=e.target.value;render()};
-$("#fArea").onchange=e=>{F.area=e.target.value;render()};
 $("#fStatus").onchange=e=>{F.status=e.target.value;render()};
 
 let entered=false;
