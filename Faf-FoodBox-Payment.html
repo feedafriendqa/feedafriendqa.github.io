@@ -247,12 +247,12 @@ body.lang-ar .pass-perks li::before{left:auto;right:0}
   <div class="hold-timer" id="hold-timer" style="display:none">
     <span>⏳</span>
     <span data-en="Your families are held for" data-ar="عائلاتك محجوزة لمدة">Your families are held for</span>
-    <span class="n" id="hold-timer-n">10:00</span>
+    <span class="n" id="hold-timer-n">5:00</span>
   </div>
 
   <div class="timeout-banner" id="timeout-banner">
     <div class="t" data-en="Your selection timed out" data-ar="انتهت مهلة اختيارك">Your selection timed out</div>
-    <div class="d" data-en="Families are held for 10 minutes so two sponsors can't both pay for the same one — yours has now been released. No harm done, just pick again." data-ar="نحجز العائلات لمدة ١٠ دقائق حتى لا يدفع متكفّلان لنفس العائلة — تم الآن تحرير حجزك. لا ضرر، فقط اختر مرة أخرى.">Families are held for 10 minutes so two sponsors can't both pay for the same one — yours has now been released. No harm done, just pick again.</div>
+    <div class="d" data-en="Families are held for 5 minutes so two sponsors can't both pay for the same one — yours has now been released. No harm done, just pick again." data-ar="نحجز العائلات لمدة ٥ دقائق حتى لا يدفع متكفّلان لنفس العائلة — تم الآن تحرير حجزك. لا ضرر، فقط اختر مرة أخرى.">Families are held for 5 minutes so two sponsors can't both pay for the same one — yours has now been released. No harm done, just pick again.</div>
     <button onclick="window.location.href='Faf-FoodBox-ChooseFamily.html'" data-en="Choose families again →" data-ar="اختر العائلات مرة أخرى ←">Choose families again →</button>
   </div>
 
@@ -553,7 +553,7 @@ async function submitSponsorship(){
         .single();
       if(error){
         // PGRST116 means the UPDATE matched zero rows — the sponsorship
-        // row itself no longer exists (the 10-minute hold lapsed and it
+        // row itself no longer exists (the 5-minute hold lapsed and it
         // was cleaned up). Nothing below this can succeed either, so go
         // straight to the timeout banner rather than grinding through
         // the family-claim step and email trigger to reach the same
@@ -575,7 +575,7 @@ async function submitSponsorship(){
         refNo = data.ref_no;
       }
 
-      // Convert the 10-minute hold set in ChooseFamily.html into a durable
+      // Convert the 5-minute hold set in ChooseFamily.html into a durable
       // claim now that the sponsor has actually submitted. If the hold
       // expired — either a specific family was picked up by someone else,
       // or (rarer) the whole sponsorship row itself is gone because the
@@ -1028,8 +1028,8 @@ function revealPaymentContent(user, profile){
   if(FAF_PLEDGE_MODE) loadPledgeRound();
 }
 
-// ── 10-minute family hold countdown ──
-// ChooseFamily.html reserves the sponsor's picked families for 10 minutes
+// ── 5-minute family hold countdown ──
+// ChooseFamily.html reserves the sponsor's picked families for 5 minutes
 // (see reserve_families()) so two sponsors mid-funnel can't both end up
 // with the same family, and stashes the expiry in sessionStorage. Show a
 // visible countdown here rather than letting that hold silently lapse
