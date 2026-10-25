@@ -896,6 +896,16 @@ async function submitPledge(){
       if(up.error) throw up.error;
       saved = up.data;
     }
+    if(!saved && pledgeId){
+      // The server may already have drafted this round's entry when the pledge
+      // was created (late sign-ups) — update it rather than adding a duplicate.
+      var ex2 = await window.sbClient.from("sponsorships").select("id").eq("pledge_id", pledgeId).eq("round_id", round.id).maybeSingle();
+      if(ex2 && ex2.data){
+        var up2 = await window.sbClient.from("sponsorships").update(fields).eq("id", ex2.data.id).select().maybeSingle();
+        if(up2.error) throw up2.error;
+        saved = up2.data;
+      }
+    }
     if(!saved){
       var ins = await window.sbClient.from("sponsorships").insert(Object.assign({ source: "web_form" }, fields)).select().single();
       if(ins.error) throw ins.error;
