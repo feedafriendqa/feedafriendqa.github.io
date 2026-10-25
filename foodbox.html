@@ -815,15 +815,19 @@ function checkFamilyAvailability(){
     FAF_SPONSORSHIPS_PAUSED = !open;
     if(!open){ applyPausedCopy(); faf_soldOut = true; setLang(sessionStorage.getItem("faf_lang") || "en"); renderGiveCard(); return; }
     if(FAF_PLEDGE_MODE){ faf_soldOut = false; renderGiveCard(); return; }
-    // Pick-families mode: also close if no confirmed family still needs a sponsor.
-    return window.sbClient
-      .from("food_box_public_pool")
-      .select("id", { count: "exact", head: true })
-      .then(function(r2){
-        if(r2.error) throw r2.error;
-        faf_soldOut = (r2.count || 0) === 0;
-        renderGiveCard();
-      });
+    // Sold out = nothing left to sponsor, using the SAME count as the headline
+    // and progress bar (target minus pledged). The old check used the
+    // family-picker pool, which skips friends carried over with an old
+    // is_sponsored flag, so it could say sold out while boxes remained.
+    return Promise.all([
+      window.sbClient.from("food_box_landing_stats").select("boxes_needed").single(),
+      window.sbClient.from("food_box_pledged_public").select("boxes_pledged").single()
+    ]).then(function(rs){
+      if(rs[0].error || rs[1].error || !rs[0].data || !rs[1].data) throw (rs[0].error || rs[1].error || new Error("no data"));
+      var left = (rs[0].data.boxes_needed || 0) - (rs[1].data.boxes_pledged || 0);
+      faf_soldOut = left <= 0;
+      renderGiveCard();
+    });
   }).catch(function(e){
     console.warn("Could not check sponsorship availability, keeping page closed", e);
     faf_soldOut = true; renderGiveCard();
