@@ -974,6 +974,11 @@ function loadPledgeProgress(boxesNeeded){
       if(res.error || !res.data) throw res.error || new Error("no data");
       var pledged = res.data.boxes_pledged || 0;
       var remaining = Math.max(boxesNeeded - pledged, 0);
+      // Headline "boxes needed" must always equal the "to go" figure, so both
+      // come from the same count (target minus pledged). Boxes briefly held by
+      // someone mid-checkout used to drop out of the headline but not "to go".
+      var statBoxesEl = document.getElementById("stat-boxes");
+      if(statBoxesEl) statBoxesEl.textContent = remaining.toLocaleString();
       var pct = Math.min(Math.round((pledged / boxesNeeded) * 100), 100);
       document.getElementById("progress-pledged").textContent = pledged.toLocaleString();
       document.getElementById("progress-needed-1").textContent = boxesNeeded.toLocaleString();
