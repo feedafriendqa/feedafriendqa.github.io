@@ -104,6 +104,9 @@ html[dir="rtl"] .mobile-menu-link{flex-direction:row-reverse;text-align:right;}
 .badge{display:inline-block;margin-top:4px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:4px 10px;border-radius:20px;white-space:nowrap;}
 .upload-proof-btn{display:block;margin-top:8px;border:1.5px solid var(--green);background:#fff;color:var(--green);font-size:12px;font-weight:800;padding:6px 12px;border-radius:8px;cursor:pointer;}
 .upload-proof-btn:disabled{opacity:.6;cursor:default;}
+.proof-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.proof-actions .upload-proof-btn{display:inline-block;margin-top:0;}
+.proof-del{border-color:#c0392b;color:#c0392b;}
 .badge-paid{background:#e0f7fa;color:#007a6e;}
 .badge-uploaded{background:#e5eefc;color:#2c5aa8;}
 .badge-discrepancy{background:#fde8e8;color:#a83232;}
@@ -567,6 +570,16 @@ function renderList(rows){
     var uploadBtn = canUpload
       ? '<button class="upload-proof-btn" onclick="startProofUpload(\'' + r.id + '\')" data-en="Upload proof of payment" data-ar="رفع إثبات الدفع">Upload proof of payment</button>'
       : '';
+    // Uploaded the wrong file? Let the sponsor view, replace or remove it until
+    // the payment has been confirmed by the team.
+    if(r.payment_status === "proof_uploaded" && r.proof_path){
+      uploadBtn =
+        '<div class="proof-actions">' +
+        '<button class="upload-proof-btn proof-act" onclick="viewProof(\'' + r.id + '\',\'' + String(r.proof_path).replace(/'/g, "\\'") + '\')" data-en="View proof" data-ar="عرض الإثبات">View proof</button>' +
+        '<button class="upload-proof-btn proof-act" onclick="replaceProof(\'' + r.id + '\')" data-en="Replace" data-ar="استبدال">Replace</button>' +
+        '<button class="upload-proof-btn proof-act proof-del" onclick="removeProof(\'' + r.id + '\')" data-en="Remove" data-ar="حذف">Remove</button>' +
+        '</div>';
+    }
 
     // Delivery-method label. "self" = the sponsor picks up and delivers the
     // box themselves (chosen on the Preferences page). Where we send them
@@ -621,8 +634,44 @@ function showVolDeliveryInfo(){
 }
 
 var proofUploadTargetId = null;
+var proofReplaceMode = false;
 function startProofUpload(sponsorshipId){
   proofUploadTargetId = sponsorshipId;
+  proofReplaceMode = false;
+  document.getElementById("proof-file-input").click();
+}
+
+// Open the uploaded proof in a new tab (private link that expires in 5 minutes).
+async function viewProof(sponsorshipId, path){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  var w = window.open("", "_blank");
+  try{
+    var r = await sbClient.storage.from("sponsorship-proofs").createSignedUrl(path, 300);
+    if(r.error || !r.data || !r.data.signedUrl) throw (r.error || new Error("no link"));
+    if(w) w.location.href = r.data.signedUrl; else window.location.href = r.data.signedUrl;
+  }catch(e){
+    if(w) w.close();
+    alert((isAr ? "تعذّر فتح الإثبات: " : "Could not open the proof: ") + (e.message || e));
+  }
+}
+
+// Remove the proof so the sponsor can upload the right one (payment goes back to "pending").
+async function removeProof(sponsorshipId){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  if(!confirm(isAr ? "هل تريد حذف هذا الإثبات؟ يمكنك رفع إثبات صحيح بعد ذلك." : "Remove this proof? You can then upload the correct one.")) return;
+  var res = await sbClient.rpc("sponsor_remove_proof", { p_sponsorship_id: sponsorshipId });
+  if(res.error || !res.data || !res.data.success){
+    alert((res.data && res.data.error) || (res.error && res.error.message) || (isAr ? "تعذّر الحذف" : "Could not remove the proof"));
+    return;
+  }
+  loadSponsorships(window.currentAuthUser.id);
+}
+
+// Pick a new file straight away (keeps the browser's click permission); the old
+// proof is removed only once a file has been chosen.
+function replaceProof(sponsorshipId){
+  proofUploadTargetId = sponsorshipId;
+  proofReplaceMode = true;
   document.getElementById("proof-file-input").click();
 }
 
@@ -637,6 +686,15 @@ async function handleProofFileSelected(fileInput){
   if(btn){
     btn.disabled = true;
     btn.textContent = isAr ? "جارٍ الرفع…" : "Uploading…";
+  }
+  if(proofReplaceMode){
+    proofReplaceMode = false;
+    var rm = await sbClient.rpc("sponsor_remove_proof", { p_sponsorship_id: sponsorshipId });
+    if(rm.error || !rm.data || !rm.data.success){
+      alert((rm.data && rm.data.error) || (rm.error && rm.error.message) || (isAr ? "تعذّر استبدال الإثبات" : "Could not replace the proof"));
+      loadSponsorships(window.currentAuthUser.id);
+      return;
+    }
   }
 
   var reader = new FileReader();
