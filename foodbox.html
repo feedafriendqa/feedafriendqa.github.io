@@ -651,14 +651,14 @@ var giveState = { boxes: 3, freq: "monthly", custom: false };
 // To reopen, set this to false here AND in the same-named flag at the top of
 // Faf-FoodBox-Preferences / ChooseFamily / Payment and faf-preferences /
 // faf-choose-family.
-var FAF_SPONSORSHIPS_PAUSED = true;
+var FAF_SPONSORSHIPS_PAUSED = false;  // real state comes from foodbox_sponsorships_state() below
 // Pledge mode: when open, sponsors pledge boxes for the current round (no family
 // picking, no payment yet — matching happens after the cut-off). The "sold out"
 // check against the pool of unsponsored families is therefore skipped; the pause
 // switch above is the only thing that closes the page. Keep in sync with the same
 // flag on the Preferences / Choose-family / Payment pages.
 var FAF_PLEDGE_MODE = false;
-var faf_soldOut = FAF_SPONSORSHIPS_PAUSED;
+var faf_soldOut = false;
 
 function setFreq(f){
   giveState.freq = f;
@@ -813,7 +813,7 @@ function checkFamilyAvailability(){
   window.sbClient.rpc("foodbox_sponsorships_state").then(function(res){
     var open = !res.error && res.data && res.data.open === true;
     FAF_SPONSORSHIPS_PAUSED = !open;
-    if(!open){ faf_soldOut = true; renderGiveCard(); return; }
+    if(!open){ applyPausedCopy(); faf_soldOut = true; setLang(sessionStorage.getItem("faf_lang") || "en"); renderGiveCard(); return; }
     if(FAF_PLEDGE_MODE){ faf_soldOut = false; renderGiveCard(); return; }
     // Pick-families mode: also close if no confirmed family still needs a sponsor.
     return window.sbClient
@@ -835,19 +835,21 @@ function checkFamilyAvailability(){
 // Restore saved language choice (defaults to English if none set) — must
 // come after renderGiveCard/giveState are defined above, since setLang()
 // calls renderGiveCard() immediately.
-(function(){
-  if(FAF_SPONSORSHIPS_PAUSED){
-    var card = document.getElementById("giveSoldOut");
-    var setCopy = function(el, en, ar){ if(el){ el.setAttribute("data-en", en); el.setAttribute("data-ar", ar); } };
-    if(card){
-      setCopy(card.querySelector("h3"), "Sponsorships open soon", "باب الكفالة سيُفتح قريباً");
-      setCopy(card.querySelector("p"),
-        "We're finalising this month's list of friends and will open sponsorships shortly. Leave your details and we'll message you the moment they open.",
-        "نقوم حالياً بإنهاء قائمة الأصدقاء لهذا الشهر وسنفتح باب الكفالة قريباً. اترك بياناتك وسنراسلك فور فتحه.");
-      setCopy(card.querySelector("#waitlistBtn span"), "Notify me when sponsorships open →", "أعلمني عند فتح الكفالة ←");
-      setCopy(card.querySelector("#waitlistSuccess"), "✅ Thanks! We'll email you as soon as sponsorships open.", "✅ شكراً لك! سنراسلك فور فتح باب الكفالة.");
-    }
+// "Open soon" wording is only applied when the admin has really paused
+// sponsorships (RPC says closed). Otherwise the card keeps its "sold out" text.
+function applyPausedCopy(){
+  var card = document.getElementById("giveSoldOut");
+  var setCopy = function(el, en, ar){ if(el){ el.setAttribute("data-en", en); el.setAttribute("data-ar", ar); } };
+  if(card){
+    setCopy(card.querySelector("h3"), "Sponsorships open soon", "باب الكفالة سيُفتح قريباً");
+    setCopy(card.querySelector("p"),
+      "We're finalising this month's list of friends and will open sponsorships shortly. Leave your details and we'll message you the moment they open.",
+      "نقوم حالياً بإنهاء قائمة الأصدقاء لهذا الشهر وسنفتح باب الكفالة قريباً. اترك بياناتك وسنراسلك فور فتحه.");
+    setCopy(card.querySelector("#waitlistBtn span"), "Notify me when sponsorships open →", "أعلمني عند فتح الكفالة ←");
+    setCopy(card.querySelector("#waitlistSuccess"), "✅ Thanks! We'll email you as soon as sponsorships open.", "✅ شكراً لك! سنراسلك فور فتح باب الكفالة.");
   }
+}
+(function(){
   var savedLang = sessionStorage.getItem("faf_lang") || "en";
   setLang(savedLang);
 })();
