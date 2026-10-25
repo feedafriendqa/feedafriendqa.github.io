@@ -656,7 +656,7 @@ var FAF_SPONSORSHIPS_PAUSED = true;
 // check against the pool of unsponsored families is therefore skipped; the pause
 // switch above is the only thing that closes the page. Keep in sync with the same
 // flag on the Preferences / Choose-family / Payment pages.
-var FAF_PLEDGE_MODE = true;
+var FAF_PLEDGE_MODE = false;
 var faf_soldOut = FAF_SPONSORSHIPS_PAUSED;
 
 function setFreq(f){
@@ -807,28 +807,26 @@ function joinWaitlist(){
 // as the other best-effort stats loaders on this page.
 function checkFamilyAvailability(){
   if(!window.sbClient) return;
-  if(FAF_PLEDGE_MODE){
-    // Open/closed is controlled from the admin portal (Distributions tab).
-    // Fails closed: if the check can't run, the page stays on "opens soon".
-    window.sbClient.rpc("foodbox_sponsorships_state").then(function(res){
-      var open = !res.error && res.data && res.data.open === true;
-      FAF_SPONSORSHIPS_PAUSED = !open;
-      faf_soldOut = FAF_SPONSORSHIPS_PAUSED;
-      renderGiveCard();
-    }).catch(function(){ faf_soldOut = true; renderGiveCard(); });
-    return;
-  }
-  window.sbClient
-    .from("food_box_public_pool")
-    .select("id", { count: "exact", head: true })
-    .then(function(res){
-      if(res.error) throw res.error;
-      faf_soldOut = FAF_SPONSORSHIPS_PAUSED || (res.count || 0) === 0;
-      renderGiveCard();
-    })
-    .catch(function(e){
-      console.warn("Could not check family availability, leaving giving enabled", e);
-    });
+  // Open/closed is controlled from the admin portal (Distributions tab).
+  // Fails closed: if the check can't run, the page stays on "opens soon".
+  window.sbClient.rpc("foodbox_sponsorships_state").then(function(res){
+    var open = !res.error && res.data && res.data.open === true;
+    FAF_SPONSORSHIPS_PAUSED = !open;
+    if(!open){ faf_soldOut = true; renderGiveCard(); return; }
+    if(FAF_PLEDGE_MODE){ faf_soldOut = false; renderGiveCard(); return; }
+    // Pick-families mode: also close if no confirmed family still needs a sponsor.
+    return window.sbClient
+      .from("food_box_public_pool")
+      .select("id", { count: "exact", head: true })
+      .then(function(r2){
+        if(r2.error) throw r2.error;
+        faf_soldOut = (r2.count || 0) === 0;
+        renderGiveCard();
+      });
+  }).catch(function(e){
+    console.warn("Could not check sponsorship availability, keeping page closed", e);
+    faf_soldOut = true; renderGiveCard();
+  });
 }
 // Called after sbClient is created below (see loadLandingStats()) --
 // window.sbClient doesn't exist yet at this point in the file.
