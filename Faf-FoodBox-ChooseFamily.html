@@ -503,8 +503,8 @@ function pickVisibleFamilies(pool){
     };
   });
   ranked.sort(function(a, b){
-    if(a.areaRank !== b.areaRank) return a.areaRank - b.areaRank;
     if(a.langRank !== b.langRank) return a.langRank - b.langRank;
+    if(a.areaRank !== b.areaRank) return a.areaRank - b.areaRank;
     if(a.sizeDiff !== b.sizeDiff) return a.sizeDiff - b.sizeDiff;
     return a.jitter - b.jitter;
   });
