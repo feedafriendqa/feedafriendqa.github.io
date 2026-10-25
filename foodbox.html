@@ -807,7 +807,17 @@ function joinWaitlist(){
 // as the other best-effort stats loaders on this page.
 function checkFamilyAvailability(){
   if(!window.sbClient) return;
-  if(FAF_PLEDGE_MODE){ faf_soldOut = FAF_SPONSORSHIPS_PAUSED; renderGiveCard(); return; }
+  if(FAF_PLEDGE_MODE){
+    // Open/closed is controlled from the admin portal (Distributions tab).
+    // Fails closed: if the check can't run, the page stays on "opens soon".
+    window.sbClient.rpc("foodbox_sponsorships_state").then(function(res){
+      var open = !res.error && res.data && res.data.open === true;
+      FAF_SPONSORSHIPS_PAUSED = !open;
+      faf_soldOut = FAF_SPONSORSHIPS_PAUSED;
+      renderGiveCard();
+    }).catch(function(){ faf_soldOut = true; renderGiveCard(); });
+    return;
+  }
   window.sbClient
     .from("food_box_public_pool")
     .select("id", { count: "exact", head: true })

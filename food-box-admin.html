@@ -451,6 +451,21 @@ select.edit-field{cursor:pointer;}
       </div>
 
       <div id="distributions-subtab-rounds-panel">
+        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
+          <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;">🛒 Public sponsorship page</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Controls whether connect.feedafriend.org/foodbox shows the normal "sponsor boxes" screen or "opens soon". Times are Qatar time.</div>
+          <div id="sponsorship-open-status" style="font-size:14px;font-weight:700;margin-bottom:12px;">Loading…</div>
+          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+            <div>
+              <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Open automatically at</label>
+              <input id="sponsorship-open-at" type="datetime-local" class="filter-btn" style="padding:8px 12px;">
+            </div>
+            <button class="filter-btn" onclick="scheduleSponsorshipOpen()">📅 Schedule</button>
+            <button class="filter-btn" onclick="setSponsorshipOpen('now')">🟢 Open now</button>
+            <button class="filter-btn" onclick="setSponsorshipOpen('pause')">⏸ Pause</button>
+          </div>
+        </div>
+
         <details style="border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;background:#fff;">
           <summary id="unmatched-summary" style="cursor:pointer;font-size:14px;font-weight:700;color:var(--text);">👋 Families awaiting a sponsor</summary>
           <div id="unmatched-panel" style="font-size:13px;color:var(--muted);margin-top:12px;">Loading…</div>
@@ -3161,6 +3176,7 @@ function showView(view) {
   if (view === 'approvals') loadApprovalsView();
   if (view === 'messages') loadMessagesView();
   if (view === 'distributions') setDistributionsSubTab(distributionsSubTab);
+  if (view === 'distributions') loadSponsorshipOpenState();
 }
 
 // Distributions sub-tabs: "Rounds" (create/manage distribution rounds) and
@@ -3535,6 +3551,50 @@ function loadPledgeRoundsAdmin() {
 
 // "Who sponsored what" — expands under a round to list every sponsor, their
 // boxes and payment status, and the families their boxes were matched to.
+
+// ── Public /foodbox open / scheduled / paused switch ──
+function fmtQatar(iso) {
+  return new Date(iso).toLocaleString('en-GB', { timeZone: 'Asia/Qatar', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' (Qatar time)';
+}
+function loadSponsorshipOpenState() {
+  var el = document.getElementById('sponsorship-open-status');
+  if (!el) return;
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/rpc/foodbox_sponsorships_state', { method: 'POST', headers: headers, body: '{}' });
+  }).then(function(r) { return r.json(); }).then(function(st) {
+    if (st.open) {
+      el.innerHTML = '<span style="color:var(--green);">🟢 Open — people can sponsor boxes now</span>';
+    } else if (st.opens_at) {
+      el.innerHTML = '<span style="color:var(--orange);">📅 Scheduled — opens ' + fmtQatar(st.opens_at) + '</span>';
+    } else {
+      el.innerHTML = '<span style="color:var(--muted);">⏸ Paused — visitors see "Sponsorships open soon"</span>';
+    }
+  }).catch(function() { el.textContent = 'Could not load status.'; });
+}
+function saveSponsorshipOpenAt(iso, okMsg) {
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/rpc/admin_set_sponsorships_open_at', { method: 'POST', headers: headers, body: JSON.stringify({ p_open_at: iso }) });
+  }).then(function(r) { return r.json().then(function(j) { if (!r.ok) throw new Error(j.message || 'Failed'); return j; }); })
+    .then(function() { loadSponsorshipOpenState(); if (okMsg) alert(okMsg); })
+    .catch(function(e) { alert('Could not save: ' + e.message); });
+}
+function scheduleSponsorshipOpen() {
+  var v = document.getElementById('sponsorship-open-at').value;
+  if (!v) { alert('Pick a date and time first.'); return; }
+  var iso = new Date(v + ':00+03:00').toISOString();
+  if (new Date(iso).getTime() <= Date.now()) { alert('That time is in the past — use "Open now" instead.'); return; }
+  saveSponsorshipOpenAt(iso, 'Scheduled. The page will switch to the normal screen at that time.');
+}
+function setSponsorshipOpen(mode) {
+  if (mode === 'now') {
+    if (!confirm('Open sponsorships to the public right now?')) return;
+    saveSponsorshipOpenAt(new Date().toISOString(), null);
+  } else {
+    if (!confirm('Pause sponsorships? Visitors will see "Sponsorships open soon".')) return;
+    saveSponsorshipOpenAt(null, null);
+  }
+}
+
 function toggleRoundSponsors(roundId) {
   var el = document.getElementById('round-sponsors-' + roundId);
   if (!el) return;

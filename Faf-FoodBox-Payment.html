@@ -2,8 +2,16 @@
 <html lang="en">
 <head>
 <script>
-/* SPONSORSHIPS PAUSED — set to false (and in foodbox.html) to reopen. */
+/* Open/closed is set from the admin portal (Distributions tab). Fails closed. */
 var FAF_SPONSORSHIPS_PAUSED = true;
+try {
+  var _x = new XMLHttpRequest();
+  _x.open('POST', 'https://xbxagukdvgyaoqvbqoic.supabase.co/rest/v1/rpc/foodbox_sponsorships_state', false);
+  _x.setRequestHeader('apikey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4');
+  _x.setRequestHeader('Content-Type', 'application/json');
+  _x.send('{}');
+  if (_x.status === 200 && JSON.parse(_x.responseText).open === true) FAF_SPONSORSHIPS_PAUSED = false;
+} catch (e) {}
 /* Pledge mode: sponsors pledge now; families are matched after the round's cut-off;
    payment is only asked for once matched. false = old pick-families-and-pay-now flow. */
 var FAF_PLEDGE_MODE = true;
