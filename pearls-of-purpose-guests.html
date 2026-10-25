@@ -401,23 +401,30 @@ function renderMissing(){
 function renderRsvp(){
   const rows=filtered();
   if(!rows.length)return `<div class="empty">${sorted().length?"No guests match these filters.":"No guests yet."}</div>`;
-  const grp={Pending:[],Attending:[],Declined:[]};
-  rows.forEach(g=>grp[grp[g.rsvp]?g.rsvp:"Pending"].push(g));
-  grp.Pending.sort((a,b)=>(RANK[b.status||"Not sent"]-RANK[a.status||"Not sent"])||cmpName(a,b));
+  const notInvited=g=>(g.status||"Not sent")==="Not sent";
+  const grp={"No reply yet":[],"Attending":[],"Declined":[],"Not invited yet":[]};
+  rows.forEach(g=>{
+    if(g.rsvp==="Attending")grp["Attending"].push(g);
+    else if(g.rsvp==="Declined")grp["Declined"].push(g);
+    else (notInvited(g)?grp["Not invited yet"]:grp["No reply yet"]).push(g);
+  });
+  grp["No reply yet"].sort((a,b)=>(RANK[b.status||"Not sent"]-RANK[a.status||"Not sent"])||cmpName(a,b));
   const head=sorted().reduce((s,g)=>s+((g.rsvp==="Attending"&&Number.isFinite(g.guests))?g.guests:0),0);
-  const unk=grp.Attending.filter(g=>!Number.isFinite(g.guests)).length;
+  const unk=grp["Attending"].filter(g=>!Number.isFinite(g.guests)).length;
   const tiles=`<div class="stats" style="margin-bottom:14px">
     <div class="stat"><b>${head}</b><span>Confirmed headcount${unk?` · ${unk} attending without a number`:""}</span></div>
-    <div class="stat"><b>${grp.Attending.length}</b><span>Attending invitations</span></div>
-    <div class="stat"><b>${grp.Pending.length}</b><span>No reply yet</span></div>
-    <div class="stat"><b>${grp.Declined.length}</b><span>Declined</span></div></div>`;
+    <div class="stat"><b>${grp["Attending"].length}</b><span>Attending</span></div>
+    <div class="stat"><b>${grp["No reply yet"].length}</b><span>Invited, no reply yet</span></div>
+    <div class="stat"><b>${grp["Declined"].length}</b><span>Declined</span></div>
+    <div class="stat"><b>${grp["Not invited yet"].length}</b><span>Not invited yet</span></div></div>`;
   const card=g=>`<div class="tk" data-id="${g.id}">
     <div class="top"><div class="nm">${esc(g.name||"Unnamed")}</div>${sel(g,"rsvp",RSVPS,"Pending")}</div>
     <div class="ln">${[g.org,g.area].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div>
     <div class="ln">${[g.phone,g.email].filter(Boolean).map(esc).join(" · ")||"No phone or email yet"}</div>
     <div class="ln">Invite: ${esc(g.status||"Not sent")}</div>
     <label class="f"><span class="lab" style="display:block">Number of guests</span><input data-f="guests" type="number" min="0" inputmode="numeric" placeholder="Guests" value="${Number.isFinite(g.guests)?g.guests:""}"${dis()}></label></div>`;
-  return tiles+`<div class="lanes">${["Pending","Attending","Declined"].map(k=>`<section class="lane"><h2>${k==="Pending"?"No reply yet":k}<small>${grp[k].length} invitation${grp[k].length===1?"":"s"}</small></h2>${k==="Pending"?`<small class="hint">Delivered invitations are at the top, so you can chase them first.</small>`:""}${grp[k].map(card).join("")||`<small class="hint">None</small>`}</section>`).join("")}</div>`;
+  const hints={"No reply yet":"Invitations sent or delivered. Delivered ones are first, so you can chase them first.","Not invited yet":"Invitation not sent yet. Set the invite status once it goes out and the guest moves to No reply yet."};
+  return tiles+`<div class="lanes">${Object.keys(grp).map(k=>`<section class="lane"><h2>${k}<small>${grp[k].length} guest${grp[k].length===1?"":"s"}</small></h2>${hints[k]?`<small class="hint">${hints[k]}</small>`:""}${grp[k].map(card).join("")||`<small class="hint">None</small>`}</section>`).join("")}</div>`;
 }
 
 function render(){
