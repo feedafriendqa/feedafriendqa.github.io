@@ -63,6 +63,7 @@ input[type=range]::-webkit-slider-thumb { appearance:none; width:22px; height:22
 .success-title { font-size:26px; font-weight:800; color:var(--ink); margin-bottom:12px; }
 .success-sub { font-size:14px; color:var(--muted); line-height:1.7; max-width:300px; }
 </style>
+<script src="faf-image.js"></script>
 </head>
 <body>
 
@@ -291,7 +292,7 @@ async function submitForm() {
     const hold_until = new Date(Date.now() + hold_days * 86400000).toISOString().split('T')[0];
     const photoUrls = [];
     for (let i = 0; i < selectedPhotoFiles.length; i++) {
-      const file = selectedPhotoFiles[i];
+      const file = window.fafShrinkImage ? await window.fafShrinkImage(selectedPhotoFiles[i]) : selectedPhotoFiles[i];
       const ext = file.name.split('.').pop().toLowerCase();
       const path = 'donations/' + Date.now() + '_' + i + '.' + ext;
       const up = await _sb.storage.from('donor-photos').upload(path, file, {contentType: file.type});

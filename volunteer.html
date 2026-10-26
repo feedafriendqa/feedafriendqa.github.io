@@ -20,6 +20,7 @@ input,select,textarea,button{font-family:inherit}
 #splash{position:fixed;inset:0;background:#0A3D1F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999}
 .spinner{width:40px;height:40px;border:4px solid #22C55E;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
 </style>
+<script src="faf-image.js"></script>
 </head>
 <body>
 <div id="splash"><div class="spinner"></div><p style="color:#BBF7D0;font-size:12px;letter-spacing:2px">LOADING...</p></div>
@@ -59,6 +60,7 @@ async function sendEmail(type,name,email,adminEmail="",eventTitle=""){
 }
 
 async function uploadPhoto(userId, file){
+  file = window.fafShrinkImage ? await window.fafShrinkImage(file) : file;
   const ext = file.name.split(".").pop();
   const {data} = await sb.storage.from("avatars").upload(userId+"/avatar."+ext, file, {upsert:true});
   if(data){const {data:u} = sb.storage.from("avatars").getPublicUrl(data.path); return u.publicUrl;}

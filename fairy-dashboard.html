@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Poppins,sans-serif;background:#fff;color:#15803D}.spartan{font-family:'League Spartan',sans-serif;font-weight:900}</style>
+<script src="faf-image.js"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -514,6 +515,7 @@ function App(){
 
   async function uploadPhoto(file){
     if(!file) return;
+    file = window.fafShrinkImage ? await window.fafShrinkImage(file) : file;
     setPhotoUploading(true);
     const uid = session.user.id;
     const ext = file.name.split(".").pop();

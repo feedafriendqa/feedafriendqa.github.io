@@ -258,7 +258,8 @@ body.lang-ar .modal-btns{flex-direction:row-reverse}
 body.lang-ar .two-btn{flex-direction:row-reverse}
 body.lang-ar .af-x{right:auto;left:12px}
 body.lang-ar .alt-contact-actions{text-align:left}
-</style></head>
+</style><script src="faf-image.js"></script>
+</head>
 <body><div class="shell">
 
 <!-- ── LOADING ── -->
@@ -1128,7 +1129,7 @@ async function saveLateNote(id){
 async function uploadLatePhoto(id){
   var inp=document.getElementById("lp-inp-"+id),st=document.getElementById("lp-st-"+id),prev=document.getElementById("lp-prev-"+id),lbl=document.getElementById("lp-lbl-"+id);
   if(!inp||!inp.files||!inp.files[0])return;
-  var file=inp.files[0];
+  var file=window.fafShrinkImage?await window.fafShrinkImage(inp.files[0]):inp.files[0];
   var mt=file.type||"image/jpeg";
   var ext=((mt.split("/")[1]||"jpg").split("+")[0]);
   var path=(inp.dataset.app||"unknown")+"/"+id+"-"+Date.now()+"."+ext;
