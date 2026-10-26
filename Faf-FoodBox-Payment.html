@@ -496,7 +496,21 @@ function checkReady(){
 });
 document.getElementById("confirm-transferred").addEventListener("change", checkReady);
 
+// "Are you sure?" gate: if the sponsor already has boxes for the open
+// distribution (incl. pending ones), make them confirm before adding more.
+function confirmExtraBoxes(){
+  var ex = window.FAF_EXISTING_BOXES;
+  if(!ex || !ex.total) return true;
+  var isAr = document.body.classList.contains("lang-ar");
+  var adding = (prefs && prefs.boxCount) || 1;
+  var msg = isAr
+    ? "لديك بالفعل " + ex.total + " صندوق لـ " + ex.name + ".\nهل أنت متأكد أنك تريد إضافة " + adding + " صندوق إضافي؟"
+    : "You already have " + ex.total + " box" + (ex.total === 1 ? "" : "es") + " sponsored for " + ex.name + ".\nAre you sure you want to add " + adding + " more?";
+  return window.confirm(msg);
+}
+
 async function submitSponsorship(){
+  if(!confirmExtraBoxes()) return;
   if(FAF_PLEDGE_MODE){ return submitPledge(); }
   var btn = document.getElementById("continue-btn");
   var hint = document.getElementById("cta-hint");
@@ -1032,6 +1046,7 @@ async function loadExistingBoxesNotice(uid){
     var total = rows.reduce(function(n, r){ return n + (Number(r.box_count) || 0); }, 0);
     if(!total) return;
     var name = cur.data.name || "this distribution";
+    window.FAF_EXISTING_BOXES = { total: total, name: name };
     var setBoth = function(id, en, ar){
       var el = document.getElementById(id);
       if(!el) return;
