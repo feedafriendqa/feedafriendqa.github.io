@@ -824,13 +824,30 @@ async function fafRetry(fn, tries){
 // someone start the funnel just to hit that wall three steps later.
 // Fails open (leaves giving enabled) if the check itself can't run, same
 // as the other best-effort stats loaders on this page.
+// Shown when the page cannot reach the database (outage, quota, bad connection).
+// Honest wording instead of "open soon" / a picker that cannot work. No waitlist
+// form here because saving it needs the same database.
+function showTemporarilyUnavailable(){
+  var card = document.getElementById("giveSoldOut");
+  var setCopy = function(el, en, ar){ if(el){ el.setAttribute("data-en", en); el.setAttribute("data-ar", ar); } };
+  if(card){
+    setCopy(card.querySelector("h3"), "Temporarily unavailable", "غير متاح مؤقتاً");
+    setCopy(card.querySelector("p"),
+      "We're fixing a technical issue and sponsorships will be back shortly. Thank you for your patience and generosity \u2014 please check back in a little while.",
+      "نعمل على حل مشكلة تقنية وسيعود باب الكفالة قريباً. شكراً لصبركم وكرمكم \u2014 يرجى المحاولة مرة أخرى بعد قليل.");
+    var f = document.getElementById("waitlistForm"); if(f) f.style.display = "none";
+    var ok = document.getElementById("waitlistSuccess"); if(ok) ok.style.display = "none";
+  }
+  faf_soldOut = true;
+  setLang(sessionStorage.getItem("faf_lang") || "en");
+  renderGiveCard();
+}
+
 function checkFamilyAvailability(){
-  if(!window.sbClient) return;
+  if(!window.sbClient){ showTemporarilyUnavailable(); return; }
   // Open/closed is controlled from the admin portal (Distributions tab).
-  // Only a clear answer from the server closes the page. If the check itself
-  // can't run (bad connection), the picker stays available: the next steps of the
-  // flow (Preferences / Choose family / Payment) each re-check and bounce back
-  // here if sponsorships really are paused, so nobody can get through by mistake.
+  // If the check itself can't run (database unreachable), the page says
+  // "Temporarily unavailable" rather than offering a flow that cannot work.
   fafRetry(function(){ return window.sbClient.rpc("foodbox_sponsorships_state"); }, 3).then(function(res){
     var open = !!(res.data && res.data.open === true);
     FAF_SPONSORSHIPS_PAUSED = !open;
@@ -848,8 +865,8 @@ function checkFamilyAvailability(){
       renderGiveCard();
     });
   }).catch(function(e){
-    console.warn("Could not check sponsorship availability, leaving the picker available", e);
-    faf_soldOut = false; renderGiveCard();
+    console.warn("Could not check sponsorship availability, showing temporarily unavailable", e);
+    showTemporarilyUnavailable();
   });
 }
 // Called after sbClient is created below (see loadLandingStats()) --
