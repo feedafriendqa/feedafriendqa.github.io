@@ -210,6 +210,10 @@ body.lang-ar .pass-perks li::before{left:auto;right:0}
       </div>
       <button class="auth-btn" id="signin-btn" onclick="doSignIn()" data-en="Sign in →" data-ar="تسجيل الدخول ←">Sign in →</button>
       <div class="auth-err" id="signin-err"></div>
+      <div style="text-align:center;margin-top:12px">
+        <a href="#" id="forgot-link" onclick="doForgotPassword();return false;" style="font-size:13px;text-decoration:underline;color:inherit" data-en="Forgot your password?" data-ar="نسيت كلمة المرور؟">Forgot your password?</a>
+      </div>
+      <div id="forgot-msg" style="display:none;margin-top:10px;font-size:13px;line-height:1.5;text-align:center"></div>
     </div>
 
     <div id="register-form" style="display:none">
@@ -1149,6 +1153,29 @@ async function doSignIn(){
   window.currentAuthSession = res.data.session;
   var profileRes = await window.sbClient.from("profiles").select("first_name,surname,phone").eq("id", res.data.user.id).maybeSingle();
   revealPaymentContent(res.data.user, profileRes ? profileRes.data : null);
+}
+
+async function doForgotPassword(){
+  var isAr = document.body.classList.contains("lang-ar");
+  var errEl = document.getElementById("signin-err");
+  var msg = document.getElementById("forgot-msg");
+  errEl.style.display = "none"; msg.style.display = "none";
+  var email = document.getElementById("si-email").value.trim();
+  if(!email){
+    errEl.textContent = isAr ? "أدخل بريدك الإلكتروني أعلاه أولاً ثم اضغط «نسيت كلمة المرور»." : "Enter your email above first, then tap \u201cForgot your password?\u201d";
+    errEl.style.display = "block";
+    return;
+  }
+  try{
+    var res = await window.sbClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/Faf-FoodBox-Account.html" });
+    if(res && res.error) throw res.error;
+    msg.textContent = isAr
+      ? "إذا كان هذا البريد مسجلاً لدينا، فقد أرسلنا إليه رابطاً لإعادة تعيين كلمة المرور. افتح الرابط، اختر كلمة مرور جديدة، ثم ارجع إلى صفحة الكفالة. تحقق أيضاً من البريد غير الهام (Spam)."
+      : "If that email has an account, we\u2019ve sent a link to reset your password. Open it, choose a new password, then come back to the sponsorship page. Please also check your spam folder.";
+  }catch(e){
+    msg.textContent = isAr ? "تعذّر إرسال الرابط الآن. حاول مرة أخرى بعد قليل." : "We couldn\u2019t send the link just now. Please try again in a moment.";
+  }
+  msg.style.display = "block";
 }
 
 async function doRegister(){
