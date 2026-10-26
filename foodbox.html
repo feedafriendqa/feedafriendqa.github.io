@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>window.supabase || document.write('<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"><\/script>');</script>
 <style>
 :root{
   --forest:#0b2f20;
@@ -487,9 +488,9 @@ body.lang-ar .ed-t{line-height:1.5}
 
   <div class="stats-card">
     <div class="stats">
-      <div class="stat"><div class="n" id="stat-boxes">8</div><div class="l" data-en="Boxes<br>needed" data-ar="صناديق<br>مطلوبة">Boxes<br>needed</div></div>
+      <div class="stat"><div class="n" id="stat-boxes">–</div><div class="l" data-en="Boxes<br>needed" data-ar="صناديق<br>مطلوبة">Boxes<br>needed</div></div>
       <div class="stat"><div class="n stat-price" data-en="QAR 100" data-ar="١٠٠ ريال قطري">QAR 100</div><div class="l" data-en="Per box<br>monthly" data-ar="للصندوق<br>شهرياً">Per box<br>monthly</div></div>
-      <div class="stat"><div class="n" id="stat-friends">22</div><div class="l" data-en="Friends<br>need food" data-ar="أصدقاء<br>يحتاجون طعام">Friends<br>need food</div></div>
+      <div class="stat"><div class="n" id="stat-friends">–</div><div class="l" data-en="Friends<br>need food" data-ar="أصدقاء<br>يحتاجون طعام">Friends<br>need food</div></div>
     </div>
     <div class="progress-wrap" id="progress-wrap" style="display:none">
       <div class="progress-top">
@@ -798,6 +799,23 @@ function joinWaitlist(){
     });
 }
 
+// Retry a Supabase call a few times (flaky mobile connections). Resolves with the
+// last result, or throws the last error.
+async function fafRetry(fn, tries){
+  var last;
+  for(var i = 0; i < tries; i++){
+    try{
+      var r = await fn();
+      if(r && r.error) throw r.error;
+      return r;
+    }catch(e){
+      last = e;
+      await new Promise(function(res){ setTimeout(res, 700 * (i + 1)); });
+    }
+  }
+  throw last;
+}
+
 // Checks whether any confirmed family still needs a sponsor this round.
 // food_box_public_pool (the same view the family-picker page reads from)
 // already nets out families whose need is fully covered by pending,
@@ -809,28 +827,29 @@ function joinWaitlist(){
 function checkFamilyAvailability(){
   if(!window.sbClient) return;
   // Open/closed is controlled from the admin portal (Distributions tab).
-  // Fails closed: if the check can't run, the page stays on "opens soon".
-  window.sbClient.rpc("foodbox_sponsorships_state").then(function(res){
-    var open = !res.error && res.data && res.data.open === true;
+  // Only a clear answer from the server closes the page. If the check itself
+  // can't run (bad connection), the picker stays available: the next steps of the
+  // flow (Preferences / Choose family / Payment) each re-check and bounce back
+  // here if sponsorships really are paused, so nobody can get through by mistake.
+  fafRetry(function(){ return window.sbClient.rpc("foodbox_sponsorships_state"); }, 3).then(function(res){
+    var open = !!(res.data && res.data.open === true);
     FAF_SPONSORSHIPS_PAUSED = !open;
     if(!open){ applyPausedCopy(); faf_soldOut = true; setLang(sessionStorage.getItem("faf_lang") || "en"); renderGiveCard(); return; }
     if(FAF_PLEDGE_MODE){ faf_soldOut = false; renderGiveCard(); return; }
     // Sold out = nothing left to sponsor, using the SAME count as the headline
-    // and progress bar (target minus pledged). The old check used the
-    // family-picker pool, which skips friends carried over with an old
-    // is_sponsored flag, so it could say sold out while boxes remained.
+    // and progress bar (target minus pledged).
     return Promise.all([
-      window.sbClient.from("food_box_landing_stats").select("boxes_needed").single(),
-      window.sbClient.from("food_box_pledged_public").select("boxes_pledged").single()
+      fafRetry(function(){ return window.sbClient.from("food_box_landing_stats").select("boxes_needed").single(); }, 3),
+      fafRetry(function(){ return window.sbClient.from("food_box_pledged_public").select("boxes_pledged").single(); }, 3)
     ]).then(function(rs){
-      if(rs[0].error || rs[1].error || !rs[0].data || !rs[1].data) throw (rs[0].error || rs[1].error || new Error("no data"));
+      if(!rs[0].data || !rs[1].data) throw new Error("no data");
       var left = (rs[0].data.boxes_needed || 0) - (rs[1].data.boxes_pledged || 0);
       faf_soldOut = left <= 0;
       renderGiveCard();
     });
   }).catch(function(e){
-    console.warn("Could not check sponsorship availability, keeping page closed", e);
-    faf_soldOut = true; renderGiveCard();
+    console.warn("Could not check sponsorship availability, leaving the picker available", e);
+    faf_soldOut = false; renderGiveCard();
   });
 }
 // Called after sbClient is created below (see loadLandingStats()) --
@@ -942,10 +961,12 @@ async function startSponsorFlow(){
 // (not boxes_remaining) through to loadPledgeProgress.
 function loadLandingStats(){
   if(!window.sbClient) return;
-  window.sbClient
-    .from("food_box_landing_stats")
-    .select("boxes_needed,boxes_remaining,friends_need_food")
-    .single()
+  fafRetry(function(){
+    return window.sbClient
+      .from("food_box_landing_stats")
+      .select("boxes_needed,boxes_remaining,friends_need_food")
+      .single();
+  }, 3)
     .then(function(res){
       if(res.error || !res.data) throw res.error || new Error("no data");
       var remaining = res.data.boxes_remaining != null ? res.data.boxes_remaining : res.data.boxes_needed;
