@@ -353,22 +353,8 @@ body.ar{direction:rtl;}
         </div>
       </div>
 
-      <div class="field" id="diaper-question-block">
-        <label id="lbl-needs-diapers">Update diaper size if your child has grown</label>
-        <div class="diaper-pills" id="reapply-diaper-pills"></div>
-        <div class="check-item" style="margin-top:8px">
-          <input type="checkbox" id="chk-no-diapers" onchange="toggleNoDiapers()">
-          <label for="chk-no-diapers" id="lbl-chk-no-diapers">We no longer need diapers</label>
-        </div>
-      </div>
-
-      <div class="field" id="formula-question-block">
-        <label id="lbl-needs-formula">Would you like to request formula?</label>
-        <div class="loc-choice">
-          <button type="button" class="loc-btn" id="formula-yes-btn" onclick="chooseNeedsFormula(true)">Yes</button>
-          <button type="button" class="loc-btn" id="formula-no-btn" onclick="chooseNeedsFormula(false)">No</button>
-        </div>
-      </div>
+      <!-- Per-child diaper size / formula. Filled in by renderReapplyChildren(). -->
+      <div id="reapply-children-block" style="display:none;"></div>
 
       <div class="field" id="pregnancy-block" style="display:none;">
         <label id="lbl-pregnant">Is anyone in your household currently pregnant?</label>
@@ -1105,18 +1091,10 @@ function showStatusScreen(status, data, canReapply) {
     // was gated on already_has_diapers too, which meant a family with a
     // brand-new baby who'd never been issued diapers could never request
     // them through reapply at all (had to go through an admin instead).
-    diaperQuestionVisible = !!data.diaper_eligible_child;
-    formulaQuestionVisible = !!(!data.already_has_formula && data.formula_eligible_baby);
+    // Diaper size and formula are now asked PER CHILD (children under 4 for
+    // diapers, babies under 12 months for formula) and saved on each child's
+    // own member record. The list comes from get_reapply_children().
     pregnancyQuestionVisible = !!data.adult_female_present;
-
-    document.getElementById('diaper-question-block').style.display = diaperQuestionVisible ? 'block' : 'none';
-    document.getElementById('lbl-needs-diapers').textContent = ar ? 'حفاضات لطفلك' : 'Diapers for your child';
-    document.getElementById('lbl-chk-no-diapers').textContent = ar ? 'لم نعد بحاجة إلى حفاضات' : 'We no longer need diapers';
-
-    document.getElementById('formula-question-block').style.display = formulaQuestionVisible ? 'block' : 'none';
-    document.getElementById('lbl-needs-formula').textContent = ar ? 'هل تريد طلب حليب أطفال؟' : 'Would you like to request formula?';
-    document.getElementById('formula-yes-btn').textContent = ar ? 'نعم' : 'Yes';
-    document.getElementById('formula-no-btn').textContent = ar ? 'لا' : 'No';
 
     document.getElementById('pregnancy-block').style.display = pregnancyQuestionVisible ? 'block' : 'none';
     document.getElementById('lbl-pregnant').textContent = ar ? 'هل توجد حالة حمل حالياً في أسرتك؟' : 'Is anyone in your household currently pregnant?';
@@ -1126,7 +1104,7 @@ function showStatusScreen(status, data, canReapply) {
 
     document.getElementById('lbl-chk-need').textContent = ar ? 'أؤكد أنني لا أزال بحاجة إلى دعم غذائي.' : 'I confirm I still need food support.';
     resetLocationChoice();
-    resetDiaperFormulaChoice(data.diaper_size, data.formula);
+    loadReapplyChildren(data.id);
     resetPregnancyChoice(data.is_pregnant);
 
     var anticipatedMonth = new Date();
@@ -1149,12 +1127,11 @@ function showStatusScreen(status, data, canReapply) {
 var locationChoice = null; // 'here' | 'moved' | null
 var movedAddressConfirmed = false;
 var reapplyPlateFile = null;
-var diaperChoice = null; // 'yes' | 'no' | null
-var diaperSizeVal = null;
-var formulaChoice = null; // 'yes' | 'no' | null
 var pregnantChoice = null; // 'yes' | 'no' | null
-var diaperQuestionVisible = false;
-var formulaQuestionVisible = false;
+// Per-child answers. Each: {member_id, name, dob, diaper_eligible, formula_eligible,
+//   diaperChoice: 'yes'|'no'|null, diaperSize, formulaChoice: 'yes'|'no'|null}
+var reapplyChildren = [];
+var reapplyChildrenReady = false; // false while the child list is still loading
 var pregnancyQuestionVisible = false;
 
 var DIAPER_SIZES = ['NB (Newborn)', 'S (Size 1)', 'M (Size 2)', 'L (Size 3)', 'XL (Size 4)', 'XXL (Size 5)'];
@@ -1254,52 +1231,126 @@ function resetLocationChoice() {
   document.getElementById('reapply-plate-input').value = '';
 }
 
-function resetDiaperFormulaChoice(existingDiaperSize, existingFormula) {
-  diaperChoice = null;
-  diaperSizeVal = null;
-  formulaChoice = null;
-  document.getElementById('chk-no-diapers').checked = false;
-  document.getElementById('reapply-diaper-pills').style.display = 'flex';
-  document.getElementById('formula-yes-btn').classList.remove('selected');
-  document.getElementById('formula-no-btn').classList.remove('selected');
+// Member records store diaper size as "Newborn" / "1".."5"; the form shows the label.
+var MEMBER_SIZE_TO_LABEL = { 'Newborn': 'NB (Newborn)', '1': 'S (Size 1)', '2': 'M (Size 2)', '3': 'L (Size 3)', '4': 'XL (Size 4)', '5': 'XXL (Size 5)' };
 
-  var pillsContainer = document.getElementById('reapply-diaper-pills');
-  var arPills = currentLang === 'ar';
-  pillsContainer.innerHTML = '';
-  DIAPER_SIZES.forEach(function(s) {
-    var pill = document.createElement('div');
-    pill.className = 'diaper-pill';
-    pill.dataset.val = s;
-    pill.textContent = arPills ? (DIAPER_SIZE_LABELS_AR[s] || s) : s;
-    pill.onclick = function() { selectReapplyDiaper(pill); };
-    if (s === existingDiaperSize) pill.classList.add('selected');
-    pillsContainer.appendChild(pill);
+function loadReapplyChildren(applicationId) {
+  reapplyChildren = [];
+  reapplyChildrenReady = false;
+  document.getElementById('reapply-children-block').style.display = 'none';
+  updateReapplyBtn();
+  sb.rpc('get_reapply_children', { p_application_id: applicationId }).then(function(r) {
+    var rows = (r && Array.isArray(r.data)) ? r.data : [];
+    reapplyChildren = rows.map(function(c) {
+      var existing = MEMBER_SIZE_TO_LABEL[c.diaper_size] || null;
+      var fm = (c.needs_formula || '').toString().toLowerCase();
+      return {
+        member_id: c.member_id, name: c.name || '', dob: c.dob,
+        diaper_eligible: !!c.diaper_eligible, formula_eligible: !!c.formula_eligible,
+        diaperChoice: c.diaper_size === 'Not needed' ? 'no' : (existing ? 'yes' : null),
+        diaperSize: existing,
+        formulaChoice: (fm === 'yes' || fm === 'true') ? 'yes' : (fm === 'no' || fm === 'false' ? 'no' : null)
+      };
+    });
+    reapplyChildrenReady = true;
+    renderReapplyChildren();
+    updateReapplyBtn();
+  }, function() {
+    // If the list can't load, don't block the reapply - just skip these questions.
+    reapplyChildrenReady = true;
+    renderReapplyChildren();
+    updateReapplyBtn();
   });
-  if (existingDiaperSize && DIAPER_SIZES.indexOf(existingDiaperSize) !== -1) {
-    diaperSizeVal = existingDiaperSize;
-  }
 }
 
-function selectReapplyDiaper(pill) {
-  document.querySelectorAll('#reapply-diaper-pills .diaper-pill').forEach(function(p) { p.classList.remove('selected'); });
-  pill.classList.add('selected');
-  diaperSizeVal = pill.dataset.val;
-  updateReapplyBtn();
+function childAgeText(dob, ar) {
+  var d = new Date(dob + 'T12:00:00');
+  var now = new Date();
+  var months = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+  if (now.getDate() < d.getDate()) months--;
+  if (months < 0) months = 0;
+  if (months < 24) return ar ? (months + ' شهر') : (months + ' month' + (months === 1 ? '' : 's'));
+  var y = Math.floor(months / 12);
+  return ar ? (y + ' سنوات') : (y + ' years');
 }
 
-function toggleNoDiapers() {
-  var optedOut = document.getElementById('chk-no-diapers').checked;
-  diaperChoice = optedOut ? 'no' : null;
-  document.getElementById('reapply-diaper-pills').style.display = optedOut ? 'none' : 'flex';
-  if (optedOut) diaperSizeVal = null;
-  updateReapplyBtn();
-}
+function renderReapplyChildren() {
+  var ar = currentLang === 'ar';
+  var block = document.getElementById('reapply-children-block');
+  block.innerHTML = '';
+  if (!reapplyChildren.length) { block.style.display = 'none'; return; }
+  block.style.display = 'block';
 
-function chooseNeedsFormula(isYes) {
-  formulaChoice = isYes ? 'yes' : 'no';
-  document.getElementById('formula-yes-btn').classList.toggle('selected', isYes);
-  document.getElementById('formula-no-btn').classList.toggle('selected', !isYes);
-  updateReapplyBtn();
+  reapplyChildren.forEach(function(ch, idx) {
+    var card = document.createElement('div');
+    card.className = 'field';
+    var nm = ch.name || (ar ? ('الطفل ' + (idx + 1)) : ('Child ' + (idx + 1)));
+    var title = document.createElement('label');
+    title.textContent = nm + ' (' + childAgeText(ch.dob, ar) + ')';
+    card.appendChild(title);
+
+    if (ch.diaper_eligible) {
+      var dl = document.createElement('div');
+      dl.style.cssText = 'font-size:13px;margin:6px 0 4px';
+      dl.textContent = ar ? 'مقاس الحفاضات' : 'Diaper size';
+      card.appendChild(dl);
+      var pills = document.createElement('div');
+      pills.className = 'diaper-pills';
+      pills.style.display = ch.diaperChoice === 'no' ? 'none' : 'flex';
+      DIAPER_SIZES.forEach(function(s) {
+        var pill = document.createElement('div');
+        pill.className = 'diaper-pill' + (ch.diaperSize === s && ch.diaperChoice !== 'no' ? ' selected' : '');
+        pill.textContent = ar ? (DIAPER_SIZE_LABELS_AR[s] || s) : s;
+        pill.onclick = function() {
+          ch.diaperChoice = 'yes'; ch.diaperSize = s;
+          pills.querySelectorAll('.diaper-pill').forEach(function(p) { p.classList.remove('selected'); });
+          pill.classList.add('selected');
+          updateReapplyBtn();
+        };
+        pills.appendChild(pill);
+      });
+      card.appendChild(pills);
+      var nd = document.createElement('div');
+      nd.className = 'check-item';
+      nd.style.marginTop = '8px';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.id = 'chk-nodiaper-' + idx; cb.checked = ch.diaperChoice === 'no';
+      cb.onchange = function() {
+        ch.diaperChoice = cb.checked ? 'no' : (ch.diaperSize ? 'yes' : null);
+        pills.style.display = cb.checked ? 'none' : 'flex';
+        updateReapplyBtn();
+      };
+      var cl = document.createElement('label');
+      cl.setAttribute('for', cb.id);
+      cl.textContent = ar ? 'لم نعد بحاجة إلى حفاضات لهذا الطفل' : 'No diapers needed for this child';
+      nd.appendChild(cb); nd.appendChild(cl);
+      card.appendChild(nd);
+    }
+
+    if (ch.formula_eligible) {
+      var fl = document.createElement('div');
+      fl.style.cssText = 'font-size:13px;margin:10px 0 4px';
+      fl.textContent = ar ? 'هل تريد طلب حليب أطفال لهذا الطفل؟' : 'Would you like to request formula for this baby?';
+      card.appendChild(fl);
+      var wrap = document.createElement('div');
+      wrap.className = 'loc-choice';
+      var yes = document.createElement('button'), no = document.createElement('button');
+      yes.type = no.type = 'button';
+      yes.className = no.className = 'loc-btn';
+      yes.textContent = ar ? 'نعم' : 'Yes';
+      no.textContent = ar ? 'لا' : 'No';
+      function paint() {
+        yes.classList.toggle('selected', ch.formulaChoice === 'yes');
+        no.classList.toggle('selected', ch.formulaChoice === 'no');
+      }
+      yes.onclick = function() { ch.formulaChoice = 'yes'; paint(); updateReapplyBtn(); };
+      no.onclick = function() { ch.formulaChoice = 'no'; paint(); updateReapplyBtn(); };
+      paint();
+      wrap.appendChild(yes); wrap.appendChild(no);
+      card.appendChild(wrap);
+    }
+    block.appendChild(card);
+  });
 }
 
 function choosePregnant(isYes) {
@@ -1434,10 +1485,13 @@ function handlePendingDoc(input, docKey) {
 
 function updateReapplyBtn() {
   var locationOk = locationChoice === 'here' || (locationChoice === 'moved' && movedAddressConfirmed);
-  var diaperOk = !diaperQuestionVisible || diaperChoice === 'no' || !!diaperSizeVal;
-  var formulaOk = !formulaQuestionVisible || formulaChoice === 'yes' || formulaChoice === 'no';
+  var childrenOk = reapplyChildrenReady && reapplyChildren.every(function(ch) {
+    var dOk = !ch.diaper_eligible || ch.diaperChoice === 'no' || (ch.diaperChoice === 'yes' && !!ch.diaperSize);
+    var fOk = !ch.formula_eligible || ch.formulaChoice === 'yes' || ch.formulaChoice === 'no';
+    return dOk && fOk;
+  });
   var pregnantOk = !pregnancyQuestionVisible || pregnantChoice === 'yes' || pregnantChoice === 'no';
-  var ok = locationOk && diaperOk && formulaOk && pregnantOk && document.getElementById('chk-need').checked;
+  var ok = locationOk && childrenOk && pregnantOk && document.getElementById('chk-need').checked;
   document.getElementById('reapply-btn').disabled = !ok;
 }
 
@@ -1458,31 +1512,43 @@ async function doReapply() {
   document.getElementById('reapply-btn-text').textContent = ar ? 'جاري التأكيد...' : 'Confirming...';
   errEl.classList.remove('show');
 
-  var extrasPayload = { type: 'update_reapply_extras', application_id: currentApp.id };
-  if (diaperQuestionVisible) {
-    extrasPayload.diaper_size = diaperChoice === 'no' ? 'Not needed' : diaperSizeVal;
-  }
-  if (formulaQuestionVisible) {
-    extrasPayload.formula = formulaChoice === 'yes' ? 'Yes' : 'Not needed';
-  }
-  if (pregnancyQuestionVisible) {
-    extrasPayload.is_pregnant = pregnantChoice === 'yes';
-    extrasPayload.due_date = pregnantChoice === 'yes' ? (document.getElementById('inp-due-date').value || null) : null;
-  }
-
-  fetch(EDGE_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY },
-    body: JSON.stringify(extrasPayload)
-  }).catch(function() {});
-
   if (emailVal) {
     // Best-effort: never blocks the reapply if it fails.
     try { sb.rpc('set_reapply_email', { p_application_id: currentApp.id, p_email: emailVal }).then(function(){}, function(){}); } catch (e) {}
   }
 
   try {
-    var result = await sb.rpc('do_reapply', { p_application_id: currentApp.id });
+    // 1) Save diaper/formula (per child) and pregnancy FIRST. The database refuses to
+    //    save anything unless the application is eligible and the reapply window is
+    //    open, so a closed window never changes a family's record.
+    var childPayload = reapplyChildren.map(function(ch) {
+      var o = { member_id: ch.member_id };
+      if (ch.diaper_eligible) o.diaper_size = ch.diaperChoice === 'no' ? 'Not needed' : ch.diaperSize;
+      if (ch.formula_eligible) o.formula = ch.formulaChoice === 'yes';
+      return o;
+    });
+    var saveArgs = { p_application_id: currentApp.id, p_children: childPayload };
+    if (pregnancyQuestionVisible) {
+      saveArgs.p_set_pregnancy = true;
+      saveArgs.p_is_pregnant = pregnantChoice === 'yes';
+      saveArgs.p_due_date = pregnantChoice === 'yes' ? (document.getElementById('inp-due-date').value || null) : null;
+    }
+    var saved = await sb.rpc('save_reapply_extras', saveArgs);
+    var savedData = saved.data;
+    var result;
+    if (savedData && savedData.error === 'cutoff_passed') {
+      // Let do_reapply produce the standard "applications closed" message below.
+      result = await sb.rpc('do_reapply', { p_application_id: currentApp.id });
+    } else if (!savedData || !savedData.ok) {
+      errEl.textContent = ar ? 'حدث خطأ. يرجى المحاولة مرة أخرى.' : 'Something went wrong. Please try again.';
+      errEl.classList.add('show');
+      btn.disabled = false;
+      document.getElementById('reapply-btn-text').textContent = ar ? 'طلب صندوق الطعام ←' : 'Request my food box →';
+      return;
+    } else {
+      // 2) Now confirm the reapply.
+      result = await sb.rpc('do_reapply', { p_application_id: currentApp.id });
+    }
     var data = result.data;
 
     if (data && data.error === 'cutoff_passed') {
