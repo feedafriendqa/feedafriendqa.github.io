@@ -3799,7 +3799,7 @@ function showMatchingReview(roundId, sponsorships, friends, profiles) {
 // they held is still on the record, so those families are fine. Two flags:
 //  - no address details on file -> ask the family for their blue plate/address
 //  - address on file but no Google location -> check the address, retry lookup
-function loadMatchingFlags() {
+function loadMatchingFlags(retried) {
   var box = document.getElementById('matching-flags');
   if (!box) return;
   box.innerHTML = '<span style="font-size:12px;color:var(--muted);">Checking address details and Google locations…</span>';
@@ -3814,6 +3814,29 @@ function loadMatchingFlags() {
       var noLoc = !(has(f.map_url) || (f.lat != null && f.lng != null));
       if (noAddr || noLoc) flagged.push({ f: f, noAddr: noAddr, noLoc: noLoc });
     });
+    // Families with an address but no Google location: retry the location
+    // lookup (QNAS) automatically, once per time the review is opened, then
+    // re-check. Spaced out to stay inside QNAS's rate limit (3 requests / 5s).
+    var retry = flagged.filter(function(x){ return !x.noAddr && x.noLoc; });
+    if (!retried && retry.length) {
+      var done = 0;
+      box.innerHTML = '<span style="font-size:12px;color:var(--muted);">Retrying Google location for ' + retry.length + ' famil' + (retry.length === 1 ? 'y' : 'ies') + ' that have an address…</span>';
+      var chain = Promise.resolve();
+      retry.forEach(function(x) {
+        chain = chain.then(function() {
+          var f = x.f;
+          return fetch(SUPABASE_URL + '/functions/v1/clever-responder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ANON_KEY },
+            body: JSON.stringify({ type: 'update_application_address', application_id: f.id, zone: f.zone, street: f.street, building: f.building, unit: f.unit, area: f.area, flat: f.flat })
+          }).catch(function(){}).then(function() {
+            done++; box.innerHTML = '<span style="font-size:12px;color:var(--muted);">Retrying Google location… ' + done + ' of ' + retry.length + '</span>';
+            return new Promise(function(res){ setTimeout(res, 1800); });
+          });
+        });
+      });
+      return chain.then(function(){ return loadMatchingFlags(true); });
+    }
     if (!flagged.length) { box.innerHTML = '<div style="background:#eef7ee;border-radius:8px;padding:8px 12px;font-size:13px;">✓ Every confirmed family has address details and a Google location.</div>'; return; }
     var byHandler = {};
     flagged.forEach(function(x) { var k = x.f.assigned_to || 'Unassigned'; (byHandler[k] = byHandler[k] || []).push(x); });
