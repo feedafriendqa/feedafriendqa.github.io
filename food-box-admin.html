@@ -3781,6 +3781,7 @@ function showMatchingReview(roundId, sponsorships, friends, profiles) {
       '<div style="background:#f1f1ee;border-radius:8px;padding:8px 12px;"><b>' + totalGiven + '</b> of <b>' + totalWanted + '</b> pledged boxes would be allocated</div>' +
       '<div style="background:#f1f1ee;border-radius:8px;padding:8px 12px;"><b>' + left + '</b> confirmed friend' + (left === 1 ? '' : 's') + ' left without a sponsor</div>' +
     '</div>' +
+    '<div id="matching-flags" style="margin-bottom:14px;"></div>' +
     (plan.length ? '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="text-align:left;border-bottom:2px solid var(--border);"><th style="padding:8px;">Sponsor</th><th style="padding:8px;text-align:center;">Pledged</th><th style="padding:8px;text-align:center;">Allocated</th><th style="padding:8px;">Friends matched</th><th style="padding:8px;text-align:center;">Result</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<div style="padding:16px;color:var(--muted);">There are no pledges waiting to be matched for this distribution.</div>') +
     '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">' +
       '<button class="btn-comment" style="background:#fff;color:var(--text);border:1.5px solid var(--border);" onclick="closeMatchingReview()">Cancel — change nothing</button>' +
@@ -3789,6 +3790,47 @@ function showMatchingReview(roundId, sponsorships, friends, profiles) {
   var ov = document.getElementById('matching-review-overlay');
   if (!ov) { ov = document.createElement('div'); ov.id = 'matching-review-overlay'; ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;'; document.body.appendChild(ov); }
   ov.innerHTML = html; ov.style.display = 'flex';
+  loadMatchingFlags();
+}
+
+// Confirmed families whose delivery details need a follow-up, grouped by case
+// handler. "Missing" is judged on the address details (zone, street, building),
+// NOT on the blue plate scan file: some old scans were lost but the address
+// they held is still on the record, so those families are fine. Two flags:
+//  - no address details on file -> ask the family for their blue plate/address
+//  - address on file but no Google location -> check the address, retry lookup
+function loadMatchingFlags() {
+  var box = document.getElementById('matching-flags');
+  if (!box) return;
+  box.innerHTML = '<span style="font-size:12px;color:var(--muted);">Checking address details and Google locations…</span>';
+  var esc = function(t){ return String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var has = function(v){ return v != null && String(v).trim() !== ''; };
+  apiHeadersAsync().then(function(h) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=id,full_name,full_name_en,whatsapp,area,zone,street,building,unit,flat,household_size,assigned_to,lat,lng,map_url,blue_plate_path&status=eq.confirmed&order=full_name_en', { headers: h });
+  }).then(function(r) { if (!r.ok) throw new Error('status ' + r.status); return r.json(); }).then(function(rows) {
+    var flagged = [];
+    rows.forEach(function(f) {
+      var noAddr = !(has(f.zone) && has(f.street) && has(f.building));
+      var noLoc = !(has(f.map_url) || (f.lat != null && f.lng != null));
+      if (noAddr || noLoc) flagged.push({ f: f, noAddr: noAddr, noLoc: noLoc });
+    });
+    if (!flagged.length) { box.innerHTML = '<div style="background:#eef7ee;border-radius:8px;padding:8px 12px;font-size:13px;">✓ Every confirmed family has address details and a Google location.</div>'; return; }
+    var byHandler = {};
+    flagged.forEach(function(x) { var k = x.f.assigned_to || 'Unassigned'; (byHandler[k] = byHandler[k] || []).push(x); });
+    var noAddrCount = flagged.filter(function(x){ return x.noAddr; }).length;
+    var noLocOnly = flagged.length - noAddrCount;
+    var groups = Object.keys(byHandler).sort().map(function(k) {
+      var list = byHandler[k].map(function(x) {
+        var f = x.f;
+        var addr = x.noAddr ? '<span style="color:var(--red);font-weight:700;">no address details</span>' : esc([f.zone, f.street, f.building, f.unit, f.flat].filter(has).join(' / ')) + ' <span style="color:var(--orange);font-weight:700;">· no Google location</span>';
+        return '<tr style="border-top:1px solid var(--border);"><td style="padding:5px 8px;">' + esc(f.full_name_en || f.full_name) + '</td><td style="padding:5px 8px;">' + esc(f.whatsapp || '') + '</td><td style="padding:5px 8px;">' + esc(f.area || '–') + '</td><td style="padding:5px 8px;">' + addr + '</td><td style="padding:5px 8px;text-align:center;">' + Math.ceil((f.household_size || 1) / 4) + '</td><td style="padding:5px 8px;color:var(--muted);">' + (has(f.blue_plate_path) ? 'scan on file' : 'no scan (fine if address is filled in)') + '</td></tr>';
+      }).join('');
+      return '<div style="margin-top:8px;"><div style="font-weight:800;font-size:13px;">' + esc(k) + ' — ' + byHandler[k].length + '</div>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="text-align:left;color:var(--muted);"><th style="padding:4px 8px;">Family</th><th style="padding:4px 8px;">WhatsApp</th><th style="padding:4px 8px;">Area</th><th style="padding:4px 8px;">Address</th><th style="padding:4px 8px;">Boxes</th><th style="padding:4px 8px;">Scan</th></tr></thead><tbody>' + list + '</tbody></table></div>';
+    }).join('');
+    box.innerHTML = '<details style="border:1.5px solid var(--orange);border-radius:10px;padding:10px 14px;background:#fffaf0;">' +
+      '<summary style="cursor:pointer;font-weight:800;font-size:14px;">⚠ ' + flagged.length + ' confirmed famil' + (flagged.length === 1 ? 'y needs' : 'ies need') + ' follow-up before the distribution sheet is finalised <span style="font-weight:400;font-size:12px;color:var(--muted);">(' + noAddrCount + ' no address details, ' + noLocOnly + ' address but no Google location)</span></summary>' + groups + '</details>';
+  }).catch(function(e) { box.innerHTML = '<span style="font-size:12px;color:var(--red);">Could not check address details: ' + esc(e.message) + '</span>'; });
 }
 function closeMatchingReview() { var ov = document.getElementById('matching-review-overlay'); if (ov) ov.style.display = 'none'; }
 function approveMatching(roundId) {
