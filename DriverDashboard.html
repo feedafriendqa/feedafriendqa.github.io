@@ -92,6 +92,13 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 
 /* STATUS BANNER */
 .banner{border-radius:16px;padding:18px 20px;margin:0 16px 10px}
+/* Tutorials */
+.tut-card{background:#fff;border-radius:16px;margin:0 16px 12px;overflow:hidden;box-shadow:0 2px 6px rgba(10,46,30,.08),0 10px 24px rgba(10,46,30,.1)}
+.tut-card video{display:block;width:100%;aspect-ratio:16/9;background:#0b2f20}
+.tut-meta{padding:12px 16px 14px}
+.tut-t{font-family:"League Spartan",sans-serif;font-size:15px;font-weight:900;color:var(--ink);margin-bottom:3px}
+.tut-s{font-size:12px;color:var(--muted);font-weight:600;line-height:1.5}
+
 .banner.pending{background:#FFFBF0;border:1.5px solid var(--amber)}
 .banner.approved{background:#F0FDF5;border:1.5px solid #a8d8b8}
 .banner-t{font-family:"League Spartan",sans-serif;font-size:14px;font-weight:900;color:var(--ink);margin-bottom:5px}
@@ -387,6 +394,32 @@ body.lang-ar .alt-contact-actions{text-align:left}
     </div>
   </div>
 
+  <!-- Tutorials -->
+  <div class="dash-stack" id="pnl-tutorials" style="display:none;padding-bottom:8px">
+    <div class="dash-hero"><img class="login-logo" alt="Feed a Friend"><div class="login-title" data-en="Tutorials" data-ar="شروحات">Tutorials</div><div class="login-sub" data-en="Short videos to guide you through distribution" data-ar="فيديوهات قصيرة لإرشادك خلال التوزيع">Short videos to guide you through distribution</div></div>
+    <div class="tut-card">
+      <video controls playsinline preload="none" poster="videos/tutorial-picking-deliveries.jpg" src="videos/tutorial-picking-deliveries.mp4"></video>
+      <div class="tut-meta">
+        <div class="tut-t"><span data-en="Picking your deliveries" data-ar="اختيار توصيلاتك">Picking your deliveries</span> <span style="font-family:Manrope,sans-serif;font-size:11px;font-weight:700;color:var(--muted-2);white-space:nowrap">· 2:07</span></div>
+        <div class="tut-s" data-en="How to sign up for a trip and choose the friends you’ll deliver to." data-ar="كيف تسجّل لرحلة وتختار الأصدقاء الذين ستوصّل إليهم.">How to sign up for a trip and choose the friends you’ll deliver to.</div>
+      </div>
+    </div>
+    <div class="tut-card">
+      <video controls playsinline preload="none" poster="videos/tutorial-before-distribution-day.jpg" src="videos/tutorial-before-distribution-day.mp4"></video>
+      <div class="tut-meta">
+        <div class="tut-t"><span data-en="Before distribution day" data-ar="قبل يوم التوزيع">Before distribution day</span> <span style="font-family:Manrope,sans-serif;font-size:11px;font-weight:700;color:var(--muted-2);white-space:nowrap">· 1:35</span></div>
+        <div class="tut-s" data-en="What to do once your trip is confirmed, including contacting your friends." data-ar="ماذا تفعل بعد تأكيد رحلتك، بما في ذلك التواصل مع أصدقائك.">What to do once your trip is confirmed, including contacting your friends.</div>
+      </div>
+    </div>
+    <div class="tut-card">
+      <video controls playsinline preload="none" poster="videos/tutorial-distribution-day.jpg" src="videos/tutorial-distribution-day.mp4"></video>
+      <div class="tut-meta">
+        <div class="tut-t"><span data-en="Distribution day" data-ar="يوم التوزيع">Distribution day</span> <span style="font-family:Manrope,sans-serif;font-size:11px;font-weight:700;color:var(--muted-2);white-space:nowrap">· 2:37</span></div>
+        <div class="tut-s" data-en="Collecting your boxes, delivering and marking each delivery done." data-ar="استلام صناديقك، والتوصيل، وتسجيل كل توصيل كمكتمل.">Collecting your boxes, delivering and marking each delivery done.</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Past trips -->
   <div class="dash-stack" id="pnl-past" style="display:none;padding-bottom:24px">
     <div class="dash-hero"><img class="login-logo" alt="Feed a Friend"><div class="login-title" data-en="Past trips" data-ar="الرحلات السابقة">Past trips</div><div class="login-sub" data-en="Your delivery history" data-ar="سجل توصيلاتك">Your delivery history</div></div>
@@ -502,7 +535,7 @@ body.lang-ar .alt-contact-actions{text-align:left}
 
 </div></body>
 <script>
-var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4",EDGE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder",EDGE_PROFILE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/update-driver-profile";
+var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4",EDGE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder",EDGE_PROFILE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/update-driver-profile",EDGE_RELEASE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/driver-release-family";
 // Works around a known supabase-js deadlock (supabase/supabase-js#1594,
 // #2013, #2111): internally it serializes every auth call (getSession,
 // signOut, etc.) through navigator.locks, and if that browser-level lock
@@ -756,7 +789,10 @@ var TR={
   enter_email_first:{en:"Enter your email first.",ar:"أدخل بريدك الإلكتروني أولاً."},
   session_check_timed_out:{en:"Session check timed out",ar:"انتهت مهلة التحقق من الجلسة"},
   delivery_photo_preview_alt:{en:"Delivery photo preview",ar:"معاينة صورة التوصيل"},
-  remove_and_match_again:{en:"Remove and match again",ar:"إزالة وإيجاد بديل"}
+  remove_and_match_again:{en:"Remove and match again",ar:"إزالة وإيجاد بديل"},
+  release_own_title:{en:"I can't deliver this one — release it for another driver",ar:"لا أستطيع توصيل هذه — أطلقها لسائق آخر"},
+  release_own_confirm:{en:"Release this delivery? It goes back to the pool for another driver to deliver. It is still your sponsorship.",ar:"هل تريد إطلاق هذا التوصيل؟ سيعود إلى القائمة ليوصله سائق آخر. ويبقى تكفّلك كما هو."},
+  release_own_failed:{en:"Could not release this one — please try again.",ar:"تعذّر الإطلاق — حاول مرة أخرى."}
 };
 function t(key){ return (TR[key]&&TR[key][LANG])||(TR[key]&&TR[key].en)||key; }
 
@@ -1756,6 +1792,9 @@ async function performRemoveFamily(id){
     var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"remove_trip_family",trip_assignment_id:id,driver_email:CU.email,reason:reason})});
     j=await r.json();
     if(!r.ok||j.error)throw new Error(j.error||t("remove_failed"));
+    // If this was a family the driver sponsored themselves, hand it back to the
+    // pool for another driver (no-op for anyone else's family).
+    if(j.application_id){rememberReleased(j.application_id);fetch(EDGE_RELEASE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({driver_email:CU.email,application_id:j.application_id,reason:reason})}).then(function(x){return x.json();}).then(function(d){if(!d||!d.ok)try{var a=getReleasedIds().filter(function(i){return i!==j.application_id;});localStorage.setItem("faf_released_ids",JSON.stringify(a));}catch(e){}}).catch(function(){});}
   }catch(e){
     closeAltNumberModal();
     alert(t("remove_failed")+(e.message?" ("+e.message+")":""));
@@ -2133,7 +2172,7 @@ async function loadAlloc(){
   document.getElementById("alloc-list").innerHTML='<div class="loading" style="padding:20px"><div class="spin"></div></div>';
   document.getElementById("confirm-btn").disabled=false;document.getElementById("confirm-btn").textContent=t("confirm_these");
   try{
-    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_boxes",driver_email:CU.email,areas:SELAREAS,capacity_override:TRIPCAP})});
+    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_boxes",driver_email:CU.email,areas:SELAREAS,exclude_ids:getReleasedIds(),capacity_override:(NOFILL?0:TRIPCAP)})});
     var d=await r.json();
     ALLOC_META=d;
     (d.families||[]).forEach(function(f){KEPT[f.id]=f;});
@@ -2164,7 +2203,7 @@ function renderAlloc(){
         // Self-sponsored cards are the driver's own committed sponsorship for
         // this round, not a rotation pick — no ✕ to swap them out and no tap
         // to leave them out, since there's no "someone else" to reshuffle in.
-        return '<div class="alloc-fam'+(off?" af-off":"")+'" id="af-'+f.id+'"'+(self?"":' onclick="toggleDeselect(\''+f.id+'\')"')+'>'+(self?"":'<button class="af-x" onclick="event.stopPropagation();removeAllocFam(\''+f.id+'\')" title="'+t("remove_and_match_again")+'">✕</button>')
+        return '<div class="alloc-fam'+(off?" af-off":"")+'" id="af-'+f.id+'"'+(self?"":' onclick="toggleDeselect(\''+f.id+'\')"')+'>'+(self?'<button class="af-x" onclick="event.stopPropagation();releaseOwnFam(\''+f.id+'\')" title="'+t("release_own_title")+'">✕</button>':'<button class="af-x" onclick="event.stopPropagation();removeAllocFam(\''+f.id+'\')" title="'+t("remove_and_match_again")+'">✕</button>')
           +'<div class="af-area"><svg viewBox="0 0 24 24" width="12" height="12" style="vertical-align:-1px;margin-right:3px" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="#146c43"/></svg>'+(f.area||t("unknown_area"))+'</div>'
           +'<div class="af-sub">'+(f.household_size?t("household_of")+f.household_size+" · ":"")+tags+'</div>'
           +(off?'<div class="af-off-lbl">'+t("not_confirming_tap_back")+'</div>':'')
@@ -2198,6 +2237,28 @@ async function reshuffleUnselected(){
 // ── REMOVE ONE CARD + RE-MATCH JUST THAT SLOT ────────────────────────────
 // Doesn't touch the families the driver already kept — only fetches a
 // replacement sized to whatever boxes the removed family freed up.
+// Partial delivery: a driver who sponsored families themselves can release any
+// of them back to the pool (delivery-only) if they can't do that one. Unlike ✕
+// on a pool card this does NOT fetch a replacement, and once a driver has
+// released one we stop topping the trip up automatically (NOFILL) and never
+// offer that family back to them (RELEASED_IDS, remembered on this device).
+var NOFILL=false;
+function getReleasedIds(){try{return JSON.parse(localStorage.getItem("faf_released_ids")||"[]");}catch(e){return [];}}
+function rememberReleased(id){try{var a=getReleasedIds();if(a.indexOf(id)<0)a.push(id);localStorage.setItem("faf_released_ids",JSON.stringify(a));}catch(e){}}
+async function releaseOwnFam(id){
+  if(!confirm(t("release_own_confirm")))return;
+  try{
+    var r=await fetch(EDGE_RELEASE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({driver_email:CU.email,application_id:id})});
+    var d=await r.json();
+    if(!d||!d.ok)throw new Error((d&&d.error)||"failed");
+    rememberReleased(id);NOFILL=true;
+    var bx=(KEPT[id]&&KEPT[id].boxes_needed)||1;
+    delete KEPT[id];delete DESELECTED[id];
+    if(ALLOC_META&&ALLOC_META.self_sponsored_boxes!=null)ALLOC_META.self_sponsored_boxes=Math.max(0,ALLOC_META.self_sponsored_boxes-bx);
+    renderAlloc();
+  }catch(e){alert(t("release_own_failed"));}
+}
+
 function removeAllocFam(id){
   delete KEPT[id];
   delete DESELECTED[id];
@@ -2372,4 +2433,29 @@ function showDeliveredToast(count){
 }
 
 init();
+
+// Tutorials panel: visible whenever the main dashboard (active trip or no trip)
+// is on screen, hidden on the allocation / delivery / profile screens. Driven
+// by an observer so it doesn't depend on every show/hide call site.
+(function(){
+  function syncTutorials(){
+    var t=document.getElementById("pnl-tutorials");
+    if(!t)return;
+    var a=document.getElementById("pnl-active"),n=document.getElementById("pnl-none");
+    var main=(a&&a.style.display==="block")||(n&&n.style.display==="block");
+    var next=main?"block":"none";
+    if(t.style.display!==next){
+      t.style.display=next;
+      if(!main){t.querySelectorAll("video").forEach(function(v){try{v.pause();}catch(e){}});}
+    }
+  }
+  function init(){
+    ["pnl-active","pnl-none"].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el)new MutationObserver(syncTutorials).observe(el,{attributes:true,attributeFilter:["style"]});
+    });
+    syncTutorials();
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
+})();
 </script></html>
