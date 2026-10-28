@@ -56,6 +56,7 @@ async function call(opts) {
 function render(d) {
   card.replaceChildren();
   const ev = d.event || {};
+  if (ev.image_url) { const im = el("img"); im.src = ev.image_url; im.alt = ev.title || "Invitation"; im.style.cssText = "width:100%;border-radius:12px;margin-bottom:16px;display:block"; card.append(im); }
   card.append(el("h1", "", ev.title || "Invitation"));
   card.append(el("p", "hi", "Hi " + (d.first_name || "there") + ","));
   if (ev.description) card.append(el("p", "desc", ev.description));

@@ -594,7 +594,7 @@ function EventsTab({vols,st}){
 
   const saveEvent=async()=>{
     if(!form.title||!form.event_date){st("Add a title and date");return;}
-    const row={title:form.title,kind:form.kind||"event",description:form.description||null,event_date:form.event_date,start_time:form.start_time||null,end_time:form.end_time||null,location:form.location||null,location_detail:form.location_detail||null,rsvp_deadline:form.rsvp_deadline||null};
+    const row={title:form.title,image_url:form.image_url||null,kind:form.kind||"event",description:form.description||null,event_date:form.event_date,start_time:form.start_time||null,end_time:form.end_time||null,location:form.location||null,location_detail:form.location_detail||null,rsvp_deadline:form.rsvp_deadline||null};
     const {data,error}=form.id?await sb.from("admin_events").update(row).eq("id",form.id).select().single():await sb.from("admin_events").insert(row).select().single();
     if(error){st("Could not save event");return;}
     st("✓ Event saved"); setForm(null); await loadEvents(); setSel(data);
@@ -644,6 +644,7 @@ function EventsTab({vols,st}){
   if(form) return <div style={{background:"#fff",borderRadius:14,padding:16,border:"1px solid "+BR}}>
     <h3 style={{fontFamily:HF,fontSize:15,fontWeight:900,textTransform:"uppercase",color:DK,margin:"0 0 6px"}}>{form.id?"Edit event":"New event"}</h3>
     <label style={lab}>Title</label><input style={inp} value={form.title||""} onChange={e=>setForm({...form,title:e.target.value})}/>
+    <label style={lab}>Invitation image URL (optional, shown in the email)</label><input style={inp} placeholder="https://…/invite.jpg" value={form.image_url||""} onChange={e=>setForm({...form,image_url:e.target.value})}/>
     <label style={lab}>Message to invitees</label><textarea style={{...inp,minHeight:80}} value={form.description||""} onChange={e=>setForm({...form,description:e.target.value})}/>
     <label style={lab}>Date</label><input type="date" style={inp} value={form.event_date||""} onChange={e=>setForm({...form,event_date:e.target.value})}/>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
