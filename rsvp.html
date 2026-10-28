@@ -53,6 +53,9 @@ async function call(opts) {
   return j;
 }
 
+const fmtDate = (d, wd = true) => /^\d{4}-\d{2}-\d{2}$/.test(d || "") ? new Date(d + "T00:00:00Z").toLocaleDateString("en-GB", { weekday: wd ? "long" : undefined, day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : (d || "");
+const fmtTime = (t) => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ""); if (!m) return t || ""; const h = +m[1]; return ((h + 11) % 12 + 1) + ":" + m[2] + (h >= 12 ? "pm" : "am"); };
+
 function render(d) {
   card.replaceChildren();
   const ev = d.event || {};
@@ -61,10 +64,10 @@ function render(d) {
   card.append(el("p", "hi", "Hi " + (d.first_name || "there") + ","));
   if (ev.description) card.append(el("p", "desc", ev.description));
   const box = el("div", "box");
-  const when = [ev.event_date, ev.start_time ? ev.start_time + (ev.end_time ? " – " + ev.end_time : "") : null].filter(Boolean).join(" · ");
+  const when = [fmtDate(ev.event_date), ev.start_time ? fmtTime(ev.start_time) + (ev.end_time ? " – " + fmtTime(ev.end_time) : "") : null].filter(Boolean).join(" · ");
   box.append(el("div", "", "📅 " + (when || "Date to be confirmed")));
   box.append(el("div", "", "📍 " + (ev.location || "Venue to be confirmed") + (ev.location_detail ? " — " + ev.location_detail : "")));
-  if (ev.rsvp_deadline) box.append(el("div", "", "✉️ Please reply by " + ev.rsvp_deadline));
+  if (ev.rsvp_deadline) box.append(el("div", "", "✉️ Please reply by " + fmtDate(ev.rsvp_deadline, false)));
   if (ev.location) {
     const a = el("a", "", "Open in Google Maps →");
     a.href = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(ev.location);
