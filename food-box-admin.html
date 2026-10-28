@@ -466,6 +466,13 @@ select.edit-field{cursor:pointer;}
           </div>
         </div>
 
+        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
+          <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;">🚗 Email distributors</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Tell approved distributors the driver portal is open. You can edit the message, send yourself a test first, and nothing goes out until you confirm.</div>
+          <button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="openEmailDistributors()">✉️ Email distributors…</button>
+          <div id="email-dist-last" style="font-size:12px;color:var(--muted);margin-top:8px;"></div>
+        </div>
+
         <details style="border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;background:#fff;">
           <summary id="unmatched-summary" style="cursor:pointer;font-size:14px;font-weight:700;color:var(--text);">👋 Families awaiting a sponsor</summary>
           <div id="unmatched-panel" style="font-size:13px;color:var(--muted);margin-top:12px;">Loading…</div>
@@ -3524,6 +3531,70 @@ function loadDriverNotesBadge() {
   }).catch(function(){});
 }
 
+// ── Email distributors (driver portal announcement) ──
+var EMAIL_DIST_ROUND = null;
+function openEmailDistributors() {
+  apiHeadersAsync().then(function(h) {
+    return fetch(SUPABASE_URL + '/rest/v1/distribution_rounds?select=id,name,distribution_date,distribution_time,location&status=eq.open&order=distribution_date.asc&limit=1', { headers: h });
+  }).then(function(r) { return r.json(); }).then(function(rows) {
+    if (!rows || !rows.length) { alert('There is no open distribution to announce.'); return; }
+    EMAIL_DIST_ROUND = rows[0];
+    var rd = EMAIL_DIST_ROUND;
+    var when = [rd.distribution_date, rd.distribution_time].filter(Boolean).join(', ');
+    document.getElementById('email-dist-round').textContent = rd.name + ' — ' + when + (rd.location ? ' · ' + rd.location : '');
+    document.getElementById('email-dist-subject').value = 'The distribution portal is open – pick your deliveries 🚗';
+    document.getElementById('email-dist-message').value = 'The food box distribution portal is now open for ' + rd.name + '.\n\nPlease log in to your driver dashboard, choose your areas and pick the deliveries you can take. If you are new, watch the short tutorial videos at the bottom of the dashboard first.\n\nThank you for helping us feed families across Qatar.';
+    document.getElementById('email-dist-audience').value = 'all';
+    document.getElementById('email-dist-status').textContent = '';
+    document.getElementById('email-dist-overlay').style.display = 'flex';
+    emailDistCall('preview').then(function(j) { emailDistShowCount(j); }).catch(function(e) { document.getElementById('email-dist-count').textContent = 'Could not count recipients: ' + e.message; });
+  }).catch(function(e) { alert('Could not load the open distribution: ' + e.message); });
+}
+function closeEmailDistributors() { document.getElementById('email-dist-overlay').style.display = 'none'; }
+function emailDistCall(action, extra) {
+  var body = Object.assign({
+    action: action,
+    round_id: EMAIL_DIST_ROUND.id,
+    audience: document.getElementById('email-dist-audience').value,
+    subject: document.getElementById('email-dist-subject').value,
+    message: document.getElementById('email-dist-message').value
+  }, extra || {});
+  return apiHeadersAsync().then(function(h) {
+    return fetch(SUPABASE_URL + '/functions/v1/email-distributors', { method: 'POST', headers: h, body: JSON.stringify(body) });
+  }).then(function(r) { return r.json().then(function(j) { j._status = r.status; return j; }); });
+}
+function emailDistShowCount(j) {
+  var el = document.getElementById('email-dist-count');
+  if (j.error) { el.textContent = j.error; return; }
+  var prev = (j.previous && j.previous.length) ? (' Last sent ' + new Date(j.previous[0].created_at).toLocaleString('en-GB', { timeZone: 'Asia/Qatar', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' to ' + j.previous[0].recipients + '.') : '';
+  el.textContent = 'This will email ' + j.count + ' approved distributor' + (j.count === 1 ? '' : 's') + '.' + prev;
+  document.getElementById('email-dist-send-btn').textContent = 'Send to ' + j.count;
+  var last = document.getElementById('email-dist-last');
+  if (last) last.textContent = (j.previous && j.previous.length) ? ('Last sent ' + new Date(j.previous[0].created_at).toLocaleString('en-GB', { timeZone: 'Asia/Qatar', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' to ' + j.previous[0].recipients + ' distributors.') : '';
+}
+function emailDistRefreshCount() { emailDistCall('preview').then(emailDistShowCount); }
+function emailDistTest() {
+  var st = document.getElementById('email-dist-status'); st.textContent = 'Sending test…';
+  emailDistCall('test').then(function(j) { st.textContent = j.error ? ('Failed: ' + j.error) : (j.ok ? ('Test sent to ' + j.sent_to + '.') : 'The test email failed to send.'); }).catch(function(e) { st.textContent = 'Failed: ' + e.message; });
+}
+function emailDistSend(force) {
+  var st = document.getElementById('email-dist-status');
+  var n = document.getElementById('email-dist-count').textContent;
+  if (!force && !confirm('Send this email to all selected distributors now? This cannot be undone.\n\n' + n)) return;
+  st.textContent = 'Sending… please keep this window open.';
+  document.getElementById('email-dist-send-btn').disabled = true;
+  emailDistCall('send', force ? { force: true } : {}).then(function(j) {
+    document.getElementById('email-dist-send-btn').disabled = false;
+    if (j.error === 'already_sent_recently') {
+      if (confirm('An announcement was already sent in the last 12 hours. Send it again?')) return emailDistSend(true);
+      st.textContent = 'Cancelled — nothing sent.'; return;
+    }
+    if (j.error) { st.textContent = 'Failed: ' + j.error; return; }
+    st.textContent = 'Sent to ' + j.sent + (j.failed ? (' (' + j.failed + ' failed — check Brevo)') : '') + '.';
+    emailDistRefreshCount();
+  }).catch(function(e) { document.getElementById('email-dist-send-btn').disabled = false; st.textContent = 'Failed: ' + e.message; });
+}
+
 // ── Monthly pledge rounds ──
 function loadPledgeRoundsAdmin() {
   var listEl = document.getElementById('pledge-rounds-admin-list');
@@ -6336,5 +6407,27 @@ async function doChangePassword() {
 }
 document.getElementById('pw-modal').addEventListener('click', function(e){ if (e.target===this) closeChangePassword(); });
 </script>
+
+<div id="email-dist-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:14px;max-width:560px;width:100%;max-height:90vh;overflow:auto;padding:22px 24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-size:17px;font-weight:800;">🚗 Email distributors</div><button class="filter-btn" onclick="closeEmailDistributors()">✕</button></div>
+    <div id="email-dist-round" style="font-size:13px;color:var(--muted);margin-bottom:14px;"></div>
+    <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Who gets it</label>
+    <select id="email-dist-audience" class="filter-btn" style="padding:8px 12px;margin-bottom:12px;width:100%;" onchange="emailDistRefreshCount()">
+      <option value="all">All approved distributors</option>
+      <option value="no_trip">Only those without a trip for this distribution yet</option>
+    </select>
+    <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Subject</label>
+    <input id="email-dist-subject" class="filter-btn" style="padding:8px 12px;width:100%;margin-bottom:12px;box-sizing:border-box;">
+    <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Message <span style="font-weight:400;">(each person is greeted by name; the distribution details and a dashboard button are added automatically)</span></label>
+    <textarea id="email-dist-message" rows="8" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:13px;margin-bottom:12px;"></textarea>
+    <div id="email-dist-count" style="font-size:13px;font-weight:700;margin-bottom:12px;">Counting recipients…</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="filter-btn" onclick="emailDistTest()">Send me a test</button>
+      <button id="email-dist-send-btn" class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="emailDistSend(false)">Send</button>
+    </div>
+    <div id="email-dist-status" style="font-size:12px;color:var(--muted);margin-top:10px;"></div>
+  </div>
+</div>
 </body>
 </html>
