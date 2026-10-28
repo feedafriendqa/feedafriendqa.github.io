@@ -681,8 +681,8 @@ function EventsTab({vols,st}){
         <button onClick={async()=>{await sb.from("admin_events").update({status:sel.status==="closed"?"invited":"closed"}).eq("id",sel.id);loadEvents();}} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>{sel.status==="closed"?"Reopen RSVPs":"Close RSVPs"}</button>
       </div>
     </div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:12}}>
-      {[["yes","Yes","#166534"],["no","No","#991B1B"],["maybe","Unsure","#92400E"],["none","No reply","#4B5563"]].map(([k,l,c])=>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,marginBottom:12}}>
+      {[["yes","Yes","#166534"],["no","No","#991B1B"],["none","No reply","#4B5563"]].map(([k,l,c])=>
         <div key={k} style={{background:"#fff",borderRadius:10,padding:"8px 4px",border:"1px solid "+BR,textAlign:"center"}}>
           <div style={{fontFamily:HF,fontWeight:900,fontSize:22,color:c}}>{count(k)}</div><div style={{fontSize:10,color:MT,fontWeight:700}}>{l}</div></div>)}
     </div>

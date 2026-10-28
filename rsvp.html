@@ -83,7 +83,7 @@ function render(d) {
 
   card.append(el("p", "desc", d.rsvp ? "Need to change your answer?" : "Will you be there?"));
   const btns = el("div", "btns");
-  [["yes", "Yes, I'm attending"], ["no", "No, I'm not available"], ["maybe", "Not sure yet"]].forEach(([r, label]) => {
+  [["yes", "Yes, I'm attending"], ["no", "No, I'm not available"]].forEach(([r, label]) => {
     const b = el("button", r + (d.rsvp === r ? " sel" : ""), label);
     b.onclick = async () => { b.disabled = true; try { render(await call({ r })); } catch (e) { fail(e.message); } };
     btns.append(b);
@@ -103,7 +103,7 @@ function fail(m) { card.replaceChildren(el("p", "err", m), el("p", "small", "Ple
 
 (async () => {
   if (!token) return fail("This link is missing its invitation code.");
-  try { render(await call(["yes", "no", "maybe"].includes(preset) ? { r: preset } : {})); }
+  try { render(await call(["yes", "no"].includes(preset) ? { r: preset } : {})); }
   catch (e) { fail(e.message); }
 })();
 </script>
