@@ -497,6 +497,225 @@ function ProfileEdit({profile, onSave, onBack}){
 }
 
 // -- ADMIN ---------------------------------------------------------------------
+// ───────── Certificates + Events (RSVP) admin tabs ─────────
+const EDGE_EVENT_INVITES = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/event-send-invites";
+const RSVP_BASE = "https://connect.feedafriend.org/rsvp.html";
+const todayISO = () => new Date().toISOString().slice(0,10);
+const pill = (bg,fg) => ({background:bg,color:fg,borderRadius:20,padding:"2px 9px",fontSize:10,fontWeight:700,whiteSpace:"nowrap"});
+const certPill = (m,status) => status==="issued"
+  ? <span key={m} style={pill("#DCFCE7","#166534")}>🏅 {m}h ✓ issued</span>
+  : status==="due" ? <span key={m} style={pill("#FEF3C7","#92400E")}>🏅 {m}h · due</span> : null;
+
+function CertsTab({hourLogs,st}){
+  const [rows,setRows]=useState([]);
+  const [filter,setFilter]=useState("due");
+  const [ms,setMs]=useState("all");
+  const [q,setQ]=useState("");
+  const [loading,setLoading]=useState(true);
+  const load=async()=>{
+    const {data,error}=await sb.from("volunteer_certificates").select("*,profiles(id,first_name,surname,email,phone,is_student,student_school)").order("milestone",{ascending:false});
+    if(error){st("Could not load certificates");}
+    setRows(data||[]); setLoading(false);
+  };
+  useEffect(()=>{ (async()=>{ await sb.rpc("sync_certificates_due",{only_students:true}); load(); })(); },[]);
+  const hrs=id=>Math.round(hourLogs.filter(l=>l.volunteer_id===id).reduce((s,l)=>s+Number(l.hours),0)*100)/100;
+  const setStatus=async(r,status)=>{
+    const patch=status==="issued"?{status,issued_at:todayISO()}:{status,issued_at:null,issued_event_id:null};
+    const {error}=await sb.from("volunteer_certificates").update(patch).eq("id",r.id);
+    if(error){st("Could not update");return;}
+    st(status==="issued"?"✓ Marked as issued":"Marked as due again"); load();
+  };
+  const shown=rows.filter(r=>{
+    if(filter!=="all"&&r.status!==filter) return false;
+    if(ms!=="all"&&String(r.milestone)!==ms) return false;
+    const s=q.toLowerCase(), p=r.profiles||{};
+    return !s||(p.first_name||"").toLowerCase().includes(s)||(p.surname||"").toLowerCase().includes(s)||(p.email||"").toLowerCase().includes(s);
+  });
+  const count=(st_,m)=>rows.filter(r=>r.status===st_&&(!m||r.milestone===m)).length;
+  const chip=(active)=>({background:active?DK:"#fff",color:active?"#fff":DK,border:"1.5px solid "+(active?DK:BR),borderRadius:20,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer"});
+  const exportCsv=()=>{
+    const lines=["name,email,phone,school,milestone,status,hours,issued_at"].concat(shown.map(r=>{const p=r.profiles||{};
+      return [`${p.first_name||""} ${p.surname||""}`.trim(),p.email,p.phone,p.student_school,r.milestone+"h",r.status,hrs(r.volunteer_id),r.issued_at||""].map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",");}));
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([lines.join("\n")],{type:"text/csv"}));a.download="certificates.csv";a.click();
+  };
+  return <div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
+      {[["Due",count("due"),"#92400E"],["Issued",count("issued"),"#166534"],["50h+ due",count("due",50)+count("due",100),DK]].map(([l,n,c])=>
+        <div key={l} style={{background:"#fff",borderRadius:12,padding:"10px 12px",border:"1px solid "+BR,textAlign:"center"}}>
+          <div style={{fontFamily:HF,fontWeight:900,fontSize:26,color:c}}>{n}</div><div style={{fontSize:11,color:MT,fontWeight:600}}>{l}</div></div>)}
+    </div>
+    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+      {[["due","Due"],["issued","Issued"],["all","All"]].map(([k,l])=><button key={k} onClick={()=>setFilter(k)} style={chip(filter===k)}>{l}</button>)}
+      <span style={{width:8}}/>
+      {[["all","Any"],["20","20h"],["50","50h"],["100","100h"]].map(([k,l])=><button key={k} onClick={()=>setMs(k)} style={chip(ms===k)}>{l}</button>)}
+      <button onClick={exportCsv} style={{...chip(false),marginLeft:"auto"}}>⬇ CSV</button>
+    </div>
+    <input type="text" placeholder="🔍 Search by name or email..." value={q} onChange={e=>setQ(e.target.value)} style={{...inp,marginBottom:12}}/>
+    {loading&&<p style={{color:MT,fontSize:14,textAlign:"center",padding:24}}>Loading…</p>}
+    {shown.map(r=>{const p=r.profiles||{};
+      return <div key={r.id} style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:700,fontSize:14,fontFamily:BF}}>{p.first_name} {p.surname}</div>
+          <div style={{fontSize:12,color:MT,overflow:"hidden",textOverflow:"ellipsis"}}>{p.email}{p.phone?" · "+p.phone:""}</div>
+          <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
+            {certPill(r.milestone,r.status)}
+            <span style={pill(DK,MD)}>⏱ {hrs(r.volunteer_id)}h</span>
+            {p.student_school&&<span style={pill("#EDE9FE","#5B21B6")}>🎓 {p.student_school}</span>}
+            {r.issued_at&&<span style={pill(PL,MT)}>{r.issued_at}</span>}
+          </div>
+        </div>
+        {r.status==="due"
+          ? <button onClick={()=>setStatus(r,"issued")} style={{background:GN,color:"#fff",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Mark issued</button>
+          : <button onClick={()=>{if(window.confirm("Mark this certificate as not yet issued?"))setStatus(r,"due");}} style={{background:PL,color:MT,border:"1px solid "+BR,borderRadius:8,padding:"6px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>Undo</button>}
+      </div>;})}
+    {!loading&&shown.length===0&&<p style={{color:MT,fontSize:14,textAlign:"center",padding:24}}>Nothing here 🎉</p>}
+  </div>;
+}
+
+function EventsTab({vols,st}){
+  const [events,setEvents]=useState([]);
+  const [sel,setSel]=useState(null);
+  const [invites,setInvites]=useState([]);
+  const [form,setForm]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const [addQ,setAddQ]=useState("");
+  const loadEvents=async()=>{
+    const {data}=await sb.from("admin_events").select("*").order("event_date",{ascending:false});
+    setEvents(data||[]);
+    if(sel){const s=(data||[]).find(e=>e.id===sel.id); if(s) setSel(s);}
+  };
+  const loadInvites=async(ev)=>{
+    const {data,error}=await sb.from("admin_event_invites").select("*,profiles(id,first_name,surname,email,phone,cert_20,cert_50,cert_100)").eq("event_id",ev.id).order("created_at");
+    if(error) st("Could not load invites");
+    setInvites(data||[]);
+  };
+  useEffect(()=>{loadEvents();},[]);
+  useEffect(()=>{ if(sel) loadInvites(sel); else setInvites([]); },[sel&&sel.id]);
+
+  const saveEvent=async()=>{
+    if(!form.title||!form.event_date){st("Add a title and date");return;}
+    const row={title:form.title,kind:form.kind||"event",description:form.description||null,event_date:form.event_date,start_time:form.start_time||null,end_time:form.end_time||null,location:form.location||null,location_detail:form.location_detail||null,rsvp_deadline:form.rsvp_deadline||null};
+    const {data,error}=form.id?await sb.from("admin_events").update(row).eq("id",form.id).select().single():await sb.from("admin_events").insert(row).select().single();
+    if(error){st("Could not save event");return;}
+    st("✓ Event saved"); setForm(null); await loadEvents(); setSel(data);
+  };
+  const addInvitees=async(ids)=>{
+    const have=new Set(invites.map(i=>i.volunteer_id));
+    const rows=ids.filter(id=>!have.has(id)).map(id=>({event_id:sel.id,volunteer_id:id}));
+    if(!rows.length){st("Already on the list");return;}
+    const {error}=await sb.from("admin_event_invites").insert(rows);
+    if(error){st("Could not add");return;}
+    st("✓ Added "+rows.length); loadInvites(sel);
+  };
+  const addDue=async()=>{
+    const {data}=await sb.from("volunteer_certificates").select("volunteer_id").eq("status","due");
+    await addInvitees([...new Set((data||[]).map(r=>r.volunteer_id))]);
+  };
+  const removeInvite=async(i)=>{ if(!window.confirm("Remove from the invite list?"))return; await sb.from("admin_event_invites").delete().eq("id",i.id); loadInvites(sel); };
+  const setAttended=async(i,v)=>{ await sb.from("admin_event_invites").update({attended:v}).eq("id",i.id); loadInvites(sel); };
+  const send=async(reminder)=>{
+    const targets=invites.filter(i=>reminder?!i.rsvp:!i.invited_at);
+    if(!targets.length){st(reminder?"Everyone has replied":"All invites already sent");return;}
+    if(!window.confirm((reminder?"Send a reminder to ":"Email invitations to ")+targets.length+" people?"))return;
+    setBusy(true);
+    try{
+      const {data:{session}}=await sb.auth.getSession();
+      const r=await fetch(EDGE_EVENT_INVITES,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
+        body:JSON.stringify({event_id:sel.id,invite_ids:targets.map(t=>t.id),reminder:!!reminder})});
+      const j=await r.json();
+      if(!r.ok) st("✗ "+(j.error||"Send failed"));
+      else st("✓ Sent "+j.sent+" of "+j.attempted+(j.failed?.length?" ("+j.failed.length+" failed)":""));
+    }catch(e){st("✗ Send failed");}
+    setBusy(false); loadInvites(sel); loadEvents();
+  };
+  const issueForAttendees=async()=>{
+    const ids=invites.filter(i=>i.attended).map(i=>i.volunteer_id);
+    if(!ids.length){st("Tick who attended first");return;}
+    if(!window.confirm("Mark all DUE certificates as issued for "+ids.length+" attendee(s)?"))return;
+    const {error}=await sb.from("volunteer_certificates").update({status:"issued",issued_at:sel.event_date||todayISO(),issued_event_id:sel.id}).in("volunteer_id",ids).eq("status","due");
+    if(error){st("Could not update");return;}
+    st("✓ Certificates marked as issued"); loadInvites(sel);
+  };
+  const copy=async(txt,msg)=>{try{await navigator.clipboard.writeText(txt);st(msg);}catch(e){window.prompt("Copy this:",txt);}};
+  const count=k=>invites.filter(i=>k==="none"?!i.rsvp:i.rsvp===k).length;
+  const lab={color:MT,fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,display:"block",margin:"10px 0 4px"};
+  const rsvpPill=r=>r==="yes"?<span style={pill("#DCFCE7","#166534")}>✅ Attending</span>:r==="no"?<span style={pill("#FEE2E2","#991B1B")}>❌ Not available</span>:r==="maybe"?<span style={pill("#FEF3C7","#92400E")}>❔ Not sure</span>:<span style={pill("#F3F4F6","#4B5563")}>⏳ No reply</span>;
+
+  if(form) return <div style={{background:"#fff",borderRadius:14,padding:16,border:"1px solid "+BR}}>
+    <h3 style={{fontFamily:HF,fontSize:15,fontWeight:900,textTransform:"uppercase",color:DK,margin:"0 0 6px"}}>{form.id?"Edit event":"New event"}</h3>
+    <label style={lab}>Title</label><input style={inp} value={form.title||""} onChange={e=>setForm({...form,title:e.target.value})}/>
+    <label style={lab}>Message to invitees</label><textarea style={{...inp,minHeight:80}} value={form.description||""} onChange={e=>setForm({...form,description:e.target.value})}/>
+    <label style={lab}>Date</label><input type="date" style={inp} value={form.event_date||""} onChange={e=>setForm({...form,event_date:e.target.value})}/>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      <div><label style={lab}>Start</label><input type="time" style={inp} value={form.start_time||""} onChange={e=>setForm({...form,start_time:e.target.value})}/></div>
+      <div><label style={lab}>End</label><input type="time" style={inp} value={form.end_time||""} onChange={e=>setForm({...form,end_time:e.target.value})}/></div>
+    </div>
+    <label style={lab}>Location</label><input style={inp} value={form.location||""} onChange={e=>setForm({...form,location:e.target.value})}/>
+    <label style={lab}>Location detail (optional)</label><input style={inp} value={form.location_detail||""} onChange={e=>setForm({...form,location_detail:e.target.value})}/>
+    <label style={lab}>Reply by</label><input type="date" style={inp} value={form.rsvp_deadline||""} onChange={e=>setForm({...form,rsvp_deadline:e.target.value})}/>
+    <div style={{display:"flex",gap:8,marginTop:16}}>
+      <button onClick={saveEvent} style={{flex:1,background:GN,color:"#fff",border:"none",borderRadius:10,padding:12,fontWeight:700,fontSize:14,cursor:"pointer"}}>Save</button>
+      <button onClick={()=>setForm(null)} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:10,padding:"12px 16px",fontWeight:700,cursor:"pointer"}}>Cancel</button>
+    </div>
+  </div>;
+
+  if(!sel) return <div>
+    <button onClick={()=>setForm({kind:"event"})} style={{width:"100%",background:GN,color:"#fff",border:"none",borderRadius:12,padding:12,fontWeight:700,fontSize:14,cursor:"pointer",marginBottom:12}}>+ New event</button>
+    {events.map(e=><div key={e.id} onClick={()=>setSel(e)} style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,marginBottom:8,cursor:"pointer"}}>
+      <div style={{fontWeight:700,fontSize:14,fontFamily:BF}}>{e.title}</div>
+      <div style={{fontSize:12,color:MT}}>📅 {e.event_date}{e.start_time?" · "+e.start_time+(e.end_time?"–"+e.end_time:""):""} · 📍 {e.location||"TBC"}</div>
+      <span style={pill(e.status==="draft"?"#F3F4F6":e.status==="invited"?"#DCFCE7":"#FEE2E2",e.status==="draft"?"#4B5563":e.status==="invited"?"#166534":"#991B1B")}>{e.status}</span>
+    </div>)}
+    {events.length===0&&<p style={{color:MT,fontSize:14,textAlign:"center",padding:24}}>No events yet.</p>}
+  </div>;
+
+  const results=addQ.length>1?vols.filter(v=>`${v.first_name} ${v.surname} ${v.email}`.toLowerCase().includes(addQ.toLowerCase())).slice(0,6):[];
+  return <div>
+    <button onClick={()=>{setSel(null);loadEvents();}} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",marginBottom:10}}>← All events</button>
+    <div style={{background:"#fff",borderRadius:14,padding:14,border:"1px solid "+BR,marginBottom:12}}>
+      <div style={{fontFamily:HF,fontWeight:900,fontSize:18,color:DK}}>{sel.title}</div>
+      <div style={{fontSize:13,color:MT,marginTop:4}}>📅 {sel.event_date}{sel.start_time?" · "+sel.start_time+(sel.end_time?"–"+sel.end_time:""):""}<br/>📍 {sel.location||"TBC"}{sel.rsvp_deadline?<><br/>✉️ Reply by {sel.rsvp_deadline}</>:null}</div>
+      <div style={{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}}>
+        <button onClick={()=>setForm({...sel})} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>✏️ Edit</button>
+        <button onClick={async()=>{await sb.from("admin_events").update({status:sel.status==="closed"?"invited":"closed"}).eq("id",sel.id);loadEvents();}} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>{sel.status==="closed"?"Reopen RSVPs":"Close RSVPs"}</button>
+      </div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:12}}>
+      {[["yes","Yes","#166534"],["no","No","#991B1B"],["maybe","Unsure","#92400E"],["none","No reply","#4B5563"]].map(([k,l,c])=>
+        <div key={k} style={{background:"#fff",borderRadius:10,padding:"8px 4px",border:"1px solid "+BR,textAlign:"center"}}>
+          <div style={{fontFamily:HF,fontWeight:900,fontSize:22,color:c}}>{count(k)}</div><div style={{fontSize:10,color:MT,fontWeight:700}}>{l}</div></div>)}
+    </div>
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+      <button disabled={busy} onClick={()=>send(false)} style={{flex:1,background:GN,color:"#fff",border:"none",borderRadius:10,padding:11,fontWeight:700,fontSize:13,cursor:"pointer",opacity:busy?.6:1}}>✉️ Send invites ({invites.filter(i=>!i.invited_at).length})</button>
+      <button disabled={busy} onClick={()=>send(true)} style={{flex:1,background:"#fff",color:DK,border:"1.5px solid "+DK,borderRadius:10,padding:11,fontWeight:700,fontSize:13,cursor:"pointer",opacity:busy?.6:1}}>🔔 Remind no reply ({count("none")})</button>
+    </div>
+    <div style={{background:"#fff",borderRadius:14,padding:12,border:"1px solid "+BR,marginBottom:12}}>
+      <button onClick={addDue} style={{width:"100%",background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:9,fontSize:12,fontWeight:700,cursor:"pointer",marginBottom:8}}>🏅 Add everyone with a certificate due</button>
+      <input type="text" placeholder="➕ Add a volunteer by name or email…" value={addQ} onChange={e=>setAddQ(e.target.value)} style={inp}/>
+      {results.map(v=><div key={v.id} onClick={()=>{addInvitees([v.id]);setAddQ("");}} style={{padding:"8px 4px",fontSize:13,cursor:"pointer",borderBottom:"1px solid "+BR}}>{v.first_name} {v.surname} <span style={{color:MT,fontSize:12}}>· {v.email}</span></div>)}
+    </div>
+    {invites.map(i=>{const p=i.profiles||{};
+      return <div key={i.id} style={{background:"#fff",borderRadius:14,padding:"10px 12px",border:"1px solid "+BR,marginBottom:8}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:700,fontSize:14}}>{p.first_name} {p.surname}</div>
+            <div style={{fontSize:12,color:MT}}>{p.email}{p.phone?" · "+p.phone:""}</div>
+          </div>
+          <button onClick={()=>removeInvite(i)} style={{background:"none",border:"none",color:"#991B1B",fontSize:16,cursor:"pointer"}} title="Remove">✕</button>
+        </div>
+        <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap",alignItems:"center"}}>
+          {rsvpPill(i.rsvp)}
+          {i.invited_at?<span style={pill(PL,MT)}>✉️ invited</span>:<span style={pill("#F3F4F6","#4B5563")}>not emailed</span>}
+          {[20,50,100].map(m=>certPill(m,p["cert_"+m]))}
+          <label style={{marginLeft:"auto",fontSize:12,color:DK,fontWeight:600,display:"flex",alignItems:"center",gap:4}}><input type="checkbox" checked={!!i.attended} onChange={e=>setAttended(i,e.target.checked)}/> attended</label>
+        </div>
+        {i.rsvp_note&&<div style={{fontSize:12,color:"#374151",marginTop:6,fontStyle:"italic"}}>“{i.rsvp_note}”</div>}
+        <button onClick={()=>copy(`${RSVP_BASE}?t=${i.token}`,"✓ RSVP link copied (e.g. for WhatsApp)")} style={{background:"none",border:"none",color:GN,fontSize:11,fontWeight:700,cursor:"pointer",padding:"6px 0 0"}}>🔗 Copy personal RSVP link</button>
+      </div>;})}
+    {invites.length>0&&<button onClick={issueForAttendees} style={{width:"100%",background:DK,color:"#fff",border:"none",borderRadius:12,padding:12,fontWeight:700,fontSize:13,cursor:"pointer",marginTop:6}}>🏅 Mark due certificates as issued for attendees</button>}
+  </div>;
+}
+
 function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   const [profile,setProfile]=useState(initProfile);
   const [tab,setTab]=useState(isSuperAdmin?"pending":"opps");
@@ -739,6 +958,8 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
     ...(isSuperAdmin?[{id:"demographics",label:"Demographics",count:null,alert:false}]:[]),
     {id:"opps",label:"Opportunities",count:opps.length,alert:false},
     {id:"hours",label:"Hours",count:null,alert:false},
+    {id:"certs",label:"🏅 Certificates",count:null,alert:false},
+    {id:"events",label:"📣 Events",count:null,alert:false},
     {id:"add",label:"+ Add",count:null,alert:false},
   ];
 
@@ -1005,6 +1226,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                 {u.is_student&&<span style={{background:"#EDE9FE",color:"#5B21B6",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>🎓 Student</span>}
                 {u.is_working&&<span style={{background:"#FFEDD5",color:"#9A3412",borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>💼 Working</span>}
                 {hrs>0&&<span style={{background:DK,color:MD,borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700}}>⏱ {Math.round(hrs*100)/100}h</span>}
+                {[20,50,100].map(m=>certPill(m,u["cert_"+m]))}
               </div>
             </div>
             <button onClick={()=>setViewProf(u)} style={{background:PL,color:DK,border:"1px solid "+BR,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>View</button>
@@ -1335,6 +1557,9 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
           </div>;
         })}
       </div>}
+
+      {tab==="certs"&&<CertsTab hourLogs={hourLogs} st={st}/>}
+      {tab==="events"&&<EventsTab vols={vols} st={st}/>}
 
       {tab==="add"&&<div>
         <h2 style={{fontFamily:HF,fontSize:16,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:16}}>Add New Opportunity</h2>

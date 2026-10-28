@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>RSVP — Feed a Friend</title>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<meta name="robots" content="noindex"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0A3D1F;font-family:Poppins,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px;color:#0A3D1F}
+.logo{height:64px;margin:8px 0 20px}
+.card{background:#fff;border-radius:18px;max-width:480px;width:100%;padding:24px 22px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+h1{font-family:'League Spartan',sans-serif;font-weight:900;font-size:24px;line-height:1.15;margin-bottom:6px}
+.hi{color:#4B7C5A;font-size:14px;margin-bottom:14px}
+.desc{font-size:14px;line-height:1.55;color:#374151;margin-bottom:14px}
+.box{border:1px solid #BBF7D0;border-left:4px solid #16a34a;border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:14px;line-height:1.7}
+.status{border-radius:12px;padding:14px;text-align:center;font-weight:700;font-size:15px;margin-bottom:14px}
+.s-yes{background:#DCFCE7;color:#166534}.s-no{background:#FEE2E2;color:#991B1B}.s-maybe{background:#FEF3C7;color:#92400E}.s-none{background:#F3F4F6;color:#4B5563}
+.btns{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+button{font-family:inherit;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;color:#fff}
+.yes{background:#15803D}.no{background:#B91C1C}.maybe{background:#6B7280}
+button.sel{outline:3px solid #0A3D1F;outline-offset:2px}
+textarea{width:100%;border:1.5px solid #BBF7D0;border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;min-height:70px;margin:6px 0 8px;color:#0A3D1F}
+.save{background:#0A3D1F;width:100%}
+.small{font-size:12px;color:#6b7280;text-align:center;margin-top:14px}
+.err{color:#991B1B;font-weight:600;text-align:center;font-size:15px}
+a{color:#15803D}
+</style>
+</head>
+<body>
+<img class="logo" src="https://xbxagukdvgyaoqvbqoic.supabase.co/storage/v1/object/public/avatars/Faflogowhite.png" alt="Feed a Friend"/>
+<div class="card" id="card"><p class="hi">Loading your invitation…</p></div>
+
+<script>
+const API = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/event-rsvp";
+const params = new URLSearchParams(location.search);
+const token = params.get("t");
+const preset = params.get("r");
+const card = document.getElementById("card");
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const MSG = {
+  yes: ["✅ You're coming — see you there!", "s-yes"],
+  no: ["❌ Thanks for letting us know you can't make it.", "s-no"],
+  maybe: ["❔ Noted as not sure yet — please update us when you can.", "s-maybe"],
+};
+
+async function call(opts) {
+  const url = API + "?t=" + encodeURIComponent(token) + (opts.r && !opts.body ? "&r=" + opts.r : "");
+  const res = await fetch(url, opts.body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(opts.body) } : undefined);
+  const j = await res.json();
+  if (!res.ok) throw new Error(j.error || "Something went wrong");
+  return j;
+}
+
+function render(d) {
+  card.replaceChildren();
+  const ev = d.event || {};
+  card.append(el("h1", "", ev.title || "Invitation"));
+  card.append(el("p", "hi", "Hi " + (d.first_name || "there") + ","));
+  if (ev.description) card.append(el("p", "desc", ev.description));
+  const box = el("div", "box");
+  const when = [ev.event_date, ev.start_time ? ev.start_time + (ev.end_time ? " – " + ev.end_time : "") : null].filter(Boolean).join(" · ");
+  box.append(el("div", "", "📅 " + (when || "Date to be confirmed")));
+  box.append(el("div", "", "📍 " + (ev.location || "Venue to be confirmed") + (ev.location_detail ? " — " + ev.location_detail : "")));
+  if (ev.rsvp_deadline) box.append(el("div", "", "✉️ Please reply by " + ev.rsvp_deadline));
+  if (ev.location) {
+    const a = el("a", "", "Open in Google Maps →");
+    a.href = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(ev.location);
+    a.target = "_blank"; a.rel = "noopener";
+    box.append(a);
+  }
+  card.append(box);
+
+  const closed = ev.status === "closed";
+  const [msg, cls] = d.rsvp ? MSG[d.rsvp] : ["You haven't replied yet.", "s-none"];
+  card.append(el("div", "status " + cls, closed ? "RSVPs for this event are now closed." + (d.rsvp ? " Your reply: " + d.rsvp : "") : msg));
+  if (closed) return;
+
+  card.append(el("p", "desc", d.rsvp ? "Need to change your answer?" : "Will you be there?"));
+  const btns = el("div", "btns");
+  [["yes", "Yes, I'm attending"], ["no", "No, I'm not available"], ["maybe", "Not sure yet"]].forEach(([r, label]) => {
+    const b = el("button", r + (d.rsvp === r ? " sel" : ""), label);
+    b.onclick = async () => { b.disabled = true; try { render(await call({ r })); } catch (e) { fail(e.message); } };
+    btns.append(b);
+  });
+  card.append(btns);
+
+  card.append(el("p", "desc", "Anything we should know? (optional)"));
+  const ta = el("textarea"); ta.maxLength = 500; ta.value = d.rsvp_note || ""; ta.placeholder = "e.g. I'll be 10 minutes late, or I can't make it because…";
+  card.append(ta);
+  const save = el("button", "save", "Save note");
+  save.onclick = async () => { save.disabled = true; try { const r = await call({ body: { t: token, note: ta.value } }); render(r); const s = card.querySelector(".status"); if (s) s.textContent = "✓ Note saved"; } catch (e) { fail(e.message); } };
+  card.append(save);
+  card.append(el("p", "small", "Questions? WhatsApp us on +974 3061 3177."));
+}
+
+function fail(m) { card.replaceChildren(el("p", "err", m), el("p", "small", "Please use the button in your invitation email, or WhatsApp +974 3061 3177.")); }
+
+(async () => {
+  if (!token) return fail("This link is missing its invitation code.");
+  try { render(await call(["yes", "no", "maybe"].includes(preset) ? { r: preset } : {})); }
+  catch (e) { fail(e.message); }
+})();
+</script>
+</body>
+</html>
