@@ -485,6 +485,8 @@ var TR={
   err_driver_phone:{en:"Enter the driver's mobile number.",ar:"أدخل رقم جوال السائق."},
   err_your_name:{en:"Enter your name.",ar:"أدخل اسمك."},
   err_your_phone:{en:"Enter your mobile number.",ar:"أدخل رقم جوالك."},
+  err_already_registered:{en:"This email already has a driver account, so you don't need to register again. Sign in instead (use Forgot password if you can't remember it).",ar:"هذا البريد مسجّل بالفعل كسائق، لذا لا حاجة للتسجيل مرة أخرى. سجّل الدخول (استخدم نسيت كلمة المرور إن لزم)."},
+  err_already_signin:{en:"Go to sign in →",ar:"الذهاب لتسجيل الدخول ←"},
   err_email:{en:"Enter a valid email address.",ar:"أدخل بريداً إلكترونياً صحيحاً."},
   err_password:{en:"Password must be at least 8 characters.",ar:"يجب أن تتكون كلمة المرور من 8 أحرف على الأقل."},
   err_car:{en:"Please select the car.",ar:"يرجى اختيار السيارة."},
@@ -597,10 +599,21 @@ function stepBack(){
 async function next(){
   if(D.step===1&&v1())goStep(2);
   else if(D.step===2&&v2())goStep(3);
-  else if(D.step===3&&v3())goStep(4);
+  else if(D.step===3&&v3()){
+    if(await emailRegistered(D.email)){
+      var e=document.getElementById("e3");
+      e.innerHTML=t("err_already_registered")+' <a href="DriverDashboard.html?lang='+LANG+'" style="color:inherit;font-weight:800;text-decoration:underline">'+t("err_already_signin")+'</a>';
+      e.classList.add("show");return;
+    }
+    goStep(4);
+  }
   else if(D.step===4&&v4())goStep(5);
   else if(D.step===5&&v5())goStep(6);
   else if(D.step===6)await submit();
+}
+async function emailRegistered(em){
+  if(!sb)return false;
+  try{var r=await sb.rpc("distributor_email_exists",{p_email:em});return r.data===true;}catch(e){return false;}
 }
 function showErr(id,msg){var el=document.getElementById(id);el.textContent=msg;el.classList.add("show");}
 function clearErr(id){document.getElementById(id).classList.remove("show");}
@@ -918,6 +931,7 @@ async function submit(){
   var btn=document.getElementById("cta");clearErr("e6");
   btn.disabled=true;btn.textContent=t("cta_registering");
   try{
+    if(await emailRegistered(D.email))throw new Error(t("err_already_registered"));
     var signupName=D.driver_mode==="me"?D.driver_name:D.contact_name;
     if(sb){
       var ar=await sb.auth.signUp({email:D.email,password:D.pw,options:{data:{preferred_name:D.driver_pref,role:"driver"}}});
