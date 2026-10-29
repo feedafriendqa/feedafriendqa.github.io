@@ -366,6 +366,8 @@ select.edit-field{cursor:pointer;}
     <div style="margin-bottom:14px;">
       <button class="btn-comment" style="background:var(--green);" onclick="exportConfirmedCSV()">⬇ Export Confirmed (CSV)</button>
       <button class="btn-comment" id="dist-list-btn" style="display:none;background:var(--green);margin-left:8px;" onclick="generateDistributionList()">⬇ Generate distribution list (CSV)</button>
+      <button class="btn-comment super-only-dist" style="display:none;background:var(--green);margin-left:8px;" onclick="generateDistributionLabels('diaper', this)">🖨 Diaper labels (PDF)</button>
+      <button class="btn-comment super-only-dist" style="display:none;background:var(--green);margin-left:8px;" onclick="generateDistributionLabels('formula', this)">🖨 Formula labels (PDF)</button>
     </div>
 
     <div class="table-wrap">
@@ -729,6 +731,7 @@ select.edit-field{cursor:pointer;}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 const SUPABASE_URL = 'https://xbxagukdvgyaoqvbqoic.supabase.co';
 const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
@@ -1035,6 +1038,7 @@ async function handleAdminSession(session) {
   });
   var distBtn = document.getElementById('dist-list-btn');
   if (distBtn) distBtn.style.display = (myRole === 'super_admin') ? 'inline-block' : 'none';
+  document.querySelectorAll('.super-only-dist').forEach(function(el){ el.style.display = (myRole === 'super_admin') ? 'inline-block' : 'none'; });
   myCasesOnly = (myRole !== 'super_admin');
   if (myRole === 'super_admin') {
     try { myCasesOnly = localStorage.getItem('fba_my_cases_only') === '1'; } catch (e) {}
@@ -2353,6 +2357,114 @@ function generateDistributionList() {
     alert('Distribution list failed: ' + e.message);
   }).finally(function() {
     if (btn) { btn.textContent = label; btn.disabled = false; }
+  });
+}
+
+// Distribution labels (diaper / formula): A4, 2 x 4 per page, built in the browser with jsPDF from the
+// super-admin-only RPC get_distribution_labels (confirmed families; formula = needs_formula yes, under 12 months at distribution date).
+function generateDistributionLabels(kind, btn) {
+  if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
+  if (!window.jspdf) { alert('PDF tool did not load. Refresh the page and try again.'); return; }
+  var orig = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = 'Generating…'; btn.disabled = true; }
+  var logoP = new Promise(function(res) {
+    var img = new Image();
+    img.onload = function() {
+      var c = document.createElement('canvas'); c.width = 400; c.height = Math.round(400 * img.height / img.width);
+      var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+      res({ data: c.toDataURL('image/png'), ar: img.height / img.width });
+    };
+    img.onerror = function() { res(null); };
+    img.src = 'faf-logo.png';
+  });
+  Promise.all([
+    fetch(SUPABASE_URL + '/rest/v1/rpc/get_distribution_labels', { method: 'POST', headers: headers, body: '{}' }).then(function(r) {
+      if (!r.ok) throw new Error('Could not load label data (' + r.status + ')');
+      return r.json();
+    }),
+    logoP
+  ]).then(function(out) {
+    var data = out[0], logo = out[1];
+    var rows = (kind === 'diaper' ? data.diapers : data.formula) || [];
+    if (!rows.length) { alert('No ' + kind + ' labels needed for this distribution.'); return; }
+    var dateStr = new Date(data.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    var title = String(data.title || 'Distribution').toUpperCase();
+    var sub = kind === 'diaper' ? 'Diaper Labels' : 'Formula Labels';
+    var doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+    var PW = 210, PH = 297, cols = 2, rpp = 4, per = 8;
+    var sm = kind === 'diaper' ? 6 : 8, top = 6, bottom = 5, hg = 6, g = 1.5;
+    var gt = top + hg, cw = (PW - 2 * sm) / cols, ch = (PH - gt - bottom) / rpp;
+    var total = Math.max(1, Math.ceil(rows.length / per));
+    var GREEN = [27, 107, 47], GREY = [138, 138, 138], BLACK = [26, 26, 26], ORANGE = [224, 123, 26];
+    function pt2mm(pt) { return pt * 0.3528; }
+    function fitSize(text, font, size, maxw) {
+      doc.setFont('helvetica', font);
+      while (size > 8) { doc.setFontSize(size); if (doc.getTextWidth(text) <= maxw) break; size -= 0.5; }
+      doc.setFontSize(size); return size;
+    }
+    function center(text, cx, y) { doc.text(text, cx, y, { align: 'center' }); }
+    function distributorLine(x, w, y, d) {
+      if (d) {
+        var prefix = 'Distributor: ';
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(11);
+        var pw = doc.getTextWidth(prefix);
+        fitSize(d, 'bold', 15, w - 8 - pw);
+        var nw = doc.getTextWidth(d), nf = doc.getFontSize();
+        var sx = x + w / 2 - (pw + nw) / 2;
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(11); doc.setTextColor.apply(doc, GREY); doc.text(prefix, sx, y);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(nf); doc.setTextColor.apply(doc, BLACK); doc.text(d, sx + pw, y);
+      } else {
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(11); doc.setTextColor.apply(doc, GREY);
+        center('Distributor: _____________________', x + w / 2, y);
+      }
+    }
+    function nameLine(x, w, y, t, size) {
+      fitSize(t, 'bold', size, w - 6); doc.setTextColor.apply(doc, BLACK); center(t, x + w / 2, y);
+    }
+    function drawLogo(x, y, w, frac) {
+      if (!logo) return 0;
+      var lw = w * frac, lh = lw * logo.ar;
+      doc.addImage(logo.data, 'PNG', x + (w - lw) / 2, y + 2.5, lw, lh, 'faflogo');
+      return lh;
+    }
+    function card(x, y, w, h, r) {
+      var cx = x + w / 2;
+      if (kind === 'diaper') {
+        var lh = drawLogo(x, y, w, 0.30); var cy = y + 2.5 + lh + 1;
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(32); doc.setTextColor.apply(doc, GREEN); center('Size ' + r.size, cx, cy + 11);
+        nameLine(x, w, cy + 21, r.name, 16);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(13); doc.setTextColor.apply(doc, GREY); center(r.phone || '', cx, cy + 27.5);
+      } else {
+        var lh2 = drawLogo(x, y, w, 0.28); var cy2 = y + 2.5 + lh2 + 1;
+        var fs = 26; doc.setFont('helvetica', 'bold'); doc.setFontSize(fs);
+        var tw = doc.getTextWidth(r.stage), dr = 2.4;
+        var sx = cx - (tw + dr * 2 + 3) / 2;
+        doc.setFillColor.apply(doc, r.stage === 'Stage 1' ? ORANGE : GREEN); doc.circle(sx + dr, cy2 + 9.3 - 0.8, dr, 'F');
+        doc.setTextColor.apply(doc, BLACK); doc.text(r.stage, sx + dr * 2 + 3, cy2 + 11);
+        nameLine(x, w, cy2 + 20.5, r.name, 15);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(13); doc.setTextColor.apply(doc, GREY); center(r.phone || '', cx, cy2 + 26.5);
+      }
+      distributorLine(x, w, y + h - 5, r.distributor || '');
+    }
+    for (var page = 0; page < total; page++) {
+      if (page > 0) doc.addPage();
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor.apply(doc, BLACK); doc.text(title, 10, 8);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor.apply(doc, GREY);
+      doc.text(sub + '  |  Distribution: ' + dateStr + '  |  Page ' + (page + 1) + '/' + total, PW - 10, 8, { align: 'right' });
+      doc.setDrawColor(221, 221, 221); doc.setLineWidth(0.4); doc.line(10, 10, PW - 10, 10);
+      for (var i = 0; i < per; i++) {
+        var idx = page * per + i; if (idx >= rows.length) break;
+        var rr = Math.floor(i / cols), col = i % cols;
+        var x = sm + col * cw, y = gt + rr * ch;
+        card(x + g, y + g, cw - 2 * g, ch - 2 * g, rows[idx]);
+        doc.setDrawColor(229, 229, 229); doc.setLineWidth(0.3); doc.rect(x + g, y + g, cw - 2 * g, ch - 2 * g);
+      }
+    }
+    doc.save((kind === 'diaper' ? 'Diaper' : 'Formula') + '_Labels_' + data.date + '.pdf');
+  }).catch(function(e) {
+    alert('Labels failed: ' + e.message);
+  }).finally(function() {
+    if (btn) { btn.textContent = orig; btn.disabled = false; }
   });
 }
 
