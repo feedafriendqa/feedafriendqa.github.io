@@ -365,7 +365,7 @@ select.edit-field{cursor:pointer;}
 
     <div style="margin-bottom:14px;">
       <button class="btn-comment" style="background:var(--green);" onclick="exportConfirmedCSV()">⬇ Export Confirmed (CSV)</button>
-      <button class="btn-comment" id="dist-list-btn" style="background:var(--green);margin-left:8px;" onclick="generateDistributionList()">⬇ Generate distribution list (CSV)</button>
+      <button class="btn-comment" id="dist-list-btn" style="display:none;background:var(--green);margin-left:8px;" onclick="generateDistributionList()">⬇ Generate distribution list (CSV)</button>
     </div>
 
     <div class="table-wrap">
@@ -1033,6 +1033,8 @@ async function handleAdminSession(session) {
     var el = document.getElementById(id);
     if (el) el.style.display = (myRole === 'super_admin') ? 'inline-block' : 'none';
   });
+  var distBtn = document.getElementById('dist-list-btn');
+  if (distBtn) distBtn.style.display = (myRole === 'super_admin') ? 'inline-block' : 'none';
   myCasesOnly = (myRole !== 'super_admin');
   if (myRole === 'super_admin') {
     try { myCasesOnly = localStorage.getItem('fba_my_cases_only') === '1'; } catch (e) {}
@@ -2310,6 +2312,7 @@ function csvEscape(val) {
 // Distribution list: confirmed + sponsored families with sponsor, driver, trip status, map link, diapers/formula.
 // Data comes from the admin-gated RPC get_distribution_list. Opens in Google Sheets (File > Import / Open).
 function generateDistributionList() {
+  if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
   var btn = document.getElementById('dist-list-btn');
   var label = '⬇ Generate distribution list (CSV)';
   if (btn) { btn.textContent = 'Generating…'; btn.disabled = true; }
