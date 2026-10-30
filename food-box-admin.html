@@ -2315,8 +2315,6 @@ function generateDistributionList(clicked, roundId) {
   var btn = clicked;
   var label = btn ? btn.textContent : '';
   if (btn) { btn.textContent = 'Generating…'; btn.disabled = true; }
-  var sheetTab = null;
-  try { sheetTab = window.open('about:blank', '_blank'); } catch (e) {}
   apiHeadersAsync().then(function(headers) {
     return fetch(SUPABASE_URL + '/rest/v1/rpc/get_distribution_list', {
       method: 'POST', headers: headers, body: JSON.stringify({ p_round_id: roundId || null })
@@ -2345,36 +2343,15 @@ function generateDistributionList(clicked, roundId) {
       boxes += Number(r.boxes) || 0;
       lines.push(cols.map(function(c){ return esc(r[c[0]]); }).join(','));
     });
-    var summary = res.round_name + ' (' + res.round_date + '): ' + rows.length + ' families, ' + boxes + ' boxes';
-    function downloadCsv() {
-      var blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = 'distribution-list-' + String(res.round_name || 'round').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + res.round_date + '.csv';
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-    // Tab-separated copy for pasting straight into a blank Google Sheet.
-    function tsv(v) { return v === null || v === undefined ? '' : String(v).replace(/[\t\r\n]+/g, ' '); }
-    var tsvText = [cols.map(function(c){ return tsv(c[1]); }).join('\t')].concat(rows.map(function(r) {
-      return cols.map(function(c){ return tsv(r[c[0]]); }).join('\t');
-    })).join('\n');
-    var copied = (navigator.clipboard && navigator.clipboard.writeText)
-      ? navigator.clipboard.writeText(tsvText).then(function(){ return true; }, function(){ return false; })
-      : Promise.resolve(false);
-    return copied.then(function(ok) {
-      if (ok) {
-        if (sheetTab) { sheetTab.location.href = 'https://sheets.new'; }
-        alert('Copied: ' + summary + '.\n\n' + (sheetTab ? 'A new Google Sheet is opening. Click cell A1 and press Ctrl+V (Cmd+V on Mac) to paste.' : 'Open a new Google Sheet (sheets.new), click cell A1 and press Ctrl+V (Cmd+V on Mac) to paste.'));
-      } else {
-        if (sheetTab) { try { sheetTab.close(); } catch (e) {} }
-        downloadCsv();
-        alert('Could not copy to the clipboard, so the list was downloaded as a CSV instead: ' + summary + '.\nOpen it in Google Sheets via File > Import.');
-      }
-    });
+    var blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'distribution-list-' + String(res.round_name || 'round').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + res.round_date + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert('Distribution list for ' + res.round_name + ' (' + res.round_date + ') downloaded: ' + rows.length + ' families, ' + boxes + ' boxes.');
   }).catch(function(e) {
-    if (sheetTab) { try { sheetTab.close(); } catch (x) {} }
     alert('Distribution list failed: ' + e.message);
   }).finally(function() {
     if (btn) { btn.textContent = label; btn.disabled = false; }
@@ -3796,7 +3773,7 @@ function loadPledgeRoundsAdmin() {
       var statusLabel = r.status === 'matching_done' ? '✅ Matched' : r.status === 'completed' ? '📦 Completed' : (pastCutoff ? '⏰ Cutoff passed — ready to match' : '📝 Open for edits until ' + r.edit_cutoff_date);
       var matchBtn = (r.status === 'open') ? ('<button class="btn-comment" style="background:' + (pastCutoff ? 'var(--green)' : '#ccc') + ';color:#fff;border:none;margin-left:8px;" onclick="runPledgeMatching(\'' + r.id + '\')">Run matching' + (pastCutoff ? '' : ' (early)') + '</button>') : '';
       var sheetBtns = (myRole === 'super_admin')
-        ? ('<button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="generateDistributionList(this, \'' + r.id + '\')">📊 Google Sheet</button>' +
+        ? ('<button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="generateDistributionList(this, \'' + r.id + '\')">⬇ Sheet (CSV)</button>' +
            '<button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="generateDistributionLabels(\'diaper\', this, \'' + r.id + '\')">🖨 Diaper labels</button>' +
            '<button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="generateDistributionLabels(\'formula\', this, \'' + r.id + '\')">🖨 Formula labels</button>')
         : '';
