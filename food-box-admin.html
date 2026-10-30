@@ -451,14 +451,6 @@ select.edit-field{cursor:pointer;}
       </div>
 
       <div id="distributions-subtab-rounds-panel">
-        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
-          <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;">📋 Distribution sheet &amp; labels</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">For the open distribution. Built fresh from live data each time you click. The sheet downloads as a CSV you can open in Google Sheets.</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;">
-            <button class="btn-comment" style="background:var(--green);" onclick="generateDistributionList(this)">⬇ Distribution list (CSV)</button>
-            <button class="btn-comment" style="background:var(--green);" onclick="generateDistributionLabels('diaper', this)">🖨 Diaper labels (PDF)</button>
-            <button class="btn-comment" style="background:var(--green);" onclick="generateDistributionLabels('formula', this)">🖨 Formula labels (PDF)</button>
-          </div>
         </div>
         <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
           <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;">🛒 Public sponsorship page</div>
@@ -2318,17 +2310,18 @@ function csvEscape(val) {
 // have more than one qualifying child, so each gets its own export row.
 // Distribution list: confirmed + sponsored families with sponsor, driver, trip status, map link, diapers/formula.
 // Data comes from the admin-gated RPC get_distribution_list. Opens in Google Sheets (File > Import / Open).
-function generateDistributionList(clicked) {
+function generateDistributionList(clicked, roundId) {
   if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
   var btn = clicked;
   var label = btn ? btn.textContent : '';
   if (btn) { btn.textContent = 'Generating…'; btn.disabled = true; }
   fetch(SUPABASE_URL + '/rest/v1/rpc/get_distribution_list', {
-    method: 'POST', headers: headers, body: JSON.stringify({})
+    method: 'POST', headers: headers, body: JSON.stringify({ p_round_id: roundId || null })
   }).then(function(r) {
     if (!r.ok) throw new Error('Could not build the list (' + r.status + ')');
     return r.json();
-  }).then(function(rows) {
+  }).then(function(res) {
+    var rows = res.rows || [];
     var cols = [
       ['family','Family'],['family_whatsapp','Family Whatsapp'],['area','Area'],['zone','Zone'],['street','Street'],
       ['building','Building'],['unit','Unit'],['household_size','Household Size'],['boxes','Boxes (household/4 rounded up)'],
@@ -2352,10 +2345,10 @@ function generateDistributionList(clicked) {
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = 'distribution-list-' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.download = 'distribution-list-' + String(res.round_name || 'round').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + res.round_date + '.csv';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    alert('Distribution list downloaded: ' + rows.length + ' families, ' + boxes + ' boxes.\nOpen it in Google Sheets via File > Import, or upload it to Drive.');
+    alert('Distribution list for ' + res.round_name + ' (' + res.round_date + ') downloaded: ' + rows.length + ' families, ' + boxes + ' boxes.\nOpen it in Google Sheets via File > Import, or upload it to Drive.');
   }).catch(function(e) {
     alert('Distribution list failed: ' + e.message);
   }).finally(function() {
@@ -2365,7 +2358,7 @@ function generateDistributionList(clicked) {
 
 // Distribution labels (diaper / formula): A4, 2 x 4 per page, built in the browser with jsPDF from the
 // super-admin-only RPC get_distribution_labels (confirmed families; formula = needs_formula yes, under 12 months at distribution date).
-function generateDistributionLabels(kind, btn) {
+function generateDistributionLabels(kind, btn, roundId) {
   if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
   if (!window.jspdf) { alert('PDF tool did not load. Refresh the page and try again.'); return; }
   var orig = btn ? btn.textContent : '';
@@ -2381,7 +2374,7 @@ function generateDistributionLabels(kind, btn) {
     img.src = 'faf-logo.png';
   });
   Promise.all([
-    fetch(SUPABASE_URL + '/rest/v1/rpc/get_distribution_labels', { method: 'POST', headers: headers, body: '{}' }).then(function(r) {
+    fetch(SUPABASE_URL + '/rest/v1/rpc/get_distribution_labels', { method: 'POST', headers: headers, body: JSON.stringify({ p_round_id: roundId || null }) }).then(function(r) {
       if (!r.ok) throw new Error('Could not load label data (' + r.status + ')');
       return r.json();
     }),
@@ -2389,7 +2382,7 @@ function generateDistributionLabels(kind, btn) {
   ]).then(function(out) {
     var data = out[0], logo = out[1];
     var rows = (kind === 'diaper' ? data.diapers : data.formula) || [];
-    if (!rows.length) { alert('No ' + kind + ' labels needed for this distribution.'); return; }
+    if (!rows.length) { alert('No ' + kind + ' labels needed for ' + data.title + '.'); return; }
     var dateStr = new Date(data.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     var title = String(data.title || 'Distribution').toUpperCase();
     var sub = kind === 'diaper' ? 'Diaper Labels' : 'Formula Labels';
@@ -2463,7 +2456,7 @@ function generateDistributionLabels(kind, btn) {
         doc.setDrawColor(229, 229, 229); doc.setLineWidth(0.3); doc.rect(x + g, y + g, cw - 2 * g, ch - 2 * g);
       }
     }
-    doc.save((kind === 'diaper' ? 'Diaper' : 'Formula') + '_Labels_' + data.date + '.pdf');
+    doc.save((kind === 'diaper' ? 'Diaper' : 'Formula') + '_Labels_' + String(data.title).replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') + '_' + data.date + '.pdf');
   }).catch(function(e) {
     alert('Labels failed: ' + e.message);
   }).finally(function() {
@@ -3775,10 +3768,15 @@ function loadPledgeRoundsAdmin() {
       var pastCutoff = todayStr > r.edit_cutoff_date;
       var statusLabel = r.status === 'matching_done' ? '✅ Matched' : r.status === 'completed' ? '📦 Completed' : (pastCutoff ? '⏰ Cutoff passed — ready to match' : '📝 Open for edits until ' + r.edit_cutoff_date);
       var matchBtn = (r.status === 'open') ? ('<button class="btn-comment" style="background:' + (pastCutoff ? 'var(--green)' : '#ccc') + ';color:#fff;border:none;margin-left:8px;" onclick="runPledgeMatching(\'' + r.id + '\')">Run matching' + (pastCutoff ? '' : ' (early)') + '</button>') : '';
+      var sheetBtns = (myRole === 'super_admin')
+        ? ('<button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="generateDistributionList(this, \'' + r.id + '\')">⬇ Sheet</button>' +
+           '<button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="generateDistributionLabels(\'diaper\', this, \'' + r.id + '\')">🖨 Diaper labels</button>' +
+           '<button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="generateDistributionLabels(\'formula\', this, \'' + r.id + '\')">🖨 Formula labels</button>')
+        : '';
       return '<div style="padding:8px 0;border-bottom:1px solid var(--border);">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleRoundSponsors(\'' + r.id + '\')">' +
         '<div><span id="round-chevron-' + r.id + '" style="display:inline-block;width:16px;color:var(--muted);">▸</span><strong>' + r.name + '</strong> — ' + r.distribution_date + '<br><span style="font-size:12px;margin-left:16px;">' + statusLabel + '</span></div>' +
-        '<div onclick="event.stopPropagation()">' + matchBtn + '</div></div>' +
+        '<div onclick="event.stopPropagation()" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;">' + sheetBtns + matchBtn + '</div></div>' +
         '<div id="round-sponsors-' + r.id + '" style="display:none;margin:10px 0 0 16px;"></div>' +
       '</div>';
     }).join('');
