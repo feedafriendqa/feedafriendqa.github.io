@@ -365,9 +365,6 @@ select.edit-field{cursor:pointer;}
 
     <div style="margin-bottom:14px;">
       <button class="btn-comment" style="background:var(--green);" onclick="exportConfirmedCSV()">⬇ Export Confirmed (CSV)</button>
-      <button class="btn-comment" id="dist-list-btn" style="display:none;background:var(--green);margin-left:8px;" onclick="generateDistributionList(this)">⬇ Generate distribution list (CSV)</button>
-      <button class="btn-comment super-only-dist" style="display:none;background:var(--green);margin-left:8px;" onclick="generateDistributionLabels('diaper', this)">🖨 Diaper labels (PDF)</button>
-      <button class="btn-comment super-only-dist" style="display:none;background:var(--green);margin-left:8px;" onclick="generateDistributionLabels('formula', this)">🖨 Formula labels (PDF)</button>
     </div>
 
     <div class="table-wrap">
@@ -1045,9 +1042,6 @@ async function handleAdminSession(session) {
     var el = document.getElementById(id);
     if (el) el.style.display = (myRole === 'super_admin') ? 'inline-block' : 'none';
   });
-  var distBtn = document.getElementById('dist-list-btn');
-  if (distBtn) distBtn.style.display = (myRole === 'super_admin') ? 'inline-block' : 'none';
-  document.querySelectorAll('.super-only-dist').forEach(function(el){ el.style.display = (myRole === 'super_admin') ? 'inline-block' : 'none'; });
   myCasesOnly = (myRole !== 'super_admin');
   if (myRole === 'super_admin') {
     try { myCasesOnly = localStorage.getItem('fba_my_cases_only') === '1'; } catch (e) {}
@@ -2326,7 +2320,7 @@ function csvEscape(val) {
 // Data comes from the admin-gated RPC get_distribution_list. Opens in Google Sheets (File > Import / Open).
 function generateDistributionList(clicked) {
   if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
-  var btn = clicked || document.getElementById('dist-list-btn');
+  var btn = clicked;
   var label = btn ? btn.textContent : '';
   if (btn) { btn.textContent = 'Generating…'; btn.disabled = true; }
   fetch(SUPABASE_URL + '/rest/v1/rpc/get_distribution_list', {
