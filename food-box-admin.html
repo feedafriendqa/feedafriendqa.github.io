@@ -365,7 +365,7 @@ select.edit-field{cursor:pointer;}
 
     <div style="margin-bottom:14px;">
       <button class="btn-comment" style="background:var(--green);" onclick="exportConfirmedCSV()">⬇ Export Confirmed (CSV)</button>
-      <button class="btn-comment" id="dist-list-btn" style="display:none;background:var(--green);margin-left:8px;" onclick="generateDistributionList()">⬇ Generate distribution list (CSV)</button>
+      <button class="btn-comment" id="dist-list-btn" style="display:none;background:var(--green);margin-left:8px;" onclick="generateDistributionList(this)">⬇ Generate distribution list (CSV)</button>
       <button class="btn-comment super-only-dist" style="display:none;background:var(--green);margin-left:8px;" onclick="generateDistributionLabels('diaper', this)">🖨 Diaper labels (PDF)</button>
       <button class="btn-comment super-only-dist" style="display:none;background:var(--green);margin-left:8px;" onclick="generateDistributionLabels('formula', this)">🖨 Formula labels (PDF)</button>
     </div>
@@ -454,6 +454,15 @@ select.edit-field{cursor:pointer;}
       </div>
 
       <div id="distributions-subtab-rounds-panel">
+        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
+          <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;">📋 Distribution sheet &amp; labels</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">For the open distribution. Built fresh from live data each time you click. The sheet downloads as a CSV you can open in Google Sheets.</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <button class="btn-comment" style="background:var(--green);" onclick="generateDistributionList(this)">⬇ Distribution list (CSV)</button>
+            <button class="btn-comment" style="background:var(--green);" onclick="generateDistributionLabels('diaper', this)">🖨 Diaper labels (PDF)</button>
+            <button class="btn-comment" style="background:var(--green);" onclick="generateDistributionLabels('formula', this)">🖨 Formula labels (PDF)</button>
+          </div>
+        </div>
         <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px;background:#fff;">
           <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;">🛒 Public sponsorship page</div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Controls whether connect.feedafriend.org/foodbox shows the normal "sponsor boxes" screen or "opens soon". Times are Qatar time.</div>
@@ -2315,10 +2324,10 @@ function csvEscape(val) {
 // have more than one qualifying child, so each gets its own export row.
 // Distribution list: confirmed + sponsored families with sponsor, driver, trip status, map link, diapers/formula.
 // Data comes from the admin-gated RPC get_distribution_list. Opens in Google Sheets (File > Import / Open).
-function generateDistributionList() {
+function generateDistributionList(clicked) {
   if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
-  var btn = document.getElementById('dist-list-btn');
-  var label = '⬇ Generate distribution list (CSV)';
+  var btn = clicked || document.getElementById('dist-list-btn');
+  var label = btn ? btn.textContent : '';
   if (btn) { btn.textContent = 'Generating…'; btn.disabled = true; }
   fetch(SUPABASE_URL + '/rest/v1/rpc/get_distribution_list', {
     method: 'POST', headers: headers, body: JSON.stringify({})
