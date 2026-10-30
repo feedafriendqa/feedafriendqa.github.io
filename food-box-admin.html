@@ -2315,8 +2315,10 @@ function generateDistributionList(clicked, roundId) {
   var btn = clicked;
   var label = btn ? btn.textContent : '';
   if (btn) { btn.textContent = 'Generating…'; btn.disabled = true; }
-  fetch(SUPABASE_URL + '/rest/v1/rpc/get_distribution_list', {
-    method: 'POST', headers: headers, body: JSON.stringify({ p_round_id: roundId || null })
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/rpc/get_distribution_list', {
+      method: 'POST', headers: headers, body: JSON.stringify({ p_round_id: roundId || null })
+    });
   }).then(function(r) {
     if (!r.ok) throw new Error('Could not build the list (' + r.status + ')');
     return r.json();
@@ -2374,7 +2376,9 @@ function generateDistributionLabels(kind, btn, roundId) {
     img.src = 'faf-logo.png';
   });
   Promise.all([
-    fetch(SUPABASE_URL + '/rest/v1/rpc/get_distribution_labels', { method: 'POST', headers: headers, body: JSON.stringify({ p_round_id: roundId || null }) }).then(function(r) {
+    apiHeadersAsync().then(function(headers) {
+      return fetch(SUPABASE_URL + '/rest/v1/rpc/get_distribution_labels', { method: 'POST', headers: headers, body: JSON.stringify({ p_round_id: roundId || null }) });
+    }).then(function(r) {
       if (!r.ok) throw new Error('Could not load label data (' + r.status + ')');
       return r.json();
     }),
