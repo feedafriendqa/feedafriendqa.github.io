@@ -3969,7 +3969,7 @@ function runPledgeMatchingReview(roundId) {
     }).then(function(d) {
       var ids = d[0].map(function(x){ return x.sponsor_id; }).filter(Boolean);
       if (!ids.length) return d.concat([[]]);
-      return fetch(SUPABASE_URL + '/rest/v1/profiles?select=id,first_name,email&id=in.(' + ids.join(',') + ')', { headers: headers })
+      return fetch(SUPABASE_URL + '/rest/v1/profiles?select=id,first_name,surname,email&id=in.(' + ids.join(',') + ')', { headers: headers })
         .then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; })
         .then(function(p){ return d.concat([p]); });
     });
@@ -4003,7 +4003,7 @@ function showMatchingReview(roundId, sponsorships, friends, profiles) {
   });
   var rows = plan.map(function(x) {
     var p = prof[x.sp.sponsor_id] || {};
-    var who = esc(p.first_name || x.sp.sponsor_name || ('Sponsor ' + String(x.sp.sponsor_id || '').slice(0, 8))) + (p.email ? ' <span style="color:var(--muted);font-size:11px;">' + esc(p.email) + '</span>' : '');
+    var who = esc(((p.first_name || '') + ' ' + (p.surname || '')).trim() || x.sp.sponsor_name || ('Sponsor ' + String(x.sp.sponsor_id || '').slice(0, 8))) + (p.email ? ' <span style="color:var(--muted);font-size:11px;">' + esc(p.email) + '</span>' : '');
     var short = x.sp.box_count - x.used;
     var list = x.picked.length ? x.picked.map(function(c){
       return esc(c.f.full_name_en || c.f.full_name || c.f.id) + ' <span style="color:var(--muted);font-size:11px;">(' + esc(c.f.area || 'no area') + ', ' + c.need + ' box' + (c.need === 1 ? '' : 'es') + (c.areaMatch ? ', preferred area' : '') + (c.langMatch ? ', preferred language' : '') + ')</span>';
