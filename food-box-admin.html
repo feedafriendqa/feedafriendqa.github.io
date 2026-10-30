@@ -2358,6 +2358,170 @@ function generateDistributionList(clicked, roundId) {
   });
 }
 
+// Distribution Print Out: one table per distributor (landscape A4), several per page, tables never split
+// across pages (unless one is taller than a page). Built in the browser with jsPDF from the same super-admin
+// RPC as the CSV (get_distribution_list). "Pasta" always equals boxes. Diapers/formula show the size/stage
+// ("2 x Size 3" when a family needs two). The driver column of the RPC is the contact person; driven_by is the
+// person actually driving when that is someone else.
+function buildDistributionPrintoutPdf(JsPDF, res, logo) {
+  var rows = res.rows || [];
+  var dateStr = new Date(res.round_date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  var title = String(res.round_name || 'Food Box Distribution').toUpperCase();
+  function items(str) {            // "Size 3 x2; Size 5" -> ["Size 3","Size 3","Size 5"]; ignores "not needed"
+    var out = [];
+    String(str || '').split(';').forEach(function(p) {
+      p = p.trim(); if (!p || /not needed/i.test(p)) return;
+      var m = p.match(/^(.*?)\s+x(\d+)$/i), n = 1;
+      if (m) { p = m[1]; n = parseInt(m[2], 10) || 1; }
+      for (var i = 0; i < n; i++) out.push(p);
+    });
+    return out;
+  }
+  function fmt(list) {
+    var c = {}, order = [];
+    list.forEach(function(x) { if (!c[x]) { c[x] = 0; order.push(x); } c[x]++; });
+    return order.sort().map(function(k) { return c[k] > 1 ? c[k] + ' x ' + k : k; }).join(', ');
+  }
+  // group by driver (contact) + who is driving
+  var groups = {}, keys = [];
+  rows.forEach(function(r) {
+    var name = r.driver || '', drv = r.driven_by || '';
+    var k = name + '||' + drv;
+    if (!groups[k]) { groups[k] = { name: name || 'No driver assigned yet', drivenBy: drv, phone: r.driver_phone || '', none: !name, rows: [] }; keys.push(k); }
+    groups[k].rows.push(r);
+  });
+  var list = keys.map(function(k) { return groups[k]; }).sort(function(a, b) {
+    if (a.none !== b.none) return a.none ? 1 : -1;
+    return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1;
+  });
+  var doc = new JsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+  var PW = 297, PH = 210, M = 12, TOP = 21, BOT = 13, W = PW - 2 * M;
+  var GREEN = [27, 107, 47], GREY = [110, 110, 110], BLACK = [26, 26, 26], LIGHT = [234, 244, 236], LINE = [201, 214, 204], ALT = [246, 250, 247];
+  var cols = [['#', 7], ['Family', 70], ['Phone', 30], ['Area', 32], ['Language', 22], ['Boxes', 15], ['Pasta', 15], ['Diapers', 32], ['Formula', 28], ['Done', 22]];
+  var RH = 5.6, HH = 6.2;
+  var page = 1, y = TOP;
+  function pageHead() {
+    if (logo) doc.addImage(logo.data, 'PNG', M, 4.5, 14, 14 * logo.ar, 'faflogo');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor.apply(doc, GREEN); doc.text(title, M + 17, 9);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor.apply(doc, BLACK); doc.text(dateStr, M + 17, 13.5);
+    doc.setDrawColor.apply(doc, LINE); doc.setLineWidth(0.4); doc.line(M, 17.5, PW - M, 17.5);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor.apply(doc, GREY);
+    doc.text(title + '  |  ' + dateStr, M, PH - 7);
+    doc.text('Page ' + page, PW - M, PH - 7, { align: 'right' });
+  }
+  function newPage() { doc.addPage(); page++; y = TOP; pageHead(); }
+  function fit(text, w, size, font) {
+    doc.setFont('helvetica', font || 'normal'); doc.setFontSize(size);
+    var t = String(text == null ? '' : text);
+    while (t.length > 1 && doc.getTextWidth(t) > w - 2) t = t.slice(0, -1);
+    return t.length < String(text == null ? '' : text).length ? t.replace(/\s+$/, '') + '…' : t;
+  }
+  function colHeader() {
+    doc.setFillColor.apply(doc, GREEN); doc.rect(M, y, W, HH, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(255, 255, 255);
+    var x = M; cols.forEach(function(c) { doc.text(c[0], x + 1.5, y + 4.2); x += c[1]; });
+    y += HH;
+  }
+  function row(cells, i, bold, fill) {
+    if (fill) { doc.setFillColor.apply(doc, fill); doc.rect(M, y, W, RH, 'F'); }
+    else if (i % 2 === 1) { doc.setFillColor.apply(doc, ALT); doc.rect(M, y, W, RH, 'F'); }
+    var x = M;
+    cols.forEach(function(c, j) {
+      var txt = cells[j] == null ? '' : String(cells[j]);
+      var isBold = bold || j === 1 || j === 5 || j === 6;
+      doc.setTextColor.apply(doc, BLACK);
+      doc.text(fit(txt, c[1], 8.3, isBold ? 'bold' : 'normal'), x + 1.5, y + 3.9);
+      x += c[1];
+    });
+    doc.setDrawColor.apply(doc, LINE); doc.setLineWidth(0.2);
+    doc.line(M, y + RH, M + W, y + RH);
+    y += RH;
+  }
+  function grid(y0, y1) {
+    doc.setDrawColor.apply(doc, LINE); doc.setLineWidth(0.2);
+    var x = M; cols.forEach(function(c) { doc.line(x, y0, x, y1); x += c[1]; });
+    doc.line(M + W, y0, M + W, y1); doc.line(M, y0, M + W, y0); doc.line(M, y1, M + W, y1);
+  }
+  pageHead();
+  if (!list.length) { doc.setFontSize(11); doc.setTextColor.apply(doc, GREY); doc.text('No families found for this distribution.', M, TOP + 8); }
+  list.forEach(function(g, gi) {
+    var recs = g.rows.map(function(r) {
+      return { fam: r.family, phone: r.family_whatsapp, area: r.area, lang: r.language || '', boxes: Number(r.boxes) || 0, dia: items(r.diaper_sizes), frm: items(r.formula_stage) };
+    });
+    var totBoxes = recs.reduce(function(s, r) { return s + r.boxes; }, 0);
+    var totDia = recs.reduce(function(s, r) { return s + r.dia.length; }, 0);
+    var totFrm = recs.reduce(function(s, r) { return s + r.frm.length; }, 0);
+    var HEAD = 15.5, GAP = 7;
+    var blockH = HEAD + HH + RH * (recs.length + 1);
+    var avail = PH - BOT - y;
+    if (gi > 0 && y > TOP) { if (blockH + GAP > avail) newPage(); else y += GAP; }
+    else if (blockH > PH - BOT - y && y > TOP) newPage();
+    // heading band
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor.apply(doc, BLACK);
+    doc.text(g.name, M, y + 5.5);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor.apply(doc, GREY);
+    var sub = (g.phone ? (g.drivenBy ? 'Contact phone ' : 'Phone ') + g.phone : '') + (g.drivenBy ? (g.phone ? '   |   ' : '') + 'Driving: ' + g.drivenBy : '');
+    if (g.none) sub = 'These families do not have a driver yet.';
+    doc.text(sub, M, y + 10.2);
+    var stats = [['STOPS', recs.length], ['BOXES', totBoxes], ['PASTA', totBoxes], ['DIAPERS', totDia], ['FORMULA', totFrm]];
+    var sw = 22, sx = PW - M - sw * stats.length;
+    doc.setFillColor.apply(doc, LIGHT); doc.rect(sx, y, sw * stats.length, 11.5, 'F');
+    stats.forEach(function(s, i) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor.apply(doc, GREY); doc.text(s[0], sx + i * sw + sw / 2, y + 3.4, { align: 'center' });
+      doc.setFontSize(13); doc.setTextColor.apply(doc, GREEN); doc.text(String(s[1]), sx + i * sw + sw / 2, y + 9.6, { align: 'center' });
+    });
+    y += HEAD;
+    var maxRows = Math.floor((PH - BOT - y - HH - RH) / RH);
+    var start = 0, tableTop;
+    while (true) {
+      tableTop = y; colHeader();
+      var chunk = recs.slice(start, start + Math.max(1, maxRows));
+      chunk.forEach(function(r, i) { row([start + i + 1, r.fam, r.phone, r.area, r.lang, r.boxes, r.boxes, fmt(r.dia), fmt(r.frm), ''], i); });
+      start += chunk.length;
+      if (start >= recs.length) break;
+      grid(tableTop, y); newPage(); maxRows = Math.floor((PH - BOT - y - HH - RH) / RH);
+    }
+    if (y + RH > PH - BOT) { grid(tableTop, y); newPage(); tableTop = y; }
+    row(['', 'TOTAL', recs.length + ' stops', '', '', totBoxes, totBoxes, totDia, totFrm, ''], 0, true, LIGHT);
+    grid(tableTop, y);
+  });
+  return { doc: doc, dateStr: dateStr };
+}
+
+function generateDistributionPrintout(btn, roundId) {
+  if (myRole !== 'super_admin') { alert('Super admin only.'); return; }
+  if (!window.jspdf) { alert('PDF tool did not load. Refresh the page and try again.'); return; }
+  var orig = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = 'Generating…'; btn.disabled = true; }
+  var logoP = new Promise(function(res) {
+    var img = new Image();
+    img.onload = function() {
+      var c = document.createElement('canvas'); c.width = 400; c.height = Math.round(400 * img.height / img.width);
+      var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+      res({ data: c.toDataURL('image/png'), ar: img.height / img.width });
+    };
+    img.onerror = function() { res(null); };
+    img.src = 'faf-logo.png';
+  });
+  Promise.all([
+    apiHeadersAsync().then(function(headers) {
+      return fetch(SUPABASE_URL + '/rest/v1/rpc/get_distribution_list', { method: 'POST', headers: headers, body: JSON.stringify({ p_round_id: roundId || null }) });
+    }).then(function(r) {
+      if (!r.ok) throw new Error('Could not load the distribution data (' + r.status + ')');
+      return r.json();
+    }),
+    logoP
+  ]).then(function(out) {
+    var res = out[0];
+    var built = buildDistributionPrintoutPdf(window.jspdf.jsPDF, res, out[1]);
+    built.doc.save('Distribution_Print_Out_' + String(res.round_name || 'round').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') + '_' + res.round_date + '.pdf');
+  }).catch(function(e) {
+    alert('Print out failed: ' + e.message);
+  }).finally(function() {
+    if (btn) { btn.textContent = orig; btn.disabled = false; }
+  });
+}
+
 // Distribution labels (diaper / formula): A4, 2 x 4 per page, built in the browser with jsPDF from the
 // super-admin-only RPC get_distribution_labels (confirmed families; formula = needs_formula yes, under 12 months at distribution date).
 function generateDistributionLabels(kind, btn, roundId) {
@@ -3775,7 +3939,8 @@ function loadPledgeRoundsAdmin() {
       var sheetBtns = (myRole === 'super_admin')
         ? ('<button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="generateDistributionList(this, \'' + r.id + '\')">⬇ Sheet (CSV)</button>' +
            '<button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="generateDistributionLabels(\'diaper\', this, \'' + r.id + '\')">🖨 Diaper labels</button>' +
-           '<button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="generateDistributionLabels(\'formula\', this, \'' + r.id + '\')">🖨 Formula labels</button>')
+           '<button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="generateDistributionLabels(\'formula\', this, \'' + r.id + '\')">🖨 Formula labels</button>' +
+           '<button class="btn-comment" style="background:var(--green);color:#fff;border:none;" onclick="generateDistributionPrintout(this, \'' + r.id + '\')">🖨 Distribution Print Out</button>')
         : '';
       return '<div style="padding:8px 0;border-bottom:1px solid var(--border);">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleRoundSponsors(\'' + r.id + '\')">' +
