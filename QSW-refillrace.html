@@ -256,6 +256,8 @@
             <div id="needsMostBadge" style="display:none; margin-top:9px; background:#fff8e6; border:1.5px solid #f4a832; border-radius:10px; padding:9px 12px; font-size:12px; color:#7a5200; line-height:1.4"><b>🔥 Needs You Most</b> — <span id="needsMostReason"></span> <b>(+10 pts auto-bonus)</b></div>
 
             <div id="fridgeBrowser" style="display:none; margin-top:10px; border:1.5px solid #d9ded6; border-radius:14px; padding:11px; background:#f8faf6">
+              <button type="button" id="fridgeNearBtn" onclick="useMyLocation()" style="display:block; width:100%; margin-bottom:9px; background:#1b7a43; color:#fff; border:none; border-radius:9px; padding:10px; font-size:13px; font-weight:700; cursor:pointer">📍 Use my location — show nearest fridges</button>
+              <div id="fridgeNearNote" style="display:none; font-size:12px; color:#5d6359; margin:-3px 0 9px"></div>
               <input id="fridgeBrowseSearch" type="text" oninput="renderFridgeBrowser()" placeholder="Search by name or zone…" style="width:100%; border:1.5px solid #d9ded6; border-radius:9px; padding:9px 10px; font-size:13px; color:#14261a; outline:none; margin-bottom:9px">
               <div id="fridgeBrowseList" style="display:flex; flex-direction:column; gap:7px; max-height:280px; overflow-y:auto"></div>
               <div id="fridgeBrowseEmpty" style="display:none; font-size:12px; color:#7a8579; text-align:center; padding:14px 0">No fridges match — try a different search.</div>
@@ -635,7 +637,7 @@ state.fridgeList = [];  // full array, same objects, for the in-page browser
 function loadFridgeList() {
   const c = cfg();
   if (!c.url || !c.key) return;
-  fetch(c.url + '/rest/v1/' + CONFIG.fridgesTable + '?select=id,name_en,zone_name,last_refill_at,photo_url&status=eq.active&order=name_en.asc', { headers: headers() })
+  fetch(c.url + '/rest/v1/' + CONFIG.fridgesTable + '?select=id,name_en,zone_name,last_refill_at,photo_url,lat,lng&status=eq.active&order=name_en.asc', { headers: headers() })
     .then(r => r.ok ? r.json() : Promise.reject())
     .then(rows => {
       const datalist = document.getElementById('fridgeList');
@@ -645,7 +647,7 @@ function loadFridgeList() {
       state.fridgeList = [];
       (rows || []).forEach(f => {
         const label = f.name_en + ' — ' + f.zone_name;
-        const entry = { id: f.id, label, name: f.name_en, zone: f.zone_name, lastRefillAt: f.last_refill_at, photoUrl: f.photo_url };
+        const entry = { id: f.id, label, name: f.name_en, zone: f.zone_name, lastRefillAt: f.last_refill_at, photoUrl: f.photo_url, lat: f.lat, lng: f.lng };
         state.fridgeIndex[label] = entry;
         state.fridgeList.push(entry);
         const opt = document.createElement('option');
@@ -699,6 +701,31 @@ function toggleFridgeBrowser() {
   }
 }
 
+function distKm(f) {
+  if (!state.userLoc || f.lat == null || f.lng == null) return Infinity;
+  const R = 6371, rad = d => d * Math.PI / 180;
+  const dLat = rad(f.lat - state.userLoc.lat), dLng = rad(f.lng - state.userLoc.lng);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(state.userLoc.lat)) * Math.cos(rad(f.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+function fmtKm(k) { return k < 1 ? Math.round(k * 1000) + ' m' : k.toFixed(1) + ' km'; }
+function useMyLocation() {
+  const note = document.getElementById('fridgeNearNote'), btn = document.getElementById('fridgeNearBtn');
+  note.style.display = 'block';
+  if (!navigator.geolocation) { note.textContent = 'Your browser can\'t share location. Search by area instead.'; return; }
+  btn.textContent = 'Finding you…';
+  navigator.geolocation.getCurrentPosition(pos => {
+    state.userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    btn.textContent = '📍 Location found — nearest first';
+    note.textContent = 'Sorted by distance from you. Your location stays on your device and is not saved.';
+    document.getElementById('fridgeBrowseSearch').value = '';
+    renderFridgeBrowser();
+  }, () => {
+    btn.textContent = '📍 Use my location — show nearest fridges';
+    note.textContent = 'Couldn\'t get your location. Allow location access in your browser, or search by area.';
+  }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+}
+
 function renderFridgeBrowser() {
   const list = document.getElementById('fridgeBrowseList');
   const empty = document.getElementById('fridgeBrowseEmpty');
@@ -708,6 +735,10 @@ function renderFridgeBrowser() {
   // Needs-you-most fridges float to the top so teams can spot where
   // help is most useful, then alphabetical within each group.
   rows = rows.slice().sort((a, b) => {
+    if (state.userLoc) {
+      const da = distKm(a), db = distKm(b);
+      if (da !== db) return da - db;
+    }
     const na = fridgeNeedsMost(a), nb = fridgeNeedsMost(b);
     if (na !== nb) return na ? -1 : 1;
     return a.name.localeCompare(b.name);
@@ -734,7 +765,7 @@ function renderFridgeBrowser() {
     btn.innerHTML = thumbHtml +
       '<div style="min-width:0; flex:1">' +
         '<div class="fc-name">' + f.name.replace(/</g, '&lt;') + '</div>' +
-        '<div class="fc-meta">' + f.zone.replace(/</g, '&lt;') + ' · ' + metaText + '</div>' +
+        '<div class="fc-meta">' + f.zone.replace(/</g, '&lt;') + ' · ' + metaText + (state.userLoc && isFinite(distKm(f)) ? ' · ' + fmtKm(distKm(f)) + ' away' : '') + '</div>' +
         (needsMost ? '<div class="fc-flame">🔥 Needs you most</div>' : '') +
       '</div>';
     list.appendChild(btn);
