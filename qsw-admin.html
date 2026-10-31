@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>QSW Admin — Feed a Friend</title><meta name="robots" content="noindex"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;background:#F0FDF4;color:#0A3D1F}
+.top{background:#0A3D1F;color:#fff;padding:14px 22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.top a{color:#fff;cursor:pointer;text-decoration:underline;font-size:13px;margin-left:14px}
+.wrap{max-width:1100px;margin:0 auto;padding:18px 14px}
+.login{max-width:340px;margin:12vh auto;background:#fff;padding:28px;border-radius:14px}
+input,select{width:100%;padding:10px;border:1.5px solid #BBF7D0;border-radius:8px;margin:6px 0 12px;font-size:14px}
+button{background:#0A3D1F;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;font-size:13px}
+.cards{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.c{background:#fff;border-radius:12px;padding:12px 16px;min-width:130px;border:1px solid #BBF7D0}
+.c b{display:block;font-size:24px}.c span{font-size:11px;color:#4B7C5A;letter-spacing:1px}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;font-size:13px}
+th,td{padding:9px 10px;border-bottom:1px solid #E5F5EA;text-align:left;vertical-align:top}th{background:#E8F7EC;font-size:11px;letter-spacing:1px}
+.p{padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700}.y{background:#DCFCE7;color:#166534}.n{background:#FEE2E2;color:#991B1B}.w{background:#F3F4F6;color:#4B5563}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.row select{width:auto;min-width:260px;margin:0}.err{color:#B91C1C;font-size:13px;margin:8px 0}
+</style></head><body><div id="app"></div>
+<script>
+const sb=supabase.createClient("https://xbxagukdvgyaoqvbqoic.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4");
+const app=document.getElementById("app");let rows=[],sel="";
+const E=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function login(msg){app.innerHTML=`<div class="login"><h2>QSW Admin</h2><p style="font-size:13px;color:#4B7C5A;margin:6px 0 14px">Sign in with your Feed a Friend admin account.</p><input id="e" type="email" placeholder="Email"/><input id="p" type="password" placeholder="Password"/><div class="err">${E(msg||"")}</div><button id="go" style="width:100%">Sign in</button></div>`;
+ const go=async()=>{const {data,error}=await sb.auth.signInWithPassword({email:e.value,password:p.value});if(error)return login(error.message);await boot();};go.call;document.getElementById("go").onclick=go;p.onkeydown=ev=>ev.key==="Enter"&&go();}
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(!session)return login();
+ const {data:pr}=await sb.from("profiles").select("role,first_name").eq("id",session.user.id).maybeSingle();
+ if(!pr||!["admin","superadmin"].includes(pr.role)){await sb.auth.signOut();return login("This account isn't an admin.");}
+ await load();}
+async function load(){const {data,error}=await sb.from("qsw_signups").select("*").order("event_date").order("created_at");if(error){app.innerHTML="<div class='wrap'>"+E(error.message)+"</div>";return;}rows=data;if(!sel)sel=rows.length?rows[0].session_key:"";draw();}
+function draw(){const keys=[...new Map(rows.map(r=>[r.session_key,r.event_title+" · "+r.event_date])).entries()];
+ const cur=rows.filter(r=>r.session_key===sel);const conf=cur.filter(r=>!r.is_waitlist);
+ const sum=a=>a.reduce((n,r)=>n+(r.people_count||0),0);
+ const att=conf.filter(r=>r.rsvp==="yes"),dec=conf.filter(r=>r.rsvp==="no"),none=conf.filter(r=>!r.rsvp),came=conf.filter(r=>r.attended===true);
+ app.innerHTML=`<div class="top"><b>QSW Admin · Feed a Friend</b><span><a id="fr" href="fridge-admin.html">Fridge Admin</a><a id="out">Sign out</a></span></div><div class="wrap">
+ <div class="row"><select id="s">${keys.map(([k,l])=>`<option value="${E(k)}" ${k===sel?"selected":""}>${E(l)}</option>`).join("")}</select><button id="csv">Download CSV</button><button id="rf">Refresh</button></div>
+ <div class="cards"><div class="c"><span>CONFIRMED PEOPLE</span><b>${sum(conf)}</b></div><div class="c"><span>ATTENDING (RSVP)</span><b>${sum(att)}</b></div><div class="c"><span>CAN'T ATTEND</span><b>${sum(dec)}</b></div><div class="c"><span>NO ANSWER</span><b>${sum(none)}</b></div><div class="c"><span>CAME (CHECKED IN)</span><b>${sum(came)}</b></div><div class="c"><span>WAITLIST</span><b>${sum(cur.filter(r=>r.is_waitlist))}</b></div></div>
+ <table><tr><th>CONTACT</th><th>GROUP</th><th>PEOPLE</th><th>PHONE</th><th>RSVP</th><th>NOTE</th><th>CAME?</th></tr>
+ ${cur.map(r=>`<tr><td><b>${E(r.full_name)}</b><br>${E(r.email)}</td><td>${E(r.company)}${r.is_waitlist?' <span class="p w">WAITLIST</span>':""}</td><td>${r.people_count}</td><td>${E(r.phone)}</td><td>${r.rsvp==="yes"?'<span class="p y">Attending</span>':r.rsvp==="no"?'<span class="p n">Can\'t attend</span>':'<span class="p w">No answer</span>'}</td><td>${E(r.rsvp_note)}</td><td><select data-id="${r.id}" style="width:auto;margin:0;padding:6px"><option value="">–</option><option value="t" ${r.attended===true?"selected":""}>Came</option><option value="f" ${r.attended===false?"selected":""}>Didn't come</option></select></td></tr>`).join("")}</table></div>`;
+ s.onchange=()=>{sel=s.value;draw();};rf.onclick=load;out.onclick=async()=>{await sb.auth.signOut();login();};
+ csv.onclick=()=>{const h=["session","name","email","company","people","phone","waitlist","rsvp","note","attended"];const L=[h.join(",")].concat(cur.map(r=>[r.event_title,r.full_name,r.email,r.company,r.people_count,r.phone,r.is_waitlist,r.rsvp||"",r.rsvp_note||"",r.attended==null?"":r.attended].map(v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"').join(",")));const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([L.join("\n")],{type:"text/csv"}));a.download="qsw-"+sel+".csv";a.click();};
+ document.querySelectorAll("select[data-id]").forEach(x=>x.onchange=async()=>{const v=x.value===""?null:x.value==="t";const {error}=await sb.from("qsw_signups").update({attended:v}).eq("id",x.dataset.id);if(error)alert(error.message);else{rows.find(r=>r.id===x.dataset.id).attended=v;draw();}});}
+boot();
+</script></body></html>
