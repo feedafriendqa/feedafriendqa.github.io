@@ -252,11 +252,11 @@
             <input id="lfLocation" list="fridgeList" autocomplete="off" oninput="onFridgePicked()" onchange="onFridgePicked()" placeholder="Start typing a fridge name or area…" style="width:100%; margin-top:5px; border:1.5px solid #d9ded6; border-radius:10px; padding:11px 12px; font-size:14px; color:#14261a; outline:none">
             <datalist id="fridgeList"></datalist>
             <span id="lfLocationErr" style="font-size:11.5px; color:#c0392b; display:none">Pick a real fridge from the list</span>
+            <button type="button" id="fridgeNearBtn" onclick="useMyLocation()" style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%; margin-top:8px; background:#1b7a43; color:#fff; border:none; border-radius:10px; padding:11px; font-size:13.5px; font-weight:700; cursor:pointer">📍 Find my location — show nearest fridges</button>
             <button type="button" id="fridgeBrowseToggle" onclick="toggleFridgeBrowser()" style="display:inline-flex; align-items:center; gap:5px; margin-top:7px; background:none; border:none; padding:0; font-size:11.5px; color:#1b7a43; font-weight:700; cursor:pointer">🔎 Browse fridges near you (with photos) →</button>
             <div id="needsMostBadge" style="display:none; margin-top:9px; background:#fff8e6; border:1.5px solid #f4a832; border-radius:10px; padding:9px 12px; font-size:12px; color:#7a5200; line-height:1.4"><b>🔥 Needs You Most</b> — <span id="needsMostReason"></span> <b>(+10 pts auto-bonus)</b></div>
 
             <div id="fridgeBrowser" style="display:none; margin-top:10px; border:1.5px solid #d9ded6; border-radius:14px; padding:11px; background:#f8faf6">
-              <button type="button" id="fridgeNearBtn" onclick="useMyLocation()" style="display:block; width:100%; margin-bottom:9px; background:#1b7a43; color:#fff; border:none; border-radius:9px; padding:10px; font-size:13px; font-weight:700; cursor:pointer">📍 Use my location — show nearest fridges</button>
               <div id="fridgeNearNote" style="display:none; font-size:12px; color:#5d6359; margin:-3px 0 9px"></div>
               <input id="fridgeBrowseSearch" type="text" oninput="renderFridgeBrowser()" placeholder="Search by name or zone…" style="width:100%; border:1.5px solid #d9ded6; border-radius:9px; padding:9px 10px; font-size:13px; color:#14261a; outline:none; margin-bottom:9px">
               <div id="fridgeBrowseList" style="display:flex; flex-direction:column; gap:7px; max-height:280px; overflow-y:auto"></div>
@@ -711,17 +711,19 @@ function distKm(f) {
 function fmtKm(k) { return k < 1 ? Math.round(k * 1000) + ' m' : k.toFixed(1) + ' km'; }
 function useMyLocation() {
   const note = document.getElementById('fridgeNearNote'), btn = document.getElementById('fridgeNearBtn');
+  const panel = document.getElementById('fridgeBrowser');
+  if (panel.style.display === 'none') { toggleFridgeBrowser(); }
   note.style.display = 'block';
   if (!navigator.geolocation) { note.textContent = 'Your browser can\'t share location. Search by area instead.'; return; }
   btn.textContent = 'Finding you…';
   navigator.geolocation.getCurrentPosition(pos => {
     state.userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    btn.textContent = '📍 Location found — nearest first';
+    btn.textContent = '📍 Location found — showing nearest first';
     note.textContent = 'Sorted by distance from you. Your location stays on your device and is not saved.';
     document.getElementById('fridgeBrowseSearch').value = '';
     renderFridgeBrowser();
   }, () => {
-    btn.textContent = '📍 Use my location — show nearest fridges';
+    btn.textContent = '📍 Find my location — show nearest fridges';
     note.textContent = 'Couldn\'t get your location. Allow location access in your browser, or search by area.';
   }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
 }
