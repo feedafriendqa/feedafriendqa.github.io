@@ -240,10 +240,12 @@
         <div style="background:#ffffff; border:3px solid #14261a; border-radius:18px; padding:clamp(18px,4vw,24px); display:flex; flex-direction:column; gap:13px; box-shadow:6px 6px 0 rgba(0,0,0,0.28)">
           <label style="display:block">
             <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">YOUR TEAM</span>
-            <select id="lfTeam" style="width:100%; margin-top:5px; border:1.5px solid #d9ded6; border-radius:10px; padding:11px 12px; font-size:14px; color:#14261a; outline:none">
+            <select id="lfTeam" onchange="if(this.value==='__new'){createTeamFromLog();}" style="width:100%; margin-top:5px; border:1.5px solid #d9ded6; border-radius:10px; padding:11px 12px; font-size:14px; color:#14261a; outline:none">
               <option value="">Select your team…</option>
             </select>
             <span id="lfTeamErr" style="font-size:11.5px; color:#c0392b; display:none">Choose your team — or create one first</span>
+            <span id="lfTeamNote" style="font-size:12px; color:#1b7a43; font-weight:600; display:none; margin-top:6px"></span>
+            <a href="javascript:void(0)" onclick="createTeamFromLog()" style="display:inline-block; margin-top:7px; font-size:12.5px; font-weight:700; color:#1b7a43; text-decoration:underline">Not on the list? Create your team</a>
           </label>
           <label style="display:block">
             <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">FRIDGE LOCATION</span>
@@ -482,6 +484,7 @@ function navigate() {
   });
   window.scrollTo(0, 0);
   if (hash === 'log') populateTeamSelect();
+  if (hash === 'board') state.returnToLog = false;
 }
 window.addEventListener('hashchange', navigate);
 
@@ -591,7 +594,25 @@ function populateTeamSelect() {
     opt.textContent = t.name + (t.business ? ' — ' + t.business : '');
     sel.appendChild(opt);
   });
-  sel.value = current;
+  const createOpt = document.createElement('option');
+  createOpt.value = '__new'; createOpt.textContent = '＋ Create a new team…';
+  sel.appendChild(createOpt);
+  sel.value = current === '__new' ? '' : current;
+  if (state.pendingTeamName) {
+    const match = (state.teamOptions || []).find(t => t.name === state.pendingTeamName);
+    if (match) {
+      sel.value = match.id;
+      const note = document.getElementById('lfTeamNote');
+      note.textContent = '✓ ' + state.pendingTeamName + ' is registered. Now log your first refill.';
+      note.style.display = 'inline-block';
+      state.pendingTeamName = null;
+    }
+  }
+}
+function createTeamFromLog() {
+  state.returnToLog = true;
+  document.getElementById('lfTeam').value = '';
+  location.hash = '#/new-team';
 }
 
 // ===================== REAL FRIDGE LIST =====================
@@ -841,7 +862,13 @@ function submitTeam() {
   const finishTeam = (displayName) => {
     btn.textContent = 'Register team'; btn.style.background = '#1b7a43';
     document.getElementById('teamDoneName').textContent = displayName + ' is on the board.';
-    location.hash = '#/team-done';
+    if (state.returnToLog) {
+      state.returnToLog = false;
+      state.pendingTeamName = displayName;
+      location.hash = '#/log';
+    } else {
+      location.hash = '#/team-done';
+    }
     loadData();
   };
 
