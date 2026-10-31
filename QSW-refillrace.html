@@ -268,10 +268,11 @@
             <span style="font-size:12.5px; color:#5d6359; line-height:1.45">I cleaned the fridge too <b>(+10 pts)</b></span>
           </label>
           <label style="display:block">
-            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">PHOTO PROOF (REQUIRED)</span>
-            <input type="file" id="lfPhoto" accept="image/*" capture="environment" onchange="onPhotoChange(event)" style="width:100%; margin-top:5px; border:1.5px solid #d9ded6; border-radius:10px; padding:9px 10px; font-size:13px; color:#14261a; outline:none">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#5d6359">PHOTO PROOF (REQUIRED · UP TO 3)</span>
+            <input type="file" id="lfPhoto" accept="image/*" multiple onchange="onPhotoChange(event)" style="width:100%; margin-top:5px; border:1.5px solid #d9ded6; border-radius:10px; padding:9px 10px; font-size:13px; color:#14261a; outline:none">
             <span id="lfPhotoErr" style="font-size:11.5px; color:#c0392b; display:none">A photo is required to log this refill</span>
-            <img id="lfPhotoPreview" alt="Preview" style="margin-top:8px; max-height:120px; border-radius:10px; display:none">
+            <div id="lfPhotoPreview" style="margin-top:8px; display:none; gap:8px; flex-wrap:wrap"></div>
+            <span id="lfPhotoHint" style="font-size:11.5px; color:#5d6359; display:block; margin-top:5px">Add 1 to 3 photos: the fridge, what you stocked, and the cleaned shelves. Choose several at once, or take them one at a time.</span>
           </label>
 
           <div style="background:#f4f9f0; border:2px dashed #1b7a43; border-radius:12px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between">
@@ -343,7 +344,7 @@ const state = {
   loading: false,
   loadError: false,
   nt: { memberCount: 4 },
-  lf: { photo: null, photoPreview: '' },
+  lf: { photo: null, photos: [], photoPreview: '' },
   lastLoggedPoints: 0
 };
 
@@ -950,14 +951,26 @@ function updatePreviewPoints() {
 }
 
 function onPhotoChange(ev) {
-  const file = ev.target.files && ev.target.files[0];
   document.getElementById('lfPhotoErr').style.display = 'none';
-  if (!file) { state.lf.photo = null; document.getElementById('lfPhotoPreview').style.display = 'none'; return; }
-  state.lf.photo = file;
-  const url = URL.createObjectURL(file);
-  state.lf.photoPreview = url;
-  const img = document.getElementById('lfPhotoPreview');
-  img.src = url; img.style.display = 'block';
+  const box = document.getElementById('lfPhotoPreview');
+  const picked = Array.from((ev.target.files || [])).filter(f => f.type.startsWith('image/'));
+  // Keep what was added before, up to 3 in total, so photos can be added one at a time too.
+  const all = (state.lf.photos || []).concat(picked).slice(0, 3);
+  state.lf.photos = all; state.lf.photo = all[0] || null;
+  ev.target.value = '';
+  box.innerHTML = '';
+  if (!all.length) { box.style.display = 'none'; return; }
+  box.style.display = 'flex';
+  all.forEach((f, i) => {
+    const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative';
+    const img = document.createElement('img'); img.src = URL.createObjectURL(f); img.alt = 'Photo ' + (i + 1);
+    img.style.cssText = 'height:84px; width:84px; object-fit:cover; border-radius:10px';
+    const x = document.createElement('button'); x.type = 'button'; x.textContent = '×';
+    x.style.cssText = 'position:absolute; top:-6px; right:-6px; width:22px; height:22px; border-radius:50%; border:none; background:#14261a; color:#fff; font-size:14px; line-height:22px; cursor:pointer; padding:0';
+    x.onclick = () => { state.lf.photos.splice(i, 1); state.lf.photo = state.lf.photos[0] || null; onPhotoChange({ target: { files: [], value: '' } }); };
+    wrap.append(img, x); box.appendChild(wrap);
+  });
+  if (all.length === 3) { const n = document.createElement('div'); n.style.cssText = 'align-self:center; font-size:11.5px; color:#5d6359'; n.textContent = 'Max 3 photos'; box.appendChild(n); }
 }
 
 function clearLfErrors() {
@@ -972,12 +985,12 @@ function submitLog() {
   const fridgeMatch = state.fridgeIndex[location_];
   const cleaned = document.getElementById('lfCleaned').checked;
   const needsMost = !!state.lf.needsMostAuto;
-  const photo = state.lf.photo;
+  const photos = state.lf.photos || [];
 
   let hasErr = false;
   if (!teamId) { document.getElementById('lfTeamErr').style.display = 'inline'; hasErr = true; }
   if (!fridgeMatch) { document.getElementById('lfLocationErr').style.display = 'inline'; hasErr = true; }
-  if (!photo) { document.getElementById('lfPhotoErr').style.display = 'inline'; hasErr = true; }
+  if (!photos.length) { document.getElementById('lfPhotoErr').style.display = 'inline'; hasErr = true; }
   if (hasErr) return;
 
   const btn = document.getElementById('lfSubmitBtn');
@@ -992,7 +1005,8 @@ function submitLog() {
     document.getElementById('lfCleaned').checked = false;
     document.getElementById('lfPhoto').value = '';
     document.getElementById('lfPhotoPreview').style.display = 'none';
-    state.lf.photo = null;
+    document.getElementById('lfPhotoPreview').innerHTML = '';
+    state.lf.photo = null; state.lf.photos = [];
     onFridgePicked();
   };
 
@@ -1014,7 +1028,9 @@ function submitLog() {
   // locator — so this refill shows up there exactly like any other, and
   // its last_refill_at trigger fires normally) and fridge_logs (the
   // race's own points ledger, for the leaderboard).
-  const insertLog = (photoUrl) => {
+  const insertLog = (photoUrls) => {
+    const photoUrl = photoUrls[0];
+    const extra = photoUrls.slice(1);
     const activityRecord = {
       fridge_id: fridgeMatch.id,
       guest_name: teamLabel,
@@ -1022,7 +1038,7 @@ function submitLog() {
       is_clean: !!cleaned,
       is_working: true,
       photo_url: photoUrl,
-      notes: 'Logged via the Fridge Refill Race (QSW 2026)'
+      notes: 'Logged via the Fridge Refill Race (QSW 2026)' + (extra.length ? ' · More photos: ' + extra.join(' ') : '')
     };
 
     fetch(c.url + '/rest/v1/' + CONFIG.fridgeActivityTable, {
@@ -1058,13 +1074,17 @@ function submitLog() {
       });
   };
 
-  const path = 'refill-' + Date.now() + '-' + photo.name.replace(/[^a-zA-Z0-9.]/g, '_');
-  fetch(c.url + '/storage/v1/object/' + c.bucket + '/' + path, {
-    method: 'POST', headers: { apikey: c.key, Authorization: 'Bearer ' + c.key, 'Content-Type': photo.type || 'application/octet-stream' }, body: photo
-  }).then(r => {
-    if (!r.ok) throw new Error();
-    insertLog(c.url + '/storage/v1/object/public/' + c.bucket + '/' + path);
-  }).catch(() => {
+  // Upload up to 3 photos; the first is the main photo (shown on the fridge locator).
+  const uploadOne = (photo, i) => {
+    const path = 'refill-' + Date.now() + '-' + i + '-' + photo.name.replace(/[^a-zA-Z0-9.]/g, '_');
+    return fetch(c.url + '/storage/v1/object/' + c.bucket + '/' + path, {
+      method: 'POST', headers: { apikey: c.key, Authorization: 'Bearer ' + c.key, 'Content-Type': photo.type || 'application/octet-stream' }, body: photo
+    }).then(r => {
+      if (!r.ok) throw new Error();
+      return c.url + '/storage/v1/object/public/' + c.bucket + '/' + path;
+    });
+  };
+  Promise.all(photos.slice(0, 3).map(uploadOne)).then(urls => insertLog(urls)).catch(() => {
     btn.textContent = 'Log this refill'; btn.style.background = '#1b7a43';
     document.getElementById('lfPostFailed').style.display = 'block';
   });
