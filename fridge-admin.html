@@ -112,7 +112,7 @@ function LoginScreen({onLoggedIn}){
 
 // ───────────────────────── SHELL / NAV ─────────────────────────
 function Header({profile,onLogout,tab,setTab}){
-  const tabs=[["dashboard","Dashboard"],["fridges","Fridges"],["activity","Activity Log"],["wishlist","Wishlist Requests"]];
+  const tabs=[["dashboard","Dashboard"],["fridges","Fridges"],["activity","Activity Log"],["wishlist","Wishlist Requests"],["race","Race Emails"]];
   return (
     <div style={{background:DARK,color:"#fff",padding:"14px 22px",position:"sticky",top:0,zIndex:20}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
@@ -665,6 +665,103 @@ function WishlistTab({session}){
   );
 }
 
+
+// ───────────────────────── RACE EMAILS ─────────────────────────
+const RACE_FN = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/fridge-race-broadcast";
+const RACE_DEFAULT = {
+  audience:"all",
+  subject:"Get ready: Fridge Refill Race starts Sunday",
+  preview:"Rules briefing 9:30am, race opens 10:00am on Sunday 1 November.",
+  title:"Get ready for the Fridge Refill Race",
+  message:"Thank you for registering **{{team}}**. The race opens on Sunday, and every refill you log helps keep our community fridges full for people who need them.\n\nWe will go through the rules on a short Google Meet briefing, which will be recorded so anyone can watch it later: https://meet.google.com/ina-ehqg-hko\n\nThe community fridges are open, free and stocked by neighbours across Qatar. Find them all at https://connect.feedafriend.org/fridges.html",
+  facts:"Rules briefing|Sun 1 Nov, 9:30am|Google Meet, recorded\nRace opens|Sun 1 Nov, 10:00am|Log refills on the race page\nRace closes|Sat 7 Nov, 8:00pm|Qatar time",
+  rsvp:true, cta_label:"Join the briefing", cta_url:"https://meet.google.com/ina-ehqg-hko"
+};
+function RaceEmailsTab({session}){
+  const [f,setF]=useState(RACE_DEFAULT);
+  const [testTo,setTestTo]=useState(session.user.email||"");
+  const [teams,setTeams]=useState([]);
+  const [log,setLog]=useState([]);
+  const [busy,setBusy]=useState(false);
+  const [msg,setMsg]=useState("");
+  useEffect(()=>{ load(); },[]);
+  async function load(){
+    const {data:t}=await sb.from("fridge_teams").select("id,name,captain_name,captain_email,briefing_rsvp,briefing_rsvp_note,is_student_team").order("created_at");
+    setTeams(t||[]);
+    const {data:l}=await sb.from("race_broadcasts").select("*").order("created_at",{ascending:false}).limit(15);
+    setLog(l||[]);
+  }
+  const set=(k,v)=>setF(o=>({...o,[k]:v}));
+  const count=k=>teams.filter(t=>k==="all"?true:k==="unanswered"?!t.briefing_rsvp:k==="attending"?t.briefing_rsvp==="yes":k==="declined"?t.briefing_rsvp==="no":t.is_student_team).length;
+  async function go(mode){
+    if(mode==="send" && !window.confirm(`Send this email to ${count(f.audience)} team(s) (${f.audience})? This cannot be undone.`)) return;
+    setBusy(true); setMsg("");
+    try{
+      const res=await fetch(RACE_FN,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
+        body:JSON.stringify({...f,mode,test_to:testTo,confirm:mode==="send"})});
+      const j=await res.json();
+      if(!res.ok) throw new Error(j.error||"Failed");
+      setMsg(mode==="test"?(j.ok?`Test sent to ${j.to}`:"Test failed to send"):`Sent ${j.sent} of ${j.attempted}.`+(j.failed?.length?` Failed: ${j.failed.join(", ")}`:""));
+      load();
+    }catch(e){ setMsg("Error: "+e.message); }
+    setBusy(false);
+  }
+  const inp={width:"100%",border:`1.5px solid ${BORDER}`,borderRadius:8,padding:"9px 11px",fontSize:14,marginBottom:12,color:DARK};
+  const lab={fontSize:12,fontWeight:700,color:MUTED,display:"block",marginBottom:4,textTransform:"uppercase",letterSpacing:".04em"};
+  return (
+    <div style={{maxWidth:900,margin:"0 auto",padding:20}}>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:18}}>
+        <StatTile label="Teams" value={teams.length}/>
+        <StatTile label="Attending" value={count("attending")}/>
+        <StatTile label="Can't attend" value={count("declined")}/>
+        <StatTile label="No answer" value={count("unanswered")}/>
+      </div>
+      <div style={{background:"#fff",border:`1px solid ${BORDER}`,borderRadius:12,padding:20,marginBottom:18}}>
+        <h2 className="spartan" style={{fontSize:20,marginBottom:14}}>Email the race captains</h2>
+        <label style={lab}>Send to</label>
+        <select value={f.audience} onChange={e=>set("audience",e.target.value)} style={inp}>
+          <option value="all">All teams ({count("all")})</option>
+          <option value="unanswered">Not yet answered RSVP ({count("unanswered")})</option>
+          <option value="attending">Attending briefing ({count("attending")})</option>
+          <option value="declined">Can't attend ({count("declined")})</option>
+          <option value="students">Student teams ({count("students")})</option>
+        </select>
+        <label style={lab}>Subject</label><input style={inp} value={f.subject} onChange={e=>set("subject",e.target.value)}/>
+        <label style={lab}>Preview text</label><input style={inp} value={f.preview} onChange={e=>set("preview",e.target.value)}/>
+        <label style={lab}>Headline</label><input style={inp} value={f.title} onChange={e=>set("title",e.target.value)}/>
+        <label style={lab}>Message (blank line = new paragraph, **bold**, {"{{first}}"} and {"{{team}}"} personalise)</label>
+        <textarea style={{...inp,minHeight:170}} value={f.message} onChange={e=>set("message",e.target.value)}/>
+        <label style={lab}>Key times (one per line: Label | Big text | Small text)</label>
+        <textarea style={{...inp,minHeight:80}} value={f.facts} onChange={e=>set("facts",e.target.value)}/>
+        <label style={{display:"flex",gap:8,alignItems:"center",fontSize:14,marginBottom:12}}><input type="checkbox" checked={f.rsvp} onChange={e=>set("rsvp",e.target.checked)}/> Include "I'm attending / Can't attend" buttons</label>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+          <div style={{flex:"1 1 200px"}}><label style={lab}>Button label</label><input style={inp} value={f.cta_label} onChange={e=>set("cta_label",e.target.value)}/></div>
+          <div style={{flex:"2 1 280px"}}><label style={lab}>Button link (https)</label><input style={inp} value={f.cta_url} onChange={e=>set("cta_url",e.target.value)}/></div>
+        </div>
+        <label style={lab}>Test address</label><input style={inp} value={testTo} onChange={e=>setTestTo(e.target.value)}/>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+          <button disabled={busy} onClick={()=>go("test")} style={{background:"#fff",color:DARK,border:`2px solid ${DARK}`,borderRadius:8,padding:"11px 18px",fontWeight:700}}>Send test to me</button>
+          <button disabled={busy} onClick={()=>go("send")} style={{background:GREEN,color:"#fff",border:"none",borderRadius:8,padding:"11px 18px",fontWeight:700}}>Send to teams ({count(f.audience)})</button>
+        </div>
+        {msg && <div style={{marginTop:12,fontWeight:600,fontSize:14}}>{msg}</div>}
+      </div>
+      <div style={{background:"#fff",border:`1px solid ${BORDER}`,borderRadius:12,padding:20,marginBottom:18}}>
+        <h3 className="spartan" style={{fontSize:17,marginBottom:10}}>Teams and RSVPs</h3>
+        <div className="tbl-wrap"><table><thead><tr><th>Team</th><th>Captain</th><th>RSVP</th><th>Note</th></tr></thead><tbody>
+          {teams.map(t=><tr key={t.id}><td>{t.name}</td><td>{t.captain_name}</td><td>{t.briefing_rsvp==="yes"?"Attending":t.briefing_rsvp==="no"?"Can't attend":"-"}</td><td>{t.briefing_rsvp_note||""}</td></tr>)}
+        </tbody></table></div>
+      </div>
+      <div style={{background:"#fff",border:`1px solid ${BORDER}`,borderRadius:12,padding:20}}>
+        <h3 className="spartan" style={{fontSize:17,marginBottom:10}}>Send log</h3>
+        <div className="tbl-wrap"><table><thead><tr><th>When</th><th>Subject</th><th>Group</th><th>Sent</th><th>Failed</th><th>Type</th></tr></thead><tbody>
+          {log.map(l=><tr key={l.id}><td>{fmtDate(l.created_at)}</td><td>{l.subject}</td><td>{l.audience}</td><td>{l.recipients}</td><td>{l.failed}</td><td>{l.is_test?"Test":"Live"}</td></tr>)}
+          {log.length===0 && <tr><td colSpan="6" style={{color:MUTED}}>Nothing sent yet.</td></tr>}
+        </tbody></table></div>
+      </div>
+    </div>
+  );
+}
+
 // ───────────────────────── APP ─────────────────────────
 function App(){
   const [session,setSession]=useState(null);
@@ -701,6 +798,7 @@ function App(){
       {tab==="fridges" && <FridgesTab/>}
       {tab==="activity" && <ActivityLogTab/>}
       {tab==="wishlist" && <WishlistTab session={session}/>}
+      {tab==="race" && <RaceEmailsTab session={session}/>}
     </div>
   );
 }
