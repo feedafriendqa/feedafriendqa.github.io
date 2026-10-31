@@ -19,7 +19,7 @@ th,td{padding:9px 10px;border-bottom:1px solid #E5F5EA;text-align:left;vertical-
 </style></head><body><div id="app"></div>
 <script>
 const sb=supabase.createClient("https://xbxagukdvgyaoqvbqoic.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4");
-const app=document.getElementById("app");let rows=[],sel="";
+const app=document.getElementById("app");let rows=[],sel="",teams=[],lb={};
 const E=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function login(msg){app.innerHTML=`<div class="login"><h2>QSW Admin</h2><p style="font-size:13px;color:#4B7C5A;margin:6px 0 14px">Sign in with your Feed a Friend admin account.</p><input id="e" type="email" placeholder="Email"/><input id="p" type="password" placeholder="Password"/><div class="err">${E(msg||"")}</div><button id="go" style="width:100%">Sign in</button></div>`;
  const go=async()=>{const {data,error}=await sb.auth.signInWithPassword({email:e.value,password:p.value});if(error)return login(error.message);await boot();};go.call;document.getElementById("go").onclick=go;p.onkeydown=ev=>ev.key==="Enter"&&go();}
@@ -27,8 +27,16 @@ async function boot(){const {data:{session}}=await sb.auth.getSession();if(!sess
  const {data:pr}=await sb.from("profiles").select("role,first_name").eq("id",session.user.id).maybeSingle();
  if(!pr||!["admin","superadmin"].includes(pr.role)){await sb.auth.signOut();return login("This account isn't an admin.");}
  await load();}
-async function load(){const {data,error}=await sb.from("qsw_signups").select("*").order("event_date").order("created_at");if(error){app.innerHTML="<div class='wrap'>"+E(error.message)+"</div>";return;}rows=data;if(!sel)sel=rows.length?rows[0].session_key:"";draw();}
-function draw(){const keys=[...new Map(rows.map(r=>[r.session_key,r.event_title+" · "+r.event_date])).entries()];
+async function load(){const {data,error}=await sb.from("qsw_signups").select("*").order("event_date").order("created_at");if(error){app.innerHTML="<div class='wrap'>"+E(error.message)+"</div>";return;}rows=data;
+ const t=await sb.from("fridge_teams").select("id,name,business,captain_name,captain_email,member_count,is_student_team,school_name,briefing_rsvp,briefing_rsvp_note,created_at").order("created_at");teams=t.data||[];
+ const l=await sb.from("fridge_leaderboard").select("team_id,logs_count,points");lb={};(l.data||[]).forEach(x=>lb[x.team_id]=x);
+ if(!sel)sel="__race";draw();}
+function drawRace(keys){const att=teams.filter(t=>t.briefing_rsvp==="yes"),dec=teams.filter(t=>t.briefing_rsvp==="no"),none=teams.filter(t=>!t.briefing_rsvp);const sum=a=>a.reduce((n,t)=>n+(t.member_count||0),0);const refills=teams.reduce((n,t)=>n+((lb[t.id]||{}).logs_count||0),0);
+ app.innerHTML=`<div class="top"><b>QSW Admin · Feed a Friend</b><span><a href="fridge-admin.html">Fridge Admin</a><a id="out">Sign out</a></span></div><div class="wrap"><div class="row"><select id="s">${keys.map(([k,l])=>`<option value="${E(k)}" ${k===sel?"selected":""}>${E(l)}</option>`).join("")}</select><button id="rf">Refresh</button></div>
+ <div class="cards"><div class="c"><span>TEAMS</span><b>${teams.length}</b></div><div class="c"><span>PEOPLE</span><b>${sum(teams)}</b></div><div class="c"><span>BRIEFING: ATTENDING</span><b>${att.length}</b></div><div class="c"><span>CAN'T ATTEND</span><b>${dec.length}</b></div><div class="c"><span>NO ANSWER</span><b>${none.length}</b></div><div class="c"><span>REFILLS LOGGED</span><b>${refills}</b></div></div>
+ <table><tr><th>TEAM</th><th>CAPTAIN</th><th>MEMBERS</th><th>BRIEFING RSVP (9:15am Sun)</th><th>NOTE</th><th>REFILLS</th><th>POINTS</th></tr>${teams.map(t=>`<tr><td><b>${E(t.name)}</b><br>${E(t.business||t.school_name||"")}${t.is_student_team?' <span class="p w">STUDENT</span>':""}</td><td>${E(t.captain_name)}<br>${E(t.captain_email)}</td><td>${t.member_count||0}</td><td>${t.briefing_rsvp==="yes"?'<span class="p y">Attending</span>':t.briefing_rsvp==="no"?'<span class="p n">Can\'t attend</span>':'<span class="p w">No answer</span>'}</td><td>${E(t.briefing_rsvp_note)}</td><td>${(lb[t.id]||{}).logs_count||0}</td><td>${(lb[t.id]||{}).points||0}</td></tr>`).join("")}</table></div>`;
+ s.onchange=()=>{sel=s.value;draw();};rf.onclick=load;out.onclick=async()=>{await sb.auth.signOut();login();};}
+function draw(){const keys=[["__race","Fridge Refill Race · all "+teams.length+" teams"]].concat([...new Map(rows.map(r=>[r.session_key,r.event_title+" · "+r.event_date])).entries()]);if(sel==="__race")return drawRace(keys);
  const cur=rows.filter(r=>r.session_key===sel);const conf=cur.filter(r=>!r.is_waitlist);
  const sum=a=>a.reduce((n,r)=>n+(r.people_count||0),0);
  const att=conf.filter(r=>r.rsvp==="yes"),dec=conf.filter(r=>r.rsvp==="no"),none=conf.filter(r=>!r.rsvp),came=conf.filter(r=>r.attended===true);
