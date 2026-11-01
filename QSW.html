@@ -282,6 +282,7 @@ try {
 }
 
 const RACE_SIGNUP_URL = "https://connect.feedafriend.org/QSW-refillrace-signup.html";
+const RACE_LOG_URL = "https://connect.feedafriend.org/QSW-refillrace.html#/log";
 
 const sessions = [
   {
@@ -309,7 +310,8 @@ const sessions = [
     locSub: "to various locations across Qatar",
     desc: "A week-long challenge to keep Qatar's community fridges stocked and clean. Build a team, refill and log every visit for points, and climb the leaderboard.",
     note: "Starts Sunday after the 9:15am online briefing. Runs until Saturday 7 Nov at 8:00pm.",
-    signup: false, link: RACE_SIGNUP_URL, linkLabel: "Join the race", capacity: 0,
+    signup: false, link: RACE_SIGNUP_URL, linkLabel: "Join the race",
+    link2: RACE_LOG_URL, link2Label: "Log a refill", capacity: 0,
   },
   {
     key: "book-drive-2026-11-01",
@@ -408,6 +410,7 @@ const SESSION_AR = {
     desc: "تحدٍّ يمتد أسبوعاً كاملاً للحفاظ على ثلاجات قطر المجتمعية ممتلئة ونظيفة. كوّن فريقك، وعبّئ الثلاجات وسجّل كل زيارة لتجمع النقاط، وتنافس على صدارة لوحة المتصدّرين.",
     note: "ينطلق يوم الأحد بعد اللقاء التعريفي عبر الإنترنت الساعة ٩:١٥ ص، ويستمر حتى السبت ٧ نوفمبر الساعة ٨:٠٠ م.",
     linkLabel: "انضم إلى السباق",
+    link2Label: "سجّل تعبئة",
   },
   "book-drive-2026-11-01": {
     dateLabel: "الأحد ١ نوفمبر",
@@ -752,7 +755,7 @@ function eventRowHtml(s, i){
       ${s.signup
         ? `<button class="btn-signup" id="signupbtn-${i}" onclick="event.stopPropagation(); openForm(${i})">${t("signUp")}</button>`
         : s.link
-        ? `<a class="btn-signup" style="text-decoration:none;display:inline-flex;align-items:center" href="${esc(s.link)}" onclick="event.stopPropagation()">${esc(L(s,"linkLabel") || t("signUp"))}</a>`
+        ? `<span style="display:inline-flex;flex-direction:column;gap:8px;align-items:stretch"><a class="btn-signup" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center" href="${esc(s.link)}" onclick="event.stopPropagation()">${esc(L(s,"linkLabel") || t("signUp"))}</a>${s.link2 ? `<a class="btn-signup" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center" href="${esc(s.link2)}" onclick="event.stopPropagation()">${esc(L(s,"link2Label") || s.link2Label)}</a>` : ""}</span>`
         : `<div class="public-tag"><span class="k">${esc(L(s,"tagK") || t("publicK"))}</span><br>${esc(L(s,"tagText") || t("publicText"))}</div>`}
     </div>
     <div class="event-detail">
