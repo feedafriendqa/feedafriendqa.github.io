@@ -101,7 +101,7 @@
     <div id="page-board" class="page">
       <div style="display:inline-block; background:#f4a832; color:#0e3d24; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; padding:5px 12px; border-radius:99px; transform:rotate(-2deg)">FRIDGE REFILL RACE</div>
       <div style="font-family:'Outfit',sans-serif; font-weight:800; font-size:clamp(34px,8.5vw,54px); line-height:1.18; color:#ffffff; letter-spacing:-0.035em; margin:14px 0 12px; text-shadow:4px 4px 0 rgba(0,0,0,0.18)">Refill it.<br><span style="color:#c6f24a">Clean it.</span><br><span style="color:#ff6f59">Climb the board.</span></div>
-      <div style="font-size:14.5px; color:#dff0e4; max-width:480px; line-height:1.55">Build a team of up to 6, keep Qatar's community fridges stocked, and log every refill for points. National leaderboard updates live — chase the 🏆 top team and 🏆 top organisation trophies.</div>
+      <div style="font-size:14.5px; color:#dff0e4; max-width:480px; line-height:1.55">Build a team of up to 6, keep Qatar's community fridges stocked, and log every refill for points. National leaderboard updates live — chase the 🏆 top team and 🏆 top business trophies.</div>
 
       <div id="needsMostStat" style="display:none; margin-top:14px; background:#fff8e6; border:1.5px solid #f4a832; border-radius:99px; padding:8px 16px; font-size:12.5px; color:#7a5200; font-weight:700; width:fit-content"><span id="needsMostStatCount">0</span> fridges need you most right now</div>
 
@@ -128,7 +128,7 @@
           </div>
         </div>
         <div style="flex:1; min-width:220px; background:#ffffff; border:3px solid #14261a; border-radius:16px; padding:16px 18px; box-shadow:5px 5px 0 rgba(0,0,0,0.28); transform:rotate(0.6deg)">
-          <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.1em; color:#7c8177">TOP ORGANISATION</div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.1em; color:#7c8177">TOP BUSINESS</div>
           <div style="display:flex; align-items:center; gap:10px; margin-top:6px">
             <div style="font-size:26px; line-height:1">🏆</div>
             <div style="min-width:0">
@@ -533,9 +533,11 @@ function renderBoard() {
     sub: (t.business ? t.business + ' · ' : '') + (t.member_count || 0) + ' members · ' + (t.logs_count || 0) + ' refills'
   })));
 
+  // Only teams repping a business count here — teams with no business are
+  // not lumped together as a pseudo-business.
   const bizMap = {};
-  state.teams.forEach(t => {
-    const key = t.business || 'Independent teams';
+  state.teams.filter(t => t.business).forEach(t => {
+    const key = t.business;
     if (!bizMap[key]) bizMap[key] = { name: key, points: 0, teamCount: 0, logs: 0 };
     bizMap[key].points += t.points || 0;
     bizMap[key].teamCount += 1;
@@ -550,7 +552,7 @@ function renderBoard() {
     sub: (t.school_name ? t.school_name + ' · ' : '') + (t.member_count || 0) + ' members · ' + (t.logs_count || 0) + ' refills'
   })));
 
-  // Trophy callouts — top team, top organisation (an organisation's points
+  // Trophy callouts — top team, top business (a business's points
   // are the sum of every team it fields), and top student team — always
   // visible above the tabs regardless of which board the person is looking at.
   const trophyRow = document.getElementById('trophyRow');
@@ -560,7 +562,7 @@ function renderBoard() {
     document.getElementById('trophyTeamName').textContent = topTeam ? topTeam.name : '—';
     document.getElementById('trophyTeamPoints').textContent = topTeam ? topTeam.points + ' pts' : '';
     const topBiz = bizRows[0];
-    document.getElementById('trophyBizName').textContent = topBiz ? topBiz.name : '—';
+    document.getElementById('trophyBizName').textContent = topBiz ? topBiz.name : 'No business yet';
     document.getElementById('trophyBizPoints').textContent = topBiz ? topBiz.points + ' pts' : '';
     const topStudent = studentRows[0];
     document.getElementById('trophyStudentName').textContent = topStudent ? topStudent.name : '—';
@@ -568,7 +570,9 @@ function renderBoard() {
   }
 
   const rows = state.tab === 'teams' ? teamRows : state.tab === 'business' ? bizRows : studentRows;
-  document.getElementById('noRowsNotice').style.display = (showBoard && rows.length === 0) ? 'block' : 'none';
+  const noRows = document.getElementById('noRowsNotice');
+  noRows.textContent = state.tab === 'business' ? 'No businesses yet — sign up your team as a business.' : state.tab === 'students' ? 'No student teams yet — be the first school to sign up.' : 'No teams yet — be the first to sign up.';
+  noRows.style.display = (showBoard && rows.length === 0) ? 'block' : 'none';
 
   rows.forEach(row => {
     const div = document.createElement('div');
