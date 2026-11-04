@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sidra x Feed a Friend Qatar | Volunteer</title>
+<style>
+:root{--green:#2f6b4f;--green-d:#1f4d38;--cream:#fbf7f0;--gold:#e2a93b;--ink:#25312b;--line:#dcd6c8;--card:#fff}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--cream);color:var(--ink);line-height:1.5}
+header{background:var(--green);color:#fff;padding:32px 20px 40px;text-align:center}
+header .brand{font-weight:800;letter-spacing:.5px;font-size:1.05rem;opacity:.95}
+header h1{margin:10px auto 8px;font-size:1.7rem;max-width:560px;line-height:1.25}
+header p{margin:0 auto;max-width:560px;opacity:.92}
+main{max-width:640px;margin:-22px auto 40px;padding:0 16px}
+.card{background:var(--card);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.card h2{margin:0 0 4px;font-size:1.1rem;color:var(--green-d)}
+.card .sub{margin:0 0 14px;font-size:.9rem;color:#667}
+label{display:block;font-weight:600;font-size:.92rem;margin:14px 0 6px}
+input,select,textarea{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:10px;font:inherit;background:#fff}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(47,107,79,.15)}
+textarea{min-height:90px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:520px){.row{grid-template-columns:1fr}}
+.opts{display:grid;gap:8px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1.5px solid var(--line);border-radius:12px;cursor:pointer;font-weight:500;margin:0}
+.opt input{width:auto;margin-top:3px;accent-color:var(--green)}
+.opt small{display:block;font-weight:400;color:#667}
+.opt:has(input:checked){border-color:var(--green);background:#eef6f1}
+.opt.suggested{border-color:var(--gold);background:#fff8e8}
+.opt.suggested::after{content:"Suggested for you";margin-left:auto;font-size:.68rem;font-weight:700;color:#8a5d00;background:#fbe3a8;padding:2px 8px;border-radius:99px;white-space:nowrap;align-self:flex-start}
+#suggestBox{display:none;background:#fff8e8;border:1.5px solid var(--gold);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:.92rem}
+.hint{font-size:.82rem;color:#667;margin-top:4px}
+button{width:100%;background:var(--green);color:#fff;border:0;padding:15px;border-radius:12px;font-size:1.05rem;font-weight:700;cursor:pointer}
+button:hover{background:var(--green-d)}
+button:disabled{opacity:.6}
+.hidden{display:none}
+.consent{display:flex;gap:10px;font-weight:400;font-size:.88rem}
+.consent input{width:auto;margin-top:3px}
+#done{text-align:center;padding:36px 20px}
+#done .tick{width:64px;height:64px;border-radius:50%;background:var(--green);color:#fff;font-size:2rem;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+footer{text-align:center;font-size:.8rem;color:#889;padding:0 16px 30px}
+.err{color:#b3261e;font-size:.85rem;margin-top:6px;display:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">FEED A FRIEND QATAR</div>
+  <h1>Sidra team, come and make a difference with us</h1>
+  <p>You already care for Qatar's newest and smallest residents. Tell us a little about your role and how you'd like to help, and we'll match you to a meaningful way to give back.</p>
+</header>
+
+<main>
+<form id="f" novalidate>
+  <div class="card">
+    <h2>About you</h2>
+    <p class="sub">So we can get in touch.</p>
+    <div class="row">
+      <div><label for="name">Full name *</label><input id="name" required autocomplete="name"></div>
+      <div><label for="phone">Mobile / WhatsApp *</label><input id="phone" type="tel" required autocomplete="tel" placeholder="+974"></div>
+    </div>
+    <label for="email">Email *</label><input id="email" type="email" required autocomplete="email">
+  </div>
+
+  <div class="card">
+    <h2>Your role at Sidra</h2>
+    <p class="sub">This helps us suggest the best fit. It is never shared outside Feed a Friend.</p>
+    <label for="dept">Department / area *</label>
+    <select id="dept" required>
+      <option value="">Select...</option>
+      <option value="nursing">Nursing / Midwifery</option>
+      <option value="neonatal">Neonatal / NICU / Paediatrics</option>
+      <option value="doctor">Doctor / Consultant</option>
+      <option value="allied">Allied health (physio, OT, dietitian, speech, pharmacy, lab, radiology)</option>
+      <option value="social">Social work / Psychology / Child life</option>
+      <option value="education">Education / Training / Research</option>
+      <option value="admin">Administration / Operations / Facilities</option>
+      <option value="it">IT / Digital / Data</option>
+      <option value="hr">HR / Finance / Procurement</option>
+      <option value="comms">Communications / Marketing / Events</option>
+      <option value="other">Other</option>
+    </select>
+    <label for="title">Job title *</label>
+    <input id="title" required placeholder="e.g. Staff Nurse, NICU">
+    <label for="years">Time at Sidra</label>
+    <select id="years"><option value="">Prefer not to say</option><option>Under 1 year</option><option>1 to 3 years</option><option>3 to 5 years</option><option>5+ years</option></select>
+  </div>
+
+  <div class="card">
+    <h2>How can you help? *</h2>
+    <p class="sub">Choose the one that fits you best.</p>
+    <div class="opts" id="helpType">
+      <label class="opt"><input type="radio" name="help" value="money"> I can't help with time, but I can help purchase food boxes</label>
+      <label class="opt"><input type="radio" name="help" value="time"> I can't help financially, but I can help with time</label>
+      <label class="opt"><input type="radio" name="help" value="both"> I can help with both</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Where would you like to help?</h2>
+    <p class="sub">Choose as many as you like.</p>
+    <div id="suggestBox"></div>
+    <div class="opts" id="opts"></div>
+    <label for="skills">Skills, languages or ideas you can offer</label>
+    <textarea id="skills" placeholder="e.g. Arabic, Bengali, Urdu, Malayalam, Tagalog; knitting or sewing; lactation consultant; first aid; photography..."></textarea>
+  </div>
+
+  <div class="card" id="avail">
+    <h2>Availability</h2>
+    <label>When are you usually free?</label>
+    <div class="opts">
+      <label class="opt"><input type="checkbox" name="avail" value="Weekday evenings">Weekday evenings</label>
+      <label class="opt"><input type="checkbox" name="avail" value="Fridays">Fridays</label>
+      <label class="opt"><input type="checkbox" name="avail" value="Saturdays">Saturdays</label>
+      <label class="opt"><input type="checkbox" name="avail" value="Flexible / one-off">Flexible or one-off events</label>
+      <label class="opt"><input type="checkbox" name="avail" value="Remote / from home">Remote or from home</label>
+    </div>
+    <label for="more">Anything else you'd like us to know?</label>
+    <textarea id="more"></textarea>
+  </div>
+
+  <div class="card">
+    <label class="consent"><input type="checkbox" id="consent" required> I agree that Feed a Friend Qatar and Together for Good may contact me about volunteering and store these details for that purpose. *</label>
+    <div class="err" id="err">Please complete the required fields, choose how you can help, and tick the consent box.</div>
+    <div style="height:12px"></div>
+    <button type="submit" id="btn">Send my details</button>
+  </div>
+</form>
+
+<div class="card hidden" id="done">
+  <div class="tick">&#10003;</div>
+  <h2>Thank you!</h2>
+  <p>We've received your details and our team will be in touch soon to talk about the best way for you to get involved.</p>
+  <p class="hint">Feed a Friend Qatar | Together for Good</p>
+</div>
+</main>
+<footer>Feed a Friend Qatar supports 47,000+ people across Qatar through Food Boxes, Welcome Baby, Community Fridges, Little Learners, the Giving Garden and Pay it Forward.</footer>
+
+<script>
+/* ---- CONFIG: paste your Supabase details (table: sidra_volunteers) ---- */
+const SUPABASE_URL = "";      // e.g. https://xxxx.supabase.co
+const SUPABASE_ANON_KEY = ""; // anon/public key only
+
+const ROLES = [
+  {id:"advMums", t:"Advice for mothers", d:"Share your expertise with new mums, e.g. breastfeeding, postnatal recovery, emotional wellbeing and counselling, sleep, nutrition, returning to work."},
+  {id:"advBabies", t:"Advice about babies", d:"Share your expertise on baby health, developmental milestones, weaning and feeding, safe sleep, vaccinations, first aid and skin care."},
+  {id:"supMums", t:"Ongoing support for mothers in need", d:"Deliver Welcome Baby care boxes, visit or call new mums, and be a friendly point of contact for families who need extra help."},
+  {id:"make",    t:"Make items for Welcome Baby boxes", d:"Knit, crochet or sew blankets, hats, mitts and booties for newborn boxes."},
+  {id:"learners", t:"Little Learners: support sessions", d:"Support early learning sessions, reading and play for children and families."},
+  {id:"sen",     t:"SEN advice for Little Learners", d:"Share special educational needs expertise with our Little Learners team and families, e.g. early identification, speech and language, sensory needs, inclusive play."},
+  {id:"books",   t:"Book collection point", d:"Be a drop-off point for donated books in your department, and help collect, sort and organise them."},
+  {id:"clothes", t:"Baby clothes collection point", d:"Be a drop-off point for donated baby clothes in your department, and help collect, sort and organise them."},
+  {id:"boxes",   t:"Food Boxes: volunteer",d:"Help pack and distribute food boxes to families in need."},
+  {id:"sponsor", t:"Food Boxes: sponsor",  d:"Sponsor a box for a family, individually or as a team."},
+  {id:"fridges", t:"Community Fridges",    d:"Keep a neighbourhood fridge stocked and tidy, or sponsor one."},
+  {id:"skills",  t:"Skilled volunteering", d:"Use your professional skills: training, translation, tech, comms, events."},
+];
+
+/* Department -> suggested roles + the personalised "Would you be interested in..." line */
+const MAP = {
+  nursing:  {r:["advMums","advBabies","make"], m:"Would you be interested in giving breastfeeding or postnatal advice to new mums, or sharing newborn-care tips for babies?"},
+  neonatal: {r:["advBabies","advMums","make"], m:"Would you be interested in sharing baby health, feeding or safe-sleep advice with new parents, or supporting mums with feeding?"},
+  doctor:   {r:["advBabies","advMums","sponsor"], m:"Would you be interested in giving health talks on baby health and milestones, or advice to new mothers?"},
+  allied:   {r:["advBabies","sen","advMums"], m:"Would you be interested in giving weaning and nutrition advice, or sharing speech, OT or development expertise as SEN advice for Little Learners?"},
+  social:   {r:["advMums","supMums","sen"], m:"Would you be interested in offering counselling to new mothers, ongoing support for mums in need, or SEN advice for Little Learners?"},
+  education:{r:["sen","learners","books"], m:"Would you be interested in giving SEN advice or supporting Little Learners with your teaching skills, or running a book collection point?"},
+  admin:    {r:["books","clothes","boxes"], m:"Would you be interested in being a collection point for books or baby clothes in your area, or helping with food box packing?"},
+  it:       {r:["skills","boxes","sponsor"], m:"Would you be interested in lending your digital or data skills to our community tools, or joining a food box packing day?"},
+  hr:       {r:["books","clothes","sponsor"], m:"Would you be interested in being a collection point for books or baby clothes, or setting up a food box sponsorship drive?"},
+  comms:    {r:["skills","sponsor","boxes"], m:"Would you be interested in helping tell our story, or sponsoring food boxes?"},
+  other:    {r:["books","clothes","boxes"], m:"Would you be interested in being a collection point for books or baby clothes, or joining a food box packing day?"}
+};
+
+const $ = id => document.getElementById(id);
+const optsEl = $("opts");
+
+function helpVal(){const r=document.querySelector('input[name="help"]:checked');return r?r.value:""}
+function render(suggested=[]){
+  const h=helpVal();
+  const checked = new Set([...document.querySelectorAll('input[name="role"]:checked')].map(i=>i.value));
+  const pool = ROLES.filter(r=> h==="money" ? r.id==="sponsor" : h==="time" ? r.id!=="sponsor" : true);
+  const ordered = [...pool].sort((a,b)=>(suggested.includes(b.id)?1:0)-(suggested.includes(a.id)?1:0));
+  optsEl.innerHTML = ordered.map(r=>`
+    <label class="opt ${suggested.includes(r.id)?'suggested':''}">
+      <input type="checkbox" name="role" value="${r.t}" ${checked.has(r.t)?'checked':''}>
+      <span>${r.t}<small>${r.d}</small></span>
+    </label>`).join("");
+}
+render();
+
+function refresh(){
+  const m = MAP[$("dept").value];
+  const h = helpVal();
+  $("avail").style.display = h==="money" ? "none" : "";
+  const box=$("suggestBox");
+  if(!m){ box.style.display="none"; render(); return; }
+  box.style.display="block"; box.textContent=m.m;
+  render(h==="money" ? ["sponsor"] : m.r.filter(x=>x!=="sponsor" || h!=="time"));
+}
+$("dept").addEventListener("change", refresh);
+document.querySelectorAll('input[name="help"]').forEach(i=>i.addEventListener("change",refresh));
+
+$("f").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const req = ["name","phone","email","dept","title"];
+  const ok = req.every(id=>$(id).value.trim()) && helpVal() && $("consent").checked && /\S+@\S+\.\S+/.test($("email").value);
+  $("err").style.display = ok ? "none" : "block";
+  if(!ok) return;
+  const data = {
+    name:$("name").value.trim(), phone:$("phone").value.trim(), email:$("email").value.trim(),
+    department:$("dept").selectedOptions[0].text, job_title:$("title").value.trim(), years_at_sidra:$("years").value,
+    interests:[...document.querySelectorAll('input[name="role"]:checked')].map(i=>i.value),
+    availability:[...document.querySelectorAll('input[name="avail"]:checked')].map(i=>i.value),
+    skills:$("skills").value.trim(), notes:$("more").value.trim(), help_type:helpVal(), consent:true, source:"sidra-form"
+  };
+  const btn=$("btn"); btn.disabled=true; btn.textContent="Sending...";
+  try{
+    if(SUPABASE_URL && SUPABASE_ANON_KEY){
+      const res = await fetch(SUPABASE_URL+"/rest/v1/sidra_volunteers",{
+        method:"POST",
+        headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+        body:JSON.stringify(data)
+      });
+      if(!res.ok) throw new Error(await res.text());
+    } else { console.log("Demo mode (no Supabase configured):", data); }
+    $("f").classList.add("hidden"); $("done").classList.remove("hidden"); window.scrollTo({top:0,behavior:"smooth"});
+  }catch(err){
+    btn.disabled=false; btn.textContent="Send my details";
+    alert("Sorry, something went wrong. Please try again or email us directly.");
+    console.error(err);
+  }
+});
+</script>
+</body>
+</html>
