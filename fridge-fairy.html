@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Who Is the Fridge Fairy?</title>
+<meta name="description" content="An animated story for little ones, from the Feed a Friend book Who Is the Fridge Fairy? by Alliyah Choudhury.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;700&display=swap">
+</head>
+<body>
+<style>
+/* Layout concept: one pinned watercolour street that the camera travels through as you scroll; a slim caption card sits under it. Pages are moments, not separate pictures: characters walk, the sky turns to evening, food appears. */
+:root{
+  --bg:#e8f2f9; --fg:#1f2f3a; --muted:#52646f; --card:#fffdf8; --ink:#1f2f3a; --accent:#2a7a55; --line:#c8dbe7;
+  --sky-a:#a9d6ee; --sky-b:#e9f5fb; --sun:#ffd35c; --sunedge:#f0a81c;
+  --dsk-a:#f08a5d; --dsk-b:#ffd7a3; --dsk-sun:#ff7a45; --tint:#ff9a55;
+  --wall:#e2bb86; --wall-shade:#c99a62; --window:#8b5a3a; --ground:#ecd9b6; --path:#d6bd8e;
+  --bougain:#d9457f; --bougain-2:#f07aa6; --leaf:#3f8a5f; --trunk:#8a6a45;
+  --fridge:#2f7a57; --fridge-dark:#1f5a40; --glass:#dff3fb; --inside:#f4fbf8; --shelf:#b9d8cd; --handle:#c9d6d2;
+  --shadow:rgba(60,40,20,.22);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1a24; --fg:#eef2ee; --muted:#a8b8bf; --card:#1a2a36; --ink:#eef2ee; --accent:#5ac795; --line:#2a3d4b;
+  --sky-a:#1b3a5c; --sky-b:#3d6286; --sun:#ffe28a; --sunedge:#f0b74a;
+  --dsk-a:#2a2350; --dsk-b:#7a4a6a; --dsk-sun:#ffcf8a; --tint:#5a3a8a;
+  --wall:#7d6249; --wall-shade:#5f4a37; --window:#f3c76b; --ground:#38363a; --path:#4a4850;
+  --bougain:#e5679b; --bougain-2:#f08fb4; --leaf:#4aa573; --trunk:#a58660;
+  --fridge:#3b9068; --fridge-dark:#235a42; --glass:#3a5f70; --inside:#20373a; --shelf:#3b5a58; --handle:#8aa09b;
+  --shadow:rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1a24; --fg:#eef2ee; --muted:#a8b8bf; --card:#1a2a36; --ink:#eef2ee; --accent:#5ac795; --line:#2a3d4b;
+  --sky-a:#1b3a5c; --sky-b:#3d6286; --sun:#ffe28a; --sunedge:#f0b74a;
+  --dsk-a:#2a2350; --dsk-b:#7a4a6a; --dsk-sun:#ffcf8a; --tint:#5a3a8a;
+  --wall:#7d6249; --wall-shade:#5f4a37; --window:#f3c76b; --ground:#38363a; --path:#4a4850;
+  --bougain:#e5679b; --bougain-2:#f08fb4; --leaf:#4aa573; --trunk:#a58660;
+  --fridge:#3b9068; --fridge-dark:#235a42; --glass:#3a5f70; --inside:#20373a; --shelf:#3b5a58; --handle:#8aa09b;
+  --shadow:rgba(0,0,0,.4); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:'Fredoka',system-ui,sans-serif;font-weight:500;line-height:1.35;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+.track{max-width:860px;margin:0 auto;height:100svh}
+.pin{position:sticky;top:env(safe-area-inset-top,0px);height:calc(100svh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
+  display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:10px;padding-block:8px}
+.prog{height:5px;background:var(--line);border-radius:5px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent);border-radius:5px;transform-origin:left;transform:scaleX(0)}
+.stage{position:relative;min-height:0;width:100%;height:100%;align-self:center;max-height:calc(min(860px,100vw - 32px)*1.3);border-radius:26px;overflow:hidden;background:linear-gradient(var(--sky-a) 0 58%,var(--ground) 58% 100%);box-shadow:0 10px 32px -14px rgba(20,50,70,.45)}
+.stage svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.cap{background:var(--card);border-radius:22px;padding:.8rem 1.1rem;text-align:center;min-height:4.6rem;max-height:44svh;overflow:auto;
+  box-shadow:0 6px 20px -14px rgba(20,50,70,.5);display:flex;flex-direction:column;justify-content:center}
+.inner{transition:opacity .3s,transform .3s}
+.cap.empty{display:none}
+.nav{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+.nb{font:inherit;font-weight:700;font-size:1.15rem;min-height:52px;border-radius:999px;border:2px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer;padding:0 1rem;-webkit-tap-highlight-color:transparent}
+.nb.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.nb:disabled{opacity:.3;cursor:default}
+.nb:focus-visible{outline:3px solid var(--sunedge);outline-offset:3px}
+.cnt{font-weight:600;color:var(--muted);font-size:1rem;min-width:4.6rem;text-align:center}
+.cap.swap .inner{opacity:0;transform:translateY(8px)}
+.cap p{margin:0 0 .45rem;font-size:clamp(1.12rem,3.7vw,1.5rem);line-height:1.3;text-wrap:balance;color:var(--ink)}
+.cap p:last-child{margin-bottom:0}
+.cap h1{margin:0;font-weight:700;font-size:clamp(1.9rem,8vw,3rem);line-height:1.05;text-wrap:balance}
+.cap h1 em{font-style:normal;color:var(--accent)}
+.cap .by{color:var(--muted);font-size:1.05rem;margin-top:.4rem}
+.cap .go{color:var(--muted);font-weight:600;font-size:.95rem;margin-top:.5rem}
+.cap .go i{display:inline-block;font-style:normal;animation:nudge 1.4s ease-in-out infinite}
+.chip{display:inline-block;background:var(--accent);color:#fff;border-radius:999px;padding:.15rem .8rem;font-size:.9rem;font-weight:600}
+.tag{display:inline-block;background:var(--accent);color:#fff;border-radius:999px;padding:.2rem .9rem;font-weight:700}
+.cap .about{font-size:.88rem;color:var(--muted);line-height:1.4}
+.cap .mission{font-weight:700;color:var(--accent)}
+.again{font:inherit;font-weight:600;background:none;border:2px solid var(--line);color:var(--fg);border-radius:999px;padding:.35rem 1rem;cursor:pointer;margin-top:.4rem}
+.again:focus-visible,.fr:focus-visible{outline:3px solid var(--sunedge);outline-offset:3px}
+.stage text{font-family:'Fredoka',system-ui,sans-serif}
+
+/* scene motion */
+#ov{opacity:0;pointer-events:none;transform-origin:400px 430px;transition:opacity .9s ease,transform 1.8s cubic-bezier(.45,.05,.25,1)}
+.ko #ov{opacity:1}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #ov{filter:brightness(.62)}}
+:root[data-theme="dark"] #ov{filter:brightness(.62)}
+#cam{transition:transform 1.8s cubic-bezier(.45,.05,.25,1)}
+.sky-dusk,.sun-dusk,.tint{opacity:0;transition:opacity 1.8s ease}
+.sun-day{transition:opacity 1.8s ease}
+.dk .sky-dusk,.dk .sun-dusk{opacity:1}.dk .sun-day{opacity:0}.dk .tint{opacity:.24}
+.glow{opacity:0;transition:opacity 1.2s}
+.gl .glow{opacity:.3;animation:glowp 3s ease-in-out infinite alternate}
+.cloud{animation:drift 28s ease-in-out infinite alternate}
+.sway{transform-origin:100px 212px;animation:sway 5s ease-in-out infinite alternate}
+.act{transition:transform 1.7s cubic-bezier(.45,.05,.25,1),opacity .5s;cursor:pointer}
+.act .in-ch{transform-box:fill-box;transform-origin:50% 100%;transition:transform .8s}
+.act.lean .in-ch{transform:rotate(-9deg)}
+.act.walking .in-ch{animation:bob .5s ease-in-out infinite alternate}
+.act.hop .in-ch{animation:hop .55s ease-out}
+.tote{opacity:0;transition:opacity .6s}.tote.on{opacity:1}
+.bub,.hsp{opacity:0;transform-box:fill-box;transform-origin:50% 100%}
+.bub.on{animation:popin .6s cubic-bezier(.3,1.7,.5,1) .9s both}
+.hsp.on{opacity:1;animation:twinkle 1.8s ease-in-out infinite}
+.item{animation:popin .6s cubic-bezier(.3,1.7,.5,1) both;transform-box:fill-box;transform-origin:50% 100%}
+.item.out{animation:popout .4s ease-in forwards}
+.spark{transform-box:fill-box;transform-origin:center;animation:twinkle 1.8s ease-in-out var(--d,0s) infinite}
+.heart{transform-box:fill-box;transform-origin:center bottom;animation:floatup 3.2s ease-in var(--d,0s) infinite}
+.fr{cursor:pointer}
+.door{transform-box:fill-box;transition:transform .8s cubic-bezier(.3,1.2,.4,1)}
+.door.l{transform-origin:left center}.door.r{transform-origin:right center}
+.fr.open .door{transform:scaleX(.14)}
+.init *{transition:none!important}
+@keyframes popin{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}
+@keyframes popout{to{opacity:0;transform:scale(0)}}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-5px)}}
+@keyframes hop{30%{transform:translateY(-16px)}60%{transform:translateY(0)}80%{transform:translateY(-5px)}}
+@keyframes sway{from{transform:rotate(-1.6deg)}to{transform:rotate(1.6deg)}}
+@keyframes drift{from{transform:translateX(0)}to{transform:translateX(60px)}}
+@keyframes twinkle{0%,100%{opacity:.45;transform:scale(.6)}50%{opacity:1;transform:scale(1.15)}}
+@keyframes floatup{0%{opacity:0;transform:translateY(0) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translateY(-70px) scale(1.1)}}
+@keyframes glowp{from{opacity:.16}to{opacity:.34}}
+@keyframes nudge{50%{transform:translateY(5px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.bub.on{opacity:1;transform:none}.item{opacity:1}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+<defs>
+<symbol id="layth" viewBox="0 0 60 120">
+ <rect x="5" y="46" width="15" height="30" rx="6" fill="#2f7a57"/>
+ <rect x="18" y="78" width="10" height="33" rx="3" fill="#c9a56b"/><rect x="32" y="78" width="10" height="33" rx="3" fill="#c9a56b"/>
+ <ellipse cx="22" cy="113" rx="9" ry="5" fill="#f4f1ea" stroke="#cfc9bb"/><ellipse cx="38" cy="113" rx="9" ry="5" fill="#f4f1ea" stroke="#cfc9bb"/>
+ <rect x="8" y="48" width="9" height="30" rx="4.5" fill="#6aa6d8"/><rect x="43" y="48" width="9" height="30" rx="4.5" fill="#6aa6d8"/>
+ <rect x="14" y="42" width="32" height="42" rx="12" fill="#6aa6d8"/>
+ <circle cx="12.5" cy="79" r="4.5" fill="#c98c60"/><circle cx="47.5" cy="79" r="4.5" fill="#c98c60"/>
+ <circle cx="30" cy="25" r="17" fill="#c98c60"/>
+ <path d="M13,23 a17,15 0 0 1 34,0 c-3,-4 -8,-6 -17,-6 s-14,2 -17,6z" fill="#2b1d16"/>
+ <circle cx="16" cy="17" r="5" fill="#2b1d16"/><circle cx="44" cy="17" r="5" fill="#2b1d16"/><circle cx="30" cy="9" r="6" fill="#2b1d16"/><circle cx="21" cy="11" r="5" fill="#2b1d16"/><circle cx="39" cy="11" r="5" fill="#2b1d16"/>
+ <circle cx="24" cy="27" r="2.2" fill="#2b1d16"/><circle cx="36" cy="27" r="2.2" fill="#2b1d16"/>
+ <circle cx="20" cy="32" r="3" fill="#e08a6a" opacity=".5"/><circle cx="40" cy="32" r="3" fill="#e08a6a" opacity=".5"/>
+ <path d="M24,33 q6,6 12,0" stroke="#7a3b2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+</symbol>
+<symbol id="hassan" viewBox="0 0 60 120">
+ <rect x="40" y="46" width="15" height="30" rx="6" fill="#3b6ea5"/>
+ <rect x="18" y="78" width="10" height="33" rx="3" fill="#3a4a63"/><rect x="32" y="78" width="10" height="33" rx="3" fill="#3a4a63"/>
+ <ellipse cx="22" cy="113" rx="9" ry="5" fill="#f4f1ea" stroke="#cfc9bb"/><ellipse cx="38" cy="113" rx="9" ry="5" fill="#f4f1ea" stroke="#cfc9bb"/>
+ <rect x="8" y="48" width="9" height="30" rx="4.5" fill="#f6f6f1" stroke="#d8d4c8"/><rect x="43" y="48" width="9" height="30" rx="4.5" fill="#f6f6f1" stroke="#d8d4c8"/>
+ <rect x="14" y="42" width="32" height="42" rx="12" fill="#f6f6f1" stroke="#d8d4c8"/>
+ <circle cx="12.5" cy="79" r="4.5" fill="#b9794f"/><circle cx="47.5" cy="79" r="4.5" fill="#b9794f"/>
+ <circle cx="30" cy="25" r="17" fill="#b9794f"/>
+ <path d="M13,24 a17,16 0 0 1 34,0 c-4,-3 -9,-5 -17,-5 s-13,2 -17,5z" fill="#1f1612"/>
+ <circle cx="24" cy="27" r="2.2" fill="#1f1612"/><circle cx="36" cy="27" r="2.2" fill="#1f1612"/>
+ <circle cx="20" cy="32" r="3" fill="#d9785a" opacity=".5"/><circle cx="40" cy="32" r="3" fill="#d9785a" opacity=".5"/>
+ <path d="M24,33 q6,6 12,0" stroke="#6a2f20" stroke-width="2" fill="none" stroke-linecap="round"/>
+</symbol>
+<symbol id="baba" viewBox="0 0 70 180">
+ <path d="M14,60 Q35,50 56,60 L64,172 H6 Z" fill="#fbfaf5" stroke="#d9d2c0" stroke-width="1.5"/>
+ <rect x="4" y="62" width="12" height="54" rx="6" fill="#fbfaf5" stroke="#d9d2c0" stroke-width="1.5"/><rect x="54" y="62" width="12" height="54" rx="6" fill="#fbfaf5" stroke="#d9d2c0" stroke-width="1.5"/>
+ <circle cx="10" cy="118" r="5" fill="#c58a5c"/><circle cx="60" cy="118" r="5" fill="#c58a5c"/>
+ <ellipse cx="22" cy="174" rx="10" ry="5" fill="#6b4a32"/><ellipse cx="48" cy="174" rx="10" ry="5" fill="#6b4a32"/>
+ <circle cx="35" cy="36" r="16" fill="#c58a5c"/>
+ <path d="M16,36 a19,19 0 0 1 38,0 v6 q-3,-12 -19,-14 q-16,2 -19,14z" fill="#fbfaf5" stroke="#d9d2c0" stroke-width="1.5"/>
+ <path d="M16,36 q-4,20 3,30 l7,-10z" fill="#fbfaf5" stroke="#d9d2c0" stroke-width="1.5"/><path d="M54,36 q4,20 -3,30 l-7,-10z" fill="#fbfaf5" stroke="#d9d2c0" stroke-width="1.5"/>
+ <path d="M17,25 q18,-9 36,0" stroke="#222" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+ <circle cx="29" cy="37" r="2.2" fill="#2b1d16"/><circle cx="41" cy="37" r="2.2" fill="#2b1d16"/>
+ <path d="M26,45 q9,9 18,0 q-9,4 -18,0z" fill="#2b1d16"/>
+ <path d="M30,43 q5,4 10,0" stroke="#7a3b2a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+</symbol>
+<symbol id="woman" viewBox="0 0 70 170">
+ <path d="M14,58 Q35,48 56,58 L64,164 H6 Z" fill="#263a5e"/>
+ <rect x="4" y="60" width="12" height="52" rx="6" fill="#263a5e"/><rect x="54" y="60" width="12" height="52" rx="6" fill="#263a5e"/>
+ <circle cx="10" cy="114" r="5" fill="#c98c60"/><circle cx="60" cy="114" r="5" fill="#c98c60"/>
+ <ellipse cx="24" cy="166" rx="9" ry="4.5" fill="#3a2a22"/><ellipse cx="46" cy="166" rx="9" ry="4.5" fill="#3a2a22"/>
+ <path d="M15,34 a20,19 0 0 1 40,0 q3,22 -7,34 q-13,7 -26,0 q-10,-12 -7,-34z" fill="#7a3b5e"/>
+ <ellipse cx="35" cy="37" rx="11" ry="13" fill="#c98c60"/>
+ <circle cx="30.5" cy="36" r="2" fill="#2b1d16"/><circle cx="39.5" cy="36" r="2" fill="#2b1d16"/>
+ <path d="M30,43 q5,5 10,0" stroke="#7a3b2a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+</symbol>
+<symbol id="man" viewBox="0 0 60 160">
+ <rect x="16" y="82" width="12" height="68" rx="4" fill="#2d3748"/><rect x="32" y="82" width="12" height="68" rx="4" fill="#2d3748"/>
+ <ellipse cx="22" cy="153" rx="10" ry="5" fill="#3a2a22"/><ellipse cx="38" cy="153" rx="10" ry="5" fill="#3a2a22"/>
+ <rect x="7" y="46" width="10" height="38" rx="5" fill="#c9733d"/><rect x="43" y="46" width="10" height="38" rx="5" fill="#c9733d"/>
+ <rect x="12" y="40" width="36" height="50" rx="12" fill="#c9733d"/>
+ <circle cx="12" cy="87" r="5" fill="#a86a43"/><circle cx="48" cy="87" r="5" fill="#a86a43"/>
+ <circle cx="30" cy="24" r="16" fill="#a86a43"/>
+ <path d="M14,22 a16,14 0 0 1 32,0 c-3,-3 -8,-5 -16,-5 s-13,2 -16,5z" fill="#1f1612"/>
+ <path d="M18,30 q12,22 24,0 q-12,8 -24,0z" fill="#1f1612"/>
+ <circle cx="24" cy="25" r="2" fill="#1f1612"/><circle cx="36" cy="25" r="2" fill="#1f1612"/>
+ <path d="M25,32 q5,4 10,0" stroke="#e9d2bf" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+</symbol>
+<symbol id="wman" viewBox="0 0 60 160">
+ <rect x="16" y="82" width="12" height="68" rx="4" fill="#3b5a8a"/><rect x="32" y="82" width="12" height="68" rx="4" fill="#3b5a8a"/>
+ <ellipse cx="22" cy="153" rx="10" ry="5" fill="#f4f1ea" stroke="#cfc9bb"/><ellipse cx="38" cy="153" rx="10" ry="5" fill="#f4f1ea" stroke="#cfc9bb"/>
+ <rect x="7" y="46" width="10" height="38" rx="5" fill="#c9404a"/><rect x="43" y="46" width="10" height="38" rx="5" fill="#c9404a"/>
+ <rect x="12" y="40" width="36" height="50" rx="12" fill="#c9404a"/>
+ <circle cx="12" cy="87" r="5" fill="#f1c9a5"/><circle cx="48" cy="87" r="5" fill="#f1c9a5"/>
+ <circle cx="30" cy="24" r="16" fill="#f1c9a5"/>
+ <path d="M14,23 a16,15 0 0 1 32,0 c-3,-4 -8,-6 -16,-6 s-13,2 -16,6z" fill="#6b4423"/>
+ <circle cx="24" cy="25" r="2" fill="#2b4a6a"/><circle cx="36" cy="25" r="2" fill="#2b4a6a"/>
+ <circle cx="20" cy="30" r="3" fill="#e9967a" opacity=".5"/><circle cx="40" cy="30" r="3" fill="#e9967a" opacity=".5"/>
+ <path d="M25,31 q5,5 10,0" stroke="#a84a3a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+</symbol>
+<symbol id="wwoman" viewBox="0 0 70 170">
+ <path d="M17,34 a18,17 0 0 1 36,0 v38 q-18,8 -36,0z" fill="#d9b25a"/>
+ <rect x="24" y="112" width="9" height="48" rx="3" fill="#f4d2b3"/><rect x="38" y="112" width="9" height="48" rx="3" fill="#f4d2b3"/>
+ <ellipse cx="28" cy="162" rx="9" ry="4.5" fill="#3a2a22"/><ellipse cx="43" cy="162" rx="9" ry="4.5" fill="#3a2a22"/>
+ <rect x="7" y="60" width="10" height="48" rx="5" fill="#f4d2b3"/><rect x="53" y="60" width="10" height="48" rx="5" fill="#f4d2b3"/>
+ <path d="M16,58 Q35,50 54,58 L59,124 H11 Z" fill="#2a9d8f"/>
+ <ellipse cx="35" cy="37" rx="11" ry="13" fill="#f4d2b3"/>
+ <path d="M23,31 q12,-13 24,0 q-12,-5 -24,0z" fill="#d9b25a"/>
+ <circle cx="30.5" cy="37" r="2" fill="#2b4a6a"/><circle cx="39.5" cy="37" r="2" fill="#2b4a6a"/>
+ <circle cx="26" cy="42" r="2.6" fill="#e9967a" opacity=".5"/><circle cx="44" cy="42" r="2.6" fill="#e9967a" opacity=".5"/>
+ <path d="M30,44 q5,5 10,0" stroke="#a84a3a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+</symbol>
+<symbol id="wkid" viewBox="0 0 60 120">
+ <rect x="18" y="78" width="10" height="33" rx="3" fill="#3b5a8a"/><rect x="32" y="78" width="10" height="33" rx="3" fill="#3b5a8a"/>
+ <ellipse cx="22" cy="113" rx="9" ry="5" fill="#f4f1ea" stroke="#cfc9bb"/><ellipse cx="38" cy="113" rx="9" ry="5" fill="#f4f1ea" stroke="#cfc9bb"/>
+ <rect x="8" y="48" width="9" height="30" rx="4.5" fill="#f2c230"/><rect x="43" y="48" width="9" height="30" rx="4.5" fill="#f2c230"/>
+ <rect x="14" y="42" width="32" height="42" rx="12" fill="#f2c230"/>
+ <circle cx="12.5" cy="79" r="4.5" fill="#f4d2b3"/><circle cx="47.5" cy="79" r="4.5" fill="#f4d2b3"/>
+ <circle cx="30" cy="25" r="17" fill="#f4d2b3"/>
+ <path d="M13,24 a17,16 0 0 1 34,0 c-4,-3 -9,-5 -17,-5 s-13,2 -17,5z" fill="#c98f3a"/>
+ <circle cx="24" cy="27" r="2.2" fill="#2b4a6a"/><circle cx="36" cy="27" r="2.2" fill="#2b4a6a"/>
+ <circle cx="20" cy="32" r="3" fill="#e9967a" opacity=".5"/><circle cx="40" cy="32" r="3" fill="#e9967a" opacity=".5"/>
+ <path d="M24,33 q6,6 12,0" stroke="#a84a3a" stroke-width="2" fill="none" stroke-linecap="round"/>
+</symbol>
+</defs>
+</svg>
+
+<div class="track" id="track"><div class="pin">
+  <div class="prog" aria-hidden="true"><i id="bar"></i></div>
+  <div class="stage" id="stage"></div>
+  <div class="cap" id="cap" aria-live="polite"><div class="inner" id="capin"></div></div>
+  <nav class="nav" aria-label="Story pages"><button type="button" class="nb" id="prev" aria-label="Previous page">‹ Back</button><span class="cnt" id="cnt" aria-live="off">1 / 20</span><button type="button" class="nb pri" id="next" aria-label="Next page">Next ›</button></nav>
+</div></div>
+
+<script>
+(function(){
+var R=document.documentElement;R.classList.add('js','init');
+var NS='http://www.w3.org/2000/svg',G=380,ROWS=[96,154,212];
+
+var IT={
+bread:'<ellipse cx="0" cy="-8" rx="16" ry="8" fill="#d9a05b"/><path d="M-8,-12 l5,6 M0,-14 l5,6 M8,-12 l5,6" stroke="#a9702f" stroke-width="2" fill="none" stroke-linecap="round"/>',
+milk:'<rect x="-7" y="-24" width="14" height="24" rx="3" fill="#fff" stroke="#c9d6dc"/><rect x="-5" y="-29" width="10" height="6" rx="2" fill="#4a86c5"/><rect x="-7" y="-14" width="14" height="6" fill="#4a86c5" opacity=".5"/>',
+orange:'<circle cy="-9" r="9" fill="#f28c28"/><path d="M0,-18 q5,-5 9,-2 q-4,5 -9,2z" fill="#3f8a5f"/>',
+apple:'<circle cx="-3" cy="-9" r="7" fill="#d63a3a"/><circle cx="3" cy="-9" r="7" fill="#d63a3a"/><path d="M0,-16 q1,-5 4,-6" stroke="#5a3a1f" stroke-width="2" fill="none"/>',
+rice:'<rect x="-11" y="-22" width="22" height="22" rx="4" fill="#f3ead2" stroke="#d6c9a4"/><rect x="-11" y="-14" width="22" height="6" fill="#c9a24f"/>',
+dates:'<rect x="-10" y="-13" width="20" height="13" rx="3" fill="#6b3f24"/><rect x="-10" y="-9" width="20" height="4" fill="#d9a05b"/>',
+banana:'<path d="M-14,-8 q10,14 28,-12 q-4,16 -26,18 q-4,0 -2,-6z" fill="#f4cf3a" stroke="#b8941f" stroke-width="1.5"/>',
+yogurt:'<path d="M-8,-15 h16 l-2,15 h-12z" fill="#fff" stroke="#c9d6dc"/><rect x="-8" y="-19" width="16" height="5" rx="2" fill="#e57fa0"/>',
+water:'<rect x="-5" y="-26" width="10" height="26" rx="4" fill="#a9dcf0" stroke="#6bb4d6"/><rect x="-3" y="-30" width="6" height="5" rx="1.5" fill="#2f7ab8"/>',
+carrot:'<path d="M-6,-20 h12 l-6,20z" fill="#f08a24"/><path d="M-3,-20 q-2,-7 -5,-8 M0,-20 q0,-8 0,-10 M3,-20 q2,-7 5,-8" stroke="#3f8a5f" stroke-width="2" fill="none" stroke-linecap="round"/>'
+};
+var STAR='M0,-11 L3,-3 L11,0 L3,3 L0,11 L-3,3 L-11,0 L-3,-3Z';
+function spark(x,y,s,d){return '<g transform="translate('+x+' '+y+') scale('+s+')"><g class="spark" style="--d:'+d+'s"><path d="'+STAR+'" fill="var(--sun)" stroke="var(--sunedge)" stroke-width="1.2" stroke-linejoin="round"/></g></g>';}
+function heart(x,y,d){return '<g transform="translate('+x+' '+y+')"><g class="heart" style="--d:'+d+'s"><path d="M0,7 C-13,-4 -8,-15 0,-8 C8,-15 13,-4 0,7Z" fill="var(--bougain)"/></g></g>';}
+function T(a,t0,gap){return a.map(function(r,i){return r.concat([+(t0+i*gap).toFixed(2)]);});}
+var FULL=[['bread',0,28],['milk',0,54],['rice',0,80],['dates',0,106],['orange',1,24],['orange',1,44],['apple',1,66],['apple',1,86],['carrot',1,108],['banana',2,28],['yogurt',2,56],['yogurt',2,76],['water',2,100],['water',2,116]];
+var S1=[['bread',0,36],['milk',0,70],['milk',0,92],['orange',1,30],['orange',1,52],['orange',1,74]];
+var S2=[['orange',1,24],['apple',1,46],['apple',1,66],['rice',0,34],['rice',0,60],['dates',0,92],['dates',0,114]];
+var S3=[['banana',2,30],['yogurt',2,60],['yogurt',2,80],['water',2,104],['water',2,118]];
+var EVE=T([['bread',0,40],['dates',0,72],['milk',0,102]],2.4,.5);
+var FULLT=T(FULL,.6,.1);
+
+/* world: x -300..1250, y -120..680. Static painted layers are baked into bitmaps with a watercolour filter. */
+function bld(x,y,w){var s='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+(G-y+8)+'" fill="var(--wall)"/><rect x="'+(x-4)+'" y="'+y+'" width="'+(w+8)+'" height="9" rx="3" fill="var(--wall-shade)"/>';
+  for(var wx=x+22;wx<x+w-20;wx+=46){for(var wy=y+28;wy<G-50;wy+=62){s+='<path d="M'+wx+','+(wy+36)+' v-24 a10,10 0 0 1 20,0 v24z" fill="var(--window)"/>';}}return s;}
+function bush(){var s='';for(var x=500,i=0;x<1270;x+=30,i++){var y=244+Math.sin(i*1.7)*16,r=22+((i*7)%9);
+  s+='<circle cx="'+x+'" cy="'+y.toFixed(0)+'" r="'+r+'" fill="'+(i%3==1?'var(--bougain-2)':'var(--bougain)')+'"/>';
+  if(i%4==0)s+='<circle cx="'+(x+8)+'" cy="'+(y+14).toFixed(0)+'" r="7" fill="var(--leaf)"/>';}return s;}
+function palm(x,k){var s='<g transform="translate('+(x-100)+' 0)"><path d="M90,380 C96,320 86,270 100,212" stroke="var(--trunk)" stroke-width="13" fill="none" stroke-linecap="round"/>';
+  [-85,-50,-15,20,55,90].forEach(function(a){s+='<ellipse cx="0" cy="-30" rx="9" ry="38" transform="translate(100 212) rotate('+a+')" fill="var(--leaf)"/>';});return s+'</g>';}
+function pavers(){var s='<rect x="-300" y="'+G+'" width="1550" height="300" fill="var(--ground)"/><rect x="-300" y="'+G+'" width="1550" height="7" fill="var(--path)"/>';
+  for(var i=-3;i<13;i++){s+='<path d="M'+(i*100)+','+(G+7)+' l-34,93" stroke="var(--path)" stroke-width="3" fill="none"/>';}
+  return s+'<path d="M-300,430 H1250" stroke="var(--path)" stroke-width="3"/>';}
+function blots(kind){return '';}
+function skyStr(kind){var g=kind==='day'?'gd':'gk';return '<rect x="-300" y="-120" width="1550" height="500" fill="url(#'+g+')"/>'+blots(kind);}
+function sceneStr(){var b=[[-300,190,190],[-90,225,170],[100,150,200],[310,215,150],[470,180,200],[680,205,180],[880,160,190],[1070,215,170]],s='';
+  b.forEach(function(a){s+=bld(a[0],a[1],a[2]);});
+  s+='<rect x="490" y="258" width="780" height="124" fill="var(--wall)"/><rect x="486" y="252" width="790" height="10" rx="3" fill="var(--wall-shade)"/>';
+  return s+bush()+palm(90)+palm(-170)+palm(1010)+pavers()+blots('scene');}
+var DEFS='<linearGradient id="gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--sky-a)"/><stop offset="1" style="stop-color:var(--sky-b)"/></linearGradient>'
++'<linearGradient id="gk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--dsk-a)"/><stop offset="1" style="stop-color:var(--dsk-b)"/></linearGradient>'
++'<filter id="soft" x="-30%" y="-60%" width="160%" height="220%"><feGaussianBlur stdDeviation="10"/></filter>'
++'<filter id="wc2" x="-8%" y="-8%" width="116%" height="116%"><feTurbulence type="fractalNoise" baseFrequency=".03 .04" numOctaves="2" seed="2" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".45"/></filter>';
+var BAKEDEFS=DEFS+'<filter id="wcb" filterUnits="userSpaceOnUse" x="-300" y="-120" width="1550" height="800"><feTurbulence type="fractalNoise" baseFrequency=".011 .015" numOctaves="2" seed="7" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="9" xChannelSelector="R" yChannelSelector="G" result="d"/><feGaussianBlur in="d" stdDeviation=".8"/></filter>';
+
+
+function kitchenStr(){var s='<rect x="-400" y="-400" width="1600" height="1400" fill="#f1dfbd"/><rect x="-400" y="430" width="1600" height="570" fill="#c99a62"/>';
+ s+='<rect x="60" y="70" width="210" height="220" rx="6" fill="url(#gk)" stroke="#8b5a3a" stroke-width="10"/><path d="M165,70 V290 M60,180 H270" stroke="#8b5a3a" stroke-width="7"/><ellipse cx="120" cy="120" rx="40" ry="12" fill="#fff" opacity=".35"/><ellipse cx="215" cy="200" rx="46" ry="12" fill="#fff" opacity=".3"/>';
+ s+='<path d="M40,60 h30 v240 h-30z M260,60 h30 v240 h-30z" fill="#e8a43c"/>';
+ s+='<rect x="330" y="95" width="70" height="90" rx="3" fill="#fff" stroke="#8b5a3a" stroke-width="6"/><circle cx="365" cy="140" r="16" fill="#e57fa0"/><circle cx="365" cy="140" r="6" fill="#ffd35c"/>';
+ s+='<rect x="520" y="150" width="270" height="9" rx="3" fill="#8b5a3a"/><rect x="540" y="96" width="16" height="54" fill="#c9404a"/><rect x="558" y="104" width="14" height="46" fill="#4a86c5"/><rect x="574" y="100" width="14" height="50" fill="#d9a05b"/><ellipse cx="660" cy="128" rx="20" ry="22" fill="#d9a05b"/><rect x="652" y="98" width="16" height="10" fill="#d9a05b"/><path d="M730,150 q-10,-30 0,-50 q10,20 0,50z M745,150 q10,-26 18,-40 q-2,24 -18,40z" fill="#3f8a5f"/>';
+ s+='<use href="#baba" x="500" y="120" width="117" height="300"/><use href="#layth" x="95" y="210" width="115" height="230"/><use href="#hassan" x="250" y="222" width="110" height="220"/>';
+ s+='<rect x="-60" y="415" width="920" height="26" rx="6" fill="#8a5a3a"/><rect x="-60" y="441" width="920" height="200" fill="#7a3d4a"/><path d="M-60,470 H860 M-60,520 H860" stroke="#f0c76b" stroke-width="10" stroke-dasharray="26 18"/>';
+ s+='<ellipse cx="350" cy="414" rx="48" ry="10" fill="#a9702f"/><ellipse cx="330" cy="404" rx="20" ry="11" fill="#d9a05b"/><ellipse cx="368" cy="404" rx="20" ry="11" fill="#d9a05b"/><ellipse cx="349" cy="397" rx="19" ry="11" fill="#e0a867"/>';
+ s+='<path d="M430,414 q0,-26 30,-26 q30,0 30,26z" fill="#3b2a22"/><circle cx="445" cy="394" r="7" fill="#6b3f24"/><circle cx="462" cy="391" r="7" fill="#6b3f24"/><circle cx="478" cy="395" r="7" fill="#6b3f24"/>';
+ s+='<rect x="230" y="360" width="26" height="54" rx="6" fill="#fff" stroke="#c9d6dc"/><rect x="236" y="346" width="14" height="16" rx="3" fill="#4a86c5"/>';
+ s+='<path d="M560,380 q30,-40 60,0" stroke="#c2570d" stroke-width="8" fill="none"/><rect x="540" y="372" width="100" height="44" rx="14" fill="#f08a3a" stroke="#c2570d" stroke-width="3"/><ellipse cx="575" cy="372" rx="20" ry="9" fill="#d9a05b"/>';
+ return s;}
+/* fridge */
+function fridgeStr(){return '<g id="fr" class="fr" role="button" tabindex="0" aria-label="Community fridge. Tap to open or close the doors.">'+
+ '<ellipse cx="610" cy="383" rx="92" ry="8" fill="var(--shadow)"/><g transform="translate(540 150)">'+
+ '<rect x="8" y="226" width="12" height="6" rx="2" fill="var(--fridge-dark)"/><rect x="120" y="226" width="12" height="6" rx="2" fill="var(--fridge-dark)"/>'+
+ '<rect width="140" height="230" rx="10" fill="var(--fridge-dark)"/><rect x="10" y="8" width="120" height="22" rx="6" fill="var(--fridge)"/>'+
+ '<circle cx="23" cy="19" r="7.5" fill="#fff"/><path d="M23,24 C16.5,19 18.5,13.5 23,16.5 C27.5,13.5 29.5,19 23,24Z" fill="#e0457b"/><text x="81" y="22.6" text-anchor="middle" font-size="8.2" font-weight="700" fill="#fff" letter-spacing=".3">COMMUNITY FRIDGE</text>'+
+ '<rect x="10" y="36" width="120" height="176" rx="4" fill="var(--inside)"/>'+
+ '<rect x="10" y="96" width="120" height="3" fill="var(--shelf)"/><rect x="10" y="154" width="120" height="3" fill="var(--shelf)"/><rect x="10" y="212" width="120" height="3" fill="var(--shelf)"/>'+
+ '<g id="items"></g>'+
+ '<g class="door l"><rect x="10" y="36" width="60" height="176" fill="var(--glass)" fill-opacity=".42" stroke="var(--fridge-dark)" stroke-width="3"/><rect x="62" y="110" width="4" height="40" rx="2" fill="var(--handle)"/>'+'<g transform="translate(36 126)"><circle r="17" fill="#2f7a57" fill-opacity=".96" stroke="#fff" stroke-width="1.6"/><path d="M0,-4 C-7,-9 -5,-15 0,-12 C5,-15 7,-9 0,-4Z" fill="#fff"/><text y="3.5" text-anchor="middle" font-size="5.4" font-weight="700" fill="#fff">FEED A</text><text y="10" text-anchor="middle" font-size="5.4" font-weight="700" fill="#fff">FRIEND</text></g>'+'</g>'+
+ '<g class="door r"><rect x="70" y="36" width="60" height="176" fill="var(--glass)" fill-opacity=".42" stroke="var(--fridge-dark)" stroke-width="3"/><rect x="74" y="110" width="4" height="40" rx="2" fill="var(--handle)"/>'+'<g transform="translate(104 126)"><circle r="17" fill="#2f7a57" fill-opacity=".96" stroke="#fff" stroke-width="1.6"/><path d="M0,-4 C-7,-9 -5,-15 0,-12 C5,-15 7,-9 0,-4Z" fill="#fff"/><text y="3.5" text-anchor="middle" font-size="5.4" font-weight="700" fill="#fff">FEED A</text><text y="10" text-anchor="middle" font-size="5.4" font-weight="700" fill="#fff">FRIEND</text></g>'+'</g>'+
+ '</g></g>';}
+
+/* actors */
+var AR={wman:60/160,wwoman:70/170,wkid:.5,layth:.5,hassan:.5,baba:70/180,woman:70/170,man:60/160};
+var ACT={layth:{sym:'layth',h:130,y:408},hassan:{sym:'hassan',h:130,y:412},baba:{sym:'baba',h:190,y:412},woman:{sym:'woman',h:170,y:412},man:{sym:'man',h:175,y:412},woman2:{sym:'woman',h:150,y:412},kid:{sym:'layth',h:98,y:408},wman:{sym:'wman',h:175,y:412},wwoman:{sym:'wwoman',h:170,y:412},wkid:{sym:'wkid',h:98,y:408}};
+var TOTE={layth:[22,-42],hassan:[-22,-42],baba:[-27,-62]};
+function actorStr(id){var c=ACT[id],h=c.h,w=h*AR[c.sym],t=TOTE[id];
+ return '<g class="act" id="a-'+id+'" data-id="'+id+'" style="opacity:0"><g class="in-ch"><use href="#'+c.sym+'" x="'+(-w/2)+'" y="'+(-h)+'" width="'+w+'" height="'+h+'"/></g>'+
+ (t?'<g class="tote" transform="translate('+t[0]+' '+t[1]+')"><path d="M-8,-10 q8,-16 16,0" stroke="#8a6a45" stroke-width="3" fill="none"/><ellipse cx="-5" cy="-11" rx="9" ry="4.5" fill="#d9a05b"/><rect x="-13" y="-10" width="26" height="24" rx="4" fill="#d7b48a" stroke="#a98456" stroke-width="1.5"/></g>':'')+
+ '<g transform="translate(0 '+(-h-32)+')"><g class="bub"><path d="M-6,17 l-5,13 l14,-9z" fill="var(--card)" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/><ellipse rx="26" ry="21" fill="var(--card)" stroke="var(--ink)" stroke-width="2.5"/><text class="bt" y="9" text-anchor="middle" font-size="26" font-weight="700" fill="var(--ink)"></text></g></g>'+
+ '<g transform="translate(0 '+(-h-30)+') scale(1.2)"><g class="hsp"><path d="'+STAR+'" fill="var(--sun)" stroke="var(--sunedge)" stroke-width="1.2" stroke-linejoin="round"/></g></g></g>';}
+
+/* build the stage */
+var stage=document.getElementById('stage');
+stage.innerHTML='<svg id="svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet" role="img" aria-label="A watercolour street in Qatar with a green community fridge. Layth, Hassan and Baba move through the story as you scroll.">'+
+'<defs>'+DEFS+'</defs>'+
+'<g id="cam">'+
+ '<g id="fb-day">'+skyStr('day')+'</g><image id="im-day" x="-300" y="-120" width="1550" height="800" preserveAspectRatio="none"/>'+
+ '<g class="sky-dusk"><g id="fb-dusk">'+skyStr('dusk')+'</g><image id="im-dusk" x="-300" y="-120" width="1550" height="800" preserveAspectRatio="none"/></g>'+
+ '<g class="sun-day"><circle cx="690" cy="70" r="40" fill="var(--sun)"/><circle cx="690" cy="70" r="56" fill="var(--sun)" opacity=".25"/></g>'+
+ '<g class="sun-dusk"><circle cx="700" cy="244" r="52" fill="var(--dsk-sun)"/></g>'+
+ '<g class="cloud" fill="#fff" opacity=".7"><ellipse cx="220" cy="70" rx="46" ry="14"/><ellipse cx="250" cy="58" rx="30" ry="14"/><ellipse cx="450" cy="110" rx="40" ry="12"/><ellipse cx="474" cy="99" rx="26" ry="12"/><ellipse cx="900" cy="80" rx="46" ry="14"/><ellipse cx="930" cy="68" rx="30" ry="14"/></g>'+
+ '<g id="fb-scene">'+sceneStr()+'</g><image id="im-scene" x="-300" y="-120" width="1550" height="800" preserveAspectRatio="none"/>'+
+ '<circle class="glow" cx="610" cy="265" r="170" fill="var(--sun)"/>'+
+ '<g>'+fridgeStr()+'</g>'+
+ '<g id="actors">'+Object.keys(ACT).map(actorStr).join('')+'</g>'+
+ '<g id="fx"></g>'+
+ '<rect class="tint" x="-300" y="-120" width="1550" height="800" fill="var(--tint)" style="mix-blend-mode:multiply" pointer-events="none"/>'+
+'</g><g id="ov">'+kitchenStr()+'</g></svg>';
+var ov=document.getElementById('ov'),svg=document.getElementById('svg'),cam=document.getElementById('cam'),itemsG=document.getElementById('items'),fx=document.getElementById('fx'),fr=document.getElementById('fr');
+
+/* bake watercolour bitmaps once (and again if the theme changes) */
+function resolve(s){var cs=getComputedStyle(R);return s.replace(/var\(--([\w-]+)\)/g,function(m,n){return cs.getPropertyValue('--'+n).trim()||'#888';});}
+function bake(inner,id,fb){
+  var w=1550,h=800,sc=1.15,src='<svg xmlns="http://www.w3.org/2000/svg" viewBox="-300 -120 '+w+' '+h+'" width="'+Math.round(w*sc)+'" height="'+Math.round(h*sc)+'"><defs>'+BAKEDEFS+'</defs><g filter="url(#wcb)">'+inner+'</g></svg>';
+  var img=new Image();
+  img.onload=function(){try{var c=document.createElement('canvas');c.width=Math.round(w*sc);c.height=Math.round(h*sc);c.getContext('2d').drawImage(img,0,0);
+    c.toBlob(function(b){if(!b)return;var u=URL.createObjectURL(b),el=document.getElementById(id);var old=el.getAttribute('data-u');el.setAttribute('href',u);el.setAttribute('data-u',u);if(old)URL.revokeObjectURL(old);var f=document.getElementById(fb);if(f)f.style.display='none';});}catch(e){}};
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(resolve(src));
+}
+function bakeAll(){bake(skyStr('day'),'im-day','fb-day');bake(skyStr('dusk'),'im-dusk','fb-dusk');bake(sceneStr(),'im-scene','fb-scene');}
+
+/* chapter data: one moment per book page (38) */
+function ban(x,y,w,t){return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="9" rx="2" fill="#2f7a57" fill-opacity=".92"/><text x="'+(x+w/2)+'" y="'+(y+6.4)+'" text-anchor="middle" font-size="5" font-weight="700" fill="#fff" textLength="'+(w-6)+'" lengthAdjust="spacingAndGlyphs">'+t+'</text>';}
+function hand(x,y,r){var f='';[-10,-4.6,.8,6.2].forEach(function(o){f+='<rect x="'+o+'" y="-24" width="4.4" height="18" rx="2.2" fill="#c98c60"/>';});return '<g transform="translate('+x+' '+y+') rotate('+r+')">'+f+'<ellipse rx="11" ry="9" fill="#c98c60"/></g>';}
+var LITTLE=T([['bread',0,36],['milk',0,70],['orange',1,44],['orange',1,70]],.3,.2);
+var SP=function(a){return a.map(function(p,i){return spark(p[0],p[1],p[2],i*.4);}).join('');};
+var CH=[
+/* 1 cover */
+{cover:1,cam:[400,268,1.2],a:{layth:{x:150},hassan:{x:210},baba:{x:290}},items:FULLT,glow:1,open:0},
+/* 2 */
+{cap:['Every morning, Layth and Hassan walked to school with their dad through their neighbourhood in Qatar.'],cam:[190,262,1.0],a:{layth:{x:110},hassan:{x:165},baba:{x:235}},items:[],open:0},
+/* 3 street walk, sunbeams */
+{cam:[300,258,1.4],a:{layth:{x:235,from:-260},hassan:{x:300,from:-260,d:.15},baba:{x:375,from:-260,d:.3}},items:[],open:0,fx:SP([[180,70,1.4],[300,48,1],[420,76,1.2]])},
+/* 4 One day they stopped */
+{cap:['One day, they stopped.','“Baba… why is there a fridge outside?” Layth asked, pointing.'],hint:1,cam:[470,270,1.55],a:{layth:{x:330,bub:'?'},hassan:{x:392},baba:{x:462}},items:LITTLE,open:0},
+/* 5 boys alone at the fridge */
+{cam:[525,268,1.9],a:{layth:{x:470,bub:'?'},hassan:{x:408,lean:1}},items:[],open:0},
+/* 6 dad smiled */
+{cap:['Their dad smiled.','“That’s a community fridge. It’s for sharing food.”'],cam:[420,250,1.4],a:{baba:{x:300,lean:1},layth:{x:370},hassan:{x:430}},items:LITTLE,open:1,fx:SP([[560,120,1],[650,110,.8]])},
+/* 7 dad crouches by the sign */
+{cam:[560,250,2.1],a:{baba:{x:455,lean:1},layth:{x:395},hassan:{x:335}},items:[],open:1,glow:1},
+/* 8 If someone has extra */
+{cap:['“If someone has extra, they can leave it there. And if someone needs food, they can take it.”'],cam:[610,276,2.3],a:{baba:{x:500,tote:1}},items:T(S1,.4,.35),open:1,glow:1},
+/* 9 shelves close-up */
+{cam:[610,262,3.3],a:{},items:FULLT,open:0,glow:1,fx:ban(552,262,56,'TAKE WHAT YOU NEED')+ban(612,262,56,'LEAVE WHAT YOU CAN')},
+/* 10 Hassan looked closely */
+{cap:['Hassan looked closely.','“So… it’s for everyone?”','“Yes,” Baba said. “It’s how we take care of each other.”'],cam:[520,262,2.2],a:{hassan:{x:468,s:1.12,lean:1},layth:{x:408},baba:{x:345}},items:FULLT,open:1,glow:1,fx:heart(585,200,0)+heart(640,190,1.1)},
+/* 11 kids and dad by the fridge */
+{cam:[420,268,1.75],a:{baba:{x:300,lean:1},hassan:{x:240},layth:{x:495}},items:FULLT,open:0},
+/* 12 Next morning */
+{cap:['The next morning, as they walked past again, Layth stopped.','“Look! There’s food inside!”'],cam:[600,266,1.9],a:{layth:{x:475,bub:'!',from:-330},hassan:{x:420,from:-330,d:.15},baba:{x:365,from:-330,d:.3}},items:T(S1,1.2,.3),open:0},
+/* 13 running */
+{cam:[110,282,1.3],a:{layth:{x:175,from:-380},hassan:{x:98,from:-380,d:.25}},items:[],open:0,fx:SP([[40,120,1],[210,90,.8]])},
+/* 14 bread milk oranges */
+{cap:['There was bread, milk, and juicy oranges.','“Who put it there?” Layth asked.'],cam:[610,260,2.0],a:{layth:{x:470,bub:'?'},hassan:{x:410}},items:T(S1,.2,.2).concat(T([['apple',1,100],['dates',0,106]],1,.3)),open:1},
+/* 15 hands on the glass */
+{cam:[610,296,3.5],a:{},items:FULLT,open:0,glow:1,fx:hand(578,352,-12)+hand(646,352,12)},
+/* 16 whisper */
+{cap:['Their dad leaned in and whispered,','“Ahh… that must be the Fridge Fairy.”','Hassan laughed. “There’s no such thing as fairies!”'],cam:[470,255,1.9],a:{baba:{x:332,lean:1},layth:{x:398},hassan:{x:462}},items:FULLT,open:0,fx:SP([[540,110,1.2],[600,84,.9],[660,112,1.1],[700,80,.7]])},
+/* 17 Hassan laughs */
+{cam:[330,284,2.5],a:{baba:{x:318,lean:1},hassan:{x:262,bub:'ha ha',s:1.1},layth:{x:200}},items:[],open:0},
+/* 18 next day hurried */
+{cap:['The next day, they hurried to the fridge.','Inside, there were shiny apples, rice, and packs of dates.'],cam:[300,266,1.2],a:{layth:{x:370,from:-420},hassan:{x:310,from:-420,d:.12},baba:{x:240,from:-420,d:.25}},items:T(S2,.8,.2),open:0},
+/* 19 running to the fridge */
+{cam:[520,266,1.5],a:{layth:{x:445,from:-300},hassan:{x:385,from:-300,d:.2}},items:S2.concat(S3).map(function(r){return r;}),open:0,glow:1},
+/* 20 bananas yogurt where is she */
+{cap:['This time, there were bananas, yogurt, and bottles of water.','“Okay… where is she?” Hassan whispered.','“I want to see this fairy.”'],cam:[600,262,1.85],a:{layth:{x:440},hassan:{x:498,lean:1,bub:'shh'}},items:T(S2,0,0).concat(T(S3,.3,.3)),open:0}
+];
+CH=CH.concat([
+/* 21 hiding behind the palm */
+{cam:[100,300,2.5],a:{hassan:{x:140,lean:1,s:1.05}},items:[],open:0},
+/* 22 Baba chuckled */
+{cap:['Baba chuckled.','“Maybe you already have.”'],cam:[215,282,1.9],a:{baba:{x:150,lean:1},hassan:{x:240}},items:[],open:0},
+/* 23 dad and Layth talk */
+{cam:[330,274,1.75],a:{baba:{x:285},layth:{x:372,bub:'?'}},items:[],open:0},
+/* 24 packing the bag (kitchen) */
+{cap:['That evening, at home, Baba packed some extra food into a bag… fresh bread, dates, and a bottle of milk.','“Layth, Hassan… Come with me.”'],ov:1,ovz:1,dusk:1,cam:[400,268,1.2],a:{},items:[],open:0},
+/* 25 kitchen close-up */
+{ov:1,ovz:1.55,dusk:1,cam:[400,268,1.2],a:{},items:[],open:0},
+/* 26 walked together */
+{cap:['They walked to the fridge together.','Baba opened the door and gently placed the food inside.'],dusk:1,cam:[330,268,1.3],a:{layth:{x:285,from:-330},hassan:{x:350,from:-330,d:.15},baba:{x:420,from:-330,d:.3,tote:1}},items:T(S2,0,0),open:0},
+/* 27 dusk walk to the glowing fridge */
+{dusk:1,cam:[470,266,1.55],a:{layth:{x:350},hassan:{x:410},baba:{x:480,tote:1}},items:T(S2,0,0),open:0,glow:1,fx:SP([[640,150,.9],[690,130,.7]])},
+/* 28 eyes grew wide */
+{cap:['Layth’s eyes grew wide. Hassan blinked.','“Baba…” he said slowly, “you’re the Fridge Fairy?”','Baba smiled. “Not just me.”'],dusk:1,cam:[310,266,2.5],a:{layth:{x:265,bub:'?!'},hassan:{x:330,bub:'!'},baba:{x:405,tote:1,sp:1}},items:T(S2,0,0),open:0},
+/* 29 Baba places the food */
+{dusk:1,cam:[600,262,1.85],a:{baba:{x:520,tote:1,lean:1},layth:{x:430},hassan:{x:372}},items:T(S2,0,0).concat(EVE),open:1,glow:1},
+/* 30 next morning, a woman, a man, a family */
+{cap:['The next morning, as they walked to school, they saw a woman placing fruit inside the fridge.','Then a man came and added bottles of water.','And later, another family left rice and vegetables.'],cam:[430,266,1.25],
+ a:{layth:{x:120,s:.8,from:-280},hassan:{x:165,s:.8,from:-280,d:.12},baba:{x:225,s:.8,from:-280,d:.25},woman:{x:485,from:420,d:.8},wman:{x:420,from:420,d:3.2},wwoman:{x:350,from:420,d:5.8},wkid:{x:305,from:420,d:6}},
+ items:[['orange',1,30,3.2],['apple',1,56,3.4],['apple',1,82,3.6],['water',2,40,5.6],['water',2,62,5.8],['water',2,84,6],['rice',0,36,8.2],['carrot',0,70,8.4],['carrot',0,92,8.6]],open:1},
+/* 31 woman and man at the fridge, boys watching */
+{cam:[520,264,1.6],a:{woman:{x:590,from:80},wman:{x:515,from:80,d:.3},wwoman:{x:650,from:80,d:.5},layth:{x:375,s:1.15},hassan:{x:310,s:1.1}},items:FULLT,open:1,glow:1},
+/* 32 Hassan turned */
+{cap:['Hassan turned to Layth. “I think I understand now…”','Layth grinned. “The Fridge Fairy isn’t one person…”'],cam:[330,280,2.5],a:{hassan:{x:285,s:1.05},layth:{x:350,s:1.05,sp:1}},items:FULLT,open:1},
+/* 33 faces close-up, people at the fridge behind */
+{cam:[470,284,2.4],a:{layth:{x:405,s:1.2,sp:1},hassan:{x:470,s:1.2},wman:{x:575},wkid:{x:615}},items:FULLT,open:1,glow:1},
+/* 34 It's everyone */
+{cap:['Hassan nodded.','“It’s everyone.”'],cam:[330,258,1.2],a:{hassan:{x:100,sp:1},layth:{x:155,sp:1},baba:{x:215,sp:1},wwoman:{x:285,sp:1},man:{x:340,sp:1},wman:{x:395,sp:1},woman:{x:450,sp:1},wkid:{x:500,sp:1}},items:FULLT,open:1,glow:1},
+/* 35 everyone together (blank placeholder in the book) */
+{cap:['<span class="chip">♥ ♥ ♥</span>'],cam:[420,210,0.95],a:{hassan:{x:120},layth:{x:175},baba:{x:235},wwoman:{x:300},man:{x:360},wman:{x:420},woman:{x:480},wkid:{x:515},woman2:{x:705},kid:{x:755}},items:FULLT,open:1,glow:1,fx:heart(200,150,0)+heart(330,120,.8)+heart(455,140,1.6)+heart(560,150,2.2)+heart(620,120,1.2)},
+/* 36 From that day on */
+{cap:['From that day on, Layth and Hassan always carried a little extra when they walked past the fridge.','Because they knew…','The Fridge Fairy was real after all.'],cam:[470,268,1.5],a:{layth:{x:340,from:-320,tote:1},hassan:{x:410,from:-320,d:.15,tote:1},baba:{x:480,from:-320,d:.3,tote:1}},items:FULLT,open:0,glow:1,fx:spark(560,128,1,0)+spark(660,118,1.2,.7)+spark(610,92,.8,1.3)},
+/* 37 Reflection */
+{refl:1,cam:[610,262,2.0],a:{},items:FULLT,open:1,glow:1,fx:heart(560,200,0)+heart(660,190,.9)+spark(600,110,1.2,0)+spark(690,120,1,.6)},
+/* 38 back cover */
+{back:1,cam:[640,225,1.15],a:{},items:FULLT,open:1,glow:1,fx:spark(480,110,1.2,0)+spark(740,120,1,.6)+spark(610,70,1.3,1)}
+]);
+
+/* text pages only: drop the picture-only pages */
+CH=CH.filter(function(c,i){return !(i>=2&&i<=34&&i%2===0)&&i!==37;});
+var N=CH.length;
+document.getElementById('track').style.setProperty('--n',N-1);
+
+function capHTML(c){
+  if(c.cover)return '<h1>Who is the <em>Fridge Fairy?</em></h1><p class="by">By Alliyah Choudhury</p><p class="go">Tap Next to begin <i>→</i></p>';
+  if(c.refl)return '<p><span class="tag">Reflection</span></p><p>Have you ever seen a community fridge?</p><p>If you see one, what will you do?</p><p class="about">Tag us on <b>@feed.a.friend</b> with your moments</p><div><button type="button" class="again" id="again">Read again ↑</button></div>';
+  if(c.back)return '<p class="about">Every morning, Layth and Hassan pass a mysterious green fridge on their way to school. Some days it’s empty. The next day, food has appeared. Who keeps putting it there? Baba says it must be the Fridge Fairy. But there’s no such thing as fairies…</p><p><b><i>… Or is there?</i></b></p><p class="mission">Raising little changemakers.</p><p class="about">Part of a collection of stories inspired by the values of Feed a Friend: kindness, sharing, community and the belief that even the smallest act can make a difference.</p><div><button type="button" class="again" id="again">Read again ↑</button></div>';
+  if(!c.cap)return '';
+  return c.cap.map(function(l){return '<p>'+l+'</p>';}).join('')+(c.hint?'<p><span class="chip">Tap the fridge!</span></p>':'');
+}
+
+/* state application */
+var itemEls={},prev={},timers={},cur=-1,capTok=0;
+function setItems(list){
+  var want={};list.forEach(function(r){want[r[0]+'|'+r[1]+'|'+r[2]]=1;});
+  Object.keys(itemEls).forEach(function(k){if(!want[k]){var e=itemEls[k];delete itemEls[k];var c=e.firstChild;c.style.animationDelay='0s';c.classList.add('out');setTimeout(function(){e.remove();},500);}});
+  list.forEach(function(r){var k=r[0]+'|'+r[1]+'|'+r[2];if(itemEls[k])return;
+    var g=document.createElementNS(NS,'g');g.setAttribute('transform','translate('+r[2]+' '+ROWS[r[1]]+')');
+    g.innerHTML='<g class="item" style="animation-delay:'+(r[3]||0)+'s">'+IT[r[0]]+'</g>';itemsG.appendChild(g);itemEls[k]=g;});
+}
+function walk(id,t){var el=document.getElementById('a-'+id);el.classList.add('walking');clearTimeout(timers[id]);timers[id]=setTimeout(function(){el.classList.remove('walking');},t*1000);}
+function setAct(id,st,first){
+  var el=document.getElementById('a-'+id),c=ACT[id];
+  if(!st){el.style.opacity=0;el.style.pointerEvents='none';el.dataset.vis='0';delete prev[id];return;}
+  var s=st.s||1,tg='translate('+st.x+'px,'+c.y+'px) scale('+s+')',vis=el.dataset.vis==='1',d=st.d||0;
+  el.classList.toggle('lean',!!st.lean);
+  var t=el.querySelector('.tote');if(t)t.classList.toggle('on',!!st.tote);
+  var b=el.querySelector('.bub'),hs=el.querySelector('.hsp');
+  b.classList.remove('on');hs.classList.toggle('on',!!st.sp);
+  if(st.bub){var tx=b.querySelector('.bt');tx.textContent=st.bub;tx.setAttribute('font-size',st.bub.length>2?20:26);void b.getBoundingClientRect();b.classList.add('on');}
+  if(first){el.style.transform=tg;el.style.opacity=1;}
+  else if(st.from!=null){
+    el.style.transition='none';el.style.transform='translate('+(st.x+st.from)+'px,'+c.y+'px) scale('+s+')';el.style.opacity=0;void el.getBoundingClientRect();
+    el.style.transition='transform 1.8s cubic-bezier(.45,.05,.25,1) '+d+'s,opacity .5s '+d+'s';el.style.transform=tg;el.style.opacity=1;walk(id,1.8+d);
+    setTimeout(function(){el.style.transition='';},(2.4+d)*1000);
+  }else if(!vis){
+    el.style.transition='none';el.style.transform=tg;void el.getBoundingClientRect();el.style.transition='opacity .5s';el.style.opacity=1;setTimeout(function(){el.style.transition='';},600);
+  }else{el.style.transition='';el.style.transform=tg;el.style.opacity=1;if(prev[id]&&Math.abs(prev[id].x-st.x)>6)walk(id,1.8);}
+  el.style.pointerEvents='auto';el.dataset.vis='1';prev[id]={x:st.x};
+}
+function apply(i,first){
+  var c=CH[i];cur=i;
+  var k=c.cam[2];cam.style.transform='translate('+(400-c.cam[0]*k).toFixed(1)+'px,'+(300-(c.cam[1]+30)*k).toFixed(1)+'px) scale('+k+')';
+  svg.classList.toggle('dk',!!c.dusk);svg.classList.toggle('ko',!!c.ov);ov.style.transform='scale('+(c.ovz||1)+')';svg.classList.toggle('gl',!!c.glow);
+  fr.classList.toggle('open',!!c.open);
+  Object.keys(ACT).forEach(function(id){setAct(id,c.a[id],first);});
+  setItems(c.items||[]);
+  fx.innerHTML=c.fx||'';
+  var tok=++capTok,capEl=document.getElementById('cap'),inn=document.getElementById('capin');
+  var em=!(c.cap||c.cover||c.refl||c.back);if(first){inn.innerHTML=capHTML(c);capEl.classList.toggle('empty',em);}else{capEl.classList.add('swap');setTimeout(function(){if(tok!==capTok)return;inn.innerHTML=capHTML(c);capEl.classList.toggle('empty',em);capEl.classList.remove('swap');bindAgain();},280);}
+  bindAgain();
+}
+function bindAgain(){var b=document.getElementById('again');if(b&&!b._b){b._b=1;b.addEventListener('click',function(){go(0);});}}
+
+/* taps: fridge doors and little hops */
+function toggle(){fr.classList.toggle('open');}
+fr.addEventListener('click',toggle);
+fr.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});
+document.querySelectorAll('.act').forEach(function(a){a.addEventListener('click',function(){a.classList.remove('hop');void a.getBoundingClientRect();a.classList.add('hop');setTimeout(function(){a.classList.remove('hop');},600);});});
+
+/* arrows, keys and swipes drive the story */
+var bar=document.getElementById('bar'),prevB=document.getElementById('prev'),nextB=document.getElementById('next'),cnt=document.getElementById('cnt');
+function ui(){bar.style.transform='scaleX('+(cur/(N-1))+')';cnt.textContent=(cur+1)+' / '+N;prevB.disabled=cur<=0;nextB.disabled=cur>=N-1;
+  try{history.replaceState(null,'','#'+(cur+1));}catch(e){}}
+function go(i){i=Math.max(0,Math.min(N-1,i));if(i===cur)return;apply(i,false);ui();}
+prevB.addEventListener('click',function(){go(cur-1);});
+nextB.addEventListener('click',function(){go(cur+1);});
+document.addEventListener('keydown',function(e){if(e.target&&e.target.closest&&e.target.closest('.fr'))return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key==='PageDown'){e.preventDefault();go(cur+1);}
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp'){e.preventDefault();go(cur-1);}});
+var sx=null,sy=null;
+stage.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+stage.addEventListener('touchend',function(e){if(sx===null)return;var dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;sx=null;
+  if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5)go(cur+(dx<0?1:-1));},{passive:true});
+var i0=0;try{i0=Math.max(0,Math.min(N-1,(parseInt((location.hash||'').slice(1),10)||1)-1));}catch(e){}
+apply(i0,true);ui();
+requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove('init');});});
+})();
+</script>
+
+</body>
+</html>
