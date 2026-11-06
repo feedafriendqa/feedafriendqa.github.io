@@ -202,6 +202,13 @@ tr:hover td{background:#fafcfa;}
         <tbody id="bfg-matched-tbody"></tbody>
       </table></div>
 
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:24px 0 8px;flex-wrap:wrap">
+        <h3 style="font-size:15px;margin:0">Receipts</h3>
+        <input class="inp" type="text" id="bfg-rcpt-search" placeholder="Find a sale: name, email or number…" style="max-width:260px;padding:8px 10px;font-size:13px" oninput="bfgRenderReceipts()">
+      </div>
+      <div class="note-inline" style="display:block;margin-bottom:8px" id="bfg-rcpt-note"></div>
+      <div id="bfg-rcpt-list"></div>
+
       <h3 style="font-size:15px;margin:24px 0 8px">Cash sales by day</h3>
       <div class="txn-table-wrap"><table>
         <thead><tr><th>Day</th><th>Sales</th><th>Cash to bank</th></tr></thead>
@@ -750,6 +757,7 @@ function renderBfg(){
   document.getElementById("bfg-cash-tbody").innerHTML = dk.length ? dk.map(function(d){
     return '<tr><td>' + d + '</td><td>' + days[d].n + '</td><td class="amt"><b>' + bfgQar(days[d].t) + '</b></td></tr>';
   }).join("") : '<tr><td colspan="3" class="empty-note">No cash sales yet.</td></tr>';
+  bfgRenderReceipts();
 }
 
 async function bfgDoConfirm(orderIds, lineId){
@@ -823,6 +831,49 @@ async function bfgPickLine(lineId){
   if(await bfgDoConfirm(BFG.manualIds, lineId)) bfgCloseManual();
 }
 function bfgCloseManual(){ document.getElementById("bfg-modal-backdrop").style.display = "none"; }
+
+// ── Books for Good: resend receipts / fix a wrong email ──
+var BFG_FN_URL = SUPABASE_URL + "/functions/v1/bfg-souq-sale";
+function bfgRenderReceipts(){
+  var q = (document.getElementById("bfg-rcpt-search").value || "").trim().toLowerCase();
+  var failed = BFG.orders.filter(function(o){ return o.receipt_status !== "sent"; });
+  var list = q ? BFG.orders.filter(function(o){ return ((o.order_no || "") + " " + (o.buyer_name || "") + " " + (o.buyer_email || "")).toLowerCase().indexOf(q) >= 0; }).slice(0, 8) : failed.slice(0, 50);
+  document.getElementById("bfg-rcpt-note").textContent = q ? "" : (failed.length ? failed.length + " receipt" + (failed.length > 1 ? "s" : "") + " not sent yet. Use Fix email if the address is wrong." : "All receipts have been sent. Search above to resend one.");
+  document.getElementById("bfg-rcpt-list").innerHTML = list.map(function(o){
+    var ok = o.receipt_status === "sent";
+    var st = ok ? '<span style="color:#146c43;font-weight:800">sent</span>' : '<span style="color:#c0392b;font-weight:800">' + escapeHtml(o.receipt_status) + '</span>' + (o.receipt_error ? '<br><span style="color:#98a89e;font-size:11.5px">' + escapeHtml(String(o.receipt_error).slice(0, 110)) + '</span>' : '');
+    return '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-top:1px solid #e7ede9">' +
+      '<div style="flex:1;min-width:220px;font-size:12.5px"><b>' + escapeHtml(o.order_no) + '</b> · ' + escapeHtml(o.buyer_name) + ' · ' + bfgQar(o.total) + '<br>' + escapeHtml(o.buyer_email) + ' · ' + st + '</div>' +
+      '<div class="row-actions"><button class="btn ghost small" onclick="bfgFixEmail(\'' + o.id + '\')">Fix email</button><button class="btn small" onclick="bfgResend(\'' + o.id + '\')">Resend</button></div></div>';
+  }).join("") || '<div class="empty-note">Nothing to show.</div>';
+}
+var bfgResending = false;
+async function bfgResend(orderId){
+  if(bfgResending) return;
+  var o = BFG.orders.filter(function(x){ return x.id === orderId; })[0];
+  if(!o) return;
+  bfgResending = true;
+  try {
+    var r = await callFn(BFG_FN_URL, { action: "resend", order_no: o.order_no, buyer_email: o.buyer_email });
+    var st = r.receipt && r.receipt.status;
+    if(st === "sent") alert("Receipt sent to " + o.buyer_email);
+    else alert("Could not send the receipt: " + ((r.receipt && (r.receipt.error || r.receipt.status)) || "unknown error"));
+  } catch(e){ alert("Could not send the receipt: " + e.message); }
+  bfgResending = false;
+  await loadBfg();
+}
+async function bfgFixEmail(orderId){
+  var o = BFG.orders.filter(function(x){ return x.id === orderId; })[0];
+  if(!o) return;
+  var e = prompt("Correct email for " + o.order_no + " (" + o.buyer_name + "):", o.buyer_email);
+  if(e === null) return;
+  e = e.trim().toLowerCase();
+  if(!/^\S+@\S+\.\S+$/.test(e)){ alert("That doesn't look like an email address."); return; }
+  var u = await sbClient.from("bfg_orders").update({ buyer_email: e }).eq("id", orderId);
+  if(u.error){ alert("Could not update the email: " + u.error.message); return; }
+  o.buyer_email = e;
+  if(confirm("Email updated to " + e + ". Send the receipt now?")) await bfgResend(orderId); else await loadBfg();
+}
 
 function closeEventModal(){
   document.getElementById("event-modal-backdrop").style.display = "none";
