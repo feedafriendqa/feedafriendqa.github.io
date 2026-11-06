@@ -18,19 +18,31 @@ const esc = (t: unknown) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g,
 const qr = (n: number) => "QR " + (Math.round(n * 100) / 100);
 const SITE = "https://connect.feedafriend.org/BFG-souq";
 const TOTE_PRICE = 30;
+// Logos are fetched once from the repo and attached inline (CID) so they always display in mail apps.
+const LOGO_BASE = "https://raw.githubusercontent.com/feedafriendqa/feedafriendqa.github.io/main/BFG-souq/email";
+let logoCache: { faf: Uint8Array; tfg: Uint8Array } | null = null;
+async function loadLogos() {
+  if (logoCache) return logoCache;
+  const get = async (n: string) => {
+    try { const r = await fetch(`${LOGO_BASE}/${n}`); return r.ok ? new Uint8Array(await r.arrayBuffer()) : undefined; } catch { return undefined; }
+  };
+  const faf = await get("faf-logo.png"), tfg = await get("tfg-logo.png");
+  if (faf && tfg && faf.length > 500 && tfg.length > 500) { logoCache = { faf, tfg }; return logoCache; }
+  return null;
+}
 const METHODS: Record<string, { label: string; ar: string; status: string }> = {
   cash: { label: "Cash", ar: "نقداً", status: "received" },
   fawran: { label: "Fawran", ar: "فورَا", status: "awaiting_match" },
   card: { label: "Card", ar: "بطاقة", status: "awaiting_match" },
 };
 
-function receiptHtml(o: any, items: any[]) {
+function receiptHtml(o: any, items: any[], cid: boolean) {
   const when = new Date(o.created_at).toLocaleString("en-GB", { timeZone: "Asia/Qatar", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const m = METHODS[o.payment_method];
   const rows = items.map((l) => `<tr><td style="padding:8px 0;border-bottom:1px solid #e7ede9;font-size:13px"><b>${esc(l.label)}</b></td><td style="padding:8px 0;border-bottom:1px solid #e7ede9;text-align:center;font-size:13px">${l.qty}</td><td style="padding:8px 0;border-bottom:1px solid #e7ede9;text-align:right;font-size:13px">${qr(l.unit_price)}</td><td style="padding:8px 0;border-bottom:1px solid #e7ede9;text-align:right;font-size:13px;font-weight:800">${qr(l.line_total)}</td></tr>`).join("");
   const lbl = "font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#98a89e";
   return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#101a14">
-<div style="background:#146c43;padding:18px 20px"><table width="100%"><tr><td><img src="${SITE}/faf-logo-white-email.png" height="34" alt="Feed a Friend" style="vertical-align:middle"> &nbsp; <img src="${SITE}/tfg-logo-white.png" height="40" alt="Together for Good" style="vertical-align:middle"></td><td style="text-align:right;color:#fff;font-weight:800;font-size:16px">Receipt<br><span style="font-size:14px">إيصال</span></td></tr></table></div>
+<div style="background:#146c43;padding:18px 20px"><table width="100%"><tr><td><img src="${cid ? "cid:faflogo" : SITE + "/faf-logo-white-email.png"}" height="34" alt="Feed a Friend" style="vertical-align:middle"> &nbsp; <img src="${cid ? "cid:tfglogo" : SITE + "/tfg-logo-white.png"}" height="40" alt="Together for Good" style="vertical-align:middle"></td><td style="text-align:right;color:#fff;font-weight:800;font-size:16px">Receipt<br><span style="font-size:14px">إيصال</span></td></tr></table></div>
 <div style="padding:18px 20px">
 <div style="font-weight:900;font-size:18px">Books for Good Souq</div><div style="font-size:14px;color:#6b7d73;direction:rtl;text-align:right">سوق كتب من أجل الخير</div>
 <p style="font-size:13px;line-height:1.6">Thank you, ${esc(o.buyer_name)}. Every riyal from today's sale supports Feed a Friend.<br><span style="direction:rtl;display:block;text-align:right;color:#6b7d73">شكراً لك. يدعم كل ريال من بيع اليوم Feed a Friend.</span></p>
@@ -57,13 +69,18 @@ async function sendReceipt(admin: any, o: any, items: any[]) {
     return { status: "not_configured" };
   }
   try {
+    const logos = await loadLogos();
     const client = new SMTPClient({ connection: { hostname: "smtp.gmail.com", port: 465, tls: true, auth: { username: user, password: pass } } });
     await client.send({
       from: `Together for Good <${user}>`,
       to: o.buyer_email,
       subject: `Your Books for Good receipt · ${o.order_no}`,
       content: `Thank you ${o.buyer_name}. Receipt ${o.order_no}, total ${qr(o.total)}. View this email in HTML for the full receipt.`,
-      html: receiptHtml(o, items),
+      html: receiptHtml(o, items, !!logos),
+      attachments: logos ? [
+        { filename: "faf-logo.png", content: logos.faf, encoding: "binary", contentType: "image/png", contentID: "faflogo" },
+        { filename: "tfg-logo.png", content: logos.tfg, encoding: "binary", contentType: "image/png", contentID: "tfglogo" },
+      ] : [],
     });
     await client.close();
     await admin.from("bfg_orders").update({ receipt_status: "sent", receipt_sent_at: new Date().toISOString(), receipt_error: null }).eq("id", o.id);
