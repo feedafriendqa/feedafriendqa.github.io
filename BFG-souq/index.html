@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@600;700;800;900&family=Manrope:wght@400;500;600;700;800&family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#eef1ed;font-family:"Manrope",sans-serif;color:#101a14;-webkit-font-smoothing:antialiased}*{box-sizing:border-box}a{color:#146c43}a:hover{color:#0b2f20}input{font-family:inherit}button{font-family:inherit;-webkit-tap-highlight-color:transparent}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;justify-content:center">
+<div style="width:100%;max-width:560px;min-height:100vh;background:#146c43;display:flex;flex-direction:column;box-shadow:0 0 40px rgba(11,47,32,.08)">
+
+<sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}"><div style="background:#146c43;padding:14px 18px 16px;flex:none;position:sticky;top:0;z-index:5;border-bottom:1px solid rgba(255,255,255,.14)">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+<div style="display:flex;align-items:center;gap:10px">
+<img src="faf-logo-white-email.png" alt="Feed a Friend" style="height:30px;width:auto">
+<span style="width:1px;height:26px;background:rgba(255,255,255,.3)"></span>
+<img src="tfg-logo-white.png" alt="Together for Good" style="height:40px;width:auto">
+</div>
+<sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}"><button onClick="{{ doLogout }}" style="font:700 11px 'Manrope',sans-serif;color:#fff;background:rgba(255,255,255,.14);border:none;padding:6px 11px;border-radius:20px;cursor:pointer">{{ vol.first }} · Sign out</button></sc-if>
+</div>
+<div style="margin-top:12px;display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap">
+<div style="font:900 22px/1.05 'League Spartan',sans-serif;color:#fff;letter-spacing:-.2px">Books for Good Souq</div>
+<div style="font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#a9df49">{{ today }}</div>
+</div>
+</div></sc-if>
+
+<sc-if value="{{ loggedOut }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;min-height:100vh;background:#146c43;padding:36px 24px;display:flex;flex-direction:column;justify-content:center">
+<div style="display:flex;align-items:center;justify-content:center;gap:16px"><img src="faf-logo-white-email.png" alt="Feed a Friend" style="height:50px;width:auto"><span style="width:1px;height:44px;background:rgba(255,255,255,.3)"></span><img src="tfg-logo-white.png" alt="Together for Good" style="height:64px;width:auto"></div>
+<div style="text-align:center;font:900 28px/1.05 'League Spartan',sans-serif;color:#fff;margin-top:22px;letter-spacing:-.3px">Books for Good Souq</div>
+<div style="text-align:center;font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#a9df49;margin-top:8px">{{ today }}</div>
+<div style="height:24px"></div>
+<div style="background:#fff;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:12px;width:100%;max-width:420px;align-self:center">
+<label style="display:block"><span style="display:block;font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#98a89e;margin-bottom:6px">Your name</span><input value="{{ login.name }}" onChange="{{ onLoginName }}" placeholder="e.g. Aisha Khalid" style="width:100%;padding:14px 16px;border:1.5px solid #d7e3da;border-radius:16px;font-size:16px;background:#fbfcfa;outline:none"></label>
+<label style="display:block"><span style="display:block;font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#98a89e;margin-bottom:6px">Mobile number</span><div style="display:flex;border:1.5px solid #d7e3da;border-radius:16px;background:#fbfcfa;overflow:hidden"><span style="padding:14px 0 14px 16px;font-size:16px;font-weight:700;color:#6b7d73">+974</span><input type="tel" inputmode="numeric" value="{{ login.phone }}" onChange="{{ onLoginPhone }}" placeholder="5512 3456" style="flex:1;min-width:0;padding:14px 16px 14px 10px;border:none;font-size:16px;background:transparent;outline:none"></div></label>
+<button onClick="{{ doLogin }}" style="margin-top:4px;padding:16px;border-radius:50px;border:none;background:{{ loginBg }};color:{{ loginFg }};font:800 15px 'League Spartan',sans-serif;cursor:pointer">Start selling</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCart }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;padding:18px">
+<div style="font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72);margin-bottom:10px">Books · tap once per book</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+<sc-for list="{{ prices }}" as="p" hint-placeholder-count="5">
+<button onClick="{{ p.add }}" style="position:relative;height:104px;border-radius:18px;border:2px solid {{ p.bd }};background:{{ p.bg }};box-shadow:{{ p.ring }};cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+<span style="font:700 11px 'Manrope',sans-serif;color:{{ p.fg }};opacity:.75">QR</span><span style="font:900 38px/1 'League Spartan',sans-serif;color:{{ p.fg }};letter-spacing:-1px">{{ p.price }}</span>
+<span style="position:absolute;top:8px;right:8px;min-width:26px;height:26px;padding:0 7px;border-radius:13px;background:#0b2f20;color:#fff;font:900 13px/26px 'League Spartan',sans-serif;visibility:{{ p.qtyVis }}">{{ p.qty }}</span>
+</button>
+</sc-for>
+<button onClick="{{ toggleOther }}" style="height:104px;border-radius:18px;border:2px dashed rgba(255,255,255,.4);background:rgba(255,255,255,.06);cursor:pointer;font:800 14px 'League Spartan',sans-serif;color:#fff">Other<br>price</button>
+</div>
+<sc-if value="{{ otherOpen }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:8px;margin-top:10px">
+<input type="number" inputmode="numeric" placeholder="Amount in QR" value="{{ otherStr }}" onChange="{{ onOther }}" style="flex:1;min-width:0;padding:13px 15px;border:1.5px solid #d7e3da;border-radius:14px;font-size:16px;outline:none;background:#fff">
+<button onClick="{{ addOther }}" style="padding:0 20px;border-radius:14px;border:none;background:#d9a441;color:#0b2f20;font:700 14px 'Manrope',sans-serif;cursor:pointer">Add</button>
+</div>
+</sc-if>
+<button onClick="{{ toteAdd }}" style="margin-top:14px;width:100%;display:flex;align-items:center;gap:14px;padding:12px;border-radius:18px;border:2px solid {{ toteBd }};background:{{ toteBg }};cursor:pointer;text-align:left">
+<img src="faf-tote.png" alt="Feed a Friend tote bag" style="width:64px;height:64px;border-radius:12px;flex:none;object-fit:cover;background:#fff">
+<div style="flex:1"><div style="font:800 15px 'League Spartan',sans-serif;color:#0b2f20">FAF tote bag</div><div style="display:flex;align-items:baseline;gap:6px;font:600 12px 'Manrope',sans-serif"><span style="font:900 16px 'League Spartan',sans-serif;color:#146c43">QR 30</span><span style="color:#98a89e;text-decoration:line-through">QR 50</span><span style="background:#c0392b;color:#fff;font:800 10px 'Manrope',sans-serif;padding:2px 7px;border-radius:10px">SALE</span></div></div>
+<span style="min-width:30px;height:30px;padding:0 8px;border-radius:15px;background:#d9a441;color:#0b2f20;font:900 14px/30px 'League Spartan',sans-serif;text-align:center;visibility:{{ toteVis }}">{{ tote }}</span>
+</button>
+<sc-if value="{{ notEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:18px;border-top:1px solid rgba(255,255,255,.2);padding-top:12px;color:#fff;display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ lines }}" as="l" hint-placeholder-count="0">
+<div style="display:flex;align-items:center;gap:10px;font-size:14px"><button onClick="{{ l.sub }}" style="width:32px;height:32px;border-radius:16px;border:1.5px solid rgba(255,255,255,.4);background:transparent;color:#fff;font-weight:800;cursor:pointer">−</button><span style="width:12px;height:12px;border-radius:3px;background:{{ l.dot }};border:1px solid rgba(0,0,0,.15);flex:none"></span><span style="flex:1;font-weight:600">{{ l.qty }} × {{ l.label }}</span><span style="font-weight:800">{{ l.amtF }}</span></div>
+</sc-for>
+<button onClick="{{ clear }}" style="align-self:flex-start;background:none;border:none;padding:4px 0;font:700 12px 'Manrope',sans-serif;color:#ffc1b6;cursor:pointer">Clear sale</button>
+</div>
+</sc-if>
+</div>
+<div style="flex:none;position:sticky;bottom:0;background:#0b2f20;padding:14px 16px 16px;display:flex;align-items:center;gap:12px">
+<div style="flex:1"><div style="font:700 10px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.5)">{{ countLabel }}</div><div style="font:900 30px/1.05 'League Spartan',sans-serif;color:#a9df49;letter-spacing:-.5px">{{ totalF }}</div></div>
+<button onClick="{{ goPay }}" style="padding:15px 22px;border-radius:50px;border:none;background:{{ ctaBg }};color:{{ ctaFg }};font:800 15px 'League Spartan',sans-serif;cursor:pointer">Checkout →</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPay }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;padding:18px;display:flex;flex-direction:column;gap:16px">
+<button onClick="{{ goCart }}" style="align-self:flex-start;background:none;border:none;padding:0;font:700 13px 'Manrope',sans-serif;color:#a9df49;cursor:pointer">← Edit items</button>
+<div style="background:#0b2f20;border-radius:18px;padding:16px;display:flex;justify-content:space-between;align-items:baseline"><span style="font:700 13px 'Manrope',sans-serif;color:rgba(255,255,255,.75)">{{ countLabel }}</span><span style="font:900 32px 'League Spartan',sans-serif;color:#a9df49">{{ totalF }}</span></div>
+<div><div style="font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72);margin-bottom:8px">Paying by</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<sc-for list="{{ methods }}" as="m" hint-placeholder-count="3">
+<button onClick="{{ m.pick }}" style="padding:14px 6px;border-radius:16px;border:2px solid {{ m.bd }};background:{{ m.bg }};color:{{ m.fg }};cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font:800 15px 'League Spartan',sans-serif">{{ m.label }}</span><span style="font:600 10.5px 'Manrope',sans-serif;opacity:.75">{{ m.sub }}</span></button>
+</sc-for>
+</div></div>
+<sc-if value="{{ isCash }}" hint-placeholder-val="{{ false }}">
+<div><div style="font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72);margin-bottom:8px">Cash given</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ cashOpts }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.pick }}" style="padding:10px 16px;border-radius:30px;border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:700 13px 'Manrope',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div>
+<sc-if value="{{ hasChange }}" hint-placeholder-val="{{ false }}"><div style="margin-top:10px;padding:12px 14px;border-radius:14px;background:#fdf6e7;font:700 14px 'Manrope',sans-serif;color:#7a5512">Give change: <span style="font:900 18px 'League Spartan',sans-serif">{{ changeF }}</span></div></sc-if>
+</div>
+</sc-if>
+<sc-if value="{{ isFawran }}" hint-placeholder-val="{{ false }}"><div style="border-radius:16px;background:#fff;border:none;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+<div style="font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#146c43">Tell the buyer</div>
+<div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px;align-items:baseline">
+<span style="color:#6b7d73">Send to</span><span style="font-weight:800;color:#0b2f20">Fawran → Business / by CR</span>
+<span style="color:#6b7d73">CR number</span><span style="font:900 22px/1 'League Spartan',sans-serif;color:#0b2f20;letter-spacing:.5px">229085</span>
+<span style="color:#6b7d73">Amount</span><span style="font-weight:800;color:#0b2f20">{{ totalF }}</span>
+<span style="color:#6b7d73">Type</span><span style="font-weight:800;color:#0b2f20">Goods &amp; services</span>
+</div>
+<div style="padding:9px 12px;border-radius:10px;background:#fdecea;color:#a2281b;font:800 12.5px 'Manrope',sans-serif">Not "Charity" — choose Goods &amp; services</div>
+<div style="font-size:12.5px;line-height:1.5;color:#6b7d73">Check the transfer has arrived before you send the receipt.</div>
+</div></sc-if>
+<label style="display:block"><span style="display:block;font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72);margin-bottom:6px">Buyer name</span><input value="{{ name }}" onChange="{{ onName }}" placeholder="Full name" style="width:100%;padding:14px 16px;border:1.5px solid #d7e3da;border-radius:16px;font-size:16px;background:#fbfcfa;outline:none"></label>
+<label style="display:block"><span style="display:block;font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72);margin-bottom:6px">Email for receipt</span><input type="email" value="{{ email }}" onChange="{{ onEmail }}" placeholder="name@example.com" style="width:100%;padding:14px 16px;border:1.5px solid #d7e3da;border-radius:16px;font-size:16px;background:#fbfcfa;outline:none"></label>
+<label style="display:block"><span style="display:block;font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72);margin-bottom:6px">Mobile (optional, helps match Fawran payments)</span><input type="tel" value="{{ phone }}" onChange="{{ onPhone }}" placeholder="+974 5555 5555" style="width:100%;padding:14px 16px;border:1.5px solid #d7e3da;border-radius:16px;font-size:16px;background:#fbfcfa;outline:none"></label>
+</div>
+<sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><div style="margin:0 16px 10px;padding:10px 12px;border-radius:10px;background:#fdecea;color:#a2281b;font:800 12.5px 'Manrope',sans-serif">{{ err }}</div></sc-if>
+<div style="flex:none;position:sticky;bottom:0;background:#146c43;padding:14px 16px 18px;border-top:1px solid rgba(255,255,255,.16)"><button onClick="{{ send }}" style="width:100%;padding:16px;border-radius:50px;border:none;background:{{ sendBg }};color:{{ sendFg }};font:800 15px 'League Spartan',sans-serif;cursor:pointer">{{ sendLabel }}</button></div>
+</sc-if>
+
+<sc-if value="{{ isSent }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;padding:24px 18px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px">
+<div style="width:76px;height:76px;border-radius:50%;background:#a9df49;display:flex;align-items:center;justify-content:center;font:900 36px 'League Spartan',sans-serif;color:#0b2f20">✓</div>
+<div style="font:900 24px 'League Spartan',sans-serif;color:#fff">{{ r.headline }}</div>
+<div style="font-size:14px;color:rgba(255,255,255,.8);line-height:1.5">{{ r.totalF }} · {{ r.method }} · to {{ r.email }}</div>
+<sc-if value="{{ r.noReceipt }}" hint-placeholder-val="{{ false }}"><div style="width:100%;padding:10px 12px;border-radius:10px;background:#fff3cd;color:#7a5b00;font:700 12.5px 'Manrope',sans-serif;text-align:left">The sale is saved, but the receipt email has not gone out yet. Check the address, then resend.<button onClick="{{ resend }}" style="display:block;margin-top:8px;padding:9px 16px;border-radius:30px;border:none;background:#d9a441;color:#0b2f20;font:800 13px 'League Spartan',sans-serif;cursor:pointer">{{ resendLabel }}</button></div></sc-if>
+<button onClick="{{ newSale }}" style="width:100%;margin-top:4px;padding:16px;border-radius:50px;border:none;background:#d9a441;color:#0b2f20;font:800 15px 'League Spartan',sans-serif;cursor:pointer">Next sale</button>
+<div style="width:100%;text-align:left;font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72);margin-top:14px">Email the buyer received</div>
+<div style="width:100%;text-align:left;background:rgba(255,255,255,.1);border-radius:14px;padding:12px">
+<div style="background:#fff;border-radius:12px;overflow:hidden">
+<div style="background:#146c43;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><img src="faf-logo-white-email.png" alt="Feed a Friend" style="height:34px;width:auto"><img src="tfg-logo-white.png" alt="Together for Good" style="height:40px;width:auto"></div>
+<div style="text-align:right;color:#fff"><div style="font:800 16px 'League Spartan',sans-serif">Receipt</div><div style="font:700 14px 'Cairo',sans-serif;direction:rtl">إيصال</div></div>
+</div>
+<div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+<div><div style="font:900 18px 'League Spartan',sans-serif;color:#0b2f20">Books for Good Souq</div><div style="font:700 14px 'Cairo',sans-serif;color:#6b7d73;direction:rtl;text-align:right">سوق كتب من أجل الخير</div></div>
+<div style="font-size:13px;line-height:1.6">Thank you, {{ r.name }}. Every riyal from today's sale supports Feed a Friend.<div style="font-family:'Cairo',sans-serif;direction:rtl;text-align:right;color:#6b7d73;margin-top:2px">شكراً لك. يدعم كل ريال من بيع اليوم Feed a Friend.</div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;padding:12px 14px;background:#fbfcfa;border-radius:10px;font-size:12px">
+<div><div style="font:700 9.5px ui-monospace,Menlo,monospace;text-transform:uppercase;color:#98a89e">Receipt no. · رقم الإيصال</div><div style="font-weight:800;margin-top:2px">{{ r.no }}</div></div>
+<div><div style="font:700 9.5px ui-monospace,Menlo,monospace;text-transform:uppercase;color:#98a89e">Date · التاريخ</div><div style="font-weight:800;margin-top:2px">{{ r.date }}</div></div>
+<div><div style="font:700 9.5px ui-monospace,Menlo,monospace;text-transform:uppercase;color:#98a89e">Payment · طريقة الدفع</div><div style="font-weight:800;margin-top:2px">{{ r.method }} · <span style="font-family:'Cairo',sans-serif">{{ r.methodAr }}</span></div></div>
+<div><div style="font:700 9.5px ui-monospace,Menlo,monospace;text-transform:uppercase;color:#98a89e">Served by · البائع</div><div style="font-weight:800;margin-top:2px">{{ r.vol }}</div></div>
+</div>
+<div>
+<div style="display:grid;grid-template-columns:1fr 36px 64px 70px;gap:6px;padding-bottom:7px;border-bottom:1.5px solid #0b2f20;font:700 9.5px ui-monospace,Menlo,monospace;text-transform:uppercase;color:#6b7d73"><span>Item · الصنف</span><span style="text-align:center">Qty</span><span style="text-align:right">Unit</span><span style="text-align:right">Amount</span></div>
+<sc-for list="{{ r.lines }}" as="l" hint-placeholder-count="2"><div style="display:grid;grid-template-columns:1fr 36px 64px 70px;gap:6px;padding:8px 0;border-bottom:1px solid #e7ede9;font-size:12.5px;align-items:baseline"><span><b>{{ l.label }}</b> <span style="font-family:'Cairo',sans-serif;color:#6b7d73">{{ l.labelAr }}</span></span><span style="text-align:center">{{ l.qty }}</span><span style="text-align:right">{{ l.unitF }}</span><span style="text-align:right;font-weight:800">{{ l.amtF }}</span></div></sc-for>
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:10px;gap:10px"><span style="font:800 14px 'League Spartan',sans-serif">Total paid · <span style="font-family:'Cairo',sans-serif">المبلغ المدفوع</span></span><span style="font:900 22px 'League Spartan',sans-serif;color:#146c43">{{ r.totalF }}</span></div>
+<div style="font-size:11px;color:#98a89e;margin-top:2px">All prices in Qatari riyals (QAR). No VAT is charged in Qatar. · جميع الأسعار بالريال القطري.</div>
+</div>
+<div style="border-top:1px solid #e7ede9;padding-top:12px;font-size:11px;line-height:1.6;color:#6b7d73">
+<div style="font-weight:800;color:#101a14">Together for Good Events W.L.L. · <span style="font-family:'Cairo',sans-serif">توجذر فور جود ايفينتس ذ.م.م</span></div>
+<div>In support of Feed a Friend · Books for Good</div>
+<div>C.R. no. 229085 · Commercial licence no. 319832 · Tax ID (TIN) 5008097008</div>
+<div>Unit 36, Floor 2, Building 32, Street 205, Zone 56, Doha, Qatar</div>
+<div>Returns and exchanges: in line with Qatari consumer law. These are preloved books, sold in the condition seen at the time of purchase.</div>
+<div style="font-family:'Cairo',sans-serif;direction:rtl;text-align:right">الإرجاع والاستبدال وفقاً لقوانين حماية المستهلك في دولة قطر. الكتب مستعملة وتُباع بالحالة التي كانت عليها وقت الشراء.</div>
+<div>Issued to {{ r.name }} · {{ r.email }}</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  static blank() { return { q: { 1: 0, 5: 0, 10: 0, 15: 0, 20: 0 }, tote: 0, others: [], otherStr: '', otherOpen: false, step: 'cart', method: null, given: 0, name: '', email: '', phone: '', sending: false, err: '' }; }
+  static COL = {
+    1: { bg: '#ffffff', fg: '#0b2f20', bd: '#d7e3da' },
+    5: { bg: '#2e9e5b', fg: '#ffffff', bd: 'rgba(255,255,255,.55)' },
+    10: { bg: '#f5c330', fg: '#0b2f20', bd: '#f5c330' },
+    15: { bg: '#f08a24', fg: '#2a1600', bd: '#f08a24' },
+    20: { bg: '#2f7fd6', fg: '#ffffff', bd: '#2f7fd6' }
+  };
+  state = Object.assign(Component.blank(), { seq: 1, last: null, loggedIn: false, login: { name: '', phone: '' }, vol: { name: '', phone: '' } });
+  fmt(n) { return 'QR ' + (Math.round(n * 100) / 100); }
+  now(opts) { try { return new Date().toLocaleString('en-GB', Object.assign({ timeZone: 'Asia/Qatar' }, opts)); } catch (e) { return new Date().toDateString(); } }
+  renderVals() {
+    const s = this.state, fmt = this.fmt, C = Component.COL, P = [1, 5, 10, 15, 20];
+    const up = p => this.setState(p);
+    const prices = P.map(p => { const q = s.q[p], c = C[p]; return { price: p, qty: q, qtyVis: q ? 'visible' : 'hidden', bg: c.bg, fg: c.fg, bd: c.bd,
+      ring: q ? '0 0 0 3px #a9df49' : 'none',
+      add: () => this.setState(x => ({ q: Object.assign({}, x.q, { [p]: x.q[p] + 1 }) })) }; });
+    const lines = [];
+    P.forEach(p => { if (s.q[p]) lines.push({ label: 'Book · QR ' + p, labelAr: 'كتاب', qty: s.q[p], unitF: fmt(p), amtF: fmt(p * s.q[p]), dot: C[p].bg, sub: () => this.setState(x => ({ q: Object.assign({}, x.q, { [p]: Math.max(0, x.q[p] - 1) }) })) }); });
+    s.others.forEach((o, i) => lines.push({ label: 'Book · QR ' + o, labelAr: 'كتاب', qty: 1, unitF: fmt(o), amtF: fmt(o), dot: '#e7ede9', sub: () => this.setState(x => ({ others: x.others.filter((_, j) => j !== i) })) }));
+    if (s.tote) lines.push({ label: 'FAF tote bag (sale price, usually QR 50)', labelAr: 'حقيبة قماشية', qty: s.tote, unitF: fmt(30), amtF: fmt(30 * s.tote), dot: '#d9a441', sub: () => this.setState(x => ({ tote: Math.max(0, x.tote - 1) })) });
+    const books = P.reduce((t, p) => t + s.q[p], 0) + s.others.length;
+    const total = P.reduce((t, p) => t + p * s.q[p], 0) + s.others.reduce((t, o) => t + o, 0) + 30 * s.tote;
+    const has = total > 0;
+    const countLabel = has ? [books ? books + (books === 1 ? ' book' : ' books') : '', s.tote ? s.tote + ' tote' + (s.tote > 1 ? 's' : '') : ''].filter(Boolean).join(' + ') : 'Nothing added';
+    const M = [{ id: 'cash', label: 'Cash', ar: 'نقداً', sub: 'Work out change' }, { id: 'fawran', label: 'Fawran', ar: 'فورَا', sub: 'Instant transfer' }, { id: 'card', label: 'Card', ar: 'بطاقة', sub: 'Card machine' }];
+    const methods = M.map(m => { const on = s.method === m.id; return Object.assign({}, m, { bg: on ? '#a9df49' : '#ffffff', fg: '#0b2f20', bd: on ? '#a9df49' : '#ffffff', pick: () => up({ method: m.id, given: 0 }) }); });
+    const cand = [total].concat([10, 20, 50, 100, 200, 500].filter(v => v > total)).slice(0, 5);
+    const cashOpts = cand.map((v, i) => { const on = s.given === v; return { label: i === 0 ? 'Exact' : fmt(v), bg: on ? '#a9df49' : '#fff', fg: '#0b2f20', bd: on ? '#a9df49' : '#fff', pick: () => up({ given: v }) }; });
+    const okEmail = /^\S+@\S+\.\S+$/.test(s.email.trim());
+    const canSend = has && !!s.method && s.name.trim().length > 1 && okEmail;
+    const mObj = M.find(m => m.id === s.method);
+    let sendLabel = 'Send receipt · ' + fmt(total);
+    if (!s.method) sendLabel = 'Choose how they paid'; else if (!(s.name.trim().length > 1)) sendLabel = 'Add buyer name'; else if (!okEmail) sendLabel = 'Add a valid email';
+    if (s.sending) sendLabel = 'Saving sale…';
+    const API = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/bfg-souq-sale', KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
+    const call = body => fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY }, body: JSON.stringify(body) }).then(r => r.json().catch(() => ({ error: 'Bad response' })).then(j => { if (!r.ok || j.error) throw new Error(j.error || 'Could not save the sale'); return j; }));
+    const toItems = () => {
+      const it = [];
+      P.forEach(p => { if (s.q[p]) it.push({ type: 'book', price: p, qty: s.q[p] }); });
+      s.others.forEach(o => it.push({ type: 'book', price: o, qty: 1 }));
+      if (s.tote) it.push({ type: 'tote', qty: s.tote });
+      return it;
+    };
+    const send = () => {
+      if (!canSend || s.sending) return;
+      this.setState({ sending: true, err: '' });
+      call({ action: 'sale', items: toItems(), payment_method: s.method, cash_given: s.given || total,
+        buyer_name: s.name.trim(), buyer_email: s.email.trim(), buyer_phone: s.phone.trim(),
+        volunteer_name: s.vol.name, volunteer_phone: s.vol.phone })
+        .then(j => {
+          const ok = j.receipt && j.receipt.status === 'sent';
+          const sale = { no: j.order_no, date: this.now({ day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }), name: s.name.trim(), email: s.email.trim(), method: mObj.label, methodAr: mObj.ar, vol: s.vol.name, totalF: fmt(j.total), headline: ok ? 'Receipt sent' : 'Sale saved', noReceipt: !ok, resending: false,
+            lines: lines.map(l => ({ label: l.label, labelAr: l.labelAr, qty: l.qty, unitF: l.unitF, amtF: l.amtF })) };
+          this.setState({ seq: s.seq + 1, last: sale, step: 'sent', sending: false });
+        })
+        .catch(e => this.setState({ sending: false, err: (e && e.message === 'Failed to fetch' ? 'No connection. Nothing was saved, so check the signal and tap again.' : (e && e.message) || 'Could not save the sale.') }));
+    };
+    const resend = () => {
+      const l = s.last; if (!l || l.resending) return;
+      this.setState({ last: Object.assign({}, l, { resending: true }) });
+      call({ action: 'resend', order_no: l.no, buyer_email: l.email })
+        .then(j => { const ok = j.receipt && j.receipt.status === 'sent'; this.setState(x => ({ last: Object.assign({}, x.last, { resending: false, noReceipt: !ok, headline: ok ? 'Receipt sent' : 'Sale saved' }) })); })
+        .catch(() => this.setState(x => ({ last: Object.assign({}, x.last, { resending: false }) })));
+    };
+    const okLogin = s.login.name.trim().length > 1 && s.login.phone.replace(/\D/g, '').length >= 8;
+    const step = s.loggedIn ? s.step : 'login';
+    return {
+      today: this.now({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+      prices, lines, tote: s.tote, toteVis: s.tote ? 'visible' : 'hidden',
+      toteBg: s.tote ? '#fdf6e7' : '#ffffff', toteBd: s.tote ? '#d9a441' : '#ffffff',
+      toteAdd: () => this.setState(x => ({ tote: x.tote + 1 })),
+      otherStr: s.otherStr, otherOpen: s.otherOpen, onOther: e => up({ otherStr: e.target.value }),
+      addOther: () => { const v = parseFloat(this.state.otherStr); if (v > 0) this.setState(x => ({ others: x.others.concat([v]), otherStr: '' })); },
+      toggleOther: () => this.setState(x => ({ otherOpen: !x.otherOpen })),
+      totalF: fmt(total), countLabel, notEmpty: has,
+      ctaBg: has ? '#d9a441' : 'rgba(255,255,255,.1)', ctaFg: has ? '#0b2f20' : 'rgba(255,255,255,.4)',
+      isCart: step === 'cart', isPay: step === 'pay', isSent: step === 'sent',
+      goPay: () => { if (has) up({ step: 'pay' }); }, goCart: () => up({ step: 'cart' }),
+      clear: () => this.setState(Component.blank()), newSale: () => this.setState(Component.blank()),
+      methods, isCash: s.method === 'cash', isFawran: s.method === 'fawran',
+      cashOpts, hasChange: s.method === 'cash' && s.given > total, changeF: fmt(s.given - total),
+      name: s.name, email: s.email, phone: s.phone, onPhone: e => up({ phone: e.target.value }), hasErr: !!s.err, err: s.err, resend, resendLabel: (s.last && s.last.resending) ? 'Sending…' : 'Resend receipt', onName: e => up({ name: e.target.value }), onEmail: e => up({ email: e.target.value }),
+      send, sendLabel, sendBg: canSend ? '#d9a441' : 'rgba(255,255,255,.12)', sendFg: canSend ? '#0b2f20' : 'rgba(255,255,255,.55)',
+      r: s.last || { lines: [], headline: '', noReceipt: false },
+      vol: { first: (s.vol.name.split(' ')[0] || '') },
+      login: s.login, loggedIn: s.loggedIn, loggedOut: !s.loggedIn,
+      loginBg: okLogin ? '#d9a441' : '#e7ede9', loginFg: okLogin ? '#0b2f20' : '#98a89e',
+      onLoginName: e => this.setState({ login: Object.assign({}, this.state.login, { name: e.target.value }) }),
+      onLoginPhone: e => this.setState({ login: Object.assign({}, this.state.login, { phone: e.target.value }) }),
+      doLogin: () => { if (okLogin) this.setState({ loggedIn: true, vol: { name: s.login.name.trim(), phone: '+974 ' + s.login.phone.trim() } }); },
+      doLogout: () => this.setState(Object.assign(Component.blank(), { loggedIn: false, login: { name: '', phone: '' } }))
+    };
+  }
+}
+</script>
+</body>
+</html>
