@@ -179,6 +179,49 @@ tr:hover td{background:#fafcfa;}
       <div id="upload-result"></div>
     </div>
 
+    <div class="card-block" id="bfg-block">
+      <h2>Books for Good sales</h2>
+      <div class="summary-grid" id="bfg-tiles"><div class="empty-note">Loading…</div></div>
+
+      <h3 style="font-size:15px;margin:24px 0 8px">Suggested matches</h3>
+      <div class="note-inline" style="display:block;margin-bottom:8px">Card and Fawran sales matched to a bank transfer with the same amount. Check the sender, then confirm.</div>
+      <div id="bfg-suggest"></div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:24px 0 8px;flex-wrap:wrap">
+        <h3 style="font-size:15px;margin:0">Waiting for a transfer</h3>
+        <button class="btn small" onclick="bfgOpenManual()">Match selected to a transfer…</button>
+      </div>
+      <div class="txn-table-wrap"><table>
+        <thead><tr><th></th><th>Sale</th><th>Buyer</th><th>Method</th><th>Items</th><th>Total</th></tr></thead>
+        <tbody id="bfg-open-tbody"></tbody>
+      </table></div>
+
+      <h3 style="font-size:15px;margin:24px 0 8px">Matched</h3>
+      <div class="txn-table-wrap"><table>
+        <thead><tr><th>Sale</th><th>Buyer</th><th>Total</th><th>Matched to</th><th></th></tr></thead>
+        <tbody id="bfg-matched-tbody"></tbody>
+      </table></div>
+
+      <h3 style="font-size:15px;margin:24px 0 8px">Cash sales by day</h3>
+      <div class="txn-table-wrap"><table>
+        <thead><tr><th>Day</th><th>Sales</th><th>Cash to bank</th></tr></thead>
+        <tbody id="bfg-cash-tbody"></tbody>
+      </table></div>
+      <div class="note-inline" style="margin-top:12px;display:block">Cash sales don't arrive in the bank statement as separate transfers. Compare each day's total with what you pay in.</div>
+    </div>
+
+    <div id="bfg-modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center" onclick="if(event.target===this) bfgCloseManual()">
+      <div style="background:#fff;border-radius:12px;padding:20px;width:min(640px,94vw);max-height:84vh;overflow:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h3 style="margin:0;font-size:16px">Match to a bank transfer</h3>
+          <button class="btn ghost small" onclick="bfgCloseManual()">✕</button>
+        </div>
+        <div id="bfg-modal-summary" style="font-size:13px;margin-bottom:10px"></div>
+        <input class="inp" type="text" id="bfg-modal-search" placeholder="Filter by amount or sender name…" style="width:100%;padding:9px 10px;font-size:13px;margin-bottom:8px" oninput="bfgRenderLines()">
+        <div id="bfg-modal-lines" style="max-height:48vh;overflow:auto;border:1px solid #e7ede9;border-radius:8px"></div>
+      </div>
+    </div>
+
     <div class="card-block">
       <h2>Transactions</h2>
       <div class="filter-bar" id="filter-bar"></div>
@@ -303,6 +346,7 @@ async function revealMain(user){
   loadEventOptions();
   loadSummary();
   loadTransactions();
+  loadBfg();
 }
 
 var EVENTS = []; // cached list of {id, name, project, event_date, count}
@@ -624,6 +668,162 @@ function openEventModal(lineId){
   document.getElementById("event-modal-backdrop").style.display = "flex";
   document.getElementById("event-modal-search").focus();
 }
+// ── Books for Good souq sales: view and match to bank transfers ──
+var BFG = { orders: [], cands: [], lineById: {}, manualIds: [], manualLines: [] };
+function bfgQar(n){ return "QAR " + Number(n).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2}); }
+function bfgWhen(iso){ try { return new Date(iso).toLocaleString("en-GB",{timeZone:"Asia/Qatar",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); } catch(e){ return iso; } }
+function bfgDay(iso){ try { return new Date(iso).toLocaleDateString("en-CA",{timeZone:"Asia/Qatar"}); } catch(e){ return String(iso).slice(0,10); } }
+function bfgMethod(m){ return m === "fawran" ? "Fawran" : m === "card" ? "Card" : "Cash"; }
+function bfgSender(desc){ return senderName(desc) || firstLines(desc, 3); }
+
+async function loadBfg(){
+  var tiles = document.getElementById("bfg-tiles");
+  try {
+    var o = await sbClient.from("bfg_orders_summary").select("*").neq("payment_status","void").order("created_at",{ascending:false}).limit(1000);
+    if(o.error) throw o.error;
+    BFG.orders = o.data || [];
+    var c = await sbClient.rpc("bfg_match_candidates");
+    if(c.error) throw c.error;
+    BFG.cands = c.data || [];
+    var ids = BFG.orders.filter(function(x){ return x.matched_bank_line_id; }).map(function(x){ return x.matched_bank_line_id; });
+    BFG.lineById = {};
+    if(ids.length){
+      var l = await sbClient.from("bank_statement_lines").select("id,transaction_date,amount,description").in("id", ids);
+      (l.data || []).forEach(function(x){ BFG.lineById[x.id] = x; });
+    }
+    renderBfg();
+  } catch(e){
+    tiles.innerHTML = '<div class="empty-note">' + escapeHtml(e.message || String(e)) + '</div>';
+  }
+}
+
+function renderBfg(){
+  var all = BFG.orders;
+  var sum = function(arr){ return arr.reduce(function(t,x){ return t + Number(x.total); }, 0); };
+  var awaiting = all.filter(function(x){ return x.payment_status === "awaiting_match"; });
+  var matched = all.filter(function(x){ return x.payment_status === "matched"; });
+  var cash = all.filter(function(x){ return x.payment_method === "cash"; });
+  var books = all.reduce(function(t,x){ return t + Number(x.book_count||0); }, 0);
+  var tiles = [
+    { l: "Total sales", n: bfgQar(sum(all)), warn: false },
+    { l: "Orders · books", n: all.length + " · " + books, warn: false },
+    { l: "Cash", n: bfgQar(sum(cash)), warn: false },
+    { l: "Waiting for transfer", n: bfgQar(sum(awaiting)) + " (" + awaiting.length + ")", warn: awaiting.length > 0 },
+    { l: "Matched", n: bfgQar(sum(matched)), warn: false }
+  ];
+  document.getElementById("bfg-tiles").innerHTML = tiles.map(function(t){
+    return '<div class="summary-tile' + (t.warn ? ' warn' : '') + '"><div class="n" style="font-size:20px">' + t.n + '</div><div class="l">' + t.l + '</div></div>';
+  }).join("");
+
+  // suggestions grouped by order
+  var byOrder = {};
+  BFG.cands.forEach(function(c){ (byOrder[c.order_id] = byOrder[c.order_id] || []).push(c); });
+  var keys = Object.keys(byOrder).sort(function(a,b){ return byOrder[b][0].score - byOrder[a][0].score; });
+  var sug = document.getElementById("bfg-suggest");
+  if(!keys.length){ sug.innerHTML = '<div class="empty-note">No suggestions right now. Upload the latest bank statement, or use “Match selected to a transfer”.</div>'; }
+  else sug.innerHTML = keys.map(function(k){
+    var cs = byOrder[k].slice(0,3), o = cs[0];
+    var lines = cs.map(function(c){
+      var col = c.confidence === "high" ? "#146c43" : c.confidence === "medium" ? "#b07d10" : "#6b7d73";
+      return '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:8px 0;border-top:1px solid #e7ede9">' +
+        '<div style="flex:1;min-width:200px;font-size:12.5px"><span style="font-weight:800;color:' + col + ';text-transform:uppercase;font-size:10.5px;letter-spacing:.05em">' + c.confidence + '</span> · ' + c.line_date + ' · ' + bfgQar(c.line_amount) + '<br><b>' + escapeHtml(bfgSender(c.line_desc)) + '</b><br><span style="color:#6b7d73">' + escapeHtml(c.reasons.join(" · ")) + '</span></div>' +
+        '<button class="btn small" onclick="bfgConfirmSuggestion(\'' + c.order_id + '\',\'' + c.line_id + '\')">Confirm match</button></div>';
+    }).join("");
+    return '<div style="border:1px solid #d7e3da;border-radius:12px;padding:12px 14px;margin-bottom:10px"><div style="font-size:13px"><b>' + escapeHtml(o.order_no) + '</b> · ' + bfgWhen(o.order_at) + ' · ' + bfgMethod(o.payment_method) + ' · <b>' + bfgQar(o.total) + '</b><br>' + escapeHtml(o.buyer_name) + (o.buyer_phone ? ' · ' + escapeHtml(o.buyer_phone) : '') + '</div>' + lines + '</div>';
+  }).join("");
+
+  var open = document.getElementById("bfg-open-tbody");
+  open.innerHTML = awaiting.length ? awaiting.map(function(x){
+    return '<tr><td><input type="checkbox" class="bfg-pick" value="' + x.id + '"></td><td><b>' + escapeHtml(x.order_no) + '</b><br><span style="color:#98a89e;font-size:12px">' + bfgWhen(x.created_at) + '</span></td><td>' + escapeHtml(x.buyer_name) + '<br><span style="color:#98a89e;font-size:12px">' + escapeHtml(x.buyer_phone || "") + '</span></td><td>' + bfgMethod(x.payment_method) + '</td><td style="font-size:12px">' + escapeHtml(x.items_summary) + '</td><td class="amt"><b>' + bfgQar(x.total) + '</b></td></tr>';
+  }).join("") : '<tr><td colspan="6" class="empty-note">Nothing waiting. 🎉</td></tr>';
+
+  var mrows = matched.slice(0, 60);
+  document.getElementById("bfg-matched-tbody").innerHTML = mrows.length ? mrows.map(function(x){
+    var ln = BFG.lineById[x.matched_bank_line_id];
+    var to = ln ? (ln.transaction_date + " · " + bfgQar(ln.amount) + "<br><span style='color:#6b7d73;font-size:12px'>" + escapeHtml(bfgSender(ln.description)) + "</span>") : "—";
+    return '<tr><td><b>' + escapeHtml(x.order_no) + '</b></td><td>' + escapeHtml(x.buyer_name) + '</td><td class="amt">' + bfgQar(x.total) + '</td><td>' + to + '</td><td><button class="btn ghost small" onclick="bfgUnmatch(\'' + x.id + '\',\'' + escapeHtml(x.order_no) + '\')">Unmatch</button></td></tr>';
+  }).join("") : '<tr><td colspan="5" class="empty-note">No matched sales yet.</td></tr>';
+
+  var days = {};
+  cash.forEach(function(x){ var d = bfgDay(x.created_at); days[d] = days[d] || { n: 0, t: 0 }; days[d].n++; days[d].t += Number(x.total); });
+  var dk = Object.keys(days).sort().reverse();
+  document.getElementById("bfg-cash-tbody").innerHTML = dk.length ? dk.map(function(d){
+    return '<tr><td>' + d + '</td><td>' + days[d].n + '</td><td class="amt"><b>' + bfgQar(days[d].t) + '</b></td></tr>';
+  }).join("") : '<tr><td colspan="3" class="empty-note">No cash sales yet.</td></tr>';
+}
+
+async function bfgDoConfirm(orderIds, lineId){
+  var r = await sbClient.rpc("bfg_confirm_match", { p_order_ids: orderIds, p_line_id: lineId, p_event_name: "Books for Good Souq" });
+  if(r.error){ alert("Could not match: " + r.error.message); return false; }
+  await loadBfg(); loadTransactions(); loadEventOptions(); loadSummary();
+  return true;
+}
+async function bfgConfirmSuggestion(orderId, lineId){
+  var c = BFG.cands.filter(function(x){ return x.order_id === orderId && x.line_id === lineId; })[0];
+  if(!c) return;
+  if(!confirm("Match " + c.order_no + " (" + bfgQar(c.total) + ") to the transfer from " + bfgSender(c.line_desc) + " on " + c.line_date + "?")) return;
+  await bfgDoConfirm([orderId], lineId);
+}
+async function bfgUnmatch(orderId, orderNo){
+  if(!confirm("Remove the match for " + orderNo + "? The sale goes back to waiting for a transfer.")) return;
+  var r = await sbClient.rpc("bfg_unmatch", { p_order_id: orderId });
+  if(r.error){ alert("Could not unmatch: " + r.error.message); return; }
+  await loadBfg(); loadTransactions(); loadSummary();
+}
+
+function bfgSelected(){
+  return Array.prototype.slice.call(document.querySelectorAll(".bfg-pick:checked")).map(function(e){ return e.value; });
+}
+async function bfgOpenManual(){
+  var ids = bfgSelected();
+  if(!ids.length){ alert("Tick the sales you want to match first."); return; }
+  BFG.manualIds = ids;
+  var picked = BFG.orders.filter(function(o){ return ids.indexOf(o.id) >= 0; });
+  var sum = picked.reduce(function(t,o){ return t + Number(o.total); }, 0);
+  var earliest = picked.map(function(o){ return bfgDay(o.created_at); }).sort()[0];
+  var from = new Date(earliest + "T00:00:00Z"); from.setUTCDate(from.getUTCDate() - 1);
+  document.getElementById("bfg-modal-summary").innerHTML = '<b>' + picked.length + ' sale' + (picked.length > 1 ? 's' : '') + '</b> · ' + picked.map(function(o){ return escapeHtml(o.order_no); }).join(", ") + '<br>Total <b>' + bfgQar(sum) + '</b>' + (picked.every(function(o){ return o.payment_method === "card"; }) ? ' <span style="color:#6b7d73">(card settlements can arrive up to 10% lower after fees)</span>' : '');
+  document.getElementById("bfg-modal-search").value = "";
+  document.getElementById("bfg-modal-lines").innerHTML = '<div class="empty-note" style="padding:14px">Loading transfers…</div>';
+  document.getElementById("bfg-modal-backdrop").style.display = "flex";
+  var r = await sbClient.from("bank_statement_lines").select("id,transaction_date,amount,description,match_status")
+    .gt("amount", 0).is("matched_sponsorship_id", null).in("match_status", ["unmatched","needs_review","categorized","unknown"])
+    .gte("transaction_date", from.toISOString().slice(0,10)).order("transaction_date", { ascending: false }).limit(300);
+  if(r.error){ document.getElementById("bfg-modal-lines").innerHTML = '<div class="empty-note" style="padding:14px">' + escapeHtml(r.error.message) + '</div>'; return; }
+  var linked = {}; BFG.orders.forEach(function(o){ if(o.matched_bank_line_id) linked[o.matched_bank_line_id] = true; });
+  BFG.manualLines = (r.data || []).filter(function(l){ return !linked[l.id]; });
+  BFG.manualSum = sum; BFG.manualAllCard = picked.every(function(o){ return o.payment_method === "card"; });
+  bfgRenderLines();
+}
+function bfgRenderLines(){
+  var q = (document.getElementById("bfg-modal-search").value || "").trim().toLowerCase();
+  var sum = BFG.manualSum;
+  var rows = BFG.manualLines.map(function(l){
+    var diff = Math.round((sum - Number(l.amount)) * 100) / 100;
+    var exact = Math.abs(diff) <= 0.01;
+    var fee = BFG.manualAllCard && diff > 0 && diff <= sum * 0.10;
+    return { l: l, diff: diff, ok: exact || fee, exact: exact };
+  }).filter(function(x){
+    if(!q) return true;
+    return String(x.l.amount).indexOf(q) >= 0 || (x.l.description || "").toLowerCase().indexOf(q) >= 0;
+  }).sort(function(a,b){ return (b.ok ? 1 : 0) - (a.ok ? 1 : 0) || (b.l.transaction_date > a.l.transaction_date ? 1 : -1); });
+  var box = document.getElementById("bfg-modal-lines");
+  if(!rows.length){ box.innerHTML = '<div class="empty-note" style="padding:14px">No matching transfers. Upload the latest bank statement first.</div>'; return; }
+  box.innerHTML = rows.slice(0, 80).map(function(x){
+    var tag = x.exact ? '<span style="color:#146c43;font-weight:800">exact amount</span>' : x.ok ? '<span style="color:#b07d10;font-weight:800">short by ' + bfgQar(x.diff) + ' (fees?)</span>' : '<span style="color:#98a89e">' + (x.diff > 0 ? 'short by ' : 'over by ') + bfgQar(Math.abs(x.diff)) + '</span>';
+    return '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid #e7ede9;opacity:' + (x.ok ? 1 : .55) + '">' +
+      '<div style="font-size:12.5px;flex:1"><b>' + x.l.transaction_date + ' · ' + bfgQar(x.l.amount) + '</b> · ' + tag + '<br>' + escapeHtml(bfgSender(x.l.description)) + '</div>' +
+      (x.ok ? '<button class="btn small" onclick="bfgPickLine(\'' + x.l.id + '\')">Match</button>' : '') + '</div>';
+  }).join("");
+}
+async function bfgPickLine(lineId){
+  var l = BFG.manualLines.filter(function(x){ return x.id === lineId; })[0];
+  if(!l) return;
+  if(!confirm("Match " + BFG.manualIds.length + " sale(s) totalling " + bfgQar(BFG.manualSum) + " to the " + bfgQar(l.amount) + " transfer on " + l.transaction_date + "?")) return;
+  if(await bfgDoConfirm(BFG.manualIds, lineId)) bfgCloseManual();
+}
+function bfgCloseManual(){ document.getElementById("bfg-modal-backdrop").style.display = "none"; }
+
 function closeEventModal(){
   document.getElementById("event-modal-backdrop").style.display = "none";
   eventModalLineId = null;
