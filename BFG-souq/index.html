@@ -84,7 +84,7 @@
 
 <sc-if value="{{ isPay }}" hint-placeholder-val="{{ false }}">
 <div style="flex:1;padding:18px;display:flex;flex-direction:column;gap:16px">
-<button onClick="{{ goCart }}" style="align-self:flex-start;background:none;border:none;padding:0;font:700 13px 'Manrope',sans-serif;color:#a9df49;cursor:pointer">← Edit items</button>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><button onClick="{{ goCart }}" style="background:none;border:none;padding:0;font:700 13px 'Manrope',sans-serif;color:#a9df49;cursor:pointer">← Edit items</button><button onClick="{{ clear }}" style="background:none;border:none;padding:0;font:700 13px 'Manrope',sans-serif;color:#ffc1b6;cursor:pointer">Cancel sale</button></div>
 <div style="background:#0b2f20;border-radius:18px;padding:16px;display:flex;justify-content:space-between;align-items:baseline"><span style="font:700 13px 'Manrope',sans-serif;color:rgba(255,255,255,.75)">{{ countLabel }}</span><span style="font:900 32px 'League Spartan',sans-serif;color:#a9df49">{{ totalF }}</span></div>
 <div><div style="font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72);margin-bottom:8px">Paying by</div>
 <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
@@ -159,6 +159,7 @@
 </div>
 </div>
 </div>
+<div style="flex:none;position:sticky;bottom:0;background:#146c43;padding:14px 16px 18px;border-top:1px solid rgba(255,255,255,.16)"><button onClick="{{ newSale }}" style="width:100%;padding:16px;border-radius:50px;border:none;background:#d9a441;color:#0b2f20;font:800 15px 'League Spartan',sans-serif;cursor:pointer">Next sale →</button><div style="display:flex;gap:10px;margin-top:10px"><button onClick="{{ resend }}" style="flex:1;padding:12px;border-radius:50px;border:1.5px solid #fff;background:transparent;color:#fff;font:700 13px 'Manrope',sans-serif;cursor:pointer">{{ resendLabel }}</button><button onClick="{{ doLogout }}" style="flex:1;padding:12px;border-radius:50px;border:none;background:rgba(255,255,255,.14);color:#fff;font:700 13px 'Manrope',sans-serif;cursor:pointer">Sign out</button></div></div>
 </sc-if>
 
 </div>
