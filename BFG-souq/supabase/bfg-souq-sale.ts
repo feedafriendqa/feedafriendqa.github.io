@@ -37,7 +37,7 @@ const METHODS: Record<string, { label: string; ar: string; status: string }> = {
   card: { label: "Card", ar: "بطاقة", status: "awaiting_match" },
 };
 
-function receiptHtml(o: any, items: any[], cid: boolean) {
+function receiptHtml(o: any, items: any[], cid: boolean, evDate = "") {
   const when = new Date(o.created_at).toLocaleString("en-GB", { timeZone: "Asia/Qatar", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const m = METHODS[o.payment_method];
   const rows = items.map((l) => `<tr><td style="padding:8px 0;border-bottom:1px solid #e7ede9;font-size:13px"><b>${esc(l.label)}</b></td><td style="padding:8px 0;border-bottom:1px solid #e7ede9;text-align:center;font-size:13px">${l.qty}</td><td style="padding:8px 0;border-bottom:1px solid #e7ede9;text-align:right;font-size:13px">${qr(l.unit_price)}</td><td style="padding:8px 0;border-bottom:1px solid #e7ede9;text-align:right;font-size:13px;font-weight:800">${qr(l.line_total)}</td></tr>`).join("");
@@ -45,7 +45,7 @@ function receiptHtml(o: any, items: any[], cid: boolean) {
   return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#101a14">
 <div style="background:#146c43;padding:18px 20px"><table width="100%"><tr><td><img src="${cid ? "cid:faflogo" : SITE + "/faf-logo-white-email.png"}" height="34" alt="Feed a Friend" style="vertical-align:middle"> &nbsp; <img src="${cid ? "cid:tfglogo" : SITE + "/tfg-logo-white.png"}" height="40" alt="Together for Good" style="vertical-align:middle"></td><td style="text-align:right;color:#fff;font-weight:800;font-size:16px">Receipt<br><span style="font-size:14px">إيصال</span></td></tr></table></div>
 <div style="padding:18px 20px">
-<div style="font-weight:900;font-size:18px">${esc(o.event || "Books for Good Souq")}</div><div style="font-size:14px;color:#6b7d73;direction:rtl;text-align:right">سوق كتب من أجل الخير</div>
+<div style="font-weight:900;font-size:18px">${esc(o.event || "Books for Good Souq")}</div>${evDate ? `<div style="font-size:13px;color:#6b7d73;margin-top:2px">${esc(evDate)}</div>` : ""}<div style="font-size:14px;color:#6b7d73;direction:rtl;text-align:right">سوق كتب من أجل الخير</div>
 <p style="font-size:13px;line-height:1.6">Thank you, ${esc(o.buyer_name)}. Every riyal from today's sale supports Feed a Friend.<br><span style="direction:rtl;display:block;text-align:right;color:#6b7d73">شكراً لك. يدعم كل ريال من بيع اليوم Feed a Friend.</span></p>
 <table width="100%" style="background:#fbfcfa;border-radius:10px;font-size:12px;margin:12px 0" cellpadding="8"><tr><td><div style="${lbl}">Receipt no. · رقم الإيصال</div><b>${esc(o.order_no)}</b></td><td><div style="${lbl}">Date · التاريخ</div><b>${esc(when)}</b></td></tr><tr><td><div style="${lbl}">Payment · طريقة الدفع</div><b>${m.label} · ${m.ar}</b></td><td><div style="${lbl}">Served by · البائع</div><b>${esc(o.volunteer_name || "")}</b></td></tr></table>
 <table width="100%" style="border-collapse:collapse"><tr style="border-bottom:1.5px solid #0b2f20;font-size:10px;text-transform:uppercase;color:#6b7d73"><td style="padding-bottom:6px">Item · الصنف</td><td style="text-align:center">Qty</td><td style="text-align:right">Unit</td><td style="text-align:right">Amount</td></tr>${rows}</table>
@@ -71,13 +71,18 @@ async function sendReceipt(admin: any, o: any, items: any[]) {
   }
   try {
     const logos = await loadLogos();
+    let evDate = "";
+    if (o.event_id) {
+      const { data: e } = await admin.from("bfg_events").select("event_date").eq("id", o.event_id).maybeSingle();
+      if (e?.event_date) evDate = new Date(e.event_date + "T12:00:00Z").toLocaleDateString("en-GB", { timeZone: "UTC", day: "numeric", month: "long", year: "numeric" });
+    }
     const client = new SMTPClient({ connection: { hostname: "smtp.gmail.com", port: 465, tls: true, auth: { username: user, password: pass } } });
     await client.send({
       from: `Together for Good <${user}>`,
       to: o.buyer_email,
       subject: `Your Books for Good receipt · ${o.order_no}`,
       content: `Thank you ${o.buyer_name}. Receipt ${o.order_no}, total ${qr(o.total)}. View this email in HTML for the full receipt.`,
-      html: receiptHtml(o, items, !!logos),
+      html: receiptHtml(o, items, !!logos, evDate),
       attachments: logos ? [
         { filename: "faf-logo.png", content: logos.faf, encoding: "binary", contentType: "image/png", contentID: "faflogo" },
         { filename: "tfg-logo.png", content: logos.tfg, encoding: "binary", contentType: "image/png", contentID: "tfglogo" },

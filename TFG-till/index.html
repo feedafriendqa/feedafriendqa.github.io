@@ -135,7 +135,7 @@
 <div style="text-align:right;color:#fff"><div style="font:800 16px 'League Spartan',sans-serif">Receipt</div><div style="font:700 14px 'Cairo',sans-serif;direction:rtl">إيصال</div></div>
 </div>
 <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px">
-<div><div style="font:900 18px 'League Spartan',sans-serif;color:#0b2f20">{{ r.event }}</div><div style="font:700 14px 'Cairo',sans-serif;color:#6b7d73;direction:rtl;text-align:right">سوق كتب من أجل الخير</div></div>
+<div><div style="font:900 18px 'League Spartan',sans-serif;color:#0b2f20">{{ r.event }}</div><div style="font:600 12.5px 'Manrope',sans-serif;color:#6b7d73;margin-top:2px">{{ r.eventDate }}</div><div style="font:700 14px 'Cairo',sans-serif;color:#6b7d73;direction:rtl;text-align:right">سوق كتب من أجل الخير</div></div>
 <div style="font-size:13px;line-height:1.6">Thank you, {{ r.name }}. Every riyal from today's sale supports Feed a Friend.<div style="font-family:'Cairo',sans-serif;direction:rtl;text-align:right;color:#6b7d73;margin-top:2px">شكراً لك. يدعم كل ريال من بيع اليوم Feed a Friend.</div></div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;padding:12px 14px;background:#fbfcfa;border-radius:10px;font-size:12px">
 <div><div style="font:700 9.5px ui-monospace,Menlo,monospace;text-transform:uppercase;color:#98a89e">Receipt no. · رقم الإيصال</div><div style="font-weight:800;margin-top:2px">{{ r.no }}</div></div>
@@ -232,7 +232,7 @@ class Component extends DCLogic {
         volunteer_name: s.vol.name, volunteer_phone: s.vol.phone })
         .then(j => {
           const ok = j.receipt && j.receipt.status === 'sent';
-          const sale = { event: s.ev ? s.ev.name : 'Books for Good Souq', no: j.order_no, date: this.now({ day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }), name: s.name.trim(), email: s.email.trim(), method: mObj.label, methodAr: mObj.ar, vol: s.vol.name, totalF: fmt(j.total), headline: ok ? 'Receipt sent' : 'Sale saved', noReceipt: !ok, resending: false,
+          const sale = { event: s.ev ? s.ev.name : 'Books for Good Souq', eventDate: s.ev ? new Date(s.ev.event_date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '', no: j.order_no, date: this.now({ day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }), name: s.name.trim(), email: s.email.trim(), method: mObj.label, methodAr: mObj.ar, vol: s.vol.name, totalF: fmt(j.total), headline: ok ? 'Receipt sent' : 'Sale saved', noReceipt: !ok, resending: false,
             lines: lines.map(l => ({ label: l.label, labelAr: l.labelAr, qty: l.qty, unitF: l.unitF, amtF: l.amtF })) };
           this.setState({ seq: s.seq + 1, last: sale, step: 'sent', sending: false });
         })
