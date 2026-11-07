@@ -95,6 +95,8 @@
 <sc-if value="{{ isCash }}" hint-placeholder-val="{{ false }}">
 <div><div style="font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72);margin-bottom:8px">Cash given</div>
 <div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ cashOpts }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.pick }}" style="padding:10px 16px;border-radius:30px;border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:700 13px 'Manrope',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div>
+<input type="number" inputmode="decimal" min="0" placeholder="Other amount given (QR)" value="{{ givenStr }}" onChange="{{ onGiven }}" style="margin-top:10px;width:100%;box-sizing:border-box;padding:12px 15px;border:1.5px solid #d7e3da;border-radius:14px;font-size:16px;outline:none;background:#fff">
+<sc-if value="{{ cashShort }}" hint-placeholder-val="{{ false }}"><div style="margin-top:10px;padding:12px 14px;border-radius:14px;background:#fdecea;font:700 14px 'Manrope',sans-serif;color:#a1281c">Not enough: still owed <span style="font:900 18px 'League Spartan',sans-serif">{{ shortF }}</span></div></sc-if>
 <sc-if value="{{ hasChange }}" hint-placeholder-val="{{ false }}"><div style="margin-top:10px;padding:12px 14px;border-radius:14px;background:#fdf6e7;font:700 14px 'Manrope',sans-serif;color:#7a5512">Give change: <span style="font:900 18px 'League Spartan',sans-serif">{{ changeF }}</span></div></sc-if>
 </div>
 </sc-if>
@@ -167,7 +169,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  static blank() { return { q: { 1: 0, 5: 0, 10: 0, 15: 0, 20: 0 }, tote: 0, others: [], otherStr: '', otherOpen: false, step: 'cart', method: null, given: 0, name: '', email: '', phone: '', sending: false, err: '' }; }
+  static blank() { return { q: { 1: 0, 5: 0, 10: 0, 15: 0, 20: 0 }, tote: 0, others: [], otherStr: '', otherOpen: false, step: 'cart', method: null, given: 0, givenStr: '', name: '', email: '', phone: '', sending: false, err: '' }; }
   static COL = {
     1: { bg: '#ffffff', fg: '#0b2f20', bd: '#d7e3da' },
     5: { bg: '#2e9e5b', fg: '#ffffff', bd: 'rgba(255,255,255,.55)' },
@@ -193,14 +195,15 @@ class Component extends DCLogic {
     const has = total > 0;
     const countLabel = has ? [books ? books + (books === 1 ? ' book' : ' books') : '', s.tote ? s.tote + ' tote' + (s.tote > 1 ? 's' : '') : ''].filter(Boolean).join(' + ') : 'Nothing added';
     const M = [{ id: 'cash', label: 'Cash', ar: 'نقداً', sub: 'Work out change' }, { id: 'fawran', label: 'Fawran', ar: 'فورَا', sub: 'Instant transfer' }, { id: 'card', label: 'Card', ar: 'بطاقة', sub: 'Card machine' }];
-    const methods = M.map(m => { const on = s.method === m.id; return Object.assign({}, m, { bg: on ? '#a9df49' : '#ffffff', fg: '#0b2f20', bd: on ? '#a9df49' : '#ffffff', pick: () => up({ method: m.id, given: 0 }) }); });
+    const methods = M.map(m => { const on = s.method === m.id; return Object.assign({}, m, { bg: on ? '#a9df49' : '#ffffff', fg: '#0b2f20', bd: on ? '#a9df49' : '#ffffff', pick: () => up({ method: m.id, given: 0, givenStr: '' }) }); });
     const cand = [total].concat([10, 20, 50, 100, 200, 500].filter(v => v > total)).slice(0, 5);
-    const cashOpts = cand.map((v, i) => { const on = s.given === v; return { label: i === 0 ? 'Exact' : fmt(v), bg: on ? '#a9df49' : '#fff', fg: '#0b2f20', bd: on ? '#a9df49' : '#fff', pick: () => up({ given: v }) }; });
+    const cashOpts = cand.map((v, i) => { const on = s.given === v; return { label: i === 0 ? 'Exact' : fmt(v), bg: on ? '#a9df49' : '#fff', fg: '#0b2f20', bd: on ? '#a9df49' : '#fff', pick: () => up({ given: v, givenStr: '' }) }; });
     const okEmail = /^\S+@\S+\.\S+$/.test(s.email.trim());
-    const canSend = has && !!s.method && s.name.trim().length > 1 && okEmail;
+    const cashShort = s.method === 'cash' && s.given > 0 && s.given < total;
+    const canSend = has && !!s.method && s.name.trim().length > 1 && okEmail && !cashShort;
     const mObj = M.find(m => m.id === s.method);
     let sendLabel = 'Send receipt · ' + fmt(total);
-    if (!s.method) sendLabel = 'Choose how they paid'; else if (!(s.name.trim().length > 1)) sendLabel = 'Add buyer name'; else if (!okEmail) sendLabel = 'Add a valid email';
+    if (!s.method) sendLabel = 'Choose how they paid'; else if (!(s.name.trim().length > 1)) sendLabel = 'Add buyer name'; else if (!okEmail) sendLabel = 'Add a valid email'; else if (cashShort) sendLabel = 'Cash given is less than the total';
     if (s.sending) sendLabel = 'Saving sale…';
     const API = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/bfg-souq-sale', KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
     const call = body => fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY }, body: JSON.stringify(body) }).then(r => r.json().catch(() => ({ error: 'Bad response' })).then(j => { if (!r.ok || j.error) throw new Error(j.error || 'Could not save the sale'); return j; }));
@@ -248,7 +251,7 @@ class Component extends DCLogic {
       goPay: () => { if (has) up({ step: 'pay' }); }, goCart: () => up({ step: 'cart' }),
       clear: () => this.setState(Component.blank()), newSale: () => this.setState(Component.blank()),
       methods, isCash: s.method === 'cash', isFawran: s.method === 'fawran',
-      cashOpts, hasChange: s.method === 'cash' && s.given > total, changeF: fmt(s.given - total),
+      cashOpts, givenStr: s.givenStr, onGiven: e => { const t = e.target.value, v = parseFloat(t); up({ givenStr: t, given: v > 0 ? Math.round(v * 100) / 100 : 0 }); }, cashShort, shortF: fmt(total - s.given), hasChange: s.method === 'cash' && s.given > total, changeF: fmt(s.given - total),
       name: s.name, email: s.email, phone: s.phone, onPhone: e => up({ phone: e.target.value }), hasErr: !!s.err, err: s.err, resend, resendLabel: (s.last && s.last.resending) ? 'Sending…' : 'Resend receipt', onName: e => up({ name: e.target.value }), onEmail: e => up({ email: e.target.value }),
       send, sendLabel, sendBg: canSend ? '#d9a441' : 'rgba(255,255,255,.12)', sendFg: canSend ? '#0b2f20' : 'rgba(255,255,255,.55)',
       r: s.last || { lines: [], headline: '', noReceipt: false },
