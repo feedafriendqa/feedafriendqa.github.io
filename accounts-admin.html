@@ -903,13 +903,13 @@ var BFG_FN_URL = SUPABASE_URL + "/functions/v1/bfg-souq-sale";
 function bfgRenderReceipts(){
   var q = (document.getElementById("bfg-rcpt-search").value || "").trim().toLowerCase();
   var failed = BFG.orders.filter(function(o){ return o.receipt_status !== "sent"; });
-  var list = q ? BFG.orders.filter(function(o){ return ((o.order_no || "") + " " + (o.buyer_name || "") + " " + (o.buyer_email || "")).toLowerCase().indexOf(q) >= 0; }).slice(0, 8) : failed.slice(0, 50);
+  var list = q ? BFG.orders.filter(function(o){ return ((o.order_no || "") + " " + (o.buyer_name || "") + " " + (o.buyer_email || "") + " " + (o.event || "")).toLowerCase().indexOf(q) >= 0; }).slice(0, 8) : failed.slice(0, 50);
   document.getElementById("bfg-rcpt-note").textContent = q ? "" : (failed.length ? failed.length + " receipt" + (failed.length > 1 ? "s" : "") + " not sent yet. Use Fix email if the address is wrong." : "All receipts have been sent. Search above to resend one.");
   document.getElementById("bfg-rcpt-list").innerHTML = list.map(function(o){
     var ok = o.receipt_status === "sent";
     var st = ok ? '<span style="color:#146c43;font-weight:800">sent</span>' : '<span style="color:#c0392b;font-weight:800">' + escapeHtml(o.receipt_status) + '</span>' + (o.receipt_error ? '<br><span style="color:#98a89e;font-size:11.5px">' + escapeHtml(String(o.receipt_error).slice(0, 110)) + '</span>' : '');
     return '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-top:1px solid #e7ede9">' +
-      '<div style="flex:1;min-width:220px;font-size:12.5px"><b>' + escapeHtml(o.order_no) + '</b> · ' + escapeHtml(o.buyer_name) + ' · ' + bfgQar(o.total) + '<br>' + escapeHtml(o.buyer_email) + ' · ' + st + '</div>' +
+      '<div style="flex:1;min-width:220px;font-size:12.5px"><b>' + escapeHtml(o.order_no) + '</b> · ' + escapeHtml(o.buyer_name) + ' · ' + bfgQar(o.total) + '<br><span style="color:#146c43;font-weight:700">' + escapeHtml(o.event || "") + '</span> · ' + escapeHtml(o.buyer_email) + ' · ' + st + '</div>' +
       '<div class="row-actions"><button class="btn ghost small" onclick="bfgFixEmail(\'' + o.id + '\')">Fix email</button><button class="btn small" onclick="bfgResend(\'' + o.id + '\')">Resend</button></div></div>';
   }).join("") || '<div class="empty-note">Nothing to show.</div>';
 }
