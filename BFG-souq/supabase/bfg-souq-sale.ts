@@ -1,6 +1,7 @@
 // bfg-souq-sale
 // Books for Good Souq till backend.
 //  action "sale"   -> validates items, recomputes the total server-side, saves order + items, emails the receipt
+//  action "events" -> lists active events for the till login picker
 //  action "resend" -> re-sends the receipt for an existing order (by order_no + buyer_email)
 // Receipts are sent from noreplytogetherforgood@gmail.com over Gmail SMTP. Needs secrets:
 //   GMAIL_USER (default noreplytogetherforgood@gmail.com) and GMAIL_APP_PASSWORD (a Google app password).
@@ -44,7 +45,7 @@ function receiptHtml(o: any, items: any[], cid: boolean) {
   return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#101a14">
 <div style="background:#146c43;padding:18px 20px"><table width="100%"><tr><td><img src="${cid ? "cid:faflogo" : SITE + "/faf-logo-white-email.png"}" height="34" alt="Feed a Friend" style="vertical-align:middle"> &nbsp; <img src="${cid ? "cid:tfglogo" : SITE + "/tfg-logo-white.png"}" height="40" alt="Together for Good" style="vertical-align:middle"></td><td style="text-align:right;color:#fff;font-weight:800;font-size:16px">Receipt<br><span style="font-size:14px">إيصال</span></td></tr></table></div>
 <div style="padding:18px 20px">
-<div style="font-weight:900;font-size:18px">Books for Good Souq</div><div style="font-size:14px;color:#6b7d73;direction:rtl;text-align:right">سوق كتب من أجل الخير</div>
+<div style="font-weight:900;font-size:18px">${esc(o.event || "Books for Good Souq")}</div><div style="font-size:14px;color:#6b7d73;direction:rtl;text-align:right">سوق كتب من أجل الخير</div>
 <p style="font-size:13px;line-height:1.6">Thank you, ${esc(o.buyer_name)}. Every riyal from today's sale supports Feed a Friend.<br><span style="direction:rtl;display:block;text-align:right;color:#6b7d73">شكراً لك. يدعم كل ريال من بيع اليوم Feed a Friend.</span></p>
 <table width="100%" style="background:#fbfcfa;border-radius:10px;font-size:12px;margin:12px 0" cellpadding="8"><tr><td><div style="${lbl}">Receipt no. · رقم الإيصال</div><b>${esc(o.order_no)}</b></td><td><div style="${lbl}">Date · التاريخ</div><b>${esc(when)}</b></td></tr><tr><td><div style="${lbl}">Payment · طريقة الدفع</div><b>${m.label} · ${m.ar}</b></td><td><div style="${lbl}">Served by · البائع</div><b>${esc(o.volunteer_name || "")}</b></td></tr></table>
 <table width="100%" style="border-collapse:collapse"><tr style="border-bottom:1.5px solid #0b2f20;font-size:10px;text-transform:uppercase;color:#6b7d73"><td style="padding-bottom:6px">Item · الصنف</td><td style="text-align:center">Qty</td><td style="text-align:right">Unit</td><td style="text-align:right">Amount</td></tr>${rows}</table>
@@ -100,6 +101,12 @@ Deno.serve(async (req: Request) => {
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const body = await req.json().catch(() => ({}));
 
+    if (body.action === "events") {
+      const { data: evs } = await admin.from("bfg_events").select("id,name,event_date").eq("active", true).order("event_date", { ascending: false });
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Qatar" });
+      return json({ ok: true, today, events: evs ?? [] });
+    }
+
     if (body.action === "resend") {
       const { data: o } = await admin.from("bfg_orders").select("*").eq("order_no", String(body.order_no ?? "")).ilike("buyer_email", String(body.buyer_email ?? "")).maybeSingle();
       if (!o) return json({ error: "Order not found" }, 404);
@@ -118,6 +125,19 @@ Deno.serve(async (req: Request) => {
     if (!/^\S+@\S+\.\S+$/.test(email)) return json({ error: "Valid email required" }, 400);
     if (!METHODS[method]) return json({ error: "Invalid payment method" }, 400);
     if (volName.length < 2) return json({ error: "Volunteer name required" }, 400);
+
+    // which event is this sale for? (till login picks it; an old cached till falls back to today's single event)
+    let ev: any = null;
+    if (body.event_id) {
+      const { data } = await admin.from("bfg_events").select("id,name,active").eq("id", String(body.event_id)).maybeSingle();
+      ev = data;
+    } else {
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Qatar" });
+      const { data } = await admin.from("bfg_events").select("id,name,active").eq("active", true).eq("event_date", today);
+      if (data && data.length === 1) ev = data[0];
+    }
+    if (!ev) return json({ error: "Please refresh the till and choose the event" }, 400);
+    if (!ev.active) return json({ error: "That event is closed. Refresh the till and choose another." }, 400);
 
     const raw = Array.isArray(body.items) ? body.items.slice(0, 200) : [];
     const items: any[] = [];
@@ -149,7 +169,7 @@ Deno.serve(async (req: Request) => {
     const { data: order, error: oErr } = await admin.from("bfg_orders").insert({
       order_no: orderNo, buyer_name: name, buyer_email: email, buyer_phone: phone, payment_method: method,
       total, cash_given: cashGiven, change_given: change, payment_status: METHODS[method].status,
-      volunteer_name: volName, volunteer_phone: volPhone || null,
+      volunteer_name: volName, volunteer_phone: volPhone || null, event_id: ev.id, event: ev.name,
     }).select().single();
     if (oErr || !order) { console.error(oErr); return json({ error: "Could not save sale" }, 500); }
 

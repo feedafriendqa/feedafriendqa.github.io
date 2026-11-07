@@ -180,7 +180,23 @@ tr:hover td{background:#fafcfa;}
     </div>
 
     <div class="card-block" id="bfg-block">
-      <h2>Books for Good sales</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <h2 style="margin:0">Books for Good sales</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select class="inp" id="bfg-event-filter" onchange="bfgSetEvent(this.value)" style="padding:8px 10px;font-size:13px;max-width:240px"></select>
+          <button class="btn ghost small" onclick="bfgToggleEventsPanel()">Manage events</button>
+        </div>
+      </div>
+      <div id="bfg-events-panel" style="display:none;border:1px solid #d7e3da;border-radius:12px;padding:12px 14px;margin:8px 0 14px">
+        <div style="font-weight:800;font-size:13px;margin-bottom:4px">Events</div>
+        <div class="note-inline" style="display:block;margin-bottom:8px">Volunteers pick an event on the till login page. Only open events appear there. Close an event once it has finished.</div>
+        <div id="bfg-events-list"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center">
+          <input class="inp" type="text" id="bfg-ev-name" placeholder="New event name, e.g. Books for Good Souq - Day 3" style="flex:1;min-width:220px;padding:8px 10px;font-size:13px">
+          <input class="inp" type="date" id="bfg-ev-date" style="padding:8px 10px;font-size:13px">
+          <button class="btn small" onclick="bfgAddEvent()">Add event</button>
+        </div>
+      </div>
       <div class="summary-grid" id="bfg-tiles"><div class="empty-note">Loading…</div></div>
 
       <h3 style="font-size:15px;margin:24px 0 8px">Suggested matches</h3>
@@ -676,7 +692,7 @@ function openEventModal(lineId){
   document.getElementById("event-modal-search").focus();
 }
 // ── Books for Good souq sales: view and match to bank transfers ──
-var BFG = { orders: [], cands: [], lineById: {}, manualIds: [], manualLines: [] };
+var BFG = { events: [], eventFilter: "all", orders: [], cands: [], lineById: {}, manualIds: [], manualLines: [] };
 function bfgQar(n){ return "QAR " + Number(n).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2}); }
 function bfgWhen(iso){ try { return new Date(iso).toLocaleString("en-GB",{timeZone:"Asia/Qatar",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}); } catch(e){ return iso; } }
 function bfgDay(iso){ try { return new Date(iso).toLocaleDateString("en-CA",{timeZone:"Asia/Qatar"}); } catch(e){ return String(iso).slice(0,10); } }
@@ -689,6 +705,9 @@ async function loadBfg(){
     var o = await sbClient.from("bfg_orders_summary").select("*").neq("payment_status","void").order("created_at",{ascending:false}).limit(1000);
     if(o.error) throw o.error;
     BFG.orders = o.data || [];
+    var ev = await sbClient.from("bfg_events").select("*").order("event_date",{ascending:true});
+    if(ev.error) throw ev.error;
+    BFG.events = ev.data || [];
     var c = await sbClient.rpc("bfg_match_candidates");
     if(c.error) throw c.error;
     BFG.cands = c.data || [];
@@ -704,8 +723,55 @@ async function loadBfg(){
   }
 }
 
+function bfgVisible(){
+  var f = BFG.eventFilter;
+  return f === "all" ? BFG.orders : BFG.orders.filter(function(o){ return o.event_id === f; });
+}
+function bfgSetEvent(v){ BFG.eventFilter = v; renderBfg(); }
+function bfgToggleEventsPanel(){ var p = document.getElementById("bfg-events-panel"); p.style.display = p.style.display === "none" ? "block" : "none"; if(!document.getElementById("bfg-ev-date").value) document.getElementById("bfg-ev-date").value = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Qatar" }); }
+function bfgRenderEvents(){
+  var sel = document.getElementById("bfg-event-filter");
+  sel.innerHTML = '<option value="all">All events</option>' + BFG.events.map(function(e){ return '<option value="' + e.id + '">' + escapeHtml(e.name) + '</option>'; }).join("");
+  sel.value = BFG.events.some(function(e){ return e.id === BFG.eventFilter; }) ? BFG.eventFilter : "all";
+  BFG.eventFilter = sel.value;
+  document.getElementById("bfg-events-list").innerHTML = BFG.events.map(function(e){
+    var n = BFG.orders.filter(function(o){ return o.event_id === e.id; }).length;
+    return '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:8px 0;border-top:1px solid #e7ede9">' +
+      '<div style="flex:1;min-width:220px;font-size:12.5px"><b>' + escapeHtml(e.name) + '</b> · ' + escapeHtml(e.event_date) + ' · ' + n + ' sale' + (n === 1 ? '' : 's') + '<br>' +
+      (e.active ? '<span style="color:#146c43;font-weight:800">open on the till</span>' : '<span style="color:#98a89e;font-weight:800">closed</span>') + '</div>' +
+      '<div class="row-actions"><button class="btn ghost small" onclick="bfgRenameEvent(\'' + e.id + '\')">Rename</button><button class="btn ghost small" onclick="bfgToggleEvent(\'' + e.id + '\')">' + (e.active ? 'Close' : 'Re-open') + '</button></div></div>';
+  }).join("") || '<div class="empty-note">No events yet.</div>';
+}
+async function bfgAddEvent(){
+  var name = document.getElementById("bfg-ev-name").value.trim(), date = document.getElementById("bfg-ev-date").value;
+  if(name.length < 2){ alert("Give the event a name."); return; }
+  if(!date){ alert("Pick the event date."); return; }
+  var r = await sbClient.from("bfg_events").insert({ name: name, event_date: date });
+  if(r.error){ alert("Could not add the event: " + r.error.message); return; }
+  document.getElementById("bfg-ev-name").value = "";
+  await loadBfg();
+}
+async function bfgToggleEvent(id){
+  var e = BFG.events.filter(function(x){ return x.id === id; })[0]; if(!e) return;
+  if(e.active && !confirm("Close " + e.name + "? It will disappear from the till login page.")) return;
+  var r = await sbClient.from("bfg_events").update({ active: !e.active }).eq("id", id);
+  if(r.error){ alert("Could not update the event: " + r.error.message); return; }
+  await loadBfg();
+}
+async function bfgRenameEvent(id){
+  var e = BFG.events.filter(function(x){ return x.id === id; })[0]; if(!e) return;
+  var n = prompt("New name for this event:", e.name); if(n === null) return; n = n.trim();
+  if(n.length < 2){ alert("That name is too short."); return; }
+  var r = await sbClient.from("bfg_events").update({ name: n }).eq("id", id);
+  if(r.error){ alert("Could not rename: " + r.error.message); return; }
+  await sbClient.from("bfg_orders").update({ event: n }).eq("event_id", id);
+  await loadBfg();
+}
+
 function renderBfg(){
-  var all = BFG.orders;
+  bfgRenderEvents();
+  var all = bfgVisible();
+  var visIds = {}; all.forEach(function(o){ visIds[o.id] = true; });
   var sum = function(arr){ return arr.reduce(function(t,x){ return t + Number(x.total); }, 0); };
   var awaiting = all.filter(function(x){ return x.payment_status === "awaiting_match"; });
   var matched = all.filter(function(x){ return x.payment_status === "matched"; });
@@ -724,7 +790,7 @@ function renderBfg(){
 
   // suggestions grouped by order
   var byOrder = {};
-  BFG.cands.forEach(function(c){ (byOrder[c.order_id] = byOrder[c.order_id] || []).push(c); });
+  BFG.cands.forEach(function(c){ if(!visIds[c.order_id]) return; (byOrder[c.order_id] = byOrder[c.order_id] || []).push(c); });
   var keys = Object.keys(byOrder).sort(function(a,b){ return byOrder[b][0].score - byOrder[a][0].score; });
   var sug = document.getElementById("bfg-suggest");
   if(!keys.length){ sug.innerHTML = '<div class="empty-note">No suggestions right now. Upload the latest bank statement, or use “Match selected to a transfer”.</div>'; }

@@ -25,7 +25,7 @@
 <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}"><button onClick="{{ doLogout }}" style="font:700 11px 'Manrope',sans-serif;color:#fff;background:rgba(255,255,255,.14);border:none;padding:6px 11px;border-radius:20px;cursor:pointer">{{ vol.first }} · Sign out</button></sc-if>
 </div>
 <div style="margin-top:12px;display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap">
-<div style="font:900 22px/1.05 'League Spartan',sans-serif;color:#fff;letter-spacing:-.2px">Books for Good Souq</div>
+<div style="font:900 22px/1.05 'League Spartan',sans-serif;color:#fff;letter-spacing:-.2px">{{ eventName }}</div>
 <div style="font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#a9df49">{{ today }}</div>
 </div>
 </div></sc-if>
@@ -39,6 +39,9 @@
 <div style="background:#fff;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:12px;width:100%;max-width:420px;align-self:center">
 <label style="display:block"><span style="display:block;font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#98a89e;margin-bottom:6px">Your name</span><input value="{{ login.name }}" onChange="{{ onLoginName }}" placeholder="e.g. Aisha Khalid" style="width:100%;padding:14px 16px;border:1.5px solid #d7e3da;border-radius:16px;font-size:16px;background:#fbfcfa;outline:none"></label>
 <label style="display:block"><span style="display:block;font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#98a89e;margin-bottom:6px">Mobile number</span><div style="display:flex;border:1.5px solid #d7e3da;border-radius:16px;background:#fbfcfa;overflow:hidden"><span style="padding:14px 0 14px 16px;font-size:16px;font-weight:700;color:#6b7d73">+974</span><input type="tel" inputmode="numeric" value="{{ login.phone }}" onChange="{{ onLoginPhone }}" placeholder="5512 3456" style="flex:1;min-width:0;padding:14px 16px 14px 10px;border:none;font-size:16px;background:transparent;outline:none"></div></label>
+<div><span style="display:block;font:700 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#98a89e;margin-bottom:6px">Which event?</span>
+<div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{ evOpts }}" as="e" hint-placeholder-count="2"><button onClick="{{ e.pick }}" style="text-align:left;padding:13px 16px;border-radius:16px;border:2px solid {{ e.bd }};background:{{ e.bg }};color:{{ e.fg }};font:800 14px 'Manrope',sans-serif;cursor:pointer">{{ e.name }}<span style="display:block;font:600 11.5px 'Manrope',sans-serif;opacity:.75;margin-top:2px">{{ e.date }}</span></button></sc-for></div>
+<sc-if value="{{ evMsg }}" hint-placeholder-val="{{ false }}"><div style="font:700 12.5px 'Manrope',sans-serif;color:#a1281c;margin-top:8px">{{ evMsg }} <button onClick="{{ reloadEvents }}" style="border:none;background:none;color:#146c43;font:800 12.5px 'Manrope',sans-serif;cursor:pointer;text-decoration:underline">Try again</button></div></sc-if></div>
 <button onClick="{{ doLogin }}" style="margin-top:4px;padding:16px;border-radius:50px;border:none;background:{{ loginBg }};color:{{ loginFg }};font:800 15px 'League Spartan',sans-serif;cursor:pointer">Start selling</button>
 </div>
 </div>
@@ -134,7 +137,7 @@
 <div style="text-align:right;color:#fff"><div style="font:800 16px 'League Spartan',sans-serif">Receipt</div><div style="font:700 14px 'Cairo',sans-serif;direction:rtl">إيصال</div></div>
 </div>
 <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px">
-<div><div style="font:900 18px 'League Spartan',sans-serif;color:#0b2f20">Books for Good Souq</div><div style="font:700 14px 'Cairo',sans-serif;color:#6b7d73;direction:rtl;text-align:right">سوق كتب من أجل الخير</div></div>
+<div><div style="font:900 18px 'League Spartan',sans-serif;color:#0b2f20">{{ r.event }}</div><div style="font:700 14px 'Cairo',sans-serif;color:#6b7d73;direction:rtl;text-align:right">سوق كتب من أجل الخير</div></div>
 <div style="font-size:13px;line-height:1.6">Thank you, {{ r.name }}. Every riyal from today's sale supports Feed a Friend.<div style="font-family:'Cairo',sans-serif;direction:rtl;text-align:right;color:#6b7d73;margin-top:2px">شكراً لك. يدعم كل ريال من بيع اليوم Feed a Friend.</div></div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;padding:12px 14px;background:#fbfcfa;border-radius:10px;font-size:12px">
 <div><div style="font:700 9.5px ui-monospace,Menlo,monospace;text-transform:uppercase;color:#98a89e">Receipt no. · رقم الإيصال</div><div style="font-weight:800;margin-top:2px">{{ r.no }}</div></div>
@@ -177,7 +180,16 @@ class Component extends DCLogic {
     15: { bg: '#f08a24', fg: '#2a1600', bd: '#f08a24' },
     20: { bg: '#2f7fd6', fg: '#ffffff', bd: '#2f7fd6' }
   };
-  state = Object.assign(Component.blank(), { seq: 1, last: null, loggedIn: false, login: { name: '', phone: '' }, vol: { name: '', phone: '' } });
+  state = Object.assign(Component.blank(), { seq: 1, last: null, loggedIn: false, login: { name: '', phone: '' }, vol: { name: '', phone: '' }, events: [], evId: '', evErr: '', ev: null });
+  FN = 'https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/bfg-souq-sale';
+  KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
+  loadEvents() {
+    this.setState({ evErr: '' });
+    fetch(this.FN, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': this.KEY, 'Authorization': 'Bearer ' + this.KEY }, body: JSON.stringify({ action: 'events' }) })
+      .then(r => r.json()).then(j => { const evs = j.events || []; const t = evs.filter(e => e.event_date === j.today); this.setState(x => ({ events: evs, evId: x.evId || (t.length === 1 ? t[0].id : ''), evErr: evs.length ? '' : 'No events are open yet. Ask the admin to add one.' })); })
+      .catch(() => this.setState({ evErr: 'Could not load events.' }));
+  }
+  componentDidMount() { this.loadEvents(); }
   fmt(n) { return 'QR ' + (Math.round(n * 100) / 100); }
   now(opts) { try { return new Date().toLocaleString('en-GB', Object.assign({ timeZone: 'Asia/Qatar' }, opts)); } catch (e) { return new Date().toDateString(); } }
   renderVals() {
@@ -217,12 +229,12 @@ class Component extends DCLogic {
     const send = () => {
       if (!canSend || s.sending) return;
       this.setState({ sending: true, err: '' });
-      call({ action: 'sale', items: toItems(), payment_method: s.method, cash_given: s.given || total,
+      call({ action: 'sale', items: toItems(), payment_method: s.method, event_id: s.ev && s.ev.id, cash_given: s.given || total,
         buyer_name: s.name.trim(), buyer_email: s.email.trim(), buyer_phone: s.phone.trim(),
         volunteer_name: s.vol.name, volunteer_phone: s.vol.phone })
         .then(j => {
           const ok = j.receipt && j.receipt.status === 'sent';
-          const sale = { no: j.order_no, date: this.now({ day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }), name: s.name.trim(), email: s.email.trim(), method: mObj.label, methodAr: mObj.ar, vol: s.vol.name, totalF: fmt(j.total), headline: ok ? 'Receipt sent' : 'Sale saved', noReceipt: !ok, resending: false,
+          const sale = { event: s.ev ? s.ev.name : 'Books for Good Souq', no: j.order_no, date: this.now({ day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }), name: s.name.trim(), email: s.email.trim(), method: mObj.label, methodAr: mObj.ar, vol: s.vol.name, totalF: fmt(j.total), headline: ok ? 'Receipt sent' : 'Sale saved', noReceipt: !ok, resending: false,
             lines: lines.map(l => ({ label: l.label, labelAr: l.labelAr, qty: l.qty, unitF: l.unitF, amtF: l.amtF })) };
           this.setState({ seq: s.seq + 1, last: sale, step: 'sent', sending: false });
         })
@@ -235,7 +247,8 @@ class Component extends DCLogic {
         .then(j => { const ok = j.receipt && j.receipt.status === 'sent'; this.setState(x => ({ last: Object.assign({}, x.last, { resending: false, noReceipt: !ok, headline: ok ? 'Receipt sent' : 'Sale saved' }) })); })
         .catch(() => this.setState(x => ({ last: Object.assign({}, x.last, { resending: false }) })));
     };
-    const okLogin = s.login.name.trim().length > 1 && s.login.phone.replace(/\D/g, '').length >= 8;
+    const okLogin = s.login.name.trim().length > 1 && s.login.phone.replace(/\D/g, '').length >= 8 && !!s.evId;
+    const evOpts = s.events.map(e => { const on = s.evId === e.id; return { name: e.name, date: new Date(e.event_date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }), bg: on ? '#146c43' : '#fbfcfa', fg: on ? '#fff' : '#0b2f20', bd: on ? '#146c43' : '#d7e3da', pick: () => this.setState({ evId: e.id }) }; });
     const step = s.loggedIn ? s.step : 'login';
     return {
       today: this.now({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
@@ -257,10 +270,11 @@ class Component extends DCLogic {
       r: s.last || { lines: [], headline: '', noReceipt: false },
       vol: { first: (s.vol.name.split(' ')[0] || '') },
       login: s.login, loggedIn: s.loggedIn, loggedOut: !s.loggedIn,
+      evOpts, evMsg: s.evErr, reloadEvents: () => this.loadEvents(), eventName: s.ev ? s.ev.name : 'Books for Good Souq',
       loginBg: okLogin ? '#d9a441' : '#e7ede9', loginFg: okLogin ? '#0b2f20' : '#98a89e',
       onLoginName: e => this.setState({ login: Object.assign({}, this.state.login, { name: e.target.value }) }),
       onLoginPhone: e => this.setState({ login: Object.assign({}, this.state.login, { phone: e.target.value }) }),
-      doLogin: () => { if (okLogin) this.setState({ loggedIn: true, vol: { name: s.login.name.trim(), phone: '+974 ' + s.login.phone.trim() } }); },
+      doLogin: () => { if (okLogin) this.setState({ ev: s.events.filter(e => e.id === s.evId)[0] || null, loggedIn: true, vol: { name: s.login.name.trim(), phone: '+974 ' + s.login.phone.trim() } }); },
       doLogout: () => this.setState(Object.assign(Component.blank(), { loggedIn: false, login: { name: '', phone: '' } }))
     };
   }
