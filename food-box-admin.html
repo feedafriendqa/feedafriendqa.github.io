@@ -3757,7 +3757,7 @@ function loadMessagesView() {
           (m.photo_url ? '<a href="' + m.photo_url + '" target="_blank"><img src="' + m.photo_url + '" style="max-width:200px;border-radius:8px;margin-bottom:10px;display:block;"/></a>' : '') +
           (isApproved ? '<div style="font-size:12px;font-weight:700;color:var(--green);">✓ Sent to sponsor</div>' :
             ('<button class="btn-comment" style="background:var(--green);color:#fff;border:none;margin-right:8px;" onclick="moderateThankyou(\'' + m.id + '\',true)">✓ Approve &amp; send</button>' +
-             '<button class="btn-comment" style="background:#fff;" onclick="moderateThankyou(\'' + m.id + '\',false)">✕ Reject</button>')) +
+             '<button class="btn-comment" style="background:#fff;color:#b3261e;border:1.5px solid #b3261e;" onclick="moderateThankyou(\'' + m.id + '\',false)">✕ Reject</button>')) +
           '</div>';
       }).join('');
     }).catch(function(e) { loadingEl.style.display = 'none'; emptyEl.textContent = 'Could not load messages: ' + e.message; emptyEl.style.display = ''; });
