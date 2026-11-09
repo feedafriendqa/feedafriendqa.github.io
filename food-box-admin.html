@@ -1328,7 +1328,7 @@ function updateStats() {
     .reduce(function(sum, a){ return sum + Math.ceil((a.household_size || 1) / 4); }, 0);
   document.getElementById('stat-boxes-needed').textContent = boxesNeeded;
   document.getElementById('stat-archived').textContent = scoped.filter(function(a){return resolveStatus(a)==='archived';}).length;
-  document.getElementById('stat-translation').textContent = scoped.filter(function(a){return a.translation_pending || a.pregnancy_review;}).length;
+  document.getElementById('stat-translation').textContent = scoped.filter(function(a){return a.translation_pending || a.pregnancy_review || a.diaper_formula_review;}).length;
   document.getElementById('stat-wbb-review').textContent = scoped.filter(function(a){
     return hasPregnantPerson(a) && !a.wbb_case_created && ['duplicate','rejected','rejected_reapply','blocked','archived'].indexOf(resolveStatus(a)) === -1;
   }).length;
@@ -1377,6 +1377,7 @@ function renderTable(apps) {
     var statusBadge = '<span class="badge badge-' + status + '">' + statusLabel + '</span>';
     if (app.translation_pending) statusBadge += '<span class="badge badge-translation">🌐</span>';
     if (app.pregnancy_review) statusBadge += '<span class="badge badge-preg" title="Pregnancy needs checking">🤰⚠</span>';
+    if (app.diaper_formula_review) statusBadge += '<span class="badge badge-preg" title="Diaper/formula needs moving to the child">🧷⚠</span>';
     // Tags
     var tags = Array.isArray(app.tags) ? app.tags : (app.tags ? JSON.parse(app.tags) : []);
     var tagHtml = '';
@@ -1439,7 +1440,7 @@ function setFilterFromTile(status) {
     currentFilter = 'all';
     document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
     var filtered = allApps.filter(function(a){
-      if (a.translation_pending !== true && a.pregnancy_review !== true) return false;
+      if (a.translation_pending !== true && a.pregnancy_review !== true && a.diaper_formula_review !== true) return false;
       if (myCasesOnly && (a.assigned_to || autoAssign(a)) !== myName) return false;
       return true;
     });
@@ -1770,6 +1771,7 @@ function renderModal(app, members, urlMap) {
   body += '<div class="stat-band-item"><div class="stat-band-lbl">Household</div><div class="stat-band-val">' + householdCount + '</div></div>';
   body += '</div>';
 
+  if (app.diaper_formula_review) body += '<div class="translation-alert" style="margin:14px 20px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#fff4e0;border-color:#f0c27a;color:#7a4500;"><span>🧷 <b>Diaper / formula needs moving to the child.</b> ' + (app.diaper_formula_review_note || 'Diaper/formula is only recorded on the applicant. Add the child under the household and set it there.').replace(/</g,'&lt;') + '</span><button class="section-save-btn" style="margin:0;" onclick="markDiaperFormulaChecked(\''+app.id+'\', this)">✓ Mark diaper/formula checked</button></div>';
   if (app.pregnancy_review) body += '<div class="translation-alert" style="margin:14px 20px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#fff4e0;border-color:#f0c27a;color:#7a4500;"><span>🤰 <b>Pregnancy needs checking.</b> ' + (app.pregnancy_review_note || 'Pregnancy was recorded on the main applicant under the old reapply form. Check who in the household is pregnant and record it on that person.').replace(/</g,'&lt;') + '</span><button class="section-save-btn" style="margin:0;" onclick="markPregnancyChecked(\''+app.id+'\', this)">✓ Mark pregnancy checked</button></div>';
   if (app.translation_pending) body += '<div class="translation-alert" style="margin:14px 20px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><span>🌐 Submitted in Arabic — translation needs review before approving.</span><button class="section-save-btn" style="margin:0;" onclick="markTranslationReviewed(\''+app.id+'\', this)">✓ Mark translation reviewed</button></div>';
 
@@ -3228,6 +3230,26 @@ function approveQidReapply(id) {
     if (btn) { btn.textContent = '✅ Approve & confirm box (QIDs collected)'; btn.disabled = false; }
     alert('Could not confirm: ' + e.message);
   });
+}
+
+function markDiaperFormulaChecked(id, btn) {
+  if (id.startsWith('demo')) { var d = allApps.find(function(a){return a.id===id;}); if (d) d.diaper_formula_review = false; updateStats(); filterApps(); closeModal(); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({'Prefer':'return=representation'}, headers),
+      body: JSON.stringify({ diaper_formula_review: false })
+    });
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed (' + r.status + ')');
+    return r.json();
+  }).then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('No row was updated — check RLS policies on food_box_applications.');
+    var app = allApps.find(function(a){return a.id===id;});
+    if (app) app.diaper_formula_review = false;
+    updateStats(); filterApps(); closeModal();
+  }).catch(function(e){ if (btn) { btn.disabled = false; btn.textContent = '✓ Mark diaper/formula checked'; } alert('Could not save: ' + e.message); });
 }
 
 function markPregnancyChecked(id, btn) {
