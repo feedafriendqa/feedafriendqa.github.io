@@ -379,6 +379,10 @@ body.ar{direction:rtl;}
           <button type="button" class="loc-btn" id="pregnant-no-btn" onclick="choosePregnant(false)">No</button>
         </div>
       </div>
+      <div class="field" id="pregnant-who-block" style="display:none;">
+        <label id="lbl-pregnant-who">Who is pregnant?</label>
+        <div class="loc-choice" id="pregnant-who-list" style="flex-wrap:wrap;"></div>
+      </div>
       <div class="field" id="due-date-block" style="display:none;">
         <label id="lbl-due-date">Expected due date (if known)</label>
         <input type="date" id="inp-due-date">
@@ -1111,7 +1115,8 @@ function showStatusScreen(status, data, canReapply) {
     // so the old single applicant-level questions stay hidden.
     diaperQuestionVisible = false;
     formulaQuestionVisible = false;
-    pregnancyQuestionVisible = !!data.adult_female_present;
+    // Shown only if the household has a woman (loaded per person in loadReapplyWomen).
+    pregnancyQuestionVisible = false;
 
     document.getElementById('diaper-question-block').style.display = diaperQuestionVisible ? 'block' : 'none';
     document.getElementById('lbl-needs-diapers').textContent = ar ? 'حفاضات لطفلك' : 'Diapers for your child';
@@ -1131,7 +1136,8 @@ function showStatusScreen(status, data, canReapply) {
     document.getElementById('lbl-chk-need').textContent = ar ? 'أؤكد أنني لا أزال بحاجة إلى دعم غذائي.' : 'I confirm I still need food support.';
     resetLocationChoice();
     loadReapplyChildren(data.id);
-    resetPregnancyChoice(data.is_pregnant);
+    resetPregnancyChoice(false);
+    loadReapplyWomen(data.id);
 
     var anticipatedMonth = new Date();
     anticipatedMonth.setMonth(anticipatedMonth.getMonth() + 1);
@@ -1308,14 +1314,60 @@ function chooseNeedsFormula(isYes) {
 
 function choosePregnant(isYes) {
   pregnantChoice = isYes ? 'yes' : 'no';
+  document.getElementById('pregnant-who-block').style.display = (isYes && reapplyWomen.length > 1) ? 'block' : 'none';
   document.getElementById('pregnant-yes-btn').classList.toggle('selected', isYes);
   document.getElementById('pregnant-no-btn').classList.toggle('selected', !isYes);
   document.getElementById('due-date-block').style.display = isYes ? 'block' : 'none';
   updateReapplyBtn();
 }
 
+var reapplyWomen = [];
+var pregnantWho = null; // 'applicant' or a member uuid
+
+async function loadReapplyWomen(appId) {
+  reapplyWomen = [];
+  pregnantWho = null;
+  pregnancyQuestionVisible = false;
+  document.getElementById('pregnancy-block').style.display = 'none';
+  document.getElementById('pregnant-who-block').style.display = 'none';
+  try {
+    var r = await sb.rpc('get_reapply_women', { p_application_id: appId });
+    if (r && Array.isArray(r.data)) reapplyWomen = r.data;
+  } catch (e) { reapplyWomen = []; }
+  var ar = currentLang === 'ar';
+  // Only households with a woman are asked at all.
+  pregnancyQuestionVisible = reapplyWomen.length > 0;
+  document.getElementById('pregnancy-block').style.display = pregnancyQuestionVisible ? 'block' : 'none';
+  document.getElementById('lbl-pregnant-who').textContent = ar ? 'من هي الحامل؟' : 'Who is pregnant?';
+  var list = document.getElementById('pregnant-who-list');
+  list.innerHTML = '';
+  reapplyWomen.forEach(function(w) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'loc-btn';
+    b.dataset.id = w.id;
+    b.textContent = w.is_self ? ((ar ? 'أنا' : 'Me') + (w.name ? ' (' + w.name + ')' : '')) : (w.name || (ar ? 'فرد من الأسرة' : 'Household member'));
+    b.onclick = function() {
+      pregnantWho = w.id;
+      list.querySelectorAll('.loc-btn').forEach(function(x) { x.classList.toggle('selected', x === b); });
+      updateReapplyBtn();
+    };
+    list.appendChild(b);
+  });
+  if (reapplyWomen.length === 1) pregnantWho = reapplyWomen[0].id;
+  var preg = reapplyWomen.filter(function(w) { return w.is_pregnant; })[0];
+  if (preg) {
+    pregnantWho = preg.id;
+    list.querySelectorAll('.loc-btn').forEach(function(x) { x.classList.toggle('selected', x.dataset.id === preg.id); });
+    choosePregnant(true);
+    if (preg.due_date) document.getElementById('inp-due-date').value = preg.due_date;
+  }
+  updateReapplyBtn();
+}
+
 function resetPregnancyChoice(existingIsPregnant) {
   pregnantChoice = null;
+  document.getElementById('pregnant-who-block').style.display = 'none';
   document.getElementById('pregnant-yes-btn').classList.remove('selected');
   document.getElementById('pregnant-no-btn').classList.remove('selected');
   document.getElementById('due-date-block').style.display = 'none';
@@ -1569,7 +1621,7 @@ function updateReapplyBtn() {
   var locationOk = locationChoice === 'here' || (locationChoice === 'moved' && movedAddressConfirmed);
   var diaperOk = reapplyChildrenOk();
   var formulaOk = true;
-  var pregnantOk = !pregnancyQuestionVisible || pregnantChoice === 'yes' || pregnantChoice === 'no';
+  var pregnantOk = !pregnancyQuestionVisible || pregnantChoice === 'no' || (pregnantChoice === 'yes' && !!pregnantWho);
   var ok = locationOk && diaperOk && formulaOk && pregnantOk && document.getElementById('chk-need').checked;
   document.getElementById('reapply-btn').disabled = !ok;
 }
@@ -1598,7 +1650,7 @@ async function doReapply() {
       p_application_id: currentApp.id,
       p_children: buildReapplyChildrenPayload(),
       p_set_pregnancy: !!pregnancyQuestionVisible,
-      p_is_pregnant: pregnancyQuestionVisible ? pregnantChoice === 'yes' : null,
+      p_pregnant_person: (pregnancyQuestionVisible && pregnantChoice === 'yes') ? pregnantWho : null,
       p_due_date: (pregnancyQuestionVisible && pregnantChoice === 'yes') ? (document.getElementById('inp-due-date').value || null) : null
     });
   } catch (e) { /* best-effort: never blocks the reapply */ }
