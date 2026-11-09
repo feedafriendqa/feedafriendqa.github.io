@@ -1694,8 +1694,9 @@ function docLink(label, path, urlMap) {
   return '<div class="detail-item"><div class="lbl">' + label + '</div><div class="val">' + inner + '</div></div>';
 }
 
-// Lists every QID photo that should be on this file but isn't: the applicant's
-// own front/back, plus each household member's (members using a birth
+// Lists every QID front photo that should be on this file but isn't (the back is a
+// nice-to-have - the front and back are often on one file - so it is never flagged):
+// the applicant's own, plus each household member's (members using a birth
 // certificate instead of a QID are skipped, as are people with no QID number
 // recorded yet). Used to show a red "QID photo missing" notice at the top of the
 // file so it is caught at review instead of being noticed later.
@@ -1705,14 +1706,12 @@ function missingQidPhotos(app, members) {
   if (app.qid_number) {
     var aSides = [];
     if (!app.qid_front_path) aSides.push('front');
-    if (!app.qid_back_path) aSides.push('back');
     if (aSides.length) out.push({ who: appName + ' (applicant)', sides: aSides });
   }
   (members || []).forEach(function(m) {
     if (m.doc_type === 'birth-cert' || !m.qid_number) return;
     var mSides = [];
     if (!m.qid_front_path) mSides.push('front');
-    if (!m.qid_back_path) mSides.push('back');
     if (mSides.length) out.push({ who: (m.full_name_en || m.full_name || 'Household member'), sides: mSides });
   });
   return out;
