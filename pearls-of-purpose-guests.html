@@ -290,7 +290,10 @@ function renderStats(){
   const total=all.reduce((s,g)=>s+(Number.isFinite(g.guests)?g.guests:0),0);
   const sc=s=>all.filter(g=>(g.status||"Not sent")===s).length;
   const done=sc("Delivered")+sc("Confirmed received");
-  $("#stats").innerHTML=`<div class="sumline"><span><b>${n}</b>invitations</span><span><b>${total}</b>guests counted</span><span><b>${done}</b>delivered or received</span></div>
+  const att=all.filter(g=>g.rsvp==="Attending");
+  const confirmed=att.reduce((s,g)=>s+(Number.isFinite(g.guests)?g.guests:1),0);
+  const noNum=att.filter(g=>!Number.isFinite(g.guests)).length;
+  $("#stats").innerHTML=`<div class="sumline"><span><b>${confirmed}</b>confirmed in total${noNum?` (${noNum} without a number, counted as 1)`:""}</span><span><b>${att.length}</b>invitations accepted</span><span><b>${n}</b>invitations</span><span><b>${total}</b>guests counted</span><span><b>${done}</b>delivered or received</span></div>
     <div class="bar" role="img" aria-label="Invite status">${STATUSES.map(x=>`<i style="width:${n?sc(x)/n*100:0}%;background:${STATUS_COLOR[x]}"></i>`).join("")}</div>`;
 }
 
@@ -394,11 +397,12 @@ function renderRsvp(){
     else (notInvited(g)?grp["Not invited yet"]:grp["No reply yet"]).push(g);
   });
   grp["No reply yet"].sort((a,b)=>(RANK[b.status||"Not sent"]-RANK[a.status||"Not sent"])||cmpName(a,b));
-  const head=sorted().reduce((s,g)=>s+((g.rsvp==="Attending"&&Number.isFinite(g.guests))?g.guests:0),0);
-  const unk=grp["Attending"].filter(g=>!Number.isFinite(g.guests)).length;
+  const attAll=sorted().filter(g=>g.rsvp==="Attending");
+  const head=attAll.reduce((s,g)=>s+(Number.isFinite(g.guests)?g.guests:1),0);
+  const unk=attAll.filter(g=>!Number.isFinite(g.guests)).length;
   const tiles=`<div class="stats" style="margin-bottom:14px">
-    <div class="stat"><b>${head}</b><span>Confirmed headcount${unk?` · ${unk} attending without a number`:""}</span></div>
-    <div class="stat"><b>${grp["Attending"].length}</b><span>Attending</span></div>
+    <div class="stat wide"><b>${head}</b><span>Total confirmed guests${unk?` · ${unk} accepted without a number, counted as 1 each`:""}</span></div>
+    <div class="stat"><b>${attAll.length}</b><span>Invitations accepted</span></div>
     <div class="stat"><b>${grp["No reply yet"].length}</b><span>Invited, no reply yet</span></div>
     <div class="stat"><b>${grp["Declined"].length}</b><span>Declined</span></div>
     <div class="stat"><b>${grp["Not invited yet"].length}</b><span>Not invited yet</span></div></div>`;
