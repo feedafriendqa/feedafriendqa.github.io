@@ -293,7 +293,12 @@ function renderStats(){
   const att=all.filter(g=>g.rsvp==="Attending");
   const confirmed=att.reduce((s,g)=>s+(Number.isFinite(g.guests)?g.guests:1),0);
   const noNum=att.filter(g=>!Number.isFinite(g.guests)).length;
-  $("#stats").innerHTML=`<div class="sumline"><span><b>${confirmed}</b>confirmed in total${noNum?` (${noNum} without a number, counted as 1)`:""}</span><span><b>${att.length}</b>invitations accepted</span><span><b>${n}</b>invitations</span><span><b>${total}</b>guests counted</span><span><b>${done}</b>delivered or received</span></div>
+  const declined=all.filter(g=>g.rsvp==="Declined").length;
+  const rest=all.filter(g=>g.rsvp!=="Attending"&&g.rsvp!=="Declined");
+  const notSent=rest.filter(g=>(g.status||"Not sent")==="Not sent").length;
+  const pending=rest.length-notSent;
+  $("#stats").innerHTML=`<div class="sumline"><span><b>${att.length}</b>confirmed${confirmed!==att.length?` (${confirmed} guests${noNum?`, ${noNum} without a number counted as 1`:""})`:""}</span><span><b>${pending}</b>pending</span><span><b>${notSent}</b>not sent</span><span><b>${declined}</b>declined</span></div>
+    <div class="sumline" style="margin-top:6px"><span><b style="font-size:18px">${n}</b>invitations</span><span><b style="font-size:18px">${total}</b>guests counted</span><span><b style="font-size:18px">${done}</b>delivered or received</span></div>
     <div class="bar" role="img" aria-label="Invite status">${STATUSES.map(x=>`<i style="width:${n?sc(x)/n*100:0}%;background:${STATUS_COLOR[x]}"></i>`).join("")}</div>`;
 }
 
