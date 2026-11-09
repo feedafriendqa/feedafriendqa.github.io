@@ -1167,7 +1167,7 @@ var diaperQuestionVisible = false;
 var formulaQuestionVisible = false;
 var pregnancyQuestionVisible = false;
 
-var DIAPER_SIZES = ['NB (Newborn)', 'S (Size 1)', 'M (Size 2)', 'L (Size 3)', 'XL (Size 4)', 'XXL (Size 5)'];
+var DIAPER_SIZES = ['NB (Newborn)', 'S (Size 1)', 'M (Size 2)', 'L (Size 3)', 'XL (Size 4)', 'XXL (Size 5)', 'XXXL (Size 6)', 'Size 7'];
 // Display-only Arabic labels — the value saved to the backend (dataset.val)
 // always stays the English string above, since that's what's already on
 // file for existing applicants (e.g. "XL (Size 4)"). Only what the pill
@@ -1178,7 +1178,9 @@ var DIAPER_SIZE_LABELS_AR = {
   'M (Size 2)': 'قياس 2 (M)',
   'L (Size 3)': 'قياس 3 (L)',
   'XL (Size 4)': 'قياس 4 (XL)',
-  'XXL (Size 5)': 'قياس 5 (XXL)'
+  'XXL (Size 5)': 'قياس 5 (XXL)',
+  'XXXL (Size 6)': 'قياس 6 (XXXL)',
+  'Size 7': 'قياس 7'
 };
 
 function openThankyou() {
@@ -1492,7 +1494,7 @@ function handlePendingDoc(input, docKey) {
 var reapplyChildren = [];
 var reapplyChildState = {};
 var reapplyChildrenLoaded = false;
-var DB_TO_DIAPER_LABEL = {'Newborn':'NB (Newborn)','1':'S (Size 1)','2':'M (Size 2)','3':'L (Size 3)','4':'XL (Size 4)','5':'XXL (Size 5)'};
+var DB_TO_DIAPER_LABEL = {'Newborn':'NB (Newborn)','1':'S (Size 1)','2':'M (Size 2)','3':'L (Size 3)','4':'XL (Size 4)','5':'XXL (Size 5)','6':'XXXL (Size 6)','7':'Size 7'};
 
 function escHtml(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
