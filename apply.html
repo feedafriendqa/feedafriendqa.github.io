@@ -1498,10 +1498,17 @@ var DB_TO_DIAPER_LABEL = {'Newborn':'NB (Newborn)','1':'S (Size 1)','2':'M (Size
 
 function escHtml(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
+var reapplyFamilyDiaper = { size: null, noDiaper: false };
+var reapplyFamilyKids = [];    // children aged 3 or under (excl. approved exceptions), youngest first
+var reapplyFamilyTargets = []; // youngest child (or twins sharing a date of birth) - the one request per family
+
 async function loadReapplyChildren(appId) {
   reapplyChildren = [];
   reapplyChildState = {};
   reapplyChildrenLoaded = false;
+  reapplyFamilyDiaper = { size: null, noDiaper: false };
+  reapplyFamilyKids = [];
+  reapplyFamilyTargets = [];
   var box = document.getElementById('reapply-children-block');
   box.style.display = 'none';
   box.innerHTML = '';
@@ -1512,6 +1519,19 @@ async function loadReapplyChildren(appId) {
       reapplyChildren = r.data.filter(function(c) { return c.diaper_eligible || c.formula_eligible; });
     }
   } catch (e) { reapplyChildren = []; }
+  // ONE diaper request per family (twins are the only exception). It is saved on the
+  // youngest child aged 3 or under - or on both twins if they share a date of birth.
+  reapplyFamilyKids = reapplyChildren.filter(function(c) { return c.diaper_eligible && !c.diaper_exception; })
+    .sort(function(x, y) { return String(y.dob || '').localeCompare(String(x.dob || '')); });
+  if (reapplyFamilyKids.length) {
+    var topDob = reapplyFamilyKids[0].dob;
+    reapplyFamilyTargets = reapplyFamilyKids.filter(function(c) { return c.dob === topDob; });
+    var answered = reapplyFamilyKids.filter(function(c) { return c.diaper_size; })[0];
+    if (answered) {
+      if (answered.diaper_size === 'Not needed') reapplyFamilyDiaper.noDiaper = true;
+      else reapplyFamilyDiaper.size = DB_TO_DIAPER_LABEL[answered.diaper_size] || null;
+    }
+  }
   reapplyChildren.forEach(function(c) {
     var d = c.diaper_size || '';
     reapplyChildState[c.member_id] = {
@@ -1525,60 +1545,93 @@ async function loadReapplyChildren(appId) {
   updateReapplyBtn();
 }
 
+// Builds a diaper-size picker (pills + "no longer needs diapers" tick) bound to state object st.
+function buildDiaperPicker(st, idKey, ar, noLabel) {
+  var wrap = document.createElement('div');
+  var pills = document.createElement('div');
+  pills.className = 'diaper-pills';
+  pills.style.display = st.noDiaper ? 'none' : 'flex';
+  DIAPER_SIZES.forEach(function(sz) {
+    var pill = document.createElement('div');
+    pill.className = 'diaper-pill' + (st.size === sz ? ' selected' : '');
+    pill.textContent = ar ? (DIAPER_SIZE_LABELS_AR[sz] || sz) : sz;
+    pill.onclick = function() {
+      st.size = sz; st.noDiaper = false;
+      pills.querySelectorAll('.diaper-pill').forEach(function(p) { p.classList.remove('selected'); });
+      pill.classList.add('selected');
+      updateReapplyBtn();
+    };
+    pills.appendChild(pill);
+  });
+  wrap.appendChild(pills);
+  var ci = document.createElement('div');
+  ci.className = 'check-item';
+  ci.style.marginTop = '8px';
+  var cb = document.createElement('input');
+  cb.type = 'checkbox'; cb.checked = st.noDiaper;
+  cb.id = 'nodiaper-' + idKey;
+  cb.onchange = function() {
+    st.noDiaper = cb.checked;
+    if (cb.checked) st.size = null;
+    pills.style.display = cb.checked ? 'none' : 'flex';
+    if (cb.checked) pills.querySelectorAll('.diaper-pill').forEach(function(p) { p.classList.remove('selected'); });
+    updateReapplyBtn();
+  };
+  var cl = document.createElement('label');
+  cl.htmlFor = cb.id;
+  cl.textContent = noLabel;
+  ci.appendChild(cb); ci.appendChild(cl);
+  wrap.appendChild(ci);
+  return wrap;
+}
+
 function renderReapplyChildren() {
   var ar = currentLang === 'ar';
   var box = document.getElementById('reapply-children-block');
-  if (!reapplyChildren.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
-  box.style.display = 'block';
   box.innerHTML = '';
+  var cardCss = 'border:1.5px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;';
+
+  // One diaper request per family
+  if (reapplyFamilyKids.length) {
+    var card = document.createElement('div');
+    card.className = 'field';
+    card.style.cssText = cardCss;
+    var title = document.createElement('label');
+    title.textContent = ar ? 'الحفاضات' : 'Diapers';
+    card.appendChild(title);
+    var note = document.createElement('div');
+    note.style.cssText = 'font-size:12px;font-weight:700;opacity:.8;margin:4px 0 8px;';
+    var names = reapplyFamilyTargets.map(function(c) { return c.name; }).join(' & ');
+    if (reapplyFamilyTargets.length > 1) {
+      note.textContent = ar ? 'توأم — نفس المقاس للاثنين (' + names + ')' : 'Twins — the same size for both (' + names + ')';
+    } else if (reapplyFamilyKids.length > 1) {
+      note.textContent = ar ? 'طلب حفاضات واحد لكل أسرة (' + names + ')' : 'One diaper request per family (' + names + ')';
+    } else {
+      note.textContent = names;
+    }
+    card.appendChild(note);
+    card.appendChild(buildDiaperPicker(reapplyFamilyDiaper, 'family', ar, ar ? 'لم نعد بحاجة إلى حفاضات' : 'We no longer need diapers'));
+    box.appendChild(card);
+  }
+
+  // Approved exceptions (e.g. special needs) get their own diaper question; babies get formula.
   reapplyChildren.forEach(function(c) {
+    var showDiaper = !!c.diaper_exception;
+    if (!showDiaper && !c.formula_eligible) return;
     var st = reapplyChildState[c.member_id];
     var card = document.createElement('div');
     card.className = 'field';
-    card.style.cssText = 'border:1.5px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;';
+    card.style.cssText = cardCss;
     var title = document.createElement('label');
     title.textContent = c.name || (ar ? 'الطفل' : 'Child');
     card.appendChild(title);
 
-    if (c.diaper_eligible) {
+    if (showDiaper) {
       var dl = document.createElement('div');
       dl.style.cssText = 'font-size:13px;font-weight:700;margin:6px 0;';
       dl.textContent = ar ? 'مقاس الحفاضات' : 'Diaper size';
       card.appendChild(dl);
-      var pills = document.createElement('div');
-      pills.className = 'diaper-pills';
-      pills.style.display = st.noDiaper ? 'none' : 'flex';
-      DIAPER_SIZES.forEach(function(sz) {
-        var pill = document.createElement('div');
-        pill.className = 'diaper-pill' + (st.size === sz ? ' selected' : '');
-        pill.textContent = ar ? (DIAPER_SIZE_LABELS_AR[sz] || sz) : sz;
-        pill.onclick = function() {
-          st.size = sz; st.noDiaper = false;
-          pills.querySelectorAll('.diaper-pill').forEach(function(p) { p.classList.remove('selected'); });
-          pill.classList.add('selected');
-          updateReapplyBtn();
-        };
-        pills.appendChild(pill);
-      });
-      card.appendChild(pills);
-      var ci = document.createElement('div');
-      ci.className = 'check-item';
-      ci.style.marginTop = '8px';
-      var cb = document.createElement('input');
-      cb.type = 'checkbox'; cb.checked = st.noDiaper;
-      cb.id = 'nodiaper-' + c.member_id;
-      cb.onchange = function() {
-        st.noDiaper = cb.checked;
-        if (cb.checked) st.size = null;
-        pills.style.display = cb.checked ? 'none' : 'flex';
-        if (cb.checked) pills.querySelectorAll('.diaper-pill').forEach(function(p) { p.classList.remove('selected'); });
-        updateReapplyBtn();
-      };
-      var cl = document.createElement('label');
-      cl.htmlFor = cb.id;
-      cl.textContent = ar ? 'لم نعد بحاجة إلى حفاضات' : 'No longer needs diapers';
-      ci.appendChild(cb); ci.appendChild(cl);
-      card.appendChild(ci);
+      card.appendChild(buildDiaperPicker(st, c.member_id, ar, ar ? 'لم نعد بحاجة إلى حفاضات' : 'No longer needs diapers'));
     }
 
     if (c.formula_eligible) {
@@ -1597,23 +1650,30 @@ function renderReapplyChildren() {
     }
     box.appendChild(card);
   });
+  box.style.display = box.children.length ? 'block' : 'none';
 }
 
 function reapplyChildrenOk() {
   if (!reapplyChildrenLoaded) return false;
+  if (reapplyFamilyKids.length && !(reapplyFamilyDiaper.noDiaper || reapplyFamilyDiaper.size)) return false;
   return reapplyChildren.every(function(c) {
     var st = reapplyChildState[c.member_id];
-    var dOk = !c.diaper_eligible || st.noDiaper || !!st.size;
+    var dOk = !c.diaper_exception || st.noDiaper || !!st.size;
     var fOk = !c.formula_eligible || st.formula === 'yes' || st.formula === 'no';
     return dOk && fOk;
   });
 }
 
 function buildReapplyChildrenPayload() {
+  var famIds = reapplyFamilyTargets.map(function(c) { return c.member_id; });
   return reapplyChildren.map(function(c) {
     var st = reapplyChildState[c.member_id];
     var o = { member_id: c.member_id };
-    if (c.diaper_eligible) o.diaper_size = st.noDiaper ? 'Not needed' : st.size;
+    if (c.diaper_exception) {
+      o.diaper_size = st.noDiaper ? 'Not needed' : st.size;
+    } else if (famIds.indexOf(c.member_id) !== -1) {
+      o.diaper_size = reapplyFamilyDiaper.noDiaper ? 'Not needed' : reapplyFamilyDiaper.size;
+    }
     if (c.formula_eligible) o.formula = st.formula === 'yes';
     return o;
   });
