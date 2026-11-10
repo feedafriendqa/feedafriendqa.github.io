@@ -123,6 +123,23 @@ html[dir="rtl"] .mobile-menu-link{flex-direction:row-reverse;text-align:right;}
 .ll-bank .row span{color:var(--muted);}
 .ll-bank .row b{color:var(--charcoal);direction:ltr;unicode-bidi:isolate;text-align:right;}
 .ll-bank .tip{margin-top:8px;font-size:12px;color:#9a6800;line-height:1.5;}
+.ll-bank .row{align-items:center;}
+.ll-bank .row b{flex:1;overflow-wrap:anywhere;}
+.ll-bank .copy-btn{flex:none;background:#fff;border:1.5px solid var(--green);color:var(--green);border-radius:50px;padding:3px 10px;font-size:11px;font-weight:800;cursor:pointer;}
+.ll-bank .copy-btn.done{background:var(--green);color:#fff;}
+.ll-bank .pay-amt{background:var(--green);color:#fff;border-radius:10px;padding:8px 12px;margin-bottom:8px;}
+.ll-bank .pay-amt .row{border-bottom:none;padding:0;}
+.ll-bank .pay-amt .row span{color:rgba(255,255,255,.85);}
+.ll-bank .pay-amt .row b{color:#fff;font-size:16px;}
+.ll-bank .pay-amt .copy-btn{background:transparent;border-color:rgba(255,255,255,.6);color:#fff;}
+.ll-bank .pay-amt .copy-btn.done{background:#fff;color:var(--green);}
+.ll-bank .pay-sub{margin:10px 0 2px;font-size:12px;font-weight:800;color:var(--charcoal);}
+.ll-bank .txn{background:#FFE9A8;border:2px solid #E0A800;border-radius:10px;padding:8px 12px;margin-top:8px;color:#6B4500;}
+.ll-bank .txn .row{border-bottom:none;padding:2px 0;}
+.ll-bank .txn .row span{color:#6B4500;font-weight:800;}
+.ll-bank .txn .row b{color:#4A2F00;font-size:15px;font-weight:900;}
+.ll-bank .txn .copy-btn{border-color:#B98500;color:#6B4500;background:#FFF7DC;}
+.ll-bank .txn .hint{font-size:12px;font-weight:600;line-height:1.5;margin-top:2px;}
 .ll-link-btn{display:inline-block;margin-top:8px;margin-inline-end:8px;border:none;background:none;color:var(--green);font-size:12px;font-weight:800;text-decoration:underline;cursor:pointer;padding:0;}
 
 .empty-state{padding:60px 10px;text-align:center;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:18px;}
@@ -568,7 +585,9 @@ function renderList(rows){
     // if we flagged a discrepancy and need a fresh screenshot to re-check.
     var canUpload = r.payment_status === "pending_payment" || r.payment_status === "discrepancy";
     var uploadBtn = canUpload
-      ? '<button class="upload-proof-btn" onclick="startProofUpload(\'' + r.id + '\')" data-en="Upload proof of payment" data-ar="رفع إثبات الدفع">Upload proof of payment</button>'
+      ? '<button class="ll-link-btn" onclick="togglePayBank(\'' + r.id + '\')">' + (isAr ? "تفاصيل الدفع" : "Payment details") + '</button>' +
+        '<button class="upload-proof-btn" onclick="startProofUpload(\'' + r.id + '\')" data-en="Upload proof of payment" data-ar="رفع إثبات الدفع">Upload proof of payment</button>' +
+        '<div class="ll-bank" id="pay-bank-' + r.id + '">' + payDetailsHtml(r.id, isAr, (r.box_count || 1) * PRICE_PER_BOX) + '</div>'
       : '';
     // Uploaded the wrong file? Let the sponsor view, replace or remove it until
     // the payment has been confirmed by the team.
@@ -830,15 +849,7 @@ function renderLL(rows){
       actions =
         '<button class="ll-link-btn" onclick="toggleLLBank(\'' + r.id + '\')">' + (isAr ? "تفاصيل الدفع" : "Payment details") + '</button>' +
         '<button class="upload-proof-btn" style="display:inline-block;" id="ll-up-' + r.id + '" onclick="startLLProof(\'' + r.id + '\')">' + (isAr ? "رفع إثبات الدفع" : "Upload proof of payment") + '</button>' +
-        '<div class="ll-bank" id="ll-bank-' + r.id + '">' +
-          '<div class="row"><span>' + (isAr ? "اسم البنك" : "Bank") + '</span><b>QNB</b></div>' +
-          '<div class="row"><span>' + (isAr ? "اسم الحساب" : "Account name") + '</span><b>Together for Good Events</b></div>' +
-          '<div class="row"><span>' + (isAr ? "رقم الحساب" : "Account number") + '</span><b>0250227446001</b></div>' +
-          '<div class="row"><span>IBAN</span><b>QA21QNBA000000000250227446001</b></div>' +
-          '<div class="row"><span>SWIFT</span><b>QNBAQAQAXXX</b></div>' +
-          '<div class="row"><span>' + (isAr ? "فوران — نوع الحساب" : "Fawran — account type") + '</span><b>' + (isAr ? "شركات / أعمال" : "Corporate / Business") + '</b></div>' +
-          '<div class="row"><span>' + (isAr ? "فوران — رقم السجل التجاري" : "Fawran — CR number") + '</span><b>229085</b></div>' +
-          '<div class="tip">' + (isAr ? "⚠️ اختر «شركات/أعمال» في فوران، وإذا طُلب الغرض فاختر «سلع وخدمات».": "⚠️ Choose Corporate/Business on Fawran, and “Goods and Services” if asked for a purpose.") + '</div>' +
+        '<div class="ll-bank" id="ll-bank-' + r.id + '">' + payDetailsHtml(r.id, isAr, r.amount ? Number(r.amount) : null) +
         '</div>';
     }
     return '<div class="event-row" id="ll-row-' + r.id + '">' +
@@ -853,6 +864,61 @@ function renderLL(rows){
       '<div class="event-time"><div class="amt">' + amountTxt + '</div><span class="badge ' + st.cls + '">' + (isAr ? st.ar : st.en) + '</span></div>' +
     '</div>';
   }).join("");
+}
+// Shared "how to pay" block (bank transfer + Fawran) with one-tap copy buttons.
+// Used for Food Box sponsorships and Little Learners sponsorships.
+function payDetailsHtml(id, isAr, amount){
+  function row(label, val, copy){
+    return '<div class="row"><span>' + label + '</span><b dir="ltr">' + val + '</b>' +
+      (copy ? '<button type="button" class="copy-btn" onclick="copyPayVal(this)">' + (isAr ? "نسخ" : "Copy") + '</button>' : '') + '</div>';
+  }
+  var html = '';
+  if(amount){
+    html += '<div class="pay-amt">' + row(isAr ? "المبلغ المطلوب" : "Amount to send", "QAR " + amount, false)
+      .replace('</div>', '<button type="button" class="copy-btn" data-copy="' + amount + '" onclick="copyPayVal(this)">' + (isAr ? "نسخ" : "Copy") + '</button></div>') + '</div>';
+  }
+  html += '<div class="pay-sub">' + (isAr ? "🏦 حوالة بنكية" : "🏦 Bank transfer") + '</div>' +
+    row(isAr ? "اسم البنك" : "Bank", "QNB", true) +
+    row(isAr ? "اسم الحساب" : "Account name", "Together for Good Events", true) +
+    row(isAr ? "رقم الحساب" : "Account number", "0250227446001", true) +
+    row("IBAN", "QA21QNBA000000000250227446001", true) +
+    row("SWIFT", "QNBAQAQAXXX", true) +
+    '<div class="pay-sub">' + (isAr ? "⚡ فوران" : "⚡ Fawran") + '</div>' +
+    row(isAr ? "نوع الحساب" : "Account type", isAr ? "شركات / أعمال" : "Corporate / Business", false) +
+    row(isAr ? "رقم السجل التجاري" : "CR number", "229085", true) +
+    '<div class="txn">' +
+      row(isAr ? "الفئة / الغرض" : "Category / purpose", isAr ? "سلع وخدمات" : "Goods and Services", true) +
+      '<div class="hint">' + (isAr
+        ? "إذا طلب البنك أو التطبيق الغرض أو الفئة، اختر «سلع وخدمات» وليس تبرع أو أصدقاء وعائلة أو شخصي."
+        : "If your bank or app asks for a purpose or category, choose this (“Online Payment for Goods and Services” / “Payment for goods/services”), not Charity, Donation, Friends &amp; Family or Personal.") + '</div>' +
+    '</div>' +
+    '<div class="tip">' + (isAr
+      ? "بعد الدفع، ارفع لقطة شاشة للتحويل (إثبات الدفع) ليتم ربط الدفعة بكفالتك."
+      : "After paying, upload a screenshot of your transfer (proof of payment) so we can match it to your sponsorship.") + '</div>';
+  return html;
+}
+function copyPayVal(btn){
+  var node = btn.previousElementSibling;
+  var text = btn.getAttribute("data-copy") || (node ? node.textContent : "").trim();
+  var oldTxt = btn.textContent;
+  var done = function(){
+    btn.textContent = "✓"; btn.classList.add("done");
+    setTimeout(function(){ btn.textContent = oldTxt; btn.classList.remove("done"); }, 1600);
+  };
+  var fallback = function(){
+    try{
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+      done();
+    }catch(e){}
+  };
+  if(navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback);
+  else fallback();
+}
+function togglePayBank(id){
+  var el = document.getElementById("pay-bank-" + id);
+  if(el) el.classList.toggle("open");
 }
 function toggleLLBank(id){
   var el = document.getElementById("ll-bank-" + id);
