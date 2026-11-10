@@ -890,7 +890,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   };
   const addOpp=async()=>{
     if(!no.title||!no.date||!no.location){st("Fill title, "+(no.type==="ongoing"?"start date":"date")+" and location.");return;}
-    const {data:inserted,error}=await sb.from("opportunities").insert({...no,end_date:no.end_date||null,spots:Number(no.spots)||10,hours:Number(no.hours)||2,commitment_hours:no.type==="ongoing"&&no.commitment_hours?Number(no.commitment_hours):null,commitment_frequency:no.type==="ongoing"?(no.commitment_frequency||"week"):null,event_admins:no.project==="general"?(no.event_admins||[]):[],created_by:profile.id}).select().single();
+    const {data:inserted,error}=await sb.from("opportunities").insert({...no,end_date:no.end_date||null,spots:Number(no.spots)||10,hours:Number(no.hours)||2,commitment_hours:no.type==="ongoing"&&no.commitment_hours?Number(no.commitment_hours):null,commitment_frequency:no.type==="ongoing"?(no.commitment_frequency||"week"):null,event_admins:no.event_admins||[],created_by:profile.id}).select().single();
     if(error){st("Error: "+error.message);return;}
     setNo({title:"",project:isSuperAdmin?"food-boxes":(profile.admin_projects?.[0]||"food-boxes"),type:"event",date:"",end_date:"",start_time:"",end_time:"",spots:"",hours:"",commitment_hours:"",commitment_frequency:"week",location:"",description:"",students_only:false,student_friendly:false,kid_friendly:false,questions:[],event_admins:[]});
     // Notify approved volunteers whose project interests match this new opportunity,
@@ -912,7 +912,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
   };
   const saveEditOpp=async()=>{
     if(!editOpp.title||!editOpp.date||!editOpp.location){st("Fill title, "+(editOpp.type==="ongoing"?"start date":"date")+" and location.");return;}
-    const {error}=await sb.from("opportunities").update({title:editOpp.title,description:editOpp.description,type:editOpp.type||"event",date:editOpp.date,end_date:editOpp.end_date||null,location:editOpp.location,location_detail:editOpp.location_detail||null,spots:Number(editOpp.spots)||10,hours:Number(editOpp.hours)||2,commitment_hours:editOpp.commitment_hours?Number(editOpp.commitment_hours):null,commitment_frequency:editOpp.type==="ongoing"?(editOpp.commitment_frequency||"week"):null,start_time:editOpp.start_time,end_time:editOpp.end_time,students_only:editOpp.students_only,project:editOpp.project,questions:editOpp.questions||[],event_admins:editOpp.project==="general"?(editOpp.event_admins||[]):[]}).eq("id",editOpp.id);
+    const {error}=await sb.from("opportunities").update({title:editOpp.title,description:editOpp.description,type:editOpp.type||"event",date:editOpp.date,end_date:editOpp.end_date||null,location:editOpp.location,location_detail:editOpp.location_detail||null,spots:Number(editOpp.spots)||10,hours:Number(editOpp.hours)||2,commitment_hours:editOpp.commitment_hours?Number(editOpp.commitment_hours):null,commitment_frequency:editOpp.type==="ongoing"?(editOpp.commitment_frequency||"week"):null,start_time:editOpp.start_time,end_time:editOpp.end_time,students_only:editOpp.students_only,project:editOpp.project,questions:editOpp.questions||[],event_admins:editOpp.event_admins||[]}).eq("id",editOpp.id);
     if(error){st("Error: "+error.message);return;}
     st("✓ Updated!"); setEditOpp(null); load();
   };
@@ -1066,7 +1066,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
       <div style={{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           <Field label="Project"><select value={editOpp.project} onChange={e=>setEditOpp(o=>{return{...o,project:e.target.value};} )} style={inp}>{PROJECTS.map(p=><option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}</select></Field>
-          {editOpp.project==="general"&&<Field label="Event Admins (can manage this event)">
+          {<Field label="Event Admins (can manage this event)">
             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
               {admins.map(a=>{
                 const assigned=(editOpp.event_admins||[]).includes(a.id);
@@ -1074,7 +1074,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
               })}
               {admins.length===0&&<p style={{fontSize:12,color:MT}}>No admins found.</p>}
             </div>
-            <p style={{fontSize:11,color:MT,marginTop:6,fontFamily:BF}}>Since General events aren't owned by one project team, pick which admins can manage this specific event.</p>
+            <p style={{fontSize:11,color:MT,marginTop:6,fontFamily:BF}}>Pick other admins who can manage this specific event (sign-ups, check-in, hours), on top of the project team.</p>
           </Field>}
           <Field label="Vacancy Type">
             <div style={{display:"flex",gap:8}}>
@@ -1567,7 +1567,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
         <div style={{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             <Field label="Project"><select value={no.project} onChange={e=>setNo(n=>{return{...n,project:e.target.value};} )} style={inp}>{(isSuperAdmin?PROJECTS:PROJECTS.filter(p=>(profile.admin_projects||[]).includes(p.id)||p.id==="general")).map(p=><option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}</select></Field>
-            {no.project==="general"&&<Field label="Event Admins (can manage this event)">
+            {<Field label="Event Admins (can manage this event)">
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                 {admins.map(a=>{
                   const assigned=(no.event_admins||[]).includes(a.id);
@@ -1575,7 +1575,7 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
                 })}
                 {admins.length===0&&<p style={{fontSize:12,color:MT}}>No admins found.</p>}
               </div>
-              <p style={{fontSize:11,color:MT,marginTop:6,fontFamily:BF}}>Since General events aren't owned by one project team, pick which admins can manage this specific event. You'll always be able to manage events you create.</p>
+              <p style={{fontSize:11,color:MT,marginTop:6,fontFamily:BF}}>Optional: pick other admins who can manage this specific event (sign-ups, check-in, hours), on top of the project team. You can add more later via Edit. You'll always be able to manage events you create.</p>
             </Field>}
             <Field label="Vacancy Type">
               <div style={{display:"flex",gap:8}}>
