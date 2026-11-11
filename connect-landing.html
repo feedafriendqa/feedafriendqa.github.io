@@ -740,7 +740,9 @@
     sessionStorage.setItem('connect_lang', lang);
   }
   (function(){
-    const savedLang = sessionStorage.getItem('connect_lang') || 'en';
+    // ?lang=ar / ?lang=en (from a link on another page) wins over the saved choice
+    const urlLang = new URLSearchParams(window.location.search).get('lang');
+    const savedLang = (urlLang === 'ar' || urlLang === 'en') ? urlLang : (sessionStorage.getItem('connect_lang') || 'en');
     setLang(savedLang);
   })();
   const langToggleBtn = document.getElementById('langToggleBtn');

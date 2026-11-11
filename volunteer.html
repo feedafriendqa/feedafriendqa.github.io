@@ -21,6 +21,7 @@ input,select,textarea,button{font-family:inherit}
 .spinner{width:40px;height:40px;border:4px solid #22C55E;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
 </style>
 <script src="faf-image.js"></script>
+<script src="volunteer-i18n.js"></script>
 </head>
 <body>
 <div id="splash"><div class="spinner"></div><p style="color:#BBF7D0;font-size:12px;letter-spacing:2px">LOADING...</p></div>
@@ -84,6 +85,12 @@ function RoleBadge({role}){
   return null;
 }
 
+// EN / AR switch. data-no-i18n keeps the label itself from being translated.
+function LangToggle({style}){
+  const ar=window.FAF_I18N.isAr();
+  return <button type="button" data-no-i18n="1" onClick={()=>window.FAF_I18N.toggle()} style={{background:"rgba(255,255,255,0.12)",color:"#fff",border:"1.5px solid rgba(255,255,255,0.35)",borderRadius:999,padding:"5px 12px",fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0,...style}}>{ar?"English":"عربي"}</button>;
+}
+
 function Field({label,children}){
   return <div><label style={{display:"block",fontWeight:700,fontSize:13,color:DK,marginBottom:6,fontFamily:BF}}>{label}</label>{children}</div>;
 }
@@ -115,17 +122,19 @@ const NATIONALITIES=["Afghan","Albanian","Algerian","American","Andorran","Angol
 // only commits a value when you pick a suggestion (or type an exact match) — no
 // arbitrary free text, so the data stays clean going forward.
 function NationalityField({value,onChange,placeholder}){
-  const [query,setQuery]=React.useState(value||"");
+  const I=window.FAF_I18N;
+  const [query,setQuery]=React.useState(I.nat(value||""));
   const [open,setOpen]=React.useState(false);
-  React.useEffect(()=>{setQuery(value||"");},[value]);
+  React.useEffect(()=>{setQuery(I.nat(value||""));},[value,I.lang]);
   const q=query.trim().toLowerCase();
-  const matches=q?NATIONALITIES.filter(n=>n.toLowerCase().includes(q)).slice(0,8):[];
-  const commit=n=>{onChange(n);setQuery(n);setOpen(false);};
+  // The stored value is always the English name; Arabic is display + search only.
+  const matches=q?NATIONALITIES.filter(n=>I.matchNat(n,q)).slice(0,8):[];
+  const commit=n=>{onChange(n);setQuery(I.nat(n));setOpen(false);};
   const handleBlur=()=>{
     setTimeout(()=>{
-      const exact=NATIONALITIES.find(n=>n.toLowerCase()===q);
-      if(exact){if(exact!==value)onChange(exact);setQuery(exact);}
-      else{setQuery(value||"");}
+      const exact=I.natFromText(q,NATIONALITIES);
+      if(exact){if(exact!==value)onChange(exact);setQuery(I.nat(exact));}
+      else{setQuery(I.nat(value||""));}
       setOpen(false);
     },150);
   };
@@ -133,7 +142,7 @@ function NationalityField({value,onChange,placeholder}){
     <input type="text" value={query} placeholder={placeholder||"Start typing... e.g. Qatari"}
       onChange={e=>{setQuery(e.target.value);setOpen(true);}} onFocus={()=>setOpen(true)} onBlur={handleBlur} style={inp}/>
     {open&&matches.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1.5px solid "+BR,borderRadius:10,marginTop:4,maxHeight:190,overflowY:"auto",zIndex:50,boxShadow:"0 6px 16px rgba(0,0,0,.12)"}}>
-      {matches.map(n=><div key={n} onMouseDown={()=>commit(n)} style={{padding:"9px 12px",fontSize:14,cursor:"pointer",color:DK,fontFamily:BF}}>{n}</div>)}
+      {matches.map(n=><div key={n} onMouseDown={()=>commit(n)} style={{padding:"9px 12px",fontSize:14,cursor:"pointer",color:DK,fontFamily:BF}}>{I.nat(n)}</div>)}
     </div>}
     {open&&q&&matches.length===0&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1.5px solid "+BR,borderRadius:10,marginTop:4,padding:"9px 12px",fontSize:12,color:MT,zIndex:50}}>No match — please pick from the list.</div>}
   </div>;
@@ -147,11 +156,12 @@ const LANGUAGES=["English","Arabic","Hindi","Urdu","Tagalog / Filipino","Malayal
 // text) adds it, so a language that isn't in the list can still be typed
 // in directly — no separate "Other" field needed.
 function LanguagesField({value,onChange}){
+  const I=window.FAF_I18N;
   const list=value||[];
   const [query,setQuery]=React.useState("");
   const [open,setOpen]=React.useState(false);
   const q=query.trim().toLowerCase();
-  const matches=q?LANGUAGES.filter(l=>l.toLowerCase().includes(q)&&!list.includes(l)).slice(0,8):[];
+  const matches=q?LANGUAGES.filter(l=>I.matchLang(l,q)&&!list.includes(l)).slice(0,8):[];
   const add=lang=>{
     const v=lang.trim();
     if(!v) return;
@@ -162,7 +172,7 @@ function LanguagesField({value,onChange}){
   return <div>
     {list.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:8}}>
       {list.map(l=><span key={l} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:20,background:PL,border:"1.5px solid "+GN,fontSize:13,fontWeight:600,color:GN}}>
-        {l}<button type="button" onClick={()=>remove(l)} style={{background:"none",border:"none",cursor:"pointer",color:GN,fontWeight:900,fontSize:13,lineHeight:1,padding:0}}>×</button>
+        {I.langName(l)}<button type="button" onClick={()=>remove(l)} style={{background:"none",border:"none",cursor:"pointer",color:GN,fontWeight:900,fontSize:13,lineHeight:1,padding:0}}>×</button>
       </span>)}
     </div>}
     <div style={{position:"relative"}}>
@@ -171,7 +181,7 @@ function LanguagesField({value,onChange}){
         onBlur={()=>setTimeout(()=>setOpen(false),150)}
         onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();add(matches[0]||query);}}} style={inp}/>
       {open&&matches.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1.5px solid "+BR,borderRadius:10,marginTop:4,maxHeight:190,overflowY:"auto",zIndex:50,boxShadow:"0 6px 16px rgba(0,0,0,.12)"}}>
-        {matches.map(l=><div key={l} onMouseDown={()=>add(l)} style={{padding:"9px 12px",fontSize:14,cursor:"pointer",color:DK,fontFamily:BF}}>{l}</div>)}
+        {matches.map(l=><div key={l} onMouseDown={()=>add(l)} style={{padding:"9px 12px",fontSize:14,cursor:"pointer",color:DK,fontFamily:BF}}>{I.langName(l)}</div>)}
       </div>}
     </div>
   </div>;
@@ -295,6 +305,7 @@ function Auth({onAuth}){
   const bg={minHeight:"100vh",background:DK,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 16px",fontFamily:BF};
 
   return <div className="fade" style={bg}>
+    <LangToggle style={{position:"fixed",top:14,insetInlineEnd:14,zIndex:50}}/>
     <img src={LOGO} alt="Feed a Friend" style={{height:70,marginBottom:6}}/>
     <p style={{fontSize:11,color:MD,letterSpacing:2,textTransform:"uppercase",marginBottom:20}}>Volunteer Portal</p>
     {msg&&<div style={{background:"#DCFCE7",color:DK,borderRadius:12,padding:"12px 16px",marginBottom:16,fontSize:13,width:"100%",maxWidth:420,textAlign:"center",fontWeight:600}}>{msg}</div>}
@@ -306,8 +317,8 @@ function Auth({onAuth}){
         <Field label="Email"><input type="email" placeholder="you@email.com" value={em} onChange={e=>setEm(e.target.value)} style={inp}/></Field>
         <Field label="Password">
           <div style={{position:"relative"}}>
-            <input type={showPw?"text":"password"} placeholder="••••••••" value={pw} onChange={e=>setPw(e.target.value)} style={{...inp,paddingRight:50}}/>
-            <button onClick={()=>setShowPw(s=>!s)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:12,color:MT}}>{showPw?"Hide":"Show"}</button>
+            <input type={showPw?"text":"password"} placeholder="••••••••" value={pw} onChange={e=>setPw(e.target.value)} style={{...inp,paddingInlineEnd:50}}/>
+            <button onClick={()=>setShowPw(s=>!s)} style={{position:"absolute",insetInlineEnd:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:12,color:MT}}>{showPw?"Hide":"Show"}</button>
           </div>
         </Field>
         {err&&<p style={{color:"#DC2626",fontSize:13,fontWeight:600}}>{err}</p>}
@@ -359,8 +370,8 @@ function Auth({onAuth}){
           <Field label="Level of study">
             <select value={r.studentLevel} onChange={e=>setR(x=>{return{...x,studentLevel:e.target.value};} )} style={inp}>
               <option value="">Select level...</option>
-              <option>Secondary School (GCSE)</option><option>Sixth Form / A-Levels</option>
-              <option>Undergraduate</option><option>Postgraduate</option><option>Other</option>
+              <option value="Secondary School (GCSE)">Secondary School (GCSE)</option><option value="Sixth Form / A-Levels">Sixth Form / A-Levels</option>
+              <option value="Undergraduate">Undergraduate</option><option value="Postgraduate">Postgraduate</option><option value="Other">Other</option>
             </select>
           </Field>
           <Field label="School / University"><input type="text" placeholder="e.g. University of Manchester" value={r.studentSchool} onChange={e=>setR(x=>{return{...x,studentSchool:e.target.value};} )} style={inp}/></Field>
@@ -434,7 +445,8 @@ function ProfileEdit({profile, onSave, onBack}){
   return <div style={{minHeight:"100vh",background:PL,fontFamily:BF}}>
     <header style={{background:DK,height:60,display:"flex",alignItems:"center",padding:"0 16px",gap:12,position:"sticky",top:0,zIndex:100}}>
       <button onClick={onBack} style={{background:"rgba(255,255,255,0.1)",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13,fontWeight:700}}>← Back</button>
-      <span style={{fontFamily:HF,fontWeight:900,fontSize:16,color:"#fff",textTransform:"uppercase"}}>Edit Profile</span>
+      <span style={{fontFamily:HF,fontWeight:900,fontSize:16,color:"#fff",textTransform:"uppercase",flex:1}}>Edit Profile</span>
+      <LangToggle/>
     </header>
     <main style={{maxWidth:640,margin:"0 auto",padding:"20px 16px 40px"}}>
       <div style={{background:"#fff",borderRadius:18,padding:"20px 16px",border:"1px solid "+BR}}>
@@ -470,8 +482,8 @@ function ProfileEdit({profile, onSave, onBack}){
               <Field label="Level of study">
                 <select value={studentLevel} onChange={e=>setStudentLevel(e.target.value)} style={inp}>
                   <option value="">Select...</option>
-                  <option>Secondary School (GCSE)</option><option>Sixth Form / A-Levels</option>
-                  <option>Undergraduate</option><option>Postgraduate</option><option>Other</option>
+                  <option value="Secondary School (GCSE)">Secondary School (GCSE)</option><option value="Sixth Form / A-Levels">Sixth Form / A-Levels</option>
+                  <option value="Undergraduate">Undergraduate</option><option value="Postgraduate">Postgraduate</option><option value="Other">Other</option>
                 </select>
               </Field>
               <Field label="School / University"><input type="text" value={studentSchool} onChange={e=>setStudentSchool(e.target.value)} style={inp}/></Field>
@@ -1732,7 +1744,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
 
   const renderOppCard=o=>{
     const p=gp(o.project); const signup=su.find(x=>x.opportunity_id===o.id); const done=!!signup; const isOngoing=o.type==="ongoing";
-    return <div key={o.id} className="card" style={{background:"#fff",borderRadius:16,border:"1px solid "+BR,borderLeft:"5px solid "+(isOngoing?"#7C3AED":p.bg),padding:"14px 14px 12px"}}>
+    return <div key={o.id} className="card" style={{background:"#fff",borderRadius:16,border:"1px solid "+BR,borderInlineStart:"5px solid "+(isOngoing?"#7C3AED":p.bg),padding:"14px 14px 12px"}}>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
         <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
           <Tag pid={o.project}/>
@@ -1779,7 +1791,8 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
       </button>
       <nav style={{display:"flex",gap:2,flex:1,justifyContent:"flex-end",alignItems:"center"}}>
         {NAV.map(n=><button key={n.id} onClick={()=>setView(n.id)} style={{background:view===n.id?MD:"transparent",color:view===n.id?DK:"#BBF7D0",border:"none",borderRadius:8,padding:"6px 9px",cursor:"pointer",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{n.label}</button>)}
-        <button onClick={onLogout} style={{background:"#DC2626",color:"#fff",border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:11,fontWeight:700,marginLeft:4}}>Sign Out</button>
+        <LangToggle style={{padding:"5px 9px",fontSize:11,marginInlineStart:4}}/>
+        <button onClick={onLogout} style={{background:"#DC2626",color:"#fff",border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:11,fontWeight:700,marginInlineStart:4}}>Sign Out</button>
       </nav>
     </header>
     <Toast msg={toast}/>
@@ -1834,7 +1847,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
             return upcoming.map(s=>{
                 const o=opps.find(x=>x.id===s.opportunity_id);
                 const p=gp(o.project);
-                return <div key={s.opportunity_id} style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,borderLeft:"4px solid "+p.bg,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
+                return <div key={s.opportunity_id} style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,borderInlineStart:"4px solid "+p.bg,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
                   <div style={{width:36,height:36,borderRadius:10,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{p.emoji}</div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:700,fontSize:13,fontFamily:BF,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{o.title}</div>
@@ -1850,7 +1863,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
         </div>
         <h2 style={{fontFamily:HF,fontSize:17,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>Our Projects</h2>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
-          {PROJECTS.map(p=><button key={p.id} className="card" onClick={()=>{setView("opportunities");setFp(p.id);}} style={{background:p.bg,border:"none",borderRadius:14,padding:"14px 12px",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}}>
+          {PROJECTS.map(p=><button key={p.id} className="card" onClick={()=>{setView("opportunities");setFp(p.id);}} style={{background:p.bg,border:"none",borderRadius:14,padding:"14px 12px",cursor:"pointer",textAlign:"start",display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:26,flexShrink:0}}>{p.emoji}</span>
             <div>
               <div style={{fontWeight:700,fontSize:13,color:"#fff",lineHeight:1.3,fontFamily:BF}}>{p.label}</div>
@@ -1963,7 +1976,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
                   <div style={{color:"#fff",fontSize:"clamp(14px,4vw,20px)",fontWeight:900,fontFamily:"Georgia,serif",textTransform:"uppercase",marginBottom:12}}>{profile.first_name} {profile.surname}</div>
                   <div style={{display:"flex",flexDirection:"column",gap:5}}>
                     <div style={{color:"rgba(255,255,255,0.85)",fontSize:"clamp(9px,2.5vw,12px)"}}>⏱ <strong>{Math.round(th*100)/100}h</strong> volunteered · <strong>{approvedLogs.length}</strong> sessions</div>
-                    {profile.nationality&&<div style={{color:"rgba(255,255,255,0.85)",fontSize:"clamp(9px,2.5vw,12px)"}}>🌍 {profile.nationality}</div>}
+                    {profile.nationality&&<div style={{color:"rgba(255,255,255,0.85)",fontSize:"clamp(9px,2.5vw,12px)"}}>🌍 {window.FAF_I18N.nat(profile.nationality)}</div>}
                     {profile.is_student&&<div style={{color:"rgba(255,255,255,0.85)",fontSize:"clamp(9px,2.5vw,12px)"}}>🎓 {profile.student_level||"Student"}{profile.student_school?" · "+profile.student_school:""}</div>}
                     {profile.is_working&&<div style={{color:"rgba(255,255,255,0.85)",fontSize:"clamp(9px,2.5vw,12px)"}}>💼 {profile.profession||"Working professional"}</div>}
                     {profile.fun_fact&&<div style={{color:"rgba(255,255,255,0.7)",fontSize:"clamp(8px,2vw,11px)",fontStyle:"italic",marginTop:4}}>✨ "{profile.fun_fact}"</div>}
@@ -1983,7 +1996,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
           {PROJECTS.map(p=>{const h=logs.filter(l=>l.project===p.id).reduce((s,l)=>s+Number(l.hours),0);if(!h) return null;return <div key={p.id} style={{background:p.bg,color:"#fff",borderRadius:20,padding:"4px 10px",fontSize:11,fontWeight:700}}>{p.emoji} {h}h {p.label}</div>;})}
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          {logs.map(l=>{const p=gp(l.project);return <div key={l.id} style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,borderLeft:"5px solid "+p.bg,display:"flex",alignItems:"center",gap:12}}>
+          {logs.map(l=>{const p=gp(l.project);return <div key={l.id} style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,borderInlineStart:"5px solid "+p.bg,display:"flex",alignItems:"center",gap:12}}>
             <div style={{width:36,height:36,borderRadius:10,background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{p.emoji}</div>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontWeight:700,fontSize:13,fontFamily:BF,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.activity}</div>
@@ -2029,6 +2042,10 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
 function App(){
   const [profile,setProfile]=useState(null);
   const [loading,setLoading]=useState(true);
+  // Re-render the whole portal when the EN/AR toggle flips. Staff (admin) screens stay English.
+  const [,setLangTick]=useState(0);
+  useEffect(()=>window.FAF_I18N.onChange(()=>setLangTick(n=>n+1)),[]);
+  useEffect(()=>{window.FAF_I18N.setAdmin(!!profile&&(profile.role==="admin"||profile.role==="superadmin"));},[profile]);
 
   useEffect(()=>{
     sb.auth.getSession().then(async({data:{session}})=>{
