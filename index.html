@@ -764,6 +764,7 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       const toggleBtn = document.getElementById('langToggleBtn');
       if (toggleBtn) toggleBtn.textContent = lang === 'ar' ? toggleBtn.getAttribute('data-ar') : toggleBtn.getAttribute('data-en');
       sessionStorage.setItem('connect_lang', lang);
+      try { renderNationalityList(); } catch(e) {} // list may not be defined yet on first call
     }
     (function(){
       const savedLang = sessionStorage.getItem('connect_lang') || 'en';
@@ -948,6 +949,36 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
     const registerBtn = document.getElementById('registerBtn');
 
     const NATIONALITIES = ["Afghan","Albanian","Algerian","American","Andorran","Angolan","Antiguan and Barbudan","Argentine","Armenian","Australian","Austrian","Azerbaijani","Bahamian","Bahraini","Bangladeshi","Barbadian","Belarusian","Belgian","Belizean","Beninese","Bhutanese","Bolivian","Bosnian","Botswanan","Brazilian","British","Bruneian","Bulgarian","Burkinabe","Burmese","Burundian","Cambodian","Cameroonian","Canadian","Cape Verdean","Central African","Chadian","Chilean","Chinese","Colombian","Comoran","Congolese","Costa Rican","Croatian","Cuban","Cypriot","Czech","Danish","Djiboutian","Dominican","Dutch","East Timorese","Ecuadorian","Egyptian","Emirati","English","Equatorial Guinean","Eritrean","Estonian","Ethiopian","Fijian","Filipino","Finnish","French","Gabonese","Gambian","Georgian","German","Ghanaian","Greek","Grenadian","Guatemalan","Guinean","Guinea-Bissauan","Guyanese","Haitian","Honduran","Hungarian","Icelandic","Indian","Indonesian","Iranian","Iraqi","Irish","Israeli","Italian","Ivorian","Jamaican","Japanese","Jordanian","Kazakh","Kenyan","Kittitian","Kosovar","Kuwaiti","Kyrgyz","Laotian","Latvian","Lebanese","Basotho","Liberian","Libyan","Liechtensteiner","Lithuanian","Luxembourgish","Macedonian","Malagasy","Malawian","Malaysian","Maldivian","Malian","Maltese","Marshallese","Mauritanian","Mauritian","Mexican","Micronesian","Moldovan","Monacan","Mongolian","Montenegrin","Moroccan","Mozambican","Namibian","Nauruan","Nepali","New Zealander","Nicaraguan","Nigerian","Nigerien","North Korean","Northern Irish","Norwegian","Omani","Pakistani","Palauan","Palestinian","Panamanian","Papua New Guinean","Paraguayan","Peruvian","Polish","Portuguese","Puerto Rican","Qatari","Romanian","Russian","Rwandan","Saint Lucian","Salvadoran","Samoan","San Marinese","Sao Tomean","Saudi","Scottish","Senegalese","Serbian","Seychellois","Sierra Leonean","Singaporean","Slovak","Slovenian","Solomon Islander","Somali","South African","South Korean","South Sudanese","Spanish","Sri Lankan","Sudanese","Surinamese","Swazi","Swedish","Swiss","Syrian","Taiwanese","Tajik","Tanzanian","Thai","Togolese","Tongan","Trinidadian","Tunisian","Turkish","Turkmen","Tuvaluan","Ugandan","Ukrainian","Uruguayan","Uzbek","Vanuatuan","Venezuelan","Vietnamese","Welsh","Yemeni","Zambian","Zimbabwean"];
+    // Arabic labels for the nationality list. The stored value is always the English
+    // name above (so existing data/filters stay consistent) — only what the
+    // volunteer sees and types changes with the language toggle.
+    const NATIONALITIES_AR = {"Afghan": "أفغاني", "Albanian": "ألباني", "Algerian": "جزائري", "American": "أمريكي", "Andorran": "أندوري", "Angolan": "أنغولي", "Antiguan and Barbudan": "أنتيغوي وباربودي", "Argentine": "أرجنتيني", "Armenian": "أرميني", "Australian": "أسترالي", "Austrian": "نمساوي", "Azerbaijani": "أذربيجاني", "Bahamian": "باهامي", "Bahraini": "بحريني", "Bangladeshi": "بنغلاديشي", "Barbadian": "بربادوسي", "Belarusian": "بيلاروسي", "Belgian": "بلجيكي", "Belizean": "بليزي", "Beninese": "بنيني", "Bhutanese": "بوتاني", "Bolivian": "بوليفي", "Bosnian": "بوسني", "Botswanan": "بوتسواني", "Brazilian": "برازيلي", "British": "بريطاني", "Bruneian": "بروني", "Bulgarian": "بلغاري", "Burkinabe": "بوركينابي", "Burmese": "بورمي", "Burundian": "بوروندي", "Cambodian": "كمبودي", "Cameroonian": "كاميروني", "Canadian": "كندي", "Cape Verdean": "أخضر (رأس الأخضر)", "Central African": "أفريقي وسطي", "Chadian": "تشادي", "Chilean": "تشيلي", "Chinese": "صيني", "Colombian": "كولومبي", "Comoran": "قمري (جزر القمر)", "Congolese": "كونغولي", "Costa Rican": "كوستاريكي", "Croatian": "كرواتي", "Cuban": "كوبي", "Cypriot": "قبرصي", "Czech": "تشيكي", "Danish": "دنماركي", "Djiboutian": "جيبوتي", "Dominican": "دومينيكاني", "Dutch": "هولندي", "East Timorese": "تيموري شرقي", "Ecuadorian": "إكوادوري", "Egyptian": "مصري", "Emirati": "إماراتي", "English": "إنجليزي", "Equatorial Guinean": "غيني استوائي", "Eritrean": "إريتري", "Estonian": "إستوني", "Ethiopian": "إثيوبي", "Fijian": "فيجي", "Filipino": "فلبيني", "Finnish": "فنلندي", "French": "فرنسي", "Gabonese": "غابوني", "Gambian": "غامبي", "Georgian": "جورجي", "German": "ألماني", "Ghanaian": "غاني", "Greek": "يوناني", "Grenadian": "غرينادي", "Guatemalan": "غواتيمالي", "Guinean": "غيني", "Guinea-Bissauan": "غيني بيساوي", "Guyanese": "غياني", "Haitian": "هايتي", "Honduran": "هندوراسي", "Hungarian": "مجري", "Icelandic": "آيسلندي", "Indian": "هندي", "Indonesian": "إندونيسي", "Iranian": "إيراني", "Iraqi": "عراقي", "Irish": "أيرلندي", "Israeli": "إسرائيلي", "Italian": "إيطالي", "Ivorian": "إيفواري", "Jamaican": "جامايكي", "Japanese": "ياباني", "Jordanian": "أردني", "Kazakh": "كازاخستاني", "Kenyan": "كيني", "Kittitian": "كيتسي (سانت كيتس ونيفيس)", "Kosovar": "كوسوفي", "Kuwaiti": "كويتي", "Kyrgyz": "قيرغيزي", "Laotian": "لاوسي", "Latvian": "لاتفي", "Lebanese": "لبناني", "Basotho": "ليسوتي", "Liberian": "ليبيري", "Libyan": "ليبي", "Liechtensteiner": "ليختنشتايني", "Lithuanian": "ليتواني", "Luxembourgish": "لوكسمبورغي", "Macedonian": "مقدوني", "Malagasy": "مدغشقري", "Malawian": "مالاوي", "Malaysian": "ماليزي", "Maldivian": "مالديفي", "Malian": "مالي", "Maltese": "مالطي", "Marshallese": "مارشالي", "Mauritanian": "موريتاني", "Mauritian": "موريشيوسي", "Mexican": "مكسيكي", "Micronesian": "ميكرونيزي", "Moldovan": "مولدوفي", "Monacan": "موناكي", "Mongolian": "منغولي", "Montenegrin": "جبل أسود (الجبل الأسود)", "Moroccan": "مغربي", "Mozambican": "موزمبيقي", "Namibian": "ناميبي", "Nauruan": "ناوروي", "Nepali": "نيبالي", "New Zealander": "نيوزيلندي", "Nicaraguan": "نيكاراغوي", "Nigerian": "نيجيري", "Nigerien": "نيجري", "North Korean": "كوري شمالي", "Northern Irish": "أيرلندي شمالي", "Norwegian": "نرويجي", "Omani": "عماني", "Pakistani": "باكستاني", "Palauan": "بالاوي", "Palestinian": "فلسطيني", "Panamanian": "بنمي", "Papua New Guinean": "بابوا غينيا الجديدة", "Paraguayan": "باراغوايي", "Peruvian": "بيروفي", "Polish": "بولندي", "Portuguese": "برتغالي", "Puerto Rican": "بورتوريكي", "Qatari": "قطري", "Romanian": "روماني", "Russian": "روسي", "Rwandan": "رواندي", "Saint Lucian": "لوسي (سانت لوسيا)", "Salvadoran": "سلفادوري", "Samoan": "ساموي", "San Marinese": "سان مارينو", "Sao Tomean": "ساو تومي", "Saudi": "سعودي", "Scottish": "اسكتلندي", "Senegalese": "سنغالي", "Serbian": "صربي", "Seychellois": "سيشيلي", "Sierra Leonean": "سيراليوني", "Singaporean": "سنغافوري", "Slovak": "سلوفاكي", "Slovenian": "سلوفيني", "Solomon Islander": "جزر سليمان", "Somali": "صومالي", "South African": "جنوب أفريقي", "South Korean": "كوري جنوبي", "South Sudanese": "جنوب سوداني", "Spanish": "إسباني", "Sri Lankan": "سريلانكي", "Sudanese": "سوداني", "Surinamese": "سورينامي", "Swazi": "إسواتيني", "Swedish": "سويدي", "Swiss": "سويسري", "Syrian": "سوري", "Taiwanese": "تايواني", "Tajik": "طاجيكي", "Tanzanian": "تنزاني", "Thai": "تايلندي", "Togolese": "توغولي", "Tongan": "تونغي", "Trinidadian": "ترينيدادي", "Tunisian": "تونسي", "Turkish": "تركي", "Turkmen": "تركماني", "Tuvaluan": "توفالي", "Ugandan": "أوغندي", "Ukrainian": "أوكراني", "Uruguayan": "أوروغوياني", "Uzbek": "أوزبكي", "Vanuatuan": "فانواتي", "Venezuelan": "فنزويلي", "Vietnamese": "فيتنامي", "Welsh": "ويلزي", "Yemeni": "يمني", "Zambian": "زامبي", "Zimbabwean": "زيمبابوي"};
+    function normAr(s){
+      return (s||'').toLowerCase().trim()
+        .replace(/[\u064B-\u0652\u0640]/g,'')
+        .replace(/[\u0623\u0625\u0622]/g,'\u0627')
+        .replace(/\u0649/g,'\u064A')
+        .replace(/\s+/g,' ');
+    }
+    // Accepts English OR Arabic (incl. feminine form ending in ة) and returns the English value.
+    function matchNationality(raw){
+      const r = normAr(raw);
+      if (!r) return '';
+      let hit = NATIONALITIES.find(n => n.toLowerCase() === r);
+      if (hit) return hit;
+      const r2 = r.replace(/\u0629$/,'');
+      hit = NATIONALITIES.find(n => {
+        const a = normAr(NATIONALITIES_AR[n]);
+        return a === r || a === r2;
+      });
+      return hit || '';
+    }
+    function renderNationalityList(){
+      const ar = curLang() === 'ar';
+      document.getElementById('nationalityList').innerHTML =
+        NATIONALITIES.map(n => '<option value="' + (ar ? NATIONALITIES_AR[n] : n) + '"></option>').join('');
+    }
+
     const LANGUAGES = ["English","Arabic","Hindi","Urdu","Tagalog / Filipino","Malayalam","Tamil","Bengali","Nepali","Sinhala","Indonesian / Bahasa","French","Swahili","Amharic","Spanish","Telugu","Punjabi","Pashto","Farsi / Persian","Turkish","Russian","Chinese (Mandarin)","Portuguese","German","Italian"];
 
     const studentFields = document.getElementById('studentFields');
@@ -960,8 +991,7 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       });
     });
 
-    document.getElementById('nationalityList').innerHTML =
-      NATIONALITIES.map(n => '<option value="' + n + '"></option>').join('');
+    renderNationalityList();
     document.getElementById('languageList').innerHTML =
       LANGUAGES.map(l => '<option value="' + l + '"></option>').join('');
 
@@ -1012,7 +1042,7 @@ filter:drop-shadow(0 2px 8px rgba(0,0,0,.25));
       const phone = document.getElementById('regPhone').value.trim();
       const dob = document.getElementById('regDob').value || null;
       const natRaw = document.getElementById('regNationality').value.trim();
-      const nationality = NATIONALITIES.find(n => n.toLowerCase() === natRaw.toLowerCase()) || '';
+      const nationality = matchNationality(natRaw);
       const employment = (registerForm.querySelector('input[name="employment"]:checked') || {}).value || '';
       const is_student = employment === 'student';
       const is_working = employment === 'working';
