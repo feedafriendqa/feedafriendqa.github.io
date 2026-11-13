@@ -187,7 +187,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  static blank() { return { q: { 1: 0, 5: 0, 10: 0, 15: 0, 20: 0 }, tote: 0, prod: { foodbox: 0, newborn: 0, sponsor: 0, formula: 0 }, creations: [], creationStr: '', creationOpen: false, others: [], otherStr: '', otherOpen: false, step: 'cart', method: null, given: 0, givenStr: '', name: '', email: '', phone: '', sending: false, err: '' }; }
+  static blank() { return { q: { 1: 0, 5: 0, 10: 0, 15: 0, 20: 0 }, tote: 0, prod: { foodbox: 0, newborn: 0, sponsor: 0, formula: 0, fridge: 0 }, creations: [], creationStr: '', creationOpen: false, others: [], otherStr: '', otherOpen: false, step: 'cart', method: null, given: 0, givenStr: '', name: '', email: '', phone: '', sending: false, err: '' }; }
   static COL = {
     1: { bg: '#ffffff', fg: '#0b2f20', bd: '#d7e3da' },
     5: { bg: '#2e9e5b', fg: '#ffffff', bd: 'rgba(255,255,255,.55)' },
@@ -217,7 +217,8 @@ class Component extends DCLogic {
       { id: 'foodbox', label: 'November Food Box', ar: 'سلة غذاء نوفمبر', price: 110 },
       { id: 'newborn', label: 'Newborn Toiletries Kit', ar: 'حقيبة مستلزمات المولود', price: 110 },
       { id: 'sponsor', label: 'Little Learners Sponsorship', ar: 'رعاية برنامج المتعلمين الصغار', price: 300 },
-      { id: 'formula', label: 'Baby Formula', ar: 'حليب أطفال', price: 110 }
+      { id: 'formula', label: 'Baby Formula', ar: 'حليب أطفال', price: 110 },
+      { id: 'fridge', label: 'Fridge Refill', ar: 'تعبئة الثلاجة', price: 80 }
     ];
     const products = PR.map(p => { const q = s.prod[p.id]; return { label: p.label, price: p.price, qty: q, qtyVis: q ? 'visible' : 'hidden', bg: q ? '#fdf6e7' : '#ffffff', bd: q ? '#d9a441' : '#ffffff',
       add: () => this.setState(x => ({ prod: Object.assign({}, x.prod, { [p.id]: x.prod[p.id] + 1 }) })) }; });
