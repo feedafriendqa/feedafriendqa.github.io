@@ -202,6 +202,28 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 .dev-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
 .dev-chip{background:var(--teal-soft);border:1.5px solid var(--teal);border-radius:50px;padding:2px 10px;font-size:12px;font-weight:700;color:var(--teal-mid);}
 
+
+/* CHILD PAGE */
+.child-strip{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:flex-end;padding:12px 18px;background:var(--cream);border-bottom:2px solid var(--border);}
+.cs-item{min-width:0;flex:0 1 auto;}
+.cs-status{flex:1 1 190px;max-width:260px;}
+.cs-k{font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px;}
+.cs-v{font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;color:var(--forest);word-break:break-word;}
+.cs-dob .cs-v{font-size:17px;}
+.cs-sub{font-size:11.5px;font-weight:700;color:var(--muted);}
+.cs-select{width:100%;padding:8px 10px;border-radius:10px;border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-weight:700;font-size:12.5px;cursor:pointer;}
+.sec{background:white;border:2px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden;}
+.sec>summary{cursor:pointer;padding:12px 14px;font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:var(--forest);list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.sec>summary::-webkit-details-marker{display:none;}
+.sec>summary::after{content:'▾';color:var(--muted);margin-left:auto;}
+.sec:not([open])>summary::after{content:'▸';}
+.sec-hint{font-family:'Quicksand',sans-serif;font-size:11.5px;font-weight:700;color:var(--muted);margin-left:auto;}
+.sec>summary .sec-hint+*{margin-left:0;}
+.sec-body{padding:2px 14px 14px;}
+.sec-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.photo-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.photo-btn{cursor:pointer;background:var(--forest-mid);color:white;border-radius:50px;padding:5px 12px;font-size:11px;font-weight:700;font-family:Quicksand,sans-serif;}
+
 /* CHILD PROFILE */
 .child-profile{background:var(--cream);border-radius:var(--r);border:2px solid var(--border);margin-bottom:12px;overflow:hidden;}
 .child-profile-header{background:var(--forest-mid);padding:12px 16px;display:flex;align-items:center;gap:12px;}
@@ -629,23 +651,26 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
       <button onclick="deleteFamily()" style="background:var(--coral);border:none;color:white;border-radius:50px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Quicksand,sans-serif;white-space:nowrap;">🗑 Delete</button>
     </div>
   </div>
+  <div class="child-strip" id="child-strip"></div>
   <div class="modal-body">
     <div class="tab-bar">
-      <button class="tab" onclick="switchTab('profile',this)">🌟 Profile</button>
-      <button class="tab on" onclick="switchTab('overview',this)">Overview</button>
-      <button class="tab" onclick="switchTab('parents',this)">👪 Parents</button>
-      <button class="tab" onclick="switchTab('children',this)">Children</button>
+      <button class="tab on" onclick="switchTab('children',this)">🧒 Child</button>
+      <button class="tab" onclick="switchTab('profile',this)">🌟 Learner</button>
       <button class="tab" onclick="switchTab('documents',this)">Documents</button>
-      <button class="tab" onclick="switchTab('assess',this)">Introductory Call</button>
       <button class="tab" onclick="switchTab('events',this)">Events</button>
-      <button class="tab" onclick="switchTab('pack',this)">Learning Pack</button>
+      <button class="tab" onclick="switchTab('pack',this)">Pack</button>
+      <button class="tab" onclick="switchTab('assess',this)">Intro Call</button>
+      <button class="tab" id="tab-siblings" onclick="switchTab('siblings',this)">👥 Siblings</button>
+      <button class="tab" onclick="switchTab('parents',this)">👪 Parents</button>
+      <button class="tab" onclick="switchTab('overview',this)">🏠 Household</button>
       <button class="tab" onclick="switchTab('checklist',this)">Checklist</button>
-      <button class="tab" onclick="switchTab('activity',this)">Activity Log</button>
+      <button class="tab" onclick="switchTab('activity',this)">Activity</button>
     </div>
     <div class="tpanel" id="tp-profile"></div>
-    <div class="tpanel on" id="tp-overview"></div>
+    <div class="tpanel" id="tp-overview"></div>
     <div class="tpanel" id="tp-parents"></div>
-    <div class="tpanel" id="tp-children"></div>
+    <div class="tpanel on" id="tp-children"></div>
+    <div class="tpanel" id="tp-siblings"></div>
     <div class="tpanel" id="tp-documents"></div>
     <div class="tpanel" id="tp-assess"></div>
     <div class="tpanel" id="tp-events"></div>
@@ -671,6 +696,8 @@ let dashExpanded = {turning3:false, checkins:false, referrals:false, recent:fals
 let foodBoxFriendIds = new Set(), welcomeBabyFriendIds = new Set();
 let currentFamily = null, currentChildren = [], currentUser = null, currentUserRole = null, currentUserEmail = '';
 let profileFocusChildId = null;
+let activeChildId = null;   // child whose page is open in the modal
+let activeTabId = 'children';
 let allEvents = [], allEventAttendees = [], currentAssessDay = null;
 let allAssessors = [];
 // One band per completed year of age (e.g. Age 7 = 7y 0m – 7y 11m). Bands group
@@ -2712,6 +2739,7 @@ function packLevelOptions(selected) {
 }
 
 function renderPackTab(f, children) {
+  children = scopeToActive(children);
   const el = document.getElementById('tp-pack');
   if(!children.length) { el.innerHTML = '<div class="empty"><div class="eicon">📚</div><p>No children on this application yet</p></div>'; return; }
 
@@ -3326,26 +3354,21 @@ function suggestYG(child) {
 
 // ── PROFILE ──
 async function openProfile(id, tab, focusChildId) {
+  const reopening = currentFamily && currentFamily.id===id && document.getElementById('modal').classList.contains('open');
   currentFamily = allFamilies.find(f=>f.id===id);
   if(!currentFamily) return;
   currentChildren = allChildren.filter(c=>c.family_id===id);
   const f = currentFamily;
-  profileFocusChildId = focusChildId || null;
-
-  // Pipeline stage is per-child now, so the header badge reflects whichever child is
-  // focused (or the first child, if none specified) rather than a single family-wide stage.
-  const headlineChild = (focusChildId && currentChildren.find(c=>c.id===focusChildId)) || currentChildren[0] || null;
-  const status = headlineChild ? (headlineChild.pipeline_status||'new') : null;
-  document.getElementById('m-title').innerHTML = `${f.father_name||'Family'}${f.mother_name?' & '+f.mother_name:''} <span style="background:var(--teal);color:white;font-size:10px;padding:2px 8px;border-radius:50px;margin-left:6px;">${f.urn||'—'}</span>`;
-  document.getElementById('m-sub').innerHTML = `
-    ${status ? `<span class="status-tag st-${status}">${headlineChild.full_name||'Child'}: ${STATUS_LABELS[status]||'New'}</span>` : ''}
-    ${currentChildren.length>1?`<span style="color:rgba(255,255,255,.7);">${currentChildren.length} children — see Children tab</span>`:''}
-    ${programPillsHTML(f)}
-    ${f.assigned_to_name?`<span>👤 ${f.assigned_to_name}</span>`:'<span style="color:rgba(255,255,255,.5);">Unassigned</span>'}
-    <span>${new Date(f.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span>`;
+  // Which child's page: the one asked for, else keep the open one (re-render after a save), else the first.
+  activeChildId = (focusChildId && currentChildren.some(c=>c.id===focusChildId)) ? focusChildId
+    : (reopening && currentChildren.some(c=>c.id===activeChildId)) ? activeChildId
+    : (currentChildren[0] ? currentChildren[0].id : null);
+  profileFocusChildId = activeChildId;
+  renderModalHeader();
 
   renderOverview(f);
   renderChildren(currentChildren,f);
+  renderSiblings();
   await renderDocs(f);
   renderAssessment(f,currentChildren);
   renderEventsTab(f,currentChildren);
@@ -3354,7 +3377,7 @@ async function openProfile(id, tab, focusChildId) {
   renderParentsTab(f);
   renderChecklist(f);
   renderActivityLog(f.id);
-  const targetTab = tab || 'overview';
+  const targetTab = tab || (reopening ? activeTabId : 'children');
   const tabBtn = [...document.querySelectorAll('.tab')].find(b => b.getAttribute('onclick')?.includes(`'${targetTab}'`));
   switchTab(targetTab, tabBtn || document.querySelector('.tab'));
   document.getElementById('modal').classList.add('open');
@@ -3374,7 +3397,7 @@ function renderOverview(f) {
       </select>
     </div>
 
-    <div class="note" style="margin-bottom:14px;">📍 Pipeline stage is now tracked per child — see each child's own stage on the Children tab.</div>
+    <div class="note" style="margin-bottom:14px;">📍 Pipeline stage is now tracked per child — see each child's own stage on their page (Child tab).</div>
 
         <div class="info-sec">
       <h3>Father / Guardian 1 <button class="qid-scan-btn-sm" onclick="openQidScan('father','${f.id}')">🪪 Scan QID</button></h3>
@@ -3427,240 +3450,265 @@ function renderOverview(f) {
     </div>`;
 }
 
-// ── CHILDREN ──
+// ── CHILD PAGE ──
+// One page per child. Identity + status live in the strip under the modal header
+// (renderModalHeader); this tab holds everything else, grouped into collapsible sections.
+// Siblings live on their own tab (renderSiblings) and open on their own page via switchChild().
+const secState = {};   // `${childId}:${key}` -> open?  (survives re-renders)
+const SEC_DEFAULT_OPEN = {details:true, learning:true, flags:true, sponsor:false};
+function secOpen(childId, key) {
+  const v = secState[childId+':'+key];
+  return (v===undefined ? SEC_DEFAULT_OPEN[key] : v) ? 'open' : '';
+}
+function secHTML(childId, key, title, hint, body) {
+  return `<details class="sec" ${secOpen(childId,key)} ontoggle="secState['${childId}:${key}']=this.open">
+    <summary><span>${title}</span><span class="sec-hint">${hint||''}</span></summary>
+    <div class="sec-body">${body}</div>
+  </details>`;
+}
+function activeChild() {
+  return (currentChildren||[]).find(c=>c.id===activeChildId) || (currentChildren||[])[0] || null;
+}
+// Events / Pack / etc. take a list of children — show just the child whose page is open.
+function scopeToActive(children) {
+  const c = (children||[]).find(x=>x.id===activeChildId);
+  return c ? [c] : (children||[]);
+}
+function fmtDob(v) {
+  const d = parseDob(v);
+  return d ? d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : (v||'—');
+}
+
 function renderChildren(children, f) {
-  if(!children.length) {
+  const c = children.find(x=>x.id===activeChildId) || children[0];
+  if(!c) {
     document.getElementById('tp-children').innerHTML = '<div class="empty"><div class="eicon">👧</div><p>No children added</p></div>';
     return;
   }
-  document.getElementById('tp-children').innerHTML = children.map((c,i)=>{
-    const unassessed = isUnassessed(c);
-    const assignedYG = c.final_year_group || c.year_group_override;
-    const displayYG = unassessed ? 'Not yet assessed' : (assignedYG || 'Not set');
-    const reason = unassessed ? 'Year group is allocated after assessment' : (assignedYG ? '' : 'No year group allocated yet');
-    const isOverride = !!c.year_group_override && !c.year_group_approved;
-    const isApproved = !!c.year_group_approved;
-    const gcClass = (c.gender||'').toLowerCase()==='girl'?'girl':(c.gender||'').toLowerCase()==='boy'?'boy':'';
+  const unassessed = isUnassessed(c);
+  const assignedYG = c.final_year_group || c.year_group_override;
+  const displayYG = unassessed ? 'Not yet assessed' : (assignedYG || 'Not set');
+  const reason = unassessed ? 'Year group is allocated after assessment' : (assignedYG ? '' : 'No year group allocated yet');
+  const isOverride = !!c.year_group_override && !c.year_group_approved;
+  const isApproved = !!c.year_group_approved;
+  const fld = (label, inner, span2) => `<div class="irow" ${span2?'style="grid-column:span 2;"':''}><div class="ikey">${label}</div>${inner}</div>`;
+  const inp = (field, ph) => `<input class="ival-input" placeholder="${ph}" value="${(c[field]||'').replace(/"/g,'&quot;')}" onblur="saveChildField('${c.id}','${field}',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">`;
+  const sel = (field, opts, refresh) => `<select class="ival-select" onchange="saveChildField('${c.id}','${field}',this.value${refresh?',true':''})">
+      <option value="" ${!c[field]?'selected':''}>Select…</option>
+      ${opts.map(o=>`<option ${c[field]===o?'selected':''}>${o}</option>`).join('')}
+    </select>`;
 
-    return `<div class="child-profile">
-      <div class="child-profile-header">
-        <div class="child-photo" id="cp-${c.id}">
-          ${c.profile_photo_path
-            ? `<img src="" id="cp-img-${c.id}" alt="photo">`
-            : (c.gender==='Girl'?'👧':'👦')}
-        </div>
-        <div class="child-header-info">
-          <div class="child-header-name">${c.full_name||'Child '+(i+1)}${c.preferred_name?` <span style="font-size:12px;font-weight:700;color:var(--gold);">"${c.preferred_name}"</span>`:''}</div>
-          <div class="child-header-sub">
-            <span>${c.urn||f.urn+'.'+(i+1)}</span>
-            ${c.gender?`<span class="gc ${gcClass}">${c.gender}</span>`:''}
-            ${c.dob?`<span>DOB: ${c.dob}</span>`:''}
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
-          <button class="qid-scan-btn-sm" style="margin-left:0;" onclick="openQidScan('child','${f.id}','${c.id}')">🪪 Scan QID</button>
-          <label style="cursor:pointer;background:rgba(255,255,255,.15);color:white;border-radius:50px;padding:5px 12px;font-size:11px;font-weight:700;font-family:Quicksand,sans-serif;">
-            📸 Photo
-            <input type="file" accept="image/*" style="display:none;" onchange="uploadChildPhoto(event,'${c.id}','${f.id}')">
-          </label>
-          ${c.profile_photo_path?`<button style="cursor:pointer;border:none;background:rgba(255,255,255,.15);color:white;border-radius:50px;padding:5px 12px;font-size:11px;font-weight:700;font-family:Quicksand,sans-serif;" onclick="openPhotoEditor('${c.id}')">✂️ Adjust</button>`:''}
-        </div>
+  // 1 ── KEY DETAILS
+  const details = `
+    <div class="info-grid">
+      ${fld('QID number <span style="text-transform:none;font-weight:600;color:var(--muted);">(auto-filled by Scan QID, or type it)</span>', `<input class="ival-input" placeholder="e.g. 28740400336" value="${c.qid||''}" onblur="saveChildField('${c.id}','qid',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">`, true)}
+      ${c.qid_expiry?fld('QID expiry', `<div class="ival">${c.qid_expiry}</div>`):''}
+      ${c.qid_sponsor?fld('Sponsor', `<div class="ival">${c.qid_sponsor}</div>`):''}
+      ${fld('Nationality', inp('nationality','e.g. Kenyan'))}
+      ${fld('Language at home', inp('lang_home','e.g. Swahili'))}
+      ${fld('Preferred name <span style="text-transform:none;font-weight:600;color:var(--muted);">(if different)</span>', `<input class="preferred-name-input" style="margin-top:4px;" placeholder="e.g. Bebo" value="${(c.preferred_name||'').replace(/"/g,'&quot;')}" onblur="savePreferredName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">`)}
+      ${fld('Arabic name <span style="text-transform:none;font-weight:600;color:var(--muted);">(Arabic sponsor page)</span>', `<input class="preferred-name-input" data-arname="${c.id}" dir="rtl" style="margin-top:4px;" placeholder="مثال: محمد" value="${(c.display_name_ar||'').replace(/"/g,'&quot;')}" onblur="saveArabicName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+        <button type="button" class="btn-small" style="margin-top:6px;" onclick="translateToArabic('${c.id}', this)">✨ Translate to Arabic</button>`)}
+    </div>`;
+
+  // 2 ── SCHOOL & LEARNING
+  const learning = `
+    <div class="yg-box">
+      <div class="sec-label">Year group</div>
+      <div class="yg-auto-row">
+        <span class="yg-badge ${isApproved?'approved':isOverride?'override':''}">${displayYG}</span>
+        <span class="yg-sub">${isApproved?'✅ Set by '+c.year_group_approved_by:reason}</span>
+        ${!unassessed?`<button class="override-btn" onclick="toggleYGEdit('yge-${c.id}',this)">✏️ Override</button>`:''}
       </div>
-      <div class="child-profile-body">
+      ${assessedSummaryHTML(c)}
+      ${c.year_group_justification?`<div style="margin-top:8px;font-size:12px;color:var(--muted);background:var(--cream);padding:8px 10px;border-radius:var(--rs);">📝 ${c.year_group_justification}</div>`:''}
+    </div>
+    <div class="yg-edit" id="yge-${c.id}">
+      <label>Override Year Group</label>
+      <select id="ygs-${c.id}">
+        <option>FS1</option><option>FS2</option><option>Year 1</option><option>Year 2</option>
+        <option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option>
+      </select>
+      <label>Justification (required)</label>
+      <textarea id="ygj-${c.id}" placeholder="e.g. Child appears to be working at Year 3 level based on assessment…">${c.year_group_justification||''}</textarea>
+      <button class="btn-teal btn-sm" onclick="saveYGOverride('${c.id}')">Save Override</button>
+    </div>
 
-        <!-- PIPELINE STATUS (per child — siblings can be at different stages) -->
-        <div style="margin-bottom:14px;">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Pipeline Status</div>
-          <div class="pipeline-status-row">
-            ${PIPELINE_STAGES.filter(s=>s.key!=='all').map(s=>`
-              <button class="pipe-btn ${(c.pipeline_status||'new')===s.key?'active':''}" onclick="setPipelineStatus('${c.id}','${s.key}')">${s.icon} ${s.label}</button>
-            `).join('')}
-          </div>
-        </div>
+    <div class="sec-label" style="margin-top:14px;">Assessment papers</div>
+    <div class="ap-wrap" data-child="${c.id}" data-sfx="c"><div class="loading">Loading…</div></div>
 
-        <!-- SECURED SCHOOL PLACE — can be flagged at any stage, independent of pipeline status -->
-        ${c.school_place_status ? `<div class="warn-box" style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <div>🏫 <strong>Secured a school place</strong> — ${c.school_place_status==='verified'?'✅ verified':'⏳ reported, needs verification'}${c.school_place_note?' — '+c.school_place_note:''}</div>
-          <div style="display:flex;gap:6px;">
-            ${c.school_place_status==='reported'?`<button class="btn-small" onclick="verifySchoolPlace('${c.id}')">✅ Verify</button>`:''}
-            <button class="btn-small" onclick="setSchoolPlaceStatus('${c.id}', null)">✖ Clear</button>
-          </div>
-        </div>` : ''}
+    <div class="info-grid" style="margin-top:14px;">
+      ${fld('School status', sel('school_status',['Never attended school','Previously attended — left','On waiting list','Online school only','Part-time (≤2.5 days/week)','Enrolled full-time']))}
+      ${fld('Years since school', inp('years_since_school','e.g. 2'))}
+      ${fld('English', sel('english_fluency',['None','Basic','Good','Fluent']))}
+      ${fld('Arabic', sel('arabic_fluency',['None','Basic','Good','Fluent']))}
+      ${fld('Special needs', sel('special_needs',['No','Yes — please describe below'], true))}
+      ${fld('Allergies', `<select class="ival-select" onchange="saveChildField('${c.id}','has_allergies',this.value,true)">
+          <option value="" ${!c.has_allergies?'selected':''}>Select…</option>
+          <option value="No" ${c.has_allergies==='No'?'selected':''}>No</option>
+          <option value="Yes" ${c.has_allergies==='Yes'?'selected':''}>Yes — please describe</option>
+        </select>`)}
+      ${c.special_needs==='Yes — please describe below'?fld('Special needs detail', `<textarea class="ival-input" style="min-height:60px;" placeholder="Describe the special need…" onblur="saveChildField('${c.id}','special_needs_detail',this.value)">${c.special_needs_detail||''}</textarea>`, true):''}
+      ${c.has_allergies==='Yes'?fld('Allergy detail', `<input class="ival-input" placeholder="e.g. peanuts, eggs, dairy…" value="${(c.allergy_detail||'').replace(/"/g,'&quot;')}" onblur="saveChildField('${c.id}','allergy_detail',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">`, true):''}
+    </div>`;
 
-        <!-- SOCIAL MEDIA / PHOTO CONSENT — always visible, any stage -->
-        <div class="${c.media_consent==='Yes'?'note':'warn-box'}" style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <div>📷 <strong>Social media &amp; photo consent</strong> — ${c.media_consent==='Yes'?'✅ Consent given':c.media_consent==='No'?'🚫 No consent':'⚠️ Not recorded'}</div>
-          <select style="padding:6px 10px;border-radius:8px;border:2px solid var(--border);font-size:12px;" onchange="saveChildField('${c.id}','media_consent',this.value||null,true)">
-            <option value="" ${!c.media_consent?'selected':''}>Not recorded</option>
-            <option value="Yes" ${c.media_consent==='Yes'?'selected':''}>Yes, consent given</option>
-            <option value="No" ${c.media_consent==='No'?'selected':''}>No consent</option>
-          </select>
-        </div>
-
-        <!-- YEAR GROUP BOX -->
-        <div class="yg-box">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Year Group</div>
-          <div class="yg-auto-row">
-            <span class="yg-badge ${isApproved?'approved':isOverride?'override':''}">${displayYG}</span>
-            <span class="yg-sub">${isApproved?'✅ Set by '+c.year_group_approved_by:reason}</span>
-            ${!unassessed?`<button class="override-btn" onclick="toggleYGEdit('yge-${c.id}',this)">✏️ Override</button>`:''}
-          </div>
-          ${assessedSummaryHTML(c)}
-          ${c.year_group_justification?`<div style="margin-top:8px;font-size:12px;color:var(--muted);background:var(--cream);padding:8px 10px;border-radius:var(--rs);">📝 ${c.year_group_justification}</div>`:''}
-        </div>
-
-        <!-- YEAR GROUP EDIT -->
-        <div class="yg-edit" id="yge-${c.id}">
-          <label>Override Year Group</label>
-          <select id="ygs-${c.id}">
-            <option>FS1</option><option>FS2</option><option>Year 1</option><option>Year 2</option>
-            <option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option>
-          </select>
-          <label>Justification (required)</label>
-          <textarea id="ygj-${c.id}" placeholder="e.g. Child appears to be working at Year 3 level based on assessment…">${c.year_group_justification||''}</textarea>
-          <button class="btn-teal btn-sm" onclick="saveYGOverride('${c.id}')">Save Override</button>
-        </div>
-
-        <div style="margin-top:14px;">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Assessment Papers</div>
-          <div class="ap-wrap" data-child="${c.id}" data-sfx="c"><div class="loading">Loading…</div></div>
-        </div>
-
-        <div class="info-grid" style="margin-top:10px;">
-          <div class="irow" style="grid-column:span 2;">
-            <div class="ikey">Preferred Name <span style="text-transform:none;font-weight:600;color:var(--muted);">(what the child likes to be called, if different)</span></div>
-            <input class="preferred-name-input" style="margin-top:4px;" placeholder="e.g. Bebo" value="${c.preferred_name||''}" onblur="savePreferredName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
-          </div>
-          <div class="irow" style="grid-column:span 2;">
-            <div class="ikey">Arabic Name <span style="text-transform:none;font-weight:600;color:var(--muted);">(shown on the Arabic sponsor page)</span></div>
-            <input class="preferred-name-input" data-arname="${c.id}" dir="rtl" style="margin-top:4px;" placeholder="مثال: محمد" value="${(c.display_name_ar||'').replace(/"/g,'&quot;')}" onblur="saveArabicName('${c.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
-              <button type="button" class="btn-small" style="margin-top:6px;" onclick="translateToArabic('${c.id}', this)">✨ Translate to Arabic</button>
-          </div>
-          <div class="irow" style="grid-column:span 2;">
-            <div class="ikey">QID Number <span style="text-transform:none;font-weight:600;color:var(--muted);">(auto-filled by Scan QID, or enter/correct manually)</span></div>
-            <input class="ival-input" placeholder="e.g. 28740400336" value="${c.qid||''}" onblur="saveChildField('${c.id}','qid',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
-          </div>
-          <div class="irow">
-            <div class="ikey">Nationality</div>
-            <input class="ival-input" placeholder="e.g. Kenyan" value="${c.nationality||''}" onblur="saveChildField('${c.id}','nationality',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
-          </div>
-          <div class="irow">
-            <div class="ikey">Language at Home</div>
-            <input class="ival-input" placeholder="e.g. Swahili" value="${c.lang_home||''}" onblur="saveChildField('${c.id}','lang_home',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
-          </div>
-          <div class="irow">
-            <div class="ikey">English</div>
-            <select class="ival-select" onchange="saveChildField('${c.id}','english_fluency',this.value)">
-              <option value="" ${!c.english_fluency?'selected':''}>Select…</option>
-              <option ${c.english_fluency==='None'?'selected':''}>None</option>
-              <option ${c.english_fluency==='Basic'?'selected':''}>Basic</option>
-              <option ${c.english_fluency==='Good'?'selected':''}>Good</option>
-              <option ${c.english_fluency==='Fluent'?'selected':''}>Fluent</option>
-            </select>
-          </div>
-          <div class="irow">
-            <div class="ikey">Arabic</div>
-            <select class="ival-select" onchange="saveChildField('${c.id}','arabic_fluency',this.value)">
-              <option value="" ${!c.arabic_fluency?'selected':''}>Select…</option>
-              <option ${c.arabic_fluency==='None'?'selected':''}>None</option>
-              <option ${c.arabic_fluency==='Basic'?'selected':''}>Basic</option>
-              <option ${c.arabic_fluency==='Good'?'selected':''}>Good</option>
-              <option ${c.arabic_fluency==='Fluent'?'selected':''}>Fluent</option>
-            </select>
-          </div>
-          <div class="irow">
-            <div class="ikey">School Status</div>
-            <select class="ival-select" onchange="saveChildField('${c.id}','school_status',this.value)">
-              <option value="" ${!c.school_status?'selected':''}>Select…</option>
-              <option ${c.school_status==='Never attended school'?'selected':''}>Never attended school</option>
-              <option ${c.school_status==='Previously attended — left'?'selected':''}>Previously attended — left</option>
-              <option ${c.school_status==='On waiting list'?'selected':''}>On waiting list</option>
-              <option ${c.school_status==='Online school only'?'selected':''}>Online school only</option>
-              <option ${c.school_status==='Part-time (≤2.5 days/week)'?'selected':''}>Part-time (≤2.5 days/week)</option>
-              <option ${c.school_status==='Enrolled full-time'?'selected':''}>Enrolled full-time</option>
-            </select>
-          </div>
-          <div class="irow">
-            <div class="ikey">Years Since School</div>
-            <input class="ival-input" placeholder="e.g. 2" value="${c.years_since_school||''}" onblur="saveChildField('${c.id}','years_since_school',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
-          </div>
-          <div class="irow">
-            <div class="ikey">Special Needs</div>
-            <select class="ival-select" onchange="saveChildField('${c.id}','special_needs',this.value,true)">
-              <option value="" ${!c.special_needs?'selected':''}>Select…</option>
-              <option ${c.special_needs==='No'?'selected':''}>No</option>
-              <option ${c.special_needs==='Yes — please describe below'?'selected':''}>Yes — please describe below</option>
-            </select>
-          </div>
-          ${c.special_needs==='Yes — please describe below'?`<div class="irow" style="grid-column:span 2"><div class="ikey">SN Detail</div><textarea class="ival-input" style="min-height:60px;" placeholder="Describe the special need…" onblur="saveChildField('${c.id}','special_needs_detail',this.value)">${c.special_needs_detail||''}</textarea></div>`:''}
-          <div class="irow">
-            <div class="ikey">Allergies</div>
-            <select class="ival-select" onchange="saveChildField('${c.id}','has_allergies',this.value,true)">
-              <option value="" ${!c.has_allergies?'selected':''}>Select…</option>
-              <option value="No" ${c.has_allergies==='No'?'selected':''}>No</option>
-              <option value="Yes" ${c.has_allergies==='Yes'?'selected':''}>Yes — please describe</option>
-            </select>
-          </div>
-          ${c.has_allergies==='Yes'?`<div class="irow"><div class="ikey">Allergy Detail</div><input class="ival-input" placeholder="e.g. peanuts, eggs, dairy…" value="${c.allergy_detail||''}" onblur="saveChildField('${c.id}','allergy_detail',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}"></div>`:''}
-          ${c.qid_sponsor?`<div class="irow"><div class="ikey">Sponsor</div><div class="ival">${c.qid_sponsor}</div></div>`:''}
-          ${c.qid_expiry?`<div class="irow"><div class="ikey">QID Expiry</div><div class="ival">${c.qid_expiry}</div></div>`:''}
-        </div>
-
-        <!-- INTRO CALL AVAILABILITY -->
-        <div style="margin-top:12px;padding-top:12px;border-top:2px solid var(--border);">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Introductory Call Status</div>
-          <select id="ics-${c.id}" style="padding:8px 10px;border-radius:var(--rs);border:2px solid var(--border);font-family:Quicksand,sans-serif;font-size:12.5px;width:100%;" onchange="onIntroCallStatusChange('${c.id}','${f.id}',this.value)">
-            <option value="Available" ${!c.intro_call_status||c.intro_call_status==='Available'?'selected':''}>✅ Available for introductory call</option>
-            <option value="Already in school" ${c.intro_call_status==='Already in school'?'selected':''}>🏫 Already in school</option>
-            <option value="Not in country" ${c.intro_call_status==='Not in country'?'selected':''}>✈️ Not currently in country</option>
-            <option value="Other" ${c.intro_call_status==='Other'?'selected':''}>❓ Other — unavailable</option>
-          </select>
-          ${c.intro_call_status && c.intro_call_status!=='Available' ? `<div style="font-size:11px;color:var(--coral);font-weight:700;margin-top:6px;">🚫 Excluded from introductory call — family notified, child archived.</div>` : ''}
-        </div>
-
-        <!-- SPONSORSHIP -->
-        <div style="margin-top:12px;padding-top:12px;border-top:2px solid var(--border);">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Sponsorship</div>
-          <select id="spons-${c.id}" style="padding:8px 10px;border-radius:var(--rs);border:2px solid var(--border);font-family:Quicksand,sans-serif;font-size:12.5px;width:100%;" onchange="saveChildField('${c.id}','sponsorship_status',this.value,true)">
-            <option value="" ${!c.sponsorship_status?'selected':''}>Not set</option>
-            <option value="needs_sponsor" ${c.sponsorship_status==='needs_sponsor'?'selected':''}>🙋 Needs Sponsor</option>
-            <option value="sponsored" ${c.sponsorship_status==='sponsored'?'selected':''}>✅ Sponsored</option>
-          </select>
-          ${c.sponsorship_status==='needs_sponsor' ? (
-            c.media_consent==='No'
-              ? (!c.profile_photo_path
-                  ? `<div style="font-size:11px;color:var(--coral);font-weight:700;margin-top:6px;">⚠️ No profile photo on file yet — upload one first so a blurred version can be made.</div>`
-                  : (c.sponsor_photo_path||'').indexOf('little-learners/blurred/')===0
-                    ? `<div style="font-size:11px;color:var(--lime);font-weight:700;margin-top:6px;">✅ Live with a blurred photo (no media consent).</div>
-                       <button class="btn-small" style="margin-top:6px;" onclick="approveSponsorPhoto('${c.id}',true)">🔄 Regenerate blurred photo</button>`
-                    : `<div style="font-size:11px;color:var(--text-muted,#666);font-weight:700;margin-top:6px;">🔒 No media consent — only a blurred photo is ever shown.</div>
-                       <button class="btn-small" style="margin-top:6px;" onclick="approveSponsorPhoto('${c.id}',true)">🔒 Create blurred photo for Sponsor Page</button>`
-                )
-            : c.media_consent!=='Yes'
-              ? `<div style="font-size:11px;color:var(--coral);font-weight:700;margin-top:6px;">⚠️ No media consent on file — cannot show on the public sponsor page until a parent consents (via RSVP or manually below).</div>
-                 <select style="margin-top:6px;padding:6px 10px;border-radius:8px;border:2px solid var(--border);font-size:12px;" onchange="saveChildField('${c.id}','media_consent',this.value,true)">
-                   <option value="">Set media consent…</option>
-                   <option value="Yes">Yes, consent given</option>
-                   <option value="No">No consent</option>
-                 </select>`
-              : (!c.profile_photo_path
-                  ? `<div style="font-size:11px;color:var(--coral);font-weight:700;margin-top:6px;">⚠️ No profile photo on file yet — upload one first (via 📷 Photo button above).</div>`
-                  : c.sponsor_photo_path
-                    ? `<div style="font-size:11px;color:var(--lime);font-weight:700;margin-top:6px;">✅ Live on the sponsor page.</div>
-                       <button class="btn-small" style="margin-top:6px;" onclick="approveSponsorPhoto('${c.id}')">🔄 Refresh Sponsor Photo</button> <button class="btn-small" style="margin-top:6px;" onclick="openPhotoEditor('${c.id}')">✂️ Adjust Photo</button>`
-                    : `<button class="btn-small" style="margin-top:6px;" onclick="openPhotoEditor('${c.id}')">✂️ Adjust Photo</button> <button class="btn-small" style="margin-top:6px;" onclick="approveSponsorPhoto('${c.id}')">📸 Approve Photo for Sponsor Page</button>`
-                )
-          ) : ''}
-        </div>
+  // 3 ── STATUS & PERMISSIONS (pipeline status itself is the dropdown in the strip above)
+  const flags = `
+    ${c.school_place_status ? `<div class="warn-box" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <div>🏫 <strong>Secured a school place</strong> — ${c.school_place_status==='verified'?'✅ verified':'⏳ reported, needs verification'}${c.school_place_note?' — '+c.school_place_note:''}</div>
+      <div style="display:flex;gap:6px;">
+        ${c.school_place_status==='reported'?`<button class="btn-small" onclick="verifySchoolPlace('${c.id}')">✅ Verify</button>`:''}
+        <button class="btn-small" onclick="setSchoolPlaceStatus('${c.id}', null)">✖ Clear</button>
       </div>
+    </div>` : ''}
+
+    <div class="${c.media_consent==='Yes'?'note':'warn-box'}" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <div>📷 <strong>Social media &amp; photo consent</strong> — ${c.media_consent==='Yes'?'✅ Consent given':c.media_consent==='No'?'🚫 No consent':'⚠️ Not recorded'}</div>
+      <select style="padding:6px 10px;border-radius:8px;border:2px solid var(--border);font-size:12px;" onchange="saveChildField('${c.id}','media_consent',this.value||null,true)">
+        <option value="" ${!c.media_consent?'selected':''}>Not recorded</option>
+        <option value="Yes" ${c.media_consent==='Yes'?'selected':''}>Yes, consent given</option>
+        <option value="No" ${c.media_consent==='No'?'selected':''}>No consent</option>
+      </select>
+    </div>
+
+    <div class="sec-label">Introductory call status</div>
+    <select id="ics-${c.id}" style="padding:8px 10px;border-radius:var(--rs);border:2px solid var(--border);font-family:Quicksand,sans-serif;font-size:12.5px;width:100%;" onchange="onIntroCallStatusChange('${c.id}','${f.id}',this.value)">
+      <option value="Available" ${!c.intro_call_status||c.intro_call_status==='Available'?'selected':''}>✅ Available for introductory call</option>
+      <option value="Already in school" ${c.intro_call_status==='Already in school'?'selected':''}>🏫 Already in school</option>
+      <option value="Not in country" ${c.intro_call_status==='Not in country'?'selected':''}>✈️ Not currently in country</option>
+      <option value="Other" ${c.intro_call_status==='Other'?'selected':''}>❓ Other — unavailable</option>
+    </select>
+    ${c.intro_call_status && c.intro_call_status!=='Available' ? `<div style="font-size:11px;color:var(--coral);font-weight:700;margin-top:6px;">🚫 Excluded from introductory call — family notified, child archived.</div>` : ''}`;
+
+  // 4 ── SPONSORSHIP
+  const sponsorBody = `
+    <select id="spons-${c.id}" style="padding:8px 10px;border-radius:var(--rs);border:2px solid var(--border);font-family:Quicksand,sans-serif;font-size:12.5px;width:100%;" onchange="saveChildField('${c.id}','sponsorship_status',this.value,true)">
+      <option value="" ${!c.sponsorship_status?'selected':''}>Not set</option>
+      <option value="needs_sponsor" ${c.sponsorship_status==='needs_sponsor'?'selected':''}>🙋 Needs Sponsor</option>
+      <option value="sponsored" ${c.sponsorship_status==='sponsored'?'selected':''}>✅ Sponsored</option>
+    </select>
+    ${c.sponsorship_status==='needs_sponsor' ? (
+      c.media_consent==='No'
+        ? (!c.profile_photo_path
+            ? `<div style="font-size:11px;color:var(--coral);font-weight:700;margin-top:6px;">⚠️ No profile photo on file yet — upload one first so a blurred version can be made.</div>`
+            : (c.sponsor_photo_path||'').indexOf('little-learners/blurred/')===0
+              ? `<div style="font-size:11px;color:var(--lime);font-weight:700;margin-top:6px;">✅ Live with a blurred photo (no media consent).</div>
+                 <button class="btn-small" style="margin-top:6px;" onclick="approveSponsorPhoto('${c.id}',true)">🔄 Regenerate blurred photo</button>`
+              : `<div style="font-size:11px;color:var(--text-muted,#666);font-weight:700;margin-top:6px;">🔒 No media consent — only a blurred photo is ever shown.</div>
+                 <button class="btn-small" style="margin-top:6px;" onclick="approveSponsorPhoto('${c.id}',true)">🔒 Create blurred photo for Sponsor Page</button>`
+          )
+      : c.media_consent!=='Yes'
+        ? `<div style="font-size:11px;color:var(--coral);font-weight:700;margin-top:6px;">⚠️ No media consent on file — cannot show on the public sponsor page until a parent consents (via RSVP or manually below).</div>
+           <select style="margin-top:6px;padding:6px 10px;border-radius:8px;border:2px solid var(--border);font-size:12px;" onchange="saveChildField('${c.id}','media_consent',this.value,true)">
+             <option value="">Set media consent…</option>
+             <option value="Yes">Yes, consent given</option>
+             <option value="No">No consent</option>
+           </select>`
+        : (!c.profile_photo_path
+            ? `<div style="font-size:11px;color:var(--coral);font-weight:700;margin-top:6px;">⚠️ No profile photo on file yet — upload one first (via 📷 Photo button above).</div>`
+            : c.sponsor_photo_path
+              ? `<div style="font-size:11px;color:var(--lime);font-weight:700;margin-top:6px;">✅ Live on the sponsor page.</div>
+                 <button class="btn-small" style="margin-top:6px;" onclick="approveSponsorPhoto('${c.id}')">🔄 Refresh Sponsor Photo</button> <button class="btn-small" style="margin-top:6px;" onclick="openPhotoEditor('${c.id}')">✂️ Adjust Photo</button>`
+              : `<button class="btn-small" style="margin-top:6px;" onclick="openPhotoEditor('${c.id}')">✂️ Adjust Photo</button> <button class="btn-small" style="margin-top:6px;" onclick="approveSponsorPhoto('${c.id}')">📸 Approve Photo for Sponsor Page</button>`
+          )
+    ) : ''}`;
+
+  const sponsorHint = c.sponsorship_status==='sponsored'?'✅ Sponsored':c.sponsorship_status==='needs_sponsor'?'🙋 Needs sponsor':'Not set';
+  const flagsHint = (c.media_consent==='Yes'?'📷 consent':c.media_consent==='No'?'📷 no consent':'⚠️ consent not recorded');
+
+  document.getElementById('tp-children').innerHTML = `
+    <div class="photo-row">
+      <div class="child-photo" id="cp-${c.id}">
+        ${c.profile_photo_path ? `<img src="" id="cp-img-${c.id}" alt="photo">` : (c.gender==='Girl'||c.gender==='Female'?'👧':'👦')}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="qid-scan-btn-sm" style="margin-left:0;" onclick="openQidScan('child','${f.id}','${c.id}')">🪪 Scan QID</button>
+        <label class="photo-btn">📸 Photo
+          <input type="file" accept="image/*" style="display:none;" onchange="uploadChildPhoto(event,'${c.id}','${f.id}')">
+        </label>
+        ${c.profile_photo_path?`<button class="photo-btn" style="border:none;" onclick="openPhotoEditor('${c.id}')">✂️ Adjust</button>`:''}
+      </div>
+    </div>
+    ${secHTML(c.id,'details','🪪 Key details','', details)}
+    ${secHTML(c.id,'learning','🎓 School &amp; learning', displayYG, learning)}
+    ${secHTML(c.id,'flags','✅ Permissions &amp; call status', flagsHint, flags)}
+    ${secHTML(c.id,'sponsor','🤝 Sponsorship', sponsorHint, sponsorBody)}
+  `;
+
+  // Load profile photo + assessment papers
+  if(c.profile_photo_path) loadChildPhoto(c.id, c.profile_photo_path);
+  loadAssessmentPapers(c.id);
+}
+
+// ── MODAL HEADER + SUMMARY STRIP (focused child) ──
+function renderModalHeader() {
+  const f = currentFamily, c = activeChild();
+  if(!f) return;
+  const name = c ? (c.full_name||'Child') : (f.father_name||'Family');
+  document.getElementById('m-title').innerHTML = `${name}${c&&c.preferred_name?` <span style="font-size:12px;font-weight:700;color:var(--gold);">"${c.preferred_name}"</span>`:''}`;
+  const phone = f.father_phone||f.mother_phone||'';
+  const parents = [f.father_name,f.mother_name].filter(Boolean).join(' & ');
+  document.getElementById('m-sub').innerHTML = `
+    ${parents?`<span>👪 ${parents}</span>`:''}
+    ${phone?`<span>📞 ${phone}</span>`:''}
+    ${programPillsHTML(f)}
+    ${f.assigned_to_name?`<span>👤 ${f.assigned_to_name}</span>`:'<span style="color:rgba(255,255,255,.5);">Unassigned</span>'}
+    <span>Ref ${f.urn||'—'}</span>`;
+
+  const strip = document.getElementById('child-strip');
+  if(!strip) return;
+  if(!c) { strip.style.display='none'; return; }
+  strip.style.display='';
+  const st = c.pipeline_status||'new';
+  const stages = PIPELINE_STAGES.filter(s=>s.key!=='all');
+  const opts = stages.map(s=>`<option value="${s.key}" ${st===s.key?'selected':''}>${s.icon} ${s.label}</option>`).join('')
+    + (stages.some(s=>s.key===st) ? '' : `<option value="${st}" selected>${STATUS_LABELS[st]||st}</option>`);
+  const age = childAgeYears(c);
+  const yg = isUnassessed(c) ? 'Not yet assessed' : (c.final_year_group||c.year_group_override||'Not set');
+  strip.innerHTML = `
+    <div class="cs-item cs-dob"><div class="cs-k">Date of birth</div><div class="cs-v">${c.dob?fmtDob(c.dob):'—'}${age!==null?` <span class="cs-sub">${age} yrs</span>`:''}</div></div>
+    <div class="cs-item"><div class="cs-k">Gender</div><div class="cs-v">${c.gender||'—'}</div></div>
+    <div class="cs-item"><div class="cs-k">QID</div><div class="cs-v">${c.qid?c.qid:'<span style="color:var(--coral);">Missing</span>'}</div></div>
+    <div class="cs-item"><div class="cs-k">Year group</div><div class="cs-v">${yg}</div></div>
+    <div class="cs-item cs-status"><div class="cs-k">Status</div>
+      <select class="cs-select st-${st}" onchange="setPipelineStatus('${c.id}', this.value)">${opts}</select>
+    </div>`;
+}
+
+// ── SIBLINGS TAB ──
+function renderSiblings() {
+  const el = document.getElementById('tp-siblings');
+  const btn = document.getElementById('tab-siblings');
+  if(!el) return;
+  const sibs = (currentChildren||[]).filter(c=>c.id!==activeChildId);
+  if(btn) btn.style.display = sibs.length ? '' : 'none';
+  if(!sibs.length) { el.innerHTML = '<div class="empty"><div class="eicon">👧</div><p>No other children in this family</p></div>'; return; }
+  el.innerHTML = `<div class="note" style="margin-bottom:12px;">Each child has their own page. Tap a sibling to open it.</div>` + sibs.map(s=>{
+    const st = s.pipeline_status||'new';
+    const age = childAgeYears(s);
+    const yg = isUnassessed(s) ? 'Not yet assessed' : (s.final_year_group||s.year_group_override||'Not set');
+    return `<div class="fam-card" style="cursor:pointer;" onclick="switchChild('${s.id}')">
+      <div class="fam-info">
+        <div class="fam-name">${s.full_name||'Child'}</div>
+        <div class="fam-meta"><span>${s.gender||'—'}</span><span>🎂 ${s.dob?fmtDob(s.dob):'—'}${age!==null?' ('+age+' yrs)':''}</span><span>🎓 ${yg}</span></div>
+      </div>
+      <span class="status-tag st-${st}">${STATUS_LABELS[st]||st}</span>
     </div>`;
   }).join('');
+}
 
-  // Load profile photos
-  children.forEach(c=>{
-    if(c.profile_photo_path) loadChildPhoto(c.id, c.profile_photo_path);
-    loadAssessmentPapers(c.id);
-  });
+function switchChild(id) {
+  if(!currentChildren.some(c=>c.id===id)) return;
+  activeChildId = id;
+  profileFocusChildId = id;
+  renderModalHeader();
+  renderChildren(currentChildren, currentFamily);
+  renderSiblings();
+  renderEventsTab(currentFamily, currentChildren);
+  renderPackTab(currentFamily, currentChildren);
+  renderLearnerProfile(currentFamily, currentChildren, id);
+  jumpToTab('children');
+  document.querySelector('.modal-body')?.scrollTo?.({top:0});
 }
 
 async function onIntroCallStatusChange(childId, familyId, status) {
@@ -3977,11 +4025,7 @@ async function setPipelineStatus(childId, status, updateUI=true) {
   if(updateUI) {
     renderDash(); renderPipelineTabs(); renderFams();
     if(currentFamily) renderChildren(currentChildren, currentFamily);
-    const tag = document.getElementById('m-sub')?.querySelector('.status-tag');
-    if(tag && (!profileFocusChildId || profileFocusChildId===childId)) {
-      tag.className = 'status-tag st-'+status;
-      tag.textContent = (c?.full_name||'Child')+': '+(STATUS_LABELS[status]||status);
-    }
+    renderModalHeader(); renderSiblings();
   }
   showToast('✅ Status: '+STATUS_LABELS[status]);
 }
@@ -4038,6 +4082,7 @@ async function confirmArchiveLearner(childId) {
 }
 
 function renderEventsTab(f, children) {
+  children = scopeToActive(children);
   const el = document.getElementById('tp-events');
   if(!el) return;
   if(!children.length) {
@@ -4552,6 +4597,7 @@ function closeModal() {
 }
 function closeBg(e) { if(e.target===document.getElementById('modal')) closeModal(); }
 function switchTab(t,btn) {
+  activeTabId = t;
   document.querySelectorAll('.tab').forEach(b=>b.className='tab');
   document.querySelectorAll('.tpanel').forEach(p=>p.className='tpanel');
   if(btn) btn.className='tab on'; else document.querySelector('.tab').className='tab on';
