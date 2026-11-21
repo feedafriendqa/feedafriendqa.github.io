@@ -1229,7 +1229,9 @@ function scanQID(frontFile, backFile) {
       // needs to become a normal interactive dropdown rather than staying
       // permanently locked with no way to set a value at all.
       if (natEl) { natEl.removeAttribute('disabled'); natEl.style.background=''; natEl.style.color=''; natEl.style.cursor=''; }
-      if (parsed.full_name) document.getElementById('inp-fullname').value = parsed.full_name;
+      // The name read off the QID is locked, same as the QID number, so it can't be typed over
+      // (e.g. replaced with a nickname). It stays editable only when the scan couldn't read a name.
+      if (parsed.full_name) { document.getElementById('inp-fullname').value = parsed.full_name; lockQIDField(fnEl); }
       if (parsed.qid_number) document.getElementById('inp-qidnum').value = parsed.qid_number;
       if (parsed.expiry_date) document.getElementById('inp-expiry').value = parsed.expiry_date;
       if (parsed.dob) document.getElementById('inp-dob').value = parsed.dob;
