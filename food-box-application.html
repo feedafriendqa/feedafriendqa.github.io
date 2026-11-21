@@ -2548,14 +2548,18 @@ function runDocumentUploadStep(uploadPromiseFactory, application, btn) {
       return;
     }
     // Some photos didn't make it: say so, and offer retry or continue.
+    // A QID photo that can still be re-sent is mandatory: the applicant can't continue past this
+    // screen until it uploads (the success screen only appears once every QID photo is in).
+    var qidBlocked = failed.some(function(f) { return !f.unrecoverable && f.file && (f.docKey === 'qid_front' || f.docKey === 'qid_back'); });
+    if (qidBlocked) window.addEventListener('beforeunload', warnBeforeLeavingDuringUpload);
     var titleEl = document.getElementById('submit-error-title');
     if (titleEl) titleEl.textContent = ar
       ? '⚠️ تم حفظ طلبك، لكن تعذّر رفع بعض المستندات'
       : '⚠️ Your application is saved, but some documents did not upload';
     showSubmitErrors([{
       label: ar
-        ? 'لم يتم رفع ' + failed.length + ' ملف(ات). تحقق من اتصالك بالإنترنت ثم اضغط «إعادة المحاولة».'
-        : failed.length + ' file(s) did not upload. Check your internet connection, then tap "Retry upload".',
+        ? 'لم يتم رفع ' + failed.length + ' ملف(ات). تحقق من اتصالك بالإنترنت ثم اضغط «إعادة المحاولة».' + (qidBlocked ? ' صور الهوية مطلوبة لإكمال الطلب — يرجى إبقاء هذه الصفحة مفتوحة.' : '')
+        : failed.length + ' file(s) did not upload. Check your internet connection, then tap "Retry upload".' + (qidBlocked ? ' Your QID photos are required to complete your application, so please keep this page open until they upload.' : ''),
       target: null
     }]);
     btn.disabled = false;
@@ -2585,7 +2589,7 @@ function runDocumentUploadStep(uploadPromiseFactory, application, btn) {
         }));
       }, application, btn);
     };
-    if (banner) {
+    if (banner && !qidBlocked) {
       var cont = document.createElement('button');
       cont.type = 'button';
       cont.id = 'doc-upload-continue';
