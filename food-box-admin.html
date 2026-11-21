@@ -883,6 +883,16 @@ function autoAssign(app) {
   return 'Alliyah';
 }
 
+// Boxes a household needs PER DISTRIBUTION = ceil(household_size / 4);
+// household_size 0/NULL counts as 1. Same rule as the generated database
+// column food_box_applications.boxes_needed (which is what to query/search).
+// Computed from household_size here, not read from boxes_needed, because the
+// in-page row is edited locally on save and its boxes_needed would be stale
+// until the next reload. NOT max_boxes (that is the lifetime cap).
+function boxesNeededFor(a) {
+  return Math.ceil(((a && a.household_size) || 1) / 4);
+}
+
 function resolveStatus(app) {
   // Imported rows with no status → 'new'
   return app.status || 'new';
@@ -1325,7 +1335,7 @@ function updateStats() {
   // ones actually due a box at the next distribution.
   var boxesNeeded = scoped
     .filter(function(a){ return resolveStatus(a) === 'confirmed'; })
-    .reduce(function(sum, a){ return sum + Math.ceil((a.household_size || 1) / 4); }, 0);
+    .reduce(function(sum, a){ return sum + boxesNeededFor(a); }, 0);
   document.getElementById('stat-boxes-needed').textContent = boxesNeeded;
   document.getElementById('stat-archived').textContent = scoped.filter(function(a){return resolveStatus(a)==='archived';}).length;
   document.getElementById('stat-translation').textContent = scoped.filter(function(a){return a.translation_pending || a.pregnancy_review || a.diaper_formula_review;}).length;
@@ -1717,6 +1727,28 @@ function missingQidPhotos(app, members) {
   return out;
 }
 
+// English-name rules. For a Latin-script QID name the English name IS the QID name and can't be
+// typed over. It becomes editable only when the QID name is in Arabic script, and then only for
+// an admin who handles Arabic cases (they translate it).
+function hasArabicScript(str) { return /[\u0600-\u06FF]/.test(str || ''); }
+function englishNameLocked(app) {
+  if (!app || !app.qid_number || !app.full_name) return false; // legacy rows with no QID keep a free-text name
+  if (!hasArabicScript(app.full_name)) return true;
+  return !(Array.isArray(myLanguages) && myLanguages.indexOf('ar') !== -1);
+}
+
+// Adult (18+) household members with no phone/WhatsApp number on file. Every adult is meant to
+// have one (the application form and the member editor both require it), so this is shown as a
+// red notice at the top of the file for case handlers to chase.
+function adultsMissingPhone(members) {
+  var out = [];
+  (members || []).forEach(function(m) {
+    var age = ageInYears(m.dob);
+    if (age !== null && age >= 18 && !String(m.whatsapp || '').trim()) out.push(m.full_name_en || m.full_name || 'Household member');
+  });
+  return out;
+}
+
 function renderModal(app, members, urlMap) {
   urlMap = urlMap || {};
   var name = app.full_name_en || app.full_name || '–';
@@ -1782,6 +1814,17 @@ function renderModal(app, members, urlMap) {
       body += '<div style="font-size:13px;color:#7A271A;">' + String(mq.who).replace(/</g, '&lt;') + ' — ' + mq.sides.join(' &amp; ') + '</div>';
     });
     body += '<div style="font-size:12px;color:#7A271A;margin-top:6px;">Ask them to send the photos, then add them under Submitted documents / Edit &amp; rescan QID.</div>';
+    body += '</div>';
+  }
+
+  var noPhoneAdults = (status === 'duplicate' || status === 'archived') ? [] : adultsMissingPhone(members);
+  if (noPhoneAdults.length) {
+    body += '<div style="margin:14px 20px 0;background:#FEF3F2;border:1px solid #FDA29B;border-radius:10px;padding:12px 14px;">';
+    body += '<div style="font-weight:800;font-size:12px;color:#B42318;margin-bottom:4px;">📵 PHONE NUMBER MISSING</div>';
+    noPhoneAdults.forEach(function(n) {
+      body += '<div style="font-size:13px;color:#7A271A;">' + String(n).replace(/</g, '&lt;') + ' (adult)</div>';
+    });
+    body += '<div style="font-size:12px;color:#7A271A;margin-top:6px;">Ask the applicant for their number, then add it under Household members → Edit.</div>';
     body += '</div>';
   }
 
@@ -1878,7 +1921,13 @@ function renderModal(app, members, urlMap) {
   // ── TEMP: main-applicant QID scanner — remove this block once the spreadsheet migration is finished ──
   body += renderMainQidScanPanel(app.id);
   body += '<div class="detail-grid">';
-  body += dif('Full name (EN)','ef-full_name_en',app.full_name_en);
+  var enLocked = englishNameLocked(app);
+  var enValue = (enLocked && app.qid_number && app.full_name && !hasArabicScript(app.full_name)) ? app.full_name : app.full_name_en;
+  body += '<div class="detail-item"><div class="lbl">Full name (EN)</div><input class="edit-field" id="ef-full_name_en" value="' + (enValue || '').toString().replace(/"/g, '&quot;') + '"' +
+    (enLocked ? ' readonly style="background:#f0f4f0;color:#4a4a4a;cursor:not-allowed;"' : '') + '>' +
+    '<div style="font-size:11px;color:var(--muted);margin-top:3px;">' + (enLocked
+      ? (hasArabicScript(app.full_name) ? 'The QID name is in Arabic — only an Arabic-case admin can enter the English translation.' : 'Matches the QID name. Re-scan or re-upload the QID to change it.')
+      : 'The QID name is in Arabic — enter the English translation.') + '</div></div>';
   // "Original name" is the name as it appears on the QID document itself
   // and is deliberately NOT editable here — it should only ever change by
   // re-scanning/re-uploading the QID, never by someone free-typing over
@@ -1985,7 +2034,8 @@ function renderModal(app, members, urlMap) {
       body += di('Date of birth', m.dob ? (m.dob + (displayAge(m.dob) ? ' <span style="color:var(--muted);font-weight:600;">(' + displayAge(m.dob) + ')</span>' : '')) : '<span style="color:#b42318;font-weight:700;">Missing – please add</span>');
       body += di('Role',m.role||'–');
       body += di('Gender',m.gender||'–');
-      body += di('WhatsApp',(m.whatsapp||'–') + waLink(m.whatsapp));
+      var mAge = ageInYears(m.dob);
+      body += di('WhatsApp', (!String(m.whatsapp||'').trim() && mAge !== null && mAge >= 18) ? '<span style="color:#b42318;font-weight:700;">Missing – please add (adult 18+)</span>' : ((m.whatsapp||'–') + waLink(m.whatsapp)));
       body += di('Sponsor / employer',m.sponsor||'–');
       if (isChildMember(m)) {
         var sch = m.is_attending_school;
@@ -2664,7 +2714,7 @@ function exportConfirmedCSV() {
     confirmed.forEach(function(a) {
       var name = a.full_name_en || a.full_name || '';
       var lang = LANG_NAMES[a.submission_lang] || a.submission_lang || '';
-      var boxesNeeded = Math.ceil((a.household_size || 1) / 4);
+      var boxesNeeded = boxesNeededFor(a);
       var baseFields = [name, a.whatsapp, a.area, a.nationality, lang, a.household_size, boxesNeeded];
 
       var householdMembers = membersByApp[a.id] || [];
@@ -3603,7 +3653,7 @@ function renderLiveView() {
   // hit and fixed this exact issue -- see its mapPoolRowToFamily comment).
   // Match the same 1-box-per-4-people rule used everywhere else in this
   // file (CRM dashboard tile, CSV export, sponsor-matching panel).
-  var boxesOf = function(a){ return Math.ceil((a.household_size || 1) / 4); };
+  var boxesOf = function(a){ return boxesNeededFor(a); };
   var sumBoxes = function(apps){ return apps.reduce(function(s,a){ return s + boxesOf(a); }, 0); };
   var pendingBoxes = sumBoxes(pending);
 
@@ -3718,7 +3768,7 @@ function viewLiveApp(id) {
 // tab still shows something rather than nothing.
 function loadLiveApps() {
   apiHeadersAsync().then(function(headers) {
-    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=id,full_name,full_name_en,area,area_en,household_size,max_boxes,sponsorship_id,reserved_until,status&status=eq.confirmed&limit=5000', { headers: headers });
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=id,full_name,full_name_en,area,area_en,household_size,boxes_needed,max_boxes,sponsorship_id,reserved_until,status&status=eq.confirmed&limit=5000', { headers: headers });
   }).then(function(r) {
     if (!r.ok) throw new Error('status ' + r.status);
     return r.json();
@@ -4072,7 +4122,7 @@ function toggleRoundSponsors(roundId) {
       var ids = x.matched_family_ids || [];
       var used = 0;
       var famHtml = ids.length ? ids.map(function(i) {
-        var f = fmap[i] || {}; var need = Math.max(1, Math.ceil((f.household_size || 1) / 4)); used += need;
+        var f = fmap[i] || {}; var need = Math.max(1, boxesNeededFor(f)); used += need;
         return '<div style="font-size:12px;padding:2px 0;">' + esc(f.full_name_en || f.full_name || 'Family') + ' · ' + esc(f.area || '–') + ' · ' + (f.household_size || 1) + ' people · ' + need + ' box' + (need === 1 ? '' : 'es') + '</div>';
       }).join('') : '<div style="font-size:12px;color:var(--muted);">Not matched yet</div>';
       totalBoxes += (x.box_count || 0); totalFams += ids.length;
@@ -4194,7 +4244,7 @@ function showMatchingReview(roundId, sponsorships, friends, profiles) {
     var ranked = pool.map(function(f){
       var wantLang = sp.preferred_family_language;
       var pl = (f.preferred_lang || '').toLowerCase(); var fLang = pl === 'arabic' ? 'ar' : pl === 'english' ? 'en' : (f.language || '');
-      return { f: f, need: Math.ceil((f.household_size || 1) / 4), areaMatch: prefs.length > 0 && prefs.indexOf(f.area) !== -1,
+      return { f: f, need: boxesNeededFor(f), areaMatch: prefs.length > 0 && prefs.indexOf(f.area) !== -1,
                langMatch: (wantLang === 'ar' || wantLang === 'en') && fLang === wantLang };
     }).sort(function(a, b){ return ((b.areaMatch ? 2 : 0) + (b.langMatch ? 1 : 0)) - ((a.areaMatch ? 2 : 0) + (a.langMatch ? 1 : 0)); });
     var picked = [], used = 0;
@@ -4291,7 +4341,7 @@ function loadMatchingFlags(retried) {
       var list = byHandler[k].map(function(x) {
         var f = x.f;
         var addr = x.noAddr ? '<span style="color:var(--red);font-weight:700;">no address details</span>' : esc([f.zone, f.street, f.building, f.unit, f.flat].filter(has).join(' / ')) + ' <span style="color:var(--orange);font-weight:700;">· no Google location</span>';
-        return '<tr style="border-top:1px solid var(--border);"><td style="padding:5px 8px;">' + esc(f.full_name_en || f.full_name) + '</td><td style="padding:5px 8px;">' + esc(f.whatsapp || '') + '</td><td style="padding:5px 8px;">' + esc(f.area || '–') + '</td><td style="padding:5px 8px;">' + addr + '</td><td style="padding:5px 8px;text-align:center;">' + Math.ceil((f.household_size || 1) / 4) + '</td><td style="padding:5px 8px;color:var(--muted);">' + (has(f.blue_plate_path) ? 'scan on file' : 'no scan (fine if address is filled in)') + '</td></tr>';
+        return '<tr style="border-top:1px solid var(--border);"><td style="padding:5px 8px;">' + esc(f.full_name_en || f.full_name) + '</td><td style="padding:5px 8px;">' + esc(f.whatsapp || '') + '</td><td style="padding:5px 8px;">' + esc(f.area || '–') + '</td><td style="padding:5px 8px;">' + addr + '</td><td style="padding:5px 8px;text-align:center;">' + boxesNeededFor(f) + '</td><td style="padding:5px 8px;color:var(--muted);">' + (has(f.blue_plate_path) ? 'scan on file' : 'no scan (fine if address is filled in)') + '</td></tr>';
       }).join('');
       return '<div style="margin-top:8px;"><div style="font-weight:800;font-size:13px;">' + esc(k) + ' — ' + byHandler[k].length + '</div>' +
         '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="text-align:left;color:var(--muted);"><th style="padding:4px 8px;">Family</th><th style="padding:4px 8px;">WhatsApp</th><th style="padding:4px 8px;">Area</th><th style="padding:4px 8px;">Address</th><th style="padding:4px 8px;">Boxes</th><th style="padding:4px 8px;">Scan</th></tr></thead><tbody>' + list + '</tbody></table></div>';
@@ -4469,12 +4519,12 @@ function renderPaymentSummary() {
 // used up by matching, or fell short.
 function getFamilyHtml(sp) {
   var linkedApps = allApps.filter(function(a){ return a.sponsorship_id === sp.id; });
-  var boxesAllocated = linkedApps.reduce(function(s, a){ return s + Math.ceil((a.household_size || 1) / 4); }, 0);
+  var boxesAllocated = linkedApps.reduce(function(s, a){ return s + boxesNeededFor(a); }, 0);
   var html = linkedApps.length
     ? linkedApps.map(function(a){
         var label = a.full_name_en || a.full_name || ('Case ' + a.id.slice(0,8));
         var areaTxt = a.area_en || a.area;
-        var boxesForThis = Math.ceil((a.household_size || 1) / 4);
+        var boxesForThis = boxesNeededFor(a);
         return '<a onclick="viewApp(\'' + a.id + '\');showView(\'cases\')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;">' +
           label + (areaTxt ? (' · ' + areaTxt) : '') + '</a>' +
           ' <span style="color:var(--muted);font-size:12px;">(' + boxesForThis + ' box' + (boxesForThis === 1 ? '' : 'es') + ')</span>';
@@ -4602,11 +4652,11 @@ function renderUnmatchedPanel() {
     wrap.innerHTML = '<div style="font-size:13px;color:var(--muted);">No confirmed families are currently waiting for a sponsor.</div>';
     return;
   }
-  var totalBoxes = unmatched.reduce(function(s, a){ return s + Math.ceil((a.household_size || 1) / 4); }, 0);
+  var totalBoxes = unmatched.reduce(function(s, a){ return s + boxesNeededFor(a); }, 0);
   var rows = unmatched.map(function(a) {
     var label = a.full_name_en || a.full_name || ('Case ' + a.id.slice(0,8));
     var areaTxt = a.area_en || a.area;
-    var boxes = Math.ceil((a.household_size || 1) / 4);
+    var boxes = boxesNeededFor(a);
     return '<a onclick="viewApp(\'' + a.id + '\');showView(\'cases\')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;">' +
       label + (areaTxt ? (' · ' + areaTxt) : '') + '</a>' +
       ' <span style="color:var(--muted);font-size:12px;">(' + boxes + ' box' + (boxes === 1 ? '' : 'es') + ')</span>';
@@ -5695,6 +5745,23 @@ function uploadMainQidFile(appId, which, file) {
       // refresh immediately. The doc's "View" link just catches up next
       // time the modal naturally re-renders (Save, close/reopen, etc).
       if (app && currentAppId === appId && which !== 'front') renderModal(app, currentMembers, currentDocUrlMap);
+      // The front photo skips the re-render (above), so refresh just the round profile photo in
+      // place — otherwise it stays blank until the file is closed and reopened.
+      if (app && currentAppId === appId && which === 'front') {
+        var picUrl = currentDocUrlMap[res.path];
+        var picEl = document.getElementById('modal-profile-pic');
+        if (picEl && picUrl) {
+          picEl.innerHTML = '<img src="' + picUrl + '" alt="" style="' + (app.profile_crop || '') + '">';
+          if (picEl.parentNode && !picEl.parentNode.querySelector('.profile-pic-edit')) {
+            var editBtn = document.createElement('button');
+            editBtn.className = 'profile-pic-edit';
+            editBtn.setAttribute('aria-label', 'Adjust photo');
+            editBtn.textContent = '✏️';
+            editBtn.onclick = function() { openCropEditor(appId); };
+            picEl.parentNode.appendChild(editBtn);
+          }
+        }
+      }
     });
   }).catch(function(e) {
     if (zone) zone.textContent = '❌ Upload failed — tap to retry';
@@ -5740,12 +5807,14 @@ function scanMainQid(appId) {
         return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + appId, {
           method: 'PATCH',
           headers: Object.assign({'Prefer':'return=minimal'}, headers),
-          body: JSON.stringify({ full_name: raw.name })
+          body: JSON.stringify(hasArabicScript(raw.name) ? { full_name: raw.name } : { full_name: raw.name, full_name_en: raw.name })
         });
       }).then(function(r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         var appRow = allApps.find(function(a){ return a.id === appId; });
-        if (appRow) appRow.full_name = raw.name;
+        if (appRow) { appRow.full_name = raw.name; if (!hasArabicScript(raw.name)) appRow.full_name_en = raw.name; }
+        var enInput = document.getElementById('ef-full_name_en');
+        if (enInput && !hasArabicScript(raw.name)) enInput.value = raw.name;
         var nameDisplay = document.getElementById('original-name-display');
         if (nameDisplay) nameDisplay.textContent = raw.name;
       }).catch(function(e) {
@@ -6487,8 +6556,26 @@ function proceedSaveNewMember(appId, name, role) {
     }).then(function(r) { return r.json(); }).then(function(res2) {
       if (!res2.ok) throw new Error(res2.error || 'Save failed');
       var memberId = res2.member_id;
+      // The admin_add_member function only inserts a fixed set of columns, so phone/WhatsApp,
+      // sponsor and the formula/pregnancy answers entered in this panel were being dropped.
+      // Save them with a follow-up update on the new member row.
+      var extraFields = {};
+      ['whatsapp', 'sponsor', 'needs_formula', 'due_date', 'baby_gender'].forEach(function(k) { if (payload[k]) extraFields[k] = payload[k]; });
+      if (payload.is_pregnant === true) extraFields.is_pregnant = true;
+      var extraSave = Object.keys(extraFields).length ? apiHeadersAsync().then(function(headers) {
+        return fetch(SUPABASE_URL + '/rest/v1/food_box_members?id=eq.' + memberId, {
+          method: 'PATCH',
+          headers: Object.assign({'Prefer':'return=representation'}, headers),
+          body: JSON.stringify(extraFields)
+        });
+      }).then(function(r) {
+        if (!r.ok) throw new Error('Member added, but saving the phone/extra details failed (' + r.status + ') — please edit the member and re-enter them.');
+        return r.json();
+      }).then(function(rows) {
+        if (!Array.isArray(rows) || rows.length === 0) throw new Error('Member added, but the phone/extra details were not saved (database permission) — please edit the member and re-enter them.');
+      }) : Promise.resolve();
       // Upload whichever documents were captured, tied to the new member id.
-      var uploadJobs = [];
+      var uploadJobs = [extraSave];
       var uploadOne = function(file, docKey) {
         if (!file) return Promise.resolve();
         return compressImageFile(file).then(function(uploadFile) {
