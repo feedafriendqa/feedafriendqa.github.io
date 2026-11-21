@@ -1717,6 +1717,16 @@ function missingQidPhotos(app, members) {
   return out;
 }
 
+// English-name rules. For a Latin-script QID name the English name IS the QID name and can't be
+// typed over. It becomes editable only when the QID name is in Arabic script, and then only for
+// an admin who handles Arabic cases (they translate it).
+function hasArabicScript(str) { return /[\u0600-\u06FF]/.test(str || ''); }
+function englishNameLocked(app) {
+  if (!app || !app.qid_number || !app.full_name) return false; // legacy rows with no QID keep a free-text name
+  if (!hasArabicScript(app.full_name)) return true;
+  return !(Array.isArray(myLanguages) && myLanguages.indexOf('ar') !== -1);
+}
+
 // Adult (18+) household members with no phone/WhatsApp number on file. Every adult is meant to
 // have one (the application form and the member editor both require it), so this is shown as a
 // red notice at the top of the file for case handlers to chase.
@@ -1901,7 +1911,13 @@ function renderModal(app, members, urlMap) {
   // ── TEMP: main-applicant QID scanner — remove this block once the spreadsheet migration is finished ──
   body += renderMainQidScanPanel(app.id);
   body += '<div class="detail-grid">';
-  body += dif('Full name (EN)','ef-full_name_en',app.full_name_en);
+  var enLocked = englishNameLocked(app);
+  var enValue = (enLocked && app.qid_number && app.full_name && !hasArabicScript(app.full_name)) ? app.full_name : app.full_name_en;
+  body += '<div class="detail-item"><div class="lbl">Full name (EN)</div><input class="edit-field" id="ef-full_name_en" value="' + (enValue || '').toString().replace(/"/g, '&quot;') + '"' +
+    (enLocked ? ' readonly style="background:#f0f4f0;color:#4a4a4a;cursor:not-allowed;"' : '') + '>' +
+    '<div style="font-size:11px;color:var(--muted);margin-top:3px;">' + (enLocked
+      ? (hasArabicScript(app.full_name) ? 'The QID name is in Arabic — only an Arabic-case admin can enter the English translation.' : 'Matches the QID name. Re-scan or re-upload the QID to change it.')
+      : 'The QID name is in Arabic — enter the English translation.') + '</div></div>';
   // "Original name" is the name as it appears on the QID document itself
   // and is deliberately NOT editable here — it should only ever change by
   // re-scanning/re-uploading the QID, never by someone free-typing over
@@ -5719,6 +5735,23 @@ function uploadMainQidFile(appId, which, file) {
       // refresh immediately. The doc's "View" link just catches up next
       // time the modal naturally re-renders (Save, close/reopen, etc).
       if (app && currentAppId === appId && which !== 'front') renderModal(app, currentMembers, currentDocUrlMap);
+      // The front photo skips the re-render (above), so refresh just the round profile photo in
+      // place — otherwise it stays blank until the file is closed and reopened.
+      if (app && currentAppId === appId && which === 'front') {
+        var picUrl = currentDocUrlMap[res.path];
+        var picEl = document.getElementById('modal-profile-pic');
+        if (picEl && picUrl) {
+          picEl.innerHTML = '<img src="' + picUrl + '" alt="" style="' + (app.profile_crop || '') + '">';
+          if (picEl.parentNode && !picEl.parentNode.querySelector('.profile-pic-edit')) {
+            var editBtn = document.createElement('button');
+            editBtn.className = 'profile-pic-edit';
+            editBtn.setAttribute('aria-label', 'Adjust photo');
+            editBtn.textContent = '✏️';
+            editBtn.onclick = function() { openCropEditor(appId); };
+            picEl.parentNode.appendChild(editBtn);
+          }
+        }
+      }
     });
   }).catch(function(e) {
     if (zone) zone.textContent = '❌ Upload failed — tap to retry';
@@ -5764,12 +5797,14 @@ function scanMainQid(appId) {
         return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?id=eq.' + appId, {
           method: 'PATCH',
           headers: Object.assign({'Prefer':'return=minimal'}, headers),
-          body: JSON.stringify({ full_name: raw.name })
+          body: JSON.stringify(hasArabicScript(raw.name) ? { full_name: raw.name } : { full_name: raw.name, full_name_en: raw.name })
         });
       }).then(function(r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         var appRow = allApps.find(function(a){ return a.id === appId; });
-        if (appRow) appRow.full_name = raw.name;
+        if (appRow) { appRow.full_name = raw.name; if (!hasArabicScript(raw.name)) appRow.full_name_en = raw.name; }
+        var enInput = document.getElementById('ef-full_name_en');
+        if (enInput && !hasArabicScript(raw.name)) enInput.value = raw.name;
         var nameDisplay = document.getElementById('original-name-display');
         if (nameDisplay) nameDisplay.textContent = raw.name;
       }).catch(function(e) {
