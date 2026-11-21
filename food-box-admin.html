@@ -883,6 +883,15 @@ function autoAssign(app) {
   return 'Alliyah';
 }
 
+// Boxes a household needs PER DISTRIBUTION. Single source of truth is the
+// generated column food_box_applications.boxes_needed = ceil(household_size / 4)
+// (household_size 0/NULL counts as 1). The fallback only covers rows fetched
+// with an explicit column list that omits it. NOT max_boxes (lifetime cap).
+function boxesNeededFor(a) {
+  if (a && typeof a.boxes_needed === 'number') return a.boxes_needed;
+  return Math.ceil(((a && a.household_size) || 1) / 4);
+}
+
 function resolveStatus(app) {
   // Imported rows with no status → 'new'
   return app.status || 'new';
@@ -1325,7 +1334,7 @@ function updateStats() {
   // ones actually due a box at the next distribution.
   var boxesNeeded = scoped
     .filter(function(a){ return resolveStatus(a) === 'confirmed'; })
-    .reduce(function(sum, a){ return sum + Math.ceil((a.household_size || 1) / 4); }, 0);
+    .reduce(function(sum, a){ return sum + boxesNeededFor(a); }, 0);
   document.getElementById('stat-boxes-needed').textContent = boxesNeeded;
   document.getElementById('stat-archived').textContent = scoped.filter(function(a){return resolveStatus(a)==='archived';}).length;
   document.getElementById('stat-translation').textContent = scoped.filter(function(a){return a.translation_pending || a.pregnancy_review || a.diaper_formula_review;}).length;
@@ -2704,7 +2713,7 @@ function exportConfirmedCSV() {
     confirmed.forEach(function(a) {
       var name = a.full_name_en || a.full_name || '';
       var lang = LANG_NAMES[a.submission_lang] || a.submission_lang || '';
-      var boxesNeeded = Math.ceil((a.household_size || 1) / 4);
+      var boxesNeeded = boxesNeededFor(a);
       var baseFields = [name, a.whatsapp, a.area, a.nationality, lang, a.household_size, boxesNeeded];
 
       var householdMembers = membersByApp[a.id] || [];
@@ -3643,7 +3652,7 @@ function renderLiveView() {
   // hit and fixed this exact issue -- see its mapPoolRowToFamily comment).
   // Match the same 1-box-per-4-people rule used everywhere else in this
   // file (CRM dashboard tile, CSV export, sponsor-matching panel).
-  var boxesOf = function(a){ return Math.ceil((a.household_size || 1) / 4); };
+  var boxesOf = function(a){ return boxesNeededFor(a); };
   var sumBoxes = function(apps){ return apps.reduce(function(s,a){ return s + boxesOf(a); }, 0); };
   var pendingBoxes = sumBoxes(pending);
 
@@ -3758,7 +3767,7 @@ function viewLiveApp(id) {
 // tab still shows something rather than nothing.
 function loadLiveApps() {
   apiHeadersAsync().then(function(headers) {
-    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=id,full_name,full_name_en,area,area_en,household_size,max_boxes,sponsorship_id,reserved_until,status&status=eq.confirmed&limit=5000', { headers: headers });
+    return fetch(SUPABASE_URL + '/rest/v1/food_box_applications?select=id,full_name,full_name_en,area,area_en,household_size,boxes_needed,max_boxes,sponsorship_id,reserved_until,status&status=eq.confirmed&limit=5000', { headers: headers });
   }).then(function(r) {
     if (!r.ok) throw new Error('status ' + r.status);
     return r.json();
@@ -4112,7 +4121,7 @@ function toggleRoundSponsors(roundId) {
       var ids = x.matched_family_ids || [];
       var used = 0;
       var famHtml = ids.length ? ids.map(function(i) {
-        var f = fmap[i] || {}; var need = Math.max(1, Math.ceil((f.household_size || 1) / 4)); used += need;
+        var f = fmap[i] || {}; var need = Math.max(1, boxesNeededFor(f)); used += need;
         return '<div style="font-size:12px;padding:2px 0;">' + esc(f.full_name_en || f.full_name || 'Family') + ' · ' + esc(f.area || '–') + ' · ' + (f.household_size || 1) + ' people · ' + need + ' box' + (need === 1 ? '' : 'es') + '</div>';
       }).join('') : '<div style="font-size:12px;color:var(--muted);">Not matched yet</div>';
       totalBoxes += (x.box_count || 0); totalFams += ids.length;
@@ -4234,7 +4243,7 @@ function showMatchingReview(roundId, sponsorships, friends, profiles) {
     var ranked = pool.map(function(f){
       var wantLang = sp.preferred_family_language;
       var pl = (f.preferred_lang || '').toLowerCase(); var fLang = pl === 'arabic' ? 'ar' : pl === 'english' ? 'en' : (f.language || '');
-      return { f: f, need: Math.ceil((f.household_size || 1) / 4), areaMatch: prefs.length > 0 && prefs.indexOf(f.area) !== -1,
+      return { f: f, need: boxesNeededFor(f), areaMatch: prefs.length > 0 && prefs.indexOf(f.area) !== -1,
                langMatch: (wantLang === 'ar' || wantLang === 'en') && fLang === wantLang };
     }).sort(function(a, b){ return ((b.areaMatch ? 2 : 0) + (b.langMatch ? 1 : 0)) - ((a.areaMatch ? 2 : 0) + (a.langMatch ? 1 : 0)); });
     var picked = [], used = 0;
@@ -4331,7 +4340,7 @@ function loadMatchingFlags(retried) {
       var list = byHandler[k].map(function(x) {
         var f = x.f;
         var addr = x.noAddr ? '<span style="color:var(--red);font-weight:700;">no address details</span>' : esc([f.zone, f.street, f.building, f.unit, f.flat].filter(has).join(' / ')) + ' <span style="color:var(--orange);font-weight:700;">· no Google location</span>';
-        return '<tr style="border-top:1px solid var(--border);"><td style="padding:5px 8px;">' + esc(f.full_name_en || f.full_name) + '</td><td style="padding:5px 8px;">' + esc(f.whatsapp || '') + '</td><td style="padding:5px 8px;">' + esc(f.area || '–') + '</td><td style="padding:5px 8px;">' + addr + '</td><td style="padding:5px 8px;text-align:center;">' + Math.ceil((f.household_size || 1) / 4) + '</td><td style="padding:5px 8px;color:var(--muted);">' + (has(f.blue_plate_path) ? 'scan on file' : 'no scan (fine if address is filled in)') + '</td></tr>';
+        return '<tr style="border-top:1px solid var(--border);"><td style="padding:5px 8px;">' + esc(f.full_name_en || f.full_name) + '</td><td style="padding:5px 8px;">' + esc(f.whatsapp || '') + '</td><td style="padding:5px 8px;">' + esc(f.area || '–') + '</td><td style="padding:5px 8px;">' + addr + '</td><td style="padding:5px 8px;text-align:center;">' + boxesNeededFor(f) + '</td><td style="padding:5px 8px;color:var(--muted);">' + (has(f.blue_plate_path) ? 'scan on file' : 'no scan (fine if address is filled in)') + '</td></tr>';
       }).join('');
       return '<div style="margin-top:8px;"><div style="font-weight:800;font-size:13px;">' + esc(k) + ' — ' + byHandler[k].length + '</div>' +
         '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="text-align:left;color:var(--muted);"><th style="padding:4px 8px;">Family</th><th style="padding:4px 8px;">WhatsApp</th><th style="padding:4px 8px;">Area</th><th style="padding:4px 8px;">Address</th><th style="padding:4px 8px;">Boxes</th><th style="padding:4px 8px;">Scan</th></tr></thead><tbody>' + list + '</tbody></table></div>';
@@ -4509,12 +4518,12 @@ function renderPaymentSummary() {
 // used up by matching, or fell short.
 function getFamilyHtml(sp) {
   var linkedApps = allApps.filter(function(a){ return a.sponsorship_id === sp.id; });
-  var boxesAllocated = linkedApps.reduce(function(s, a){ return s + Math.ceil((a.household_size || 1) / 4); }, 0);
+  var boxesAllocated = linkedApps.reduce(function(s, a){ return s + boxesNeededFor(a); }, 0);
   var html = linkedApps.length
     ? linkedApps.map(function(a){
         var label = a.full_name_en || a.full_name || ('Case ' + a.id.slice(0,8));
         var areaTxt = a.area_en || a.area;
-        var boxesForThis = Math.ceil((a.household_size || 1) / 4);
+        var boxesForThis = boxesNeededFor(a);
         return '<a onclick="viewApp(\'' + a.id + '\');showView(\'cases\')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;">' +
           label + (areaTxt ? (' · ' + areaTxt) : '') + '</a>' +
           ' <span style="color:var(--muted);font-size:12px;">(' + boxesForThis + ' box' + (boxesForThis === 1 ? '' : 'es') + ')</span>';
@@ -4642,11 +4651,11 @@ function renderUnmatchedPanel() {
     wrap.innerHTML = '<div style="font-size:13px;color:var(--muted);">No confirmed families are currently waiting for a sponsor.</div>';
     return;
   }
-  var totalBoxes = unmatched.reduce(function(s, a){ return s + Math.ceil((a.household_size || 1) / 4); }, 0);
+  var totalBoxes = unmatched.reduce(function(s, a){ return s + boxesNeededFor(a); }, 0);
   var rows = unmatched.map(function(a) {
     var label = a.full_name_en || a.full_name || ('Case ' + a.id.slice(0,8));
     var areaTxt = a.area_en || a.area;
-    var boxes = Math.ceil((a.household_size || 1) / 4);
+    var boxes = boxesNeededFor(a);
     return '<a onclick="viewApp(\'' + a.id + '\');showView(\'cases\')" style="cursor:pointer;color:var(--green-dark);text-decoration:underline;">' +
       label + (areaTxt ? (' · ' + areaTxt) : '') + '</a>' +
       ' <span style="color:var(--muted);font-size:12px;">(' + boxes + ' box' + (boxes === 1 ? '' : 'es') + ')</span>';
