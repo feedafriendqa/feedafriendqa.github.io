@@ -2000,7 +2000,10 @@ function collectMembers() {
       diaper_size: get('m' + i + '-diaper-val'),
       is_pregnant: getRadio('m' + i + '-pregnant') === 'yes',
       due_date: get('m' + i + '-duedate') || null,
-      baby_gender: get('m' + i + '-baby-gender')
+      baby_gender: get('m' + i + '-baby-gender'),
+      // Phone/WhatsApp for adults 18+ (validated in validateApplication, so it must also be sent;
+      // it was collected and checked but never included here, so it was never saved).
+      whatsapp: toWesternDigits(get('m' + i + '-phone').trim()) || null
     });
     formIndices.push(i);
   }

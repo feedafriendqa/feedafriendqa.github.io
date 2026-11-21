@@ -1717,6 +1717,18 @@ function missingQidPhotos(app, members) {
   return out;
 }
 
+// Adult (18+) household members with no phone/WhatsApp number on file. Every adult is meant to
+// have one (the application form and the member editor both require it), so this is shown as a
+// red notice at the top of the file for case handlers to chase.
+function adultsMissingPhone(members) {
+  var out = [];
+  (members || []).forEach(function(m) {
+    var age = ageInYears(m.dob);
+    if (age !== null && age >= 18 && !String(m.whatsapp || '').trim()) out.push(m.full_name_en || m.full_name || 'Household member');
+  });
+  return out;
+}
+
 function renderModal(app, members, urlMap) {
   urlMap = urlMap || {};
   var name = app.full_name_en || app.full_name || '–';
@@ -1782,6 +1794,17 @@ function renderModal(app, members, urlMap) {
       body += '<div style="font-size:13px;color:#7A271A;">' + String(mq.who).replace(/</g, '&lt;') + ' — ' + mq.sides.join(' &amp; ') + '</div>';
     });
     body += '<div style="font-size:12px;color:#7A271A;margin-top:6px;">Ask them to send the photos, then add them under Submitted documents / Edit &amp; rescan QID.</div>';
+    body += '</div>';
+  }
+
+  var noPhoneAdults = (status === 'duplicate' || status === 'archived') ? [] : adultsMissingPhone(members);
+  if (noPhoneAdults.length) {
+    body += '<div style="margin:14px 20px 0;background:#FEF3F2;border:1px solid #FDA29B;border-radius:10px;padding:12px 14px;">';
+    body += '<div style="font-weight:800;font-size:12px;color:#B42318;margin-bottom:4px;">📵 PHONE NUMBER MISSING</div>';
+    noPhoneAdults.forEach(function(n) {
+      body += '<div style="font-size:13px;color:#7A271A;">' + String(n).replace(/</g, '&lt;') + ' (adult)</div>';
+    });
+    body += '<div style="font-size:12px;color:#7A271A;margin-top:6px;">Ask the applicant for their number, then add it under Household members → Edit.</div>';
     body += '</div>';
   }
 
@@ -1985,7 +2008,8 @@ function renderModal(app, members, urlMap) {
       body += di('Date of birth', m.dob ? (m.dob + (displayAge(m.dob) ? ' <span style="color:var(--muted);font-weight:600;">(' + displayAge(m.dob) + ')</span>' : '')) : '<span style="color:#b42318;font-weight:700;">Missing – please add</span>');
       body += di('Role',m.role||'–');
       body += di('Gender',m.gender||'–');
-      body += di('WhatsApp',(m.whatsapp||'–') + waLink(m.whatsapp));
+      var mAge = ageInYears(m.dob);
+      body += di('WhatsApp', (!String(m.whatsapp||'').trim() && mAge !== null && mAge >= 18) ? '<span style="color:#b42318;font-weight:700;">Missing – please add (adult 18+)</span>' : ((m.whatsapp||'–') + waLink(m.whatsapp)));
       body += di('Sponsor / employer',m.sponsor||'–');
       if (isChildMember(m)) {
         var sch = m.is_attending_school;
@@ -6487,8 +6511,26 @@ function proceedSaveNewMember(appId, name, role) {
     }).then(function(r) { return r.json(); }).then(function(res2) {
       if (!res2.ok) throw new Error(res2.error || 'Save failed');
       var memberId = res2.member_id;
+      // The admin_add_member function only inserts a fixed set of columns, so phone/WhatsApp,
+      // sponsor and the formula/pregnancy answers entered in this panel were being dropped.
+      // Save them with a follow-up update on the new member row.
+      var extraFields = {};
+      ['whatsapp', 'sponsor', 'needs_formula', 'due_date', 'baby_gender'].forEach(function(k) { if (payload[k]) extraFields[k] = payload[k]; });
+      if (payload.is_pregnant === true) extraFields.is_pregnant = true;
+      var extraSave = Object.keys(extraFields).length ? apiHeadersAsync().then(function(headers) {
+        return fetch(SUPABASE_URL + '/rest/v1/food_box_members?id=eq.' + memberId, {
+          method: 'PATCH',
+          headers: Object.assign({'Prefer':'return=representation'}, headers),
+          body: JSON.stringify(extraFields)
+        });
+      }).then(function(r) {
+        if (!r.ok) throw new Error('Member added, but saving the phone/extra details failed (' + r.status + ') — please edit the member and re-enter them.');
+        return r.json();
+      }).then(function(rows) {
+        if (!Array.isArray(rows) || rows.length === 0) throw new Error('Member added, but the phone/extra details were not saved (database permission) — please edit the member and re-enter them.');
+      }) : Promise.resolve();
       // Upload whichever documents were captured, tied to the new member id.
-      var uploadJobs = [];
+      var uploadJobs = [extraSave];
       var uploadOne = function(file, docKey) {
         if (!file) return Promise.resolve();
         return compressImageFile(file).then(function(uploadFile) {
