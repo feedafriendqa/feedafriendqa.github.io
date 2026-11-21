@@ -883,12 +883,13 @@ function autoAssign(app) {
   return 'Alliyah';
 }
 
-// Boxes a household needs PER DISTRIBUTION. Single source of truth is the
-// generated column food_box_applications.boxes_needed = ceil(household_size / 4)
-// (household_size 0/NULL counts as 1). The fallback only covers rows fetched
-// with an explicit column list that omits it. NOT max_boxes (lifetime cap).
+// Boxes a household needs PER DISTRIBUTION = ceil(household_size / 4);
+// household_size 0/NULL counts as 1. Same rule as the generated database
+// column food_box_applications.boxes_needed (which is what to query/search).
+// Computed from household_size here, not read from boxes_needed, because the
+// in-page row is edited locally on save and its boxes_needed would be stale
+// until the next reload. NOT max_boxes (that is the lifetime cap).
 function boxesNeededFor(a) {
-  if (a && typeof a.boxes_needed === 'number') return a.boxes_needed;
   return Math.ceil(((a && a.household_size) || 1) / 4);
 }
 
