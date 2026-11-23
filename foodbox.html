@@ -1047,8 +1047,11 @@ var AR_MONTHS = ["يناير","فبراير","مارس","أبريل","مايو",
 var AR_DAYS = ["الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
 function loadDistributionDate(){
   if(!window.sbClient) return;
+  // Uses sponsor_distribution_public (the round the pledge counts are for,
+  // i.e. the next distribution that hasn't happened yet) so the date always
+  // matches the boxes shown. current_distribution_public is for applications.
   window.sbClient
-    .from("current_distribution_public")
+    .from("sponsor_distribution_public")
     .select("distribution_date")
     .maybeSingle()
     .then(function(res){
