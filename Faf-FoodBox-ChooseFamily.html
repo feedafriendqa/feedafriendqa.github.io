@@ -539,9 +539,21 @@ function renderFamilies(){
   }
   if(FRIENDS.length === 0){
     document.getElementById("match-count").textContent = isAr ? "٠ صديق" : "0 friends";
-    grid.innerHTML = '<div class="pool-state-msg">'
+    grid.innerHTML = '<div class="pool-state-msg" id="empty-pool-msg">'
       + (isAr ? "🎉 كل الأصدقاء مكفولون حالياً! يرجى التحقق مرة أخرى قريباً." : "🎉 Every friend is sponsored right now — please check back soon!")
       + '</div>';
+    // If some boxes are only on a short hold by other sponsors, say so —
+    // they come back automatically if that sponsor doesn't finish.
+    if(window.sbClient){
+      window.sbClient.rpc("foodbox_held_summary").then(function(res){
+        var h = res && res.data;
+        var el = document.getElementById("empty-pool-msg");
+        if(!el || !h || !h.families) return;
+        el.innerHTML = isAr
+          ? "⏳ هناك صناديق متاحة لكنها محجوزة مؤقتاً من قِبل كفلاء آخرين. إذا لم يُكمل أحدهم، ستعود متاحة — يرجى التحقق مرة أخرى بعد بضع دقائق."
+          : "⏳ There are boxes available, but other sponsors are holding them for a few minutes. If they don't finish, they'll be released — please check back in a few minutes.";
+      }).catch(function(){});
+    }
     return;
   }
 
