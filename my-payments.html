@@ -621,6 +621,16 @@ function renderList(rows){
     var distTag = r.distribution_event
       ? '<span class="dist-tag">\uD83D\uDCE6 ' + r.distribution_event + '</span>'
       : "";
+    // Let the sponsor switch this month's delivery until 2 days before the
+    // distribution (the database enforces the same rule).
+    var dr = r.distribution_rounds;
+    if(deliveryTag && dr && dr.distribution_date && dr.status !== "closed" && r.payment_status !== "cancelled"){
+      var lastDay = new Date(dr.distribution_date + "T00:00:00+03:00").getTime() - 2 * 86400000;
+      if(Date.now() <= lastDay + 86400000 - 1){
+        deliveryTag += ' <a class="deliv-tag" href="javascript:void(0)" onclick="changeDelivery(\'' + r.id + '\',\'' + (r.delivery_method === "self" ? "vol" : "self") + '\')">' +
+          (isAr ? "\u270F\uFE0F تغيير التوصيل" : "\u270F\uFE0F Change delivery") + '</a>';
+      }
+    }
     var tagsRow = (deliveryTag || distTag) ? ('<div class="event-tags">' + deliveryTag + distTag + '</div>') : "";
 
     return '<div class="event-row" id="spon-row-' + r.id + '">' +
@@ -645,6 +655,20 @@ function showSelfDeliveryInfo(){
     ? "التكفّل مكتمل. سنُعلمك فور التوصيل."
     : "Your sponsorship is complete. We'll notify you once it's delivered.");
 }
+async function changeDelivery(sponsorshipId, newMethod){
+  var isAr = document.documentElement.getAttribute("lang") === "ar";
+  var msg = newMethod === "vol"
+    ? (isAr ? "هل تريد أن يقوم متطوعونا بتوصيل صناديقك هذا الشهر؟" : "Switch to volunteer delivery? One of our drivers will deliver your boxes this month.")
+    : (isAr ? "هل تريد توصيل الصناديق بنفسك هذا الشهر؟" : "Switch to self-delivery? You will deliver the boxes yourself this month.");
+  if(!confirm(msg)) return;
+  var res = await window.sbClient.rpc("sponsor_set_delivery", { p_sponsorship_id: sponsorshipId, p_method: newMethod });
+  if(res.error || !res.data || !res.data.success){
+    alert((res.data && res.data.error) || (isAr ? "تعذّر تغيير التوصيل. يرجى التواصل معنا." : "Could not change delivery. Please contact us."));
+    return;
+  }
+  window.location.reload();
+}
+
 function showVolDeliveryInfo(){
   var isAr = document.documentElement.getAttribute("lang") === "ar";
   alert(isAr
@@ -754,7 +778,7 @@ async function handleProofFileSelected(fileInput){
 async function loadSponsorships(userId){
   var result = await sbClient
     .from("sponsorships")
-    .select("*")
+    .select("*, distribution_rounds(distribution_date, status)")
     .eq("sponsor_id", userId)
     .order("created_at", { ascending: false });
   var rows = result.data || [];
