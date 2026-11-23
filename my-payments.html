@@ -558,7 +558,7 @@ function renderList(rows){
   var totalBoxes = 0, totalAmount = 0, activeCount = 0;
   rows.forEach(function(r){
     var boxes = r.box_count || 1;
-    totalBoxes += boxes;
+    if(r.payment_status !== "cancelled") totalBoxes += boxes;
     if(r.payment_status === "payment_received") totalAmount += boxes * PRICE_PER_BOX;
     if(r.payment_status === "payment_received" || r.payment_status === "pending_payment" || r.payment_status === "proof_uploaded") activeCount += 1;
   });

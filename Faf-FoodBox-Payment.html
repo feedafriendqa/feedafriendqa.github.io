@@ -554,6 +554,14 @@ async function submitSponsorship(){
   var currentUserId = liveSession.user.id;
   var currentAccessToken = liveSession.access_token;
 
+  // No sponsorship row means no family was held — never show a success
+  // screen for something that was not saved.
+  if(!window.sbClient || !sponsorshipId){
+    console.warn("submitSponsorship: no sponsorship hold found — not saved");
+    showTimeoutBanner();
+    return;
+  }
+
   try{
     if(window.sbClient && sponsorshipId){
       var { data, error } = await window.sbClient
@@ -685,7 +693,9 @@ async function submitSponsorship(){
       }
     }
   } catch(e){
-    console.warn("Could not finalize sponsorship in Supabase", e);
+    console.error("Could not finalize sponsorship in Supabase", e);
+    showTimeoutBanner();
+    return;
   }
 
   document.getElementById("success-ref").textContent = (isArSubmit ? "المرجع: " : "Ref: ") + refNo;
@@ -724,6 +734,7 @@ async function submitSponsorship(){
       .from("sponsorships")
       .select("box_count, matched_family_ids, matched_household_total")
       .eq("sponsor_id", currentUserId)
+      .neq("payment_status", "cancelled")
       .then(function(res){
         if(res.error || !res.data) return;
         var totalBoxes = res.data.reduce(function(sum, r){ return sum + (r.box_count || 0); }, 0);
