@@ -924,7 +924,7 @@ async function startSponsorFlow(){
   try{
     if(window.sbClient){
       var { data: distRow } = await window.sbClient
-        .from("current_distribution_public")
+        .from("sponsor_distribution_public")
         .select("id,name")
         .maybeSingle();
       if(distRow && distRow.name){

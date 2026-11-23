@@ -806,7 +806,7 @@ function renderPledgeHow(){
 // that is closed or past its cut-off.
 async function loadPledgeRound(){
   try{
-    var cur = await window.sbClient.from("current_distribution_public").select("id,name").maybeSingle();
+    var cur = await window.sbClient.from("sponsor_distribution_public").select("id,name").maybeSingle();
     if(!cur || !cur.data) return;
     var r = await window.sbClient.from("distribution_rounds").select("id,name,status,edit_cutoff_date").eq("id", cur.data.id).maybeSingle();
     if(!r || !r.data) return;
@@ -854,11 +854,16 @@ async function submitPledge(){
 
   try{
     // 1. The current round must be open and before its cut-off.
-    var cur = await window.sbClient.from("current_distribution_public").select("id,name").maybeSingle();
-    var rr = cur && cur.data ? await window.sbClient.from("distribution_rounds").select("id,name,status,edit_cutoff_date").eq("id", cur.data.id).maybeSingle() : null;
+    var cur = await window.sbClient.from("sponsor_distribution_public").select("id,name").maybeSingle();
+    var rr = cur && cur.data ? await window.sbClient.from("distribution_rounds").select("id,name,status,edit_cutoff_date,distribution_date").eq("id", cur.data.id).maybeSingle() : null;
     var round = rr && rr.data ? rr.data : null;
     var todayQ = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10); // Doha date
-    if(!round || round.status !== "open" || (round.edit_cutoff_date && todayQ > round.edit_cutoff_date)){
+    // Open before the cut-off, or a late pledge after matching but before the distribution day.
+    var roundOk = !!round && (
+      (round.status === "open" && !(round.edit_cutoff_date && todayQ > round.edit_cutoff_date)) ||
+      (round.status === "matching_done" && round.distribution_date && todayQ <= round.distribution_date)
+    );
+    if(!roundOk){
       return fail(t("Sponsorships aren't open right now — please check back soon.", "باب الكفالة غير مفتوح حالياً — يرجى المحاولة لاحقاً."));
     }
 
@@ -1037,7 +1042,7 @@ function setAuthTab(tab){
 async function loadExistingBoxesNotice(uid){
   try{
     if(!window.sbClient || !uid) return;
-    var cur = await window.sbClient.from("current_distribution_public").select("id,name").maybeSingle();
+    var cur = await window.sbClient.from("sponsor_distribution_public").select("id,name").maybeSingle();
     if(!cur || !cur.data) return;
     var leadId = sessionStorage.getItem("faf_sponsorship_id");
     var res = await window.sbClient.from("sponsorships").select("id,box_count,payment_status")
