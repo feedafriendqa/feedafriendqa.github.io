@@ -65,6 +65,15 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 .af-boxes svg{display:block}
 .fam-card.fam-own{border:2.5px solid var(--amber);box-shadow:0 0 0 4px rgba(217,164,65,.28),0 12px 30px rgba(10,46,30,.14)}
 .fam-own-lbl{font-family:"Manrope",sans-serif;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#8a5f0f;background:rgba(217,164,65,.22);border-radius:10px;padding:6px 10px;margin:-6px 0 12px;text-align:center}
+.next-card{background:#fff;border-radius:18px;margin:0 16px 16px;padding:16px 18px;box-shadow:0 12px 30px rgba(10,46,30,.2);border:2px solid var(--forest)}
+.next-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-family:"Manrope",sans-serif}
+.next-lbl{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--forest)}
+.next-left{font-size:11px;font-weight:700;color:var(--muted-2)}
+.next-name{font-size:18px;font-weight:800;color:#0b2f20;font-family:"Manrope",sans-serif}
+.next-sub{font-size:12px;color:var(--muted-2);margin:2px 0 12px;font-family:"Manrope",sans-serif}
+.next-nav{width:100%!important;margin:0!important}
+.next-acts{display:flex;gap:10px;margin-top:10px}
+.next-link{flex:1;text-align:center;padding:10px;border:1.5px solid var(--forest);border-radius:24px;font-family:"Manrope",sans-serif;font-size:13px;font-weight:700;color:var(--forest);text-decoration:none}
 .menu-wrap{position:relative}
 .menu-toggle{display:none;font-family:"Manrope",sans-serif;font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.4);border-radius:20px;padding:7px 16px;cursor:pointer}
 .menu-pop{display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:190px;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:6px;z-index:50}
@@ -335,6 +344,7 @@ body.lang-ar .alt-contact-actions{text-align:left}
       <div class="route-banner" id="route-banner"></div>
     </div>
     <div style="height:14px"></div>
+    <div id="next-stop"></div>
     <div id="fams-list"></div>
     <div id="fams-delivered"></div>
   </div>
@@ -1315,8 +1325,41 @@ async function loadOwnFamIds(){
     (q.data||[]).forEach(function(row){(row.matched_family_ids||[]).forEach(function(id){OWNFAMS[id]=true;});});
   }catch(e){console.warn("Could not load own sponsored families (non-fatal):",e);}
 }
+function renderNextStop(pending){
+  var el=document.getElementById("next-stop");
+  if(!el)return;
+  if(!pending||!pending.length){el.innerHTML="";return;}
+  var row=pending[0],app=row.food_box_applications||{};
+  var name=(app.full_name_en||app.full_name||t("dash")).replace(/</g,"&lt;");
+  var wa=(app.whatsapp||"").replace(/[^0-9+]/g,"");
+  var own=!!OWNFAMS[row.application_id];
+  var boxes=app.household_size?Math.ceil(app.household_size/4):1;
+  el.innerHTML='<div class="next-card'+(own?" fam-own":"")+'">'
+    +'<div class="next-top"><span class="next-lbl">'+(LANG==="ar"?"التوقف التالي":"Next stop")+'</span><span class="next-left">'+pending.length+(LANG==="ar"?" متبقية":" left")+'</span></div>'
+    +(own?'<div class="fam-own-lbl" style="margin:0 0 10px">'+t("own_box_heading")+'</div>':"")
+    +'<div class="next-name">'+name+'</div>'
+    +'<div class="next-sub">'+(app.area||"")+' · '+boxes+(boxes===1?t("box_singular"):t("box_plural"))+'</div>'
+    +'<button class="act-btn next-nav" onclick="navNext(\''+row.id+'\')">'+(LANG==="ar"?"🧭 انتقل إلى هذا التوقف ←":"🧭 Navigate to this stop →")+'</button>'
+    +'<div class="next-acts">'
+      +(app.whatsapp?'<a class="next-link" href="tel:'+(app.whatsapp||"").replace(/[^0-9+]/g,"")+'">📞 '+(LANG==="ar"?"اتصال":"Call")+'</a>':"")
+      +(wa?'<a class="next-link" target="_blank" href="https://wa.me/'+wa+'">💬 WhatsApp</a>':"")
+    +'</div></div>';
+}
+async function navNext(rowId){
+  var row=(CURRENT_FAMS||[]).find(function(r){return r.id===rowId;});
+  if(!row)return;
+  var app=row.food_box_applications||{};
+  var c=await famCoord(app);
+  var url=c?"https://www.google.com/maps/dir/?api=1&travelmode=driving&destination="+c[0]+","+c[1]:buildMapsUrl(app);
+  if(url)window.open(url,"_blank");else alert(t("route_no_navigable_stops"));
+}
 function renderFamsList(){
   var pending=(CURRENT_FAMS||[]).filter(function(r){return r.status!=="delivered";});
+  var so=savedRouteOrder();
+  if(so){
+    pending=pending.map(function(r,i){var ix=so.indexOf(r.id);return {r:r,k:ix<0?1e6+i:ix};}).sort(function(a,b){return a.k-b.k;}).map(function(x){return x.r;});
+  }
+  renderNextStop(pending);
   document.getElementById("fams-list").innerHTML=pending.map(function(row,i){return renderFamCard(row,i+1);}).join("");
   updateFamCountLbl();
   renderDeliveredSection();
@@ -1483,6 +1526,7 @@ var FAF_POINT_LAT=25.2592198, FAF_POINT_LON=51.4719974;
 // all are left in their original order at the end, since there's nothing
 // to sort them by.
 async function orderByDistance(lat,lon,list){
+  list=(list||[]).filter(function(r){return r.status!=="delivered";});
   var withCoord=[],withoutCoord=[];
   for(var i=0;i<list.length;i++){
     var app=list[i].food_box_applications||{};
@@ -1503,8 +1547,17 @@ async function orderByDistance(lat,lon,list){
   }
   return {ordered:ordered.concat(withoutCoord),unplaced:withoutCoord.length};
 }
+function routeKey(){return "faf_route_"+(AT?AT.id:"");}
+function saveRouteOrder(list){
+  try{localStorage.setItem(routeKey(),JSON.stringify((list||[]).filter(function(r){return r.status!=="delivered";}).map(function(r){return r.id;})));}catch(e){}
+}
+function savedRouteOrder(){
+  try{var v=JSON.parse(localStorage.getItem(routeKey())||"null");return Array.isArray(v)&&v.length?v:null;}catch(e){return null;}
+}
 function renderRouteAndBanner(list,label,unplaced){
-  CURRENT_FAMS=list;
+  var done=(CURRENT_FAMS||[]).filter(function(r){return r.status==="delivered";});
+  CURRENT_FAMS=list.concat(done);
+  saveRouteOrder(list);
   renderFamsList();
   showRouteBanner(t("route_set_start")+label+"."+t("route_ordered_by_distance")
     +(unplaced?" "+unplaced+t("route_unplaced_suffix"):"")
@@ -1594,6 +1647,21 @@ async function startNavigation(){
   var sel=document.getElementById("route-start-sel");
   var startId=sel&&sel.value;
   if(!startId){alert(t("route_pick_start_first"));return;}
+  // Route already set earlier: keep that order, drop anything delivered, and
+  // let Google start from the driver's live position — no re-sorting, no repeats.
+  var saved=savedRouteOrder();
+  if(saved){
+    var pend=(CURRENT_FAMS||[]).filter(function(r){return r.status!=="delivered";});
+    pend=pend.map(function(r,i){var ix=saved.indexOf(r.id);return {r:r,k:ix<0?1e6+i:ix};}).sort(function(a,b){return a.k-b.k;}).map(function(x){return x.r;});
+    var sstops=[];
+    for(var si=0;si<pend.length;si++){var sc=await famCoord(pend[si].food_box_applications||{});if(sc)sstops.push(sc);}
+    if(!sstops.length){alert(t("route_no_navigable_stops"));return;}
+    var anyDone=(CURRENT_FAMS||[]).some(function(r){return r.status==="delivered";});
+    if(!anyDone&&startId==="__my_location_via_faf")sstops.unshift([FAF_POINT_LAT,FAF_POINT_LON]);
+    var sdest=sstops[sstops.length-1],swps=sstops.slice(0,-1);
+    window.open("https://www.google.com/maps/dir/?api=1&travelmode=driving&destination="+sdest[0]+","+sdest[1]+(swps.length?"&waypoints="+swps.map(function(w){return w[0]+","+w[1];}).join("|"):""),"_blank");
+    return;
+  }
   showRouteBanner((startId==="__my_location"||startId==="__my_location_via_faf")?t("route_finding_location"):t("route_ordering"));
   var r;
   try{ r=await computeRoute(startId); }
