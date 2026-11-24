@@ -294,6 +294,7 @@ body.lang-ar .alt-contact-actions{text-align:left}
       <button class="menu-toggle" id="menu-toggle" onclick="toggleMenu(event)" aria-label="Menu" data-en="☰ Menu" data-ar="☰ القائمة">☰ Menu</button>
       <div class="menu-pop" id="menu-pop">
         <button class="so-btn" id="past-btn" onclick="closeMenu();showPast()" data-en="Past trips" data-ar="الرحلات السابقة">Past trips</button>
+        <button class="so-btn" id="tut-btn" onclick="closeMenu();showTutorials()" data-en="Tutorials" data-ar="شروحات">Tutorials</button>
         <button class="so-btn" id="pf-btn" onclick="closeMenu();showProfile()" data-en="Edit profile" data-ar="تعديل الملف الشخصي">Edit profile</button>
         <button class="so-btn" id="so-btn" onclick="closeMenu();signOut()" data-en="Sign out" data-ar="تسجيل الخروج">Sign out</button>
       </div>
@@ -890,6 +891,7 @@ function showV(id){
   document.getElementById("so-btn").style.display=(id==="v-dash")?"block":"none";
   document.getElementById("pf-btn").style.display=(id==="v-dash")?"block":"none";
   document.getElementById("past-btn").style.display=(id==="v-dash")?"block":"none";
+  document.getElementById("tut-btn").style.display=(id==="v-dash")?"block":"none";
   document.getElementById("menu-toggle").style.display=(id==="v-dash")?"block":"none";
   // Full-bleed gradient + centered fading card only on the sign-in screen —
   // every other view keeps the ordinary green nav + page-header layout.
@@ -932,6 +934,10 @@ function showDashMain(){
 function toggleMenu(e){if(e)e.stopPropagation();document.getElementById("menu-pop").classList.toggle("open");}
 function closeMenu(){var m=document.getElementById("menu-pop");if(m)m.classList.remove("open");}
 document.addEventListener("click",function(e){if(!e.target.closest||!e.target.closest(".menu-wrap"))closeMenu();});
+function showTutorials(){
+  showDashMain();
+  setTimeout(function(){var t=document.getElementById("pnl-tutorials");if(t)t.scrollIntoView({behavior:"smooth",block:"start"});},80);
+}
 function showPast(){
   ["pnl-active","pnl-none","pnl-fams","pnl-areas","pnl-alloc","pnl-profile"].forEach(function(id){
     var el=document.getElementById(id);if(el)el.style.display="none";
