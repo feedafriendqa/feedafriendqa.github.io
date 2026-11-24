@@ -53,6 +53,9 @@ body.login-mode .shell{display:flex;align-items:center;justify-content:center;pa
 .dash-topbar{max-width:440px;margin:0 auto 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 body.lang-ar .dash-topbar{flex-direction:row-reverse}
 .so-btn{font-family:"Manrope",sans-serif;font-size:11px;font-weight:700;color:rgba(255,255,255,.8);background:none;border:1.5px solid rgba(255,255,255,.3);border-radius:20px;padding:6px 15px;cursor:pointer;display:none}
+.own-box{margin:10px 16px 6px;padding:10px 0 12px;border:2px solid var(--amber);border-radius:18px;background:rgba(217,164,65,.14)}
+.own-box .alloc-fam{margin:8px 12px 0}
+.own-lbl{font-family:"Manrope",sans-serif;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);text-align:center;padding:0 12px}
 .menu-wrap{position:relative}
 .menu-toggle{display:none;font-family:"Manrope",sans-serif;font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.4);border-radius:20px;padding:7px 16px;cursor:pointer}
 .menu-pop{display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:190px;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:6px;z-index:50}
@@ -764,6 +767,7 @@ var TR={
   diaper_size_prefix:{en:"Size ",ar:"مقاس "},
   yes:{en:"Yes",ar:"نعم"},
   matched_last_time:{en:"Matched with you last time",ar:"طابقناك بهم آخر مرة"},
+  own_box_heading:{en:"🎁 Your sponsored box",ar:"🎁 صندوق تكفّلك"},
   your_own_sponsorship:{en:"🎁 Your own sponsorship",ar:"🎁 تكفّلك الخاص"},
   loading_ellipsis:{en:"Loading…",ar:"جارٍ التحميل…"},
   no_own_boxes_found:{en:"We couldn't find your sponsored boxes right now — please try again in a moment.",ar:"لم نتمكن من العثور على صناديقك المتكفّل بها الآن — يرجى المحاولة مرة أخرى بعد قليل."},
@@ -944,6 +948,11 @@ function showDashMain(){
 function toggleMenu(e){if(e)e.stopPropagation();document.getElementById("menu-pop").classList.toggle("open");}
 function closeMenu(){var m=document.getElementById("menu-pop");if(m)m.classList.remove("open");}
 document.addEventListener("click",function(e){if(!e.target.closest||!e.target.closest(".menu-wrap"))closeMenu();});
+function ownSplit(list,fn){
+  var own=list.filter(function(f){return f.self_sponsored;}).map(fn).join("");
+  var rest=list.filter(function(f){return !f.self_sponsored;}).map(fn).join("");
+  return (own?'<div class="own-box"><div class="own-lbl">'+t("own_box_heading")+'</div>'+own+'</div>':"")+rest;
+}
 function showTutorials(){
   ["pnl-active","pnl-none","pnl-fams","pnl-areas","pnl-alloc","pnl-profile","pnl-past"].forEach(function(id){
     var el=document.getElementById(id);if(el)el.style.display="none";
@@ -2242,7 +2251,7 @@ function renderAlloc(){
     :t("no_friends_available_long");
   document.getElementById("alloc-list").innerHTML=fams.length===0
     ?'<div style="text-align:center;padding:20px 24px;font-size:13px;color:var(--muted);font-weight:500">'+t("no_friends_available_short")+'</div>'
-    :fams.map(function(f){
+    :ownSplit(fams,function(f){
         var bx=f.boxes_needed||1;
         var off=!!DESELECTED[f.id];
         var self=!!f.self_sponsored;
@@ -2255,7 +2264,7 @@ function renderAlloc(){
           +'<div class="af-sub">'+(f.household_size?t("household_of")+f.household_size+" · ":"")+tags+'</div>'
           +(off?'<div class="af-off-lbl">'+t("not_confirming_tap_back")+'</div>':'')
           +'</div>';
-      }).join("");
+      });
   var selectedCount=fams.length-Object.keys(DESELECTED).length;
   var confirmBtn=document.getElementById("confirm-btn");
   confirmBtn.textContent=selectedCount===fams.length?t("confirm_these"):t("confirm_selected_prefix")+selectedCount+t("close_paren_arrow");
