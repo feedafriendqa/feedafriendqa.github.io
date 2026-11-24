@@ -338,8 +338,8 @@ select.edit-field{cursor:pointer;}
       <div class="stat-card sc-new" onclick="setFilterFromTile('new')"><div class="num" id="stat-new">–</div><div class="lbl">New</div></div>
       <div class="stat-card sc-pending" onclick="setFilterFromTile('pending')"><div class="num" id="stat-pending">–</div><div class="lbl">Pending</div></div>
       <div class="stat-card sc-approved" onclick="setFilterFromTile('approved')"><div class="num" id="stat-approved">–</div><div class="lbl">Approved</div></div>
-      <div class="stat-card sc-active" onclick="setFilterFromTile('confirmed')"><div class="num" id="stat-active">–</div><div class="lbl">Confirmed</div></div>
-      <div class="stat-card sc-boxes" onclick="setFilterFromTile('confirmed')"><div class="num" id="stat-boxes-needed">–</div><div class="lbl">Boxes needed</div></div>
+      <div class="stat-card sc-active" onclick="setFilterFromTile('confirmed')"><div class="num" id="stat-active">–</div><div class="lbl" id="lbl-stat-active">Confirmed</div></div>
+      <div class="stat-card sc-boxes" onclick="setFilterFromTile('confirmed')"><div class="num" id="stat-boxes-needed">–</div><div class="lbl" id="lbl-stat-boxes">Boxes needed</div></div>
       <div class="stat-card sc-archived" onclick="setFilterFromTile('archived')"><div class="num" id="stat-archived">–</div><div class="lbl">Archived</div></div>
       <div class="stat-card sc-review" onclick="setFilterFromTile('review')"><div class="num" id="stat-translation">–</div><div class="lbl">Needs review</div></div>
       <div class="stat-card sc-wbb" onclick="setFilterFromTile('wbb_review')"><div class="num" id="stat-wbb-review">–</div><div class="lbl">🍼 Pregnant — verify WBB</div></div>
@@ -852,6 +852,24 @@ function loadCurrentDistribution() {
     }
   }).catch(function(){});
 }
+// The Confirmed / Boxes needed tiles are scoped to the round that is next to
+// be distributed (earliest non-closed round dated today or later), NOT the
+// "current" open round, because families can already confirm for the next
+// month (e.g. December) while November's boxes are still going out.
+var TILE_ROUND_ID = null;
+var TILE_ROUND_LABEL = null;
+function loadTileRound() {
+  return apiHeadersAsync().then(function(headers) {
+    return fetch(SUPABASE_URL + '/rest/v1/distribution_rounds?select=id,name,distribution_date,status&status=neq.closed&order=distribution_date.asc', { headers: headers });
+  }).then(function(r) { return r.ok ? r.json() : []; }).then(function(rows) {
+    if (!rows || !rows.length) return;
+    var today = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Qatar'});
+    var pick = rows.filter(function(x){ return x.distribution_date >= today; })[0] || rows[0];
+    TILE_ROUND_ID = pick.id;
+    TILE_ROUND_LABEL = (pick.name || '').split(' ')[0] || null;
+    if (typeof updateStats === 'function' && allApps && allApps.length) updateStats();
+  }).catch(function(){});
+}
 var myRole = 'admin';
 var myLanguages = null;
 var myName = null;
@@ -1053,6 +1071,7 @@ async function handleAdminSession(session) {
   }
 
   loadCurrentDistribution();
+  loadTileRound();
   loadTopupRequests();
 
   // Lightweight background check so the Approvals nav button shows a
@@ -1329,12 +1348,16 @@ function updateStats() {
   document.getElementById('stat-new').textContent = scoped.filter(function(a){return resolveStatus(a)==='new';}).length;
   document.getElementById('stat-pending').textContent = scoped.filter(function(a){return resolveStatus(a)==='pending';}).length;
   document.getElementById('stat-approved').textContent = scoped.filter(function(a){return resolveStatus(a)==='approved';}).length;
-  document.getElementById('stat-active').textContent = scoped.filter(function(a){return resolveStatus(a)==='confirmed';}).length;
+  var inTileRound = function(a){ return !TILE_ROUND_ID || a.confirmed_round_id === TILE_ROUND_ID; };
+  document.getElementById('stat-active').textContent = scoped.filter(function(a){return resolveStatus(a)==='confirmed' && inTileRound(a);}).length;
+  var lblA = document.getElementById('lbl-stat-active'), lblB = document.getElementById('lbl-stat-boxes');
+  if (lblA) lblA.textContent = TILE_ROUND_ID && TILE_ROUND_LABEL ? 'Confirmed · ' + TILE_ROUND_LABEL : 'Confirmed';
+  if (lblB) lblB.textContent = TILE_ROUND_ID && TILE_ROUND_LABEL ? 'Boxes needed · ' + TILE_ROUND_LABEL : 'Boxes needed';
   // 1 box feeds 3-4 people, so a household needs ceil(size / 4) boxes at
   // each delivery. Only Confirmed cases count here, since those are the
   // ones actually due a box at the next distribution.
   var boxesNeeded = scoped
-    .filter(function(a){ return resolveStatus(a) === 'confirmed'; })
+    .filter(function(a){ return resolveStatus(a) === 'confirmed' && inTileRound(a); })
     .reduce(function(sum, a){ return sum + boxesNeededFor(a); }, 0);
   document.getElementById('stat-boxes-needed').textContent = boxesNeeded;
   document.getElementById('stat-archived').textContent = scoped.filter(function(a){return resolveStatus(a)==='archived';}).length;
