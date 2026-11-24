@@ -53,7 +53,6 @@ body.login-mode .shell{display:flex;align-items:center;justify-content:center;pa
 .dash-topbar{max-width:440px;margin:0 auto 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 body.lang-ar .dash-topbar{flex-direction:row-reverse}
 .so-btn{font-family:"Manrope",sans-serif;font-size:11px;font-weight:700;color:rgba(255,255,255,.8);background:none;border:1.5px solid rgba(255,255,255,.3);border-radius:20px;padding:6px 15px;cursor:pointer;display:none}
-.alloc-fam.af-own{border:2px solid var(--amber);box-shadow:0 0 0 3px rgba(217,164,65,.25)}
 .menu-wrap{position:relative}
 .menu-toggle{display:none;font-family:"Manrope",sans-serif;font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.4);border-radius:20px;padding:7px 16px;cursor:pointer}
 .menu-pop{display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:190px;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:6px;z-index:50}
@@ -2249,7 +2248,7 @@ function renderAlloc(){
         // Self-sponsored cards are the driver's own committed sponsorship for
         // this round, not a rotation pick — no ✕ to swap them out and no tap
         // to leave them out, since there's no "someone else" to reshuffle in.
-        return '<div class="alloc-fam'+(off?" af-off":"")+(self?" af-own":"")+'" id="af-'+f.id+'"'+(self?"":' onclick="toggleDeselect(\''+f.id+'\')"')+'>'+(self?'<button class="af-x" onclick="event.stopPropagation();releaseOwnFam(\''+f.id+'\')" title="'+t("release_own_title")+'">✕</button>':'<button class="af-x" onclick="event.stopPropagation();removeAllocFam(\''+f.id+'\')" title="'+t("remove_and_match_again")+'">✕</button>')
+        return '<div class="alloc-fam'+(off?" af-off":"")+'" id="af-'+f.id+'"'+(self?"":' onclick="toggleDeselect(\''+f.id+'\')"')+'>'+(self?'<button class="af-x" onclick="event.stopPropagation();releaseOwnFam(\''+f.id+'\')" title="'+t("release_own_title")+'">✕</button>':'<button class="af-x" onclick="event.stopPropagation();removeAllocFam(\''+f.id+'\')" title="'+t("remove_and_match_again")+'">✕</button>')
           +'<div class="af-area"><svg viewBox="0 0 24 24" width="12" height="12" style="vertical-align:-1px;margin-right:3px" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="#146c43"/></svg>'+(f.area||t("unknown_area"))+'</div>'
           +'<div class="af-sub">'+(f.household_size?t("household_of")+f.household_size+" · ":"")+tags+'</div>'
           +(off?'<div class="af-off-lbl">'+t("not_confirming_tap_back")+'</div>':'')
