@@ -409,7 +409,8 @@ body.lang-ar .alt-contact-actions{text-align:left}
   </div>
 
   <!-- Tutorials -->
-  <div class="dash-stack" id="pnl-tutorials" style="display:none;padding-bottom:8px">
+  <div class="dash-stack" id="pnl-tutorials" style="display:none;padding-bottom:24px">
+    <div class="back-row"><button class="back-btn" onclick="showDashMain()" data-en="← Back" data-ar="→ رجوع">← Back</button></div>
     <div class="dash-hero"><img class="login-logo" alt="Feed a Friend"><div class="login-title" data-en="Tutorials" data-ar="شروحات">Tutorials</div><div class="login-sub" data-en="Short videos to guide you through distribution" data-ar="فيديوهات قصيرة لإرشادك خلال التوزيع">Short videos to guide you through distribution</div></div>
     <div class="tut-card">
       <video controls playsinline preload="none" poster="videos/tutorial-picking-deliveries.jpg" src="videos/tutorial-picking-deliveries.mp4"></video>
@@ -922,7 +923,14 @@ function resetSession(){
   location.reload();
 }
 
+function hideTutorials(){
+  var t=document.getElementById("pnl-tutorials");
+  if(!t)return;
+  t.style.display="none";
+  t.querySelectorAll("video").forEach(function(v){try{v.pause();}catch(e){}});
+}
 function showDashMain(){
+  hideTutorials();
   document.getElementById("pnl-fams").style.display="none";
   document.getElementById("pnl-areas").style.display="none";
   document.getElementById("pnl-alloc").style.display="none";
@@ -936,10 +944,14 @@ function toggleMenu(e){if(e)e.stopPropagation();document.getElementById("menu-po
 function closeMenu(){var m=document.getElementById("menu-pop");if(m)m.classList.remove("open");}
 document.addEventListener("click",function(e){if(!e.target.closest||!e.target.closest(".menu-wrap"))closeMenu();});
 function showTutorials(){
-  showDashMain();
-  setTimeout(function(){var t=document.getElementById("pnl-tutorials");if(t)t.scrollIntoView({behavior:"smooth",block:"start"});},80);
+  ["pnl-active","pnl-none","pnl-fams","pnl-areas","pnl-alloc","pnl-profile","pnl-past"].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.style.display="none";
+  });
+  document.getElementById("pnl-tutorials").style.display="block";
+  window.scrollTo(0,0);
 }
 function showPast(){
+  hideTutorials();
   ["pnl-active","pnl-none","pnl-fams","pnl-areas","pnl-alloc","pnl-profile"].forEach(function(id){
     var el=document.getElementById(id);if(el)el.style.display="none";
   });
@@ -954,6 +966,7 @@ function clearPfMsg(){
 
 function showProfile(){
   if(!DP)return;
+  hideTutorials();
   document.getElementById("pnl-active").style.display="none";
   document.getElementById("pnl-none").style.display="none";
   document.getElementById("pnl-fams").style.display="none";
@@ -2400,7 +2413,7 @@ function buildCapBoxRow(n,claimed){
 // past round's self-delivery boxes don't linger here forever.
 async function loadSelfBoxCount(){
   try{
-    var roundRes=await sb.from("current_distribution_public").select("name").maybeSingle();
+    var roundRes=await sb.from("next_distribution_public").select("name").maybeSingle();
     var roundName=roundRes&&roundRes.data?roundRes.data.name:null;
     if(!roundName)return 0;
     var q=sb.from("sponsorships").select("box_count").ilike("email",CU.email).eq("delivery_method","self").eq("distribution_event",roundName).neq("payment_status","cancelled");
@@ -2467,28 +2480,5 @@ function showDeliveredToast(count){
 
 init();
 
-// Tutorials panel: visible whenever the main dashboard (active trip or no trip)
-// is on screen, hidden on the allocation / delivery / profile screens. Driven
-// by an observer so it doesn't depend on every show/hide call site.
-(function(){
-  function syncTutorials(){
-    var t=document.getElementById("pnl-tutorials");
-    if(!t)return;
-    var a=document.getElementById("pnl-active"),n=document.getElementById("pnl-none");
-    var main=(a&&a.style.display==="block")||(n&&n.style.display==="block");
-    var next=main?"block":"none";
-    if(t.style.display!==next){
-      t.style.display=next;
-      if(!main){t.querySelectorAll("video").forEach(function(v){try{v.pause();}catch(e){}});}
-    }
-  }
-  function init(){
-    ["pnl-active","pnl-none"].forEach(function(id){
-      var el=document.getElementById(id);
-      if(el)new MutationObserver(syncTutorials).observe(el,{attributes:true,attributeFilter:["style"]});
-    });
-    syncTutorials();
-  }
-  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
-})();
+
 </script></html>
