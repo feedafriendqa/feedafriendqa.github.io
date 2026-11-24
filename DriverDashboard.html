@@ -61,6 +61,8 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 .cap-edit-btn{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--forest);background:#fff;color:var(--forest);font-size:18px;font-weight:700;line-height:1;cursor:pointer}
 .cap-edit-val{font-size:18px;font-weight:800;color:var(--forest);min-width:22px;text-align:center}
 .cap-edit-ok{font-size:11px;font-weight:700;color:var(--forest);min-width:60px}
+.af-boxes{display:flex;gap:3px;margin-top:8px}
+.af-boxes svg{display:block}
 .menu-wrap{position:relative}
 .menu-toggle{display:none;font-family:"Manrope",sans-serif;font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.4);border-radius:20px;padding:7px 16px;cursor:pointer}
 .menu-pop{display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:190px;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:6px;z-index:50}
@@ -958,6 +960,11 @@ function showDashMain(){
 function toggleMenu(e){if(e)e.stopPropagation();document.getElementById("menu-pop").classList.toggle("open");}
 function closeMenu(){var m=document.getElementById("menu-pop");if(m)m.classList.remove("open");}
 document.addEventListener("click",function(e){if(!e.target.closest||!e.target.closest(".menu-wrap"))closeMenu();});
+function boxIcons(n,gold){
+  var one='<svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-2 .9-2 2v3.01c0 .72.39 1.34.97 1.69V20c0 1.1 1.1 2 2.03 2h14c.93 0 2-.9 2-2V8.7c.58-.35.97-.97.97-1.69V4c0-1.1-.9-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z" fill="'+(gold?"#d9a441":"#146c43")+'"/></svg>';
+  var h="";for(var i=0;i<Math.max(1,n);i++)h+=one;
+  return '<div class="af-boxes">'+h+'</div>';
+}
 function ownSplit(list,fn){
   var own=list.filter(function(f){return f.self_sponsored;}).map(fn).join("");
   var rest=list.filter(function(f){return !f.self_sponsored;}).map(fn).join("");
@@ -2292,6 +2299,7 @@ function renderAlloc(){
         // to leave them out, since there's no "someone else" to reshuffle in.
         return '<div class="alloc-fam'+(off?" af-off":"")+'" id="af-'+f.id+'"'+(self?"":' onclick="toggleDeselect(\''+f.id+'\')"')+'>'+(self?'<button class="af-x" onclick="event.stopPropagation();releaseOwnFam(\''+f.id+'\')" title="'+t("release_own_title")+'">✕</button>':'<button class="af-x" onclick="event.stopPropagation();removeAllocFam(\''+f.id+'\')" title="'+t("remove_and_match_again")+'">✕</button>')
           +'<div class="af-area"><svg viewBox="0 0 24 24" width="12" height="12" style="vertical-align:-1px;margin-right:3px" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="#146c43"/></svg>'+(f.area||t("unknown_area"))+'</div>'
+          +boxIcons(bx,self)
           +'<div class="af-sub">'+(f.household_size?t("household_of")+f.household_size+" · ":"")+tags+'</div>'
           +(off?'<div class="af-off-lbl">'+t("not_confirming_tap_back")+'</div>':'')
           +'</div>';
