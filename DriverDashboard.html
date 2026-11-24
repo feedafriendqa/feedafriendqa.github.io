@@ -282,7 +282,8 @@ body.lang-ar .alt-contact-actions{text-align:left}
 
   <div class="dash-topbar">
     <div class="lang-toggle"><button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button><button class="lang-btn" data-lang="ar" onclick="setLang('ar')">AR</button></div>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+      <button class="so-btn" id="past-btn" onclick="showPast()" data-en="Past trips" data-ar="الرحلات السابقة">Past trips</button>
       <button class="so-btn" id="pf-btn" onclick="showProfile()" data-en="Edit profile" data-ar="تعديل الملف الشخصي">Edit profile</button>
       <button class="so-btn" id="so-btn" onclick="signOut()" data-en="Sign out" data-ar="تسجيل الخروج">Sign out</button>
     </div>
@@ -422,6 +423,7 @@ body.lang-ar .alt-contact-actions{text-align:left}
 
   <!-- Past trips -->
   <div class="dash-stack" id="pnl-past" style="display:none;padding-bottom:24px">
+    <div class="back-row"><button class="back-btn" onclick="showDashMain()" data-en="← Back" data-ar="→ رجوع">← Back</button></div>
     <div class="dash-hero"><img class="login-logo" alt="Feed a Friend"><div class="login-title" data-en="Past trips" data-ar="الرحلات السابقة">Past trips</div><div class="login-sub" data-en="Your delivery history" data-ar="سجل توصيلاتك">Your delivery history</div></div>
     <div id="past-list"></div>
   </div>
@@ -876,6 +878,7 @@ function showV(id){
   document.getElementById("l-btn")&&(document.getElementById("l-btn").parentElement.style.display=id==="v-login"?"block":"none");
   document.getElementById("so-btn").style.display=(id==="v-dash")?"block":"none";
   document.getElementById("pf-btn").style.display=(id==="v-dash")?"block":"none";
+  document.getElementById("past-btn").style.display=(id==="v-dash")?"block":"none";
   // Full-bleed gradient + centered fading card only on the sign-in screen —
   // every other view keeps the ordinary green nav + page-header layout.
   document.body.classList.toggle("login-mode",id==="v-login"||id==="v-pending"||id==="v-notreg"||id==="v-reset");
@@ -912,6 +915,14 @@ function showDashMain(){
   document.getElementById("pnl-profile").style.display="none";
   document.getElementById("pnl-active").style.display=AT?"block":"none";
   document.getElementById("pnl-none").style.display=AT?"none":"block";
+}
+
+function showPast(){
+  ["pnl-active","pnl-none","pnl-fams","pnl-areas","pnl-alloc","pnl-profile"].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.style.display="none";
+  });
+  document.getElementById("pnl-past").style.display="block";
+  window.scrollTo(0,0);
 }
 
 function clearPfMsg(){
@@ -1086,9 +1097,9 @@ async function loadTrips(){
   var past=trips.filter(function(t){return t.status==="completed";});
   if(AT){renderActiveTrip(AT);document.getElementById("pnl-active").style.display="block";document.getElementById("pnl-none").style.display="none";}
   else{document.getElementById("pnl-active").style.display="none";document.getElementById("pnl-none").style.display="block";}
-  if(past.length){
-    document.getElementById("pnl-past").style.display="block";
-    document.getElementById("past-list").innerHTML=past.map(renderPastTrip).join("");
+  document.getElementById("past-list").innerHTML=past.length?past.map(renderPastTrip).join(""):'<div style="text-align:center;color:rgba(255,255,255,.85);font-size:13px;padding:20px">'+(LANG==="ar"?"لا توجد رحلات سابقة بعد":"No past trips yet")+'</div>';
+  if(document.getElementById("pnl-past").style.display==="block"){
+    document.getElementById("pnl-active").style.display="none";document.getElementById("pnl-none").style.display="none";
   }
 }
 
