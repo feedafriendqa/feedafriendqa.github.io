@@ -1325,6 +1325,12 @@ async function loadOwnFamIds(){
     (q.data||[]).forEach(function(row){(row.matched_family_ids||[]).forEach(function(id){OWNFAMS[id]=true;});});
   }catch(e){console.warn("Could not load own sponsored families (non-fatal):",e);}
 }
+function refreshNextStop(){
+  var pending=(CURRENT_FAMS||[]).filter(function(r){return r.status!=="delivered";});
+  var so=savedRouteOrder();
+  if(so)pending=pending.map(function(r,i){var ix=so.indexOf(r.id);return {r:r,k:ix<0?1e6+i:ix};}).sort(function(a,b){return a.k-b.k;}).map(function(x){return x.r;});
+  renderNextStop(pending);
+}
 function renderNextStop(pending){
   var el=document.getElementById("next-stop");
   if(!el)return;
@@ -1914,6 +1920,7 @@ function removeFamCard(id){
   });
   setTimeout(function(){
     card.remove();
+    refreshNextStop();
     updateFamCountLbl();
     renderDeliveredSection();
     if(!document.querySelectorAll("#fams-list .fam-card").length){
