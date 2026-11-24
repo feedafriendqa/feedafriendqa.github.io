@@ -56,6 +56,11 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 .own-box{margin:10px 16px 6px;padding:10px 0 12px;border:2px solid var(--amber);border-radius:18px;background:rgba(217,164,65,.14)}
 .own-box .alloc-fam{margin:8px 12px 0}
 .own-lbl{font-family:"Manrope",sans-serif;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);text-align:center;padding:0 12px}
+.cap-edit{display:flex;align-items:center;justify-content:center;gap:12px;margin:2px 0 14px;font-family:"Manrope",sans-serif}
+.cap-edit-lbl{font-size:11px;font-weight:700;color:var(--muted-2);text-transform:uppercase;letter-spacing:.05em}
+.cap-edit-btn{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--forest);background:#fff;color:var(--forest);font-size:18px;font-weight:700;line-height:1;cursor:pointer}
+.cap-edit-val{font-size:18px;font-weight:800;color:var(--forest);min-width:22px;text-align:center}
+.cap-edit-ok{font-size:11px;font-weight:700;color:var(--forest);min-width:60px}
 .menu-wrap{position:relative}
 .menu-toggle{display:none;font-family:"Manrope",sans-serif;font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.4);border-radius:20px;padding:7px 16px;cursor:pointer}
 .menu-pop{display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:190px;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:6px;z-index:50}
@@ -398,6 +403,11 @@ body.lang-ar .alt-contact-actions{text-align:left}
       <div class="box-row" id="cap-box-row"></div>
       <div class="boot-note" id="boot-note" style="display:none"></div>
       <div class="nt-t" id="cap-remind"></div>
+      <div class="cap-edit"><span class="cap-edit-lbl" data-en="Change capacity" data-ar="تغيير السعة">Change capacity</span>
+        <button type="button" class="cap-edit-btn" onclick="adjCap(-1)" aria-label="-">−</button>
+        <span class="cap-edit-val" id="cap-edit-val">0</span>
+        <button type="button" class="cap-edit-btn" onclick="adjCap(1)" aria-label="+">+</button>
+        <span class="cap-edit-ok" id="cap-edit-ok"></span></div>
       <div class="nt-d" data-en="We'll match you with friends in your preferred areas." data-ar="سنطابقك مع أصدقاء في المناطق التي تفضّلها.">We'll match you with friends in your preferred areas.</div>
       <button onclick="anotherTrip()" class="cta" style="display:block;max-width:280px;margin:0 auto" data-en="Sign up for a trip →" data-ar="سجّل لرحلة ←">Sign up for a trip →</button>
     </div>
@@ -870,7 +880,7 @@ function setLang(lang){
     loadTrips().catch(function(){});
   }
   if(DP&&document.getElementById("pnl-none")&&document.getElementById("pnl-none").style.display!=="none"){
-    document.getElementById("cap-remind").textContent=capRemindText(DP);
+    document.getElementById("cap-remind").textContent=capRemindText(DP);syncCapEdit();
   }
   if(document.getElementById("pnl-areas")&&document.getElementById("pnl-areas").style.display!=="none"){
     updTripAreaStat();
@@ -1118,7 +1128,7 @@ async function loadDriver(){
     if(!DP){showV("v-notreg");return;}
     if(DP.status==="pending"){setHero("pending");showV("v-pending");return;}
     setHero("dash");
-    document.getElementById("cap-remind").textContent=capRemindText(DP);
+    document.getElementById("cap-remind").textContent=capRemindText(DP);syncCapEdit();
     SELFBOXES=await loadSelfBoxCount();
     buildCapBoxRow(DP.boxes_capacity,SELFBOXES);
     await loadTrips();
@@ -1131,6 +1141,27 @@ async function loadDriver(){
   }
 }
 
+var CAPTIMER=null;
+function syncCapEdit(){var v=document.getElementById("cap-edit-val");if(v&&DP)v.textContent=DP.boxes_capacity||5;}
+function adjCap(d){
+  if(!DP||!CU)return;
+  var n=Math.max(1,Math.min(40,(DP.boxes_capacity||5)+d));
+  if(n===DP.boxes_capacity)return;
+  DP.boxes_capacity=n;
+  syncCapEdit();
+  var ok=document.getElementById("cap-edit-ok");if(ok)ok.textContent="";
+  var cr=document.getElementById("cap-remind");if(cr)cr.textContent=capRemindText(DP);
+  buildCapBoxRow(n,SELFBOXES||0);
+  clearTimeout(CAPTIMER);
+  CAPTIMER=setTimeout(async function(){
+    try{
+      var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"update_driver_capacity",driver_email:CU.email,boxes_capacity:n})});
+      var j=await r.json();
+      if(!r.ok||j.error)throw new Error(j.error||"HTTP "+r.status);
+      if(ok)ok.textContent=LANG==="ar"?"تم الحفظ ✓":"Saved ✓";
+    }catch(e){if(ok)ok.textContent=LANG==="ar"?"تعذّر الحفظ":"Could not save";}
+  },500);
+}
 function capRemindText(dp){
   return t("cap_line_your")+dp.car_make+" "+dp.car_model+t("cap_line_fits")+dp.boxes_capacity+t("cap_line_boxes");
 }
