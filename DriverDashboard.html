@@ -63,6 +63,8 @@ body.lang-ar .dash-topbar{flex-direction:row-reverse}
 .cap-edit-ok{font-size:11px;font-weight:700;color:var(--forest);min-width:60px}
 .af-boxes{display:flex;gap:3px;margin-top:8px}
 .af-boxes svg{display:block}
+.fam-card.fam-own{border:2.5px solid var(--amber);box-shadow:0 0 0 4px rgba(217,164,65,.28),0 12px 30px rgba(10,46,30,.14)}
+.fam-own-lbl{font-family:"Manrope",sans-serif;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#8a5f0f;background:rgba(217,164,65,.22);border-radius:10px;padding:6px 10px;margin:-6px 0 12px;text-align:center}
 .menu-wrap{position:relative}
 .menu-toggle{display:none;font-family:"Manrope",sans-serif;font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.4);border-radius:20px;padding:7px 16px;cursor:pointer}
 .menu-pop{display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:190px;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:6px;z-index:50}
@@ -1302,6 +1304,17 @@ async function togglePastPhotos(tripId){
 // only shows families still to deliver; delivered ones live in a
 // collapsible section underneath where a photo can still be added.
 var DELIV_OPEN=false;
+var OWNFAMS={};
+async function loadOwnFamIds(){
+  OWNFAMS={};
+  try{
+    var rr=await sb.from("distribution_rounds").select("name").neq("status","closed").gte("distribution_date",new Date(Date.now()+10800000).toISOString().split("T")[0]).order("distribution_date",{ascending:true}).limit(1).maybeSingle();
+    var rn=rr&&rr.data?rr.data.name:null;
+    if(!rn||!CU)return;
+    var q=await sb.from("sponsorships").select("matched_family_ids").ilike("email",CU.email).eq("distribution_event",rn).neq("payment_status","cancelled");
+    (q.data||[]).forEach(function(row){(row.matched_family_ids||[]).forEach(function(id){OWNFAMS[id]=true;});});
+  }catch(e){console.warn("Could not load own sponsored families (non-fatal):",e);}
+}
 function renderFamsList(){
   var pending=(CURRENT_FAMS||[]).filter(function(r){return r.status!=="delivered";});
   document.getElementById("fams-list").innerHTML=pending.map(function(row,i){return renderFamCard(row,i+1);}).join("");
@@ -1358,6 +1371,7 @@ async function showFamilies(){
     return sum+(hh?Math.ceil(hh/4):1);
   },0);
   renderHeroTotals(rows);
+  await loadOwnFamIds();
   if(rows.length===0){
     listEl.innerHTML='<div style="text-align:center;padding:20px 24px;font-size:13px;color:var(--muted);font-weight:600">'+t("no_deliveries_found_p1")+(AT.boxes_count||"?")+t("no_deliveries_found_p2")+'</div>';
     var rc=document.getElementById("route-card"); if(rc)rc.style.display="none";
@@ -1692,7 +1706,9 @@ function renderFamCard(row,num){
   });
   if(needsFormula)tags+='<span class="need-badge formula"><span class="need-ic">🍼</span>'+(t("yes")||"Yes")+'</span>';
   var notesVal=app.driver_notes?app.driver_notes.replace(/</g,"&lt;"):"";
-  return '<div class="fam-card" id="fc-'+row.id+'" data-boxes="'+boxCount+'">'
+  var isOwn=!!OWNFAMS[row.application_id];
+  return '<div class="fam-card'+(isOwn?" fam-own":"")+'" id="fc-'+row.id+'" data-boxes="'+boxCount+'">'
+    +(isOwn?'<div class="fam-own-lbl">'+t("own_box_heading")+'</div>':"")
     +'<div class="fam-head"><div class="fam-head-left"><div class="fam-circle">'+num+'</div><span class="fam-box-badge"><span class="fam-box-ic">📦</span>'+boxCount+'</span></div><span class="fam-st '+(done?"done":"pending")+'">'+(done?t("badge_delivered"):t("badge_pending"))+'</span></div>'
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4.42 0-8 2.24-8 5v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1c0-2.76-3.58-5-8-5z" fill="#146c43"/></svg></span><div><div class="fam-lbl">'+t("fam_name")+'</div><div class="fam-val">'+name+(app.nationality?' <span style="color:var(--muted);font-weight:600">· '+app.nationality+'</span>':"")+'</div></div></div>'
     +'<div class="fam-row"><span class="fam-ic"><svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="#146c43"/></svg></span><div><div class="fam-lbl">'+t("fam_address")+'</div><div class="fam-val">'+addr+mapsHtml+'</div></div></div>'
