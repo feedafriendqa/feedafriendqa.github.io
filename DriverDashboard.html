@@ -406,9 +406,9 @@ body.lang-ar .alt-contact-actions{text-align:left}
       <div class="boot-note" id="boot-note" style="display:none"></div>
       <div class="nt-t" id="cap-remind"></div>
       <div class="cap-edit"><span class="cap-edit-lbl" data-en="Change capacity" data-ar="تغيير السعة">Change capacity</span>
-        <button type="button" class="cap-edit-btn" onclick="adjCap(-1)" aria-label="-">−</button>
+        <button type="button" class="cap-edit-btn" onclick="adjMyCap(-1)" aria-label="-">−</button>
         <span class="cap-edit-val" id="cap-edit-val">0</span>
-        <button type="button" class="cap-edit-btn" onclick="adjCap(1)" aria-label="+">+</button>
+        <button type="button" class="cap-edit-btn" onclick="adjMyCap(1)" aria-label="+">+</button>
         <span class="cap-edit-ok" id="cap-edit-ok"></span></div>
       <div class="nt-d" data-en="We'll match you with friends in your preferred areas." data-ar="سنطابقك مع أصدقاء في المناطق التي تفضّلها.">We'll match you with friends in your preferred areas.</div>
       <button onclick="anotherTrip()" class="cta" style="display:block;max-width:280px;margin:0 auto" data-en="Sign up for a trip →" data-ar="سجّل لرحلة ←">Sign up for a trip →</button>
@@ -1150,7 +1150,7 @@ async function loadDriver(){
 
 var CAPTIMER=null;
 function syncCapEdit(){var v=document.getElementById("cap-edit-val");if(v&&DP)v.textContent=DP.boxes_capacity||5;}
-function adjCap(d){
+function adjMyCap(d){
   if(!DP||!CU)return;
   var n=Math.max(1,Math.min(40,(DP.boxes_capacity||5)+d));
   if(n===DP.boxes_capacity)return;
