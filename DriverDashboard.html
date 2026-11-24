@@ -535,7 +535,7 @@ body.lang-ar .alt-contact-actions{text-align:left}
 
 </div></body>
 <script>
-var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4",EDGE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder",EDGE_PROFILE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/update-driver-profile",EDGE_RELEASE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/driver-release-family";
+var SB="https://xbxagukdvgyaoqvbqoic.supabase.co",KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4",EDGE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/clever-responder",EDGE_PROFILE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/update-driver-profile",EDGE_RELEASE="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/driver-release-family",EDGE_POOL="https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/driver-pool";
 // Works around a known supabase-js deadlock (supabase/supabase-js#1594,
 // #2013, #2111): internally it serializes every auth call (getSession,
 // signOut, etc.) through navigator.locks, and if that browser-level lock
@@ -1921,7 +1921,7 @@ async function viewOwnBoxesOnly(btn){
   var origLabel=btn?btn.textContent:"";
   if(btn){btn.disabled=true;btn.textContent=t("loading_ellipsis");}
   try{
-    var boxesRes=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_boxes",driver_email:CU.email,areas:(DP&&DP.location_preferences)||[],capacity_override:0})});
+    var boxesRes=await fetch(EDGE_POOL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_boxes",driver_email:CU.email,areas:(DP&&DP.location_preferences)||[],capacity_override:0})});
     var boxesData=await boxesRes.json();
     if(!boxesRes.ok||boxesData.error)throw new Error(boxesData.error||t("something_went_wrong_generic"));
     var ownIds=(boxesData.families||[]).map(function(f){return f.id;});
@@ -1930,7 +1930,7 @@ async function viewOwnBoxesOnly(btn){
       dismissHelpDeliverBanner();
       return;
     }
-    var tripRes=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"confirm_driver_trip",driver_email:CU.email,family_ids:ownIds,areas:[]})});
+    var tripRes=await fetch(EDGE_POOL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"confirm_driver_trip",driver_email:CU.email,family_ids:ownIds,areas:[]})});
     var tripData=await tripRes.json();
     if(!tripRes.ok||tripData.error)throw new Error(tripData.error||t("something_went_wrong_generic"));
     dismissHelpDeliverBanner();
@@ -2010,7 +2010,7 @@ async function loadAllAreas(){
     ALL_AREAS=(locRes.data||[]).map(function(r){return r.name;});
   }catch(e){ ALL_AREAS=((DP&&DP.location_preferences)||[]).slice(); }
   try{
-    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_available_areas"})});
+    var r=await fetch(EDGE_POOL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_available_areas"})});
     var d=await r.json();
     AVAILABILITY={};
     (d.areas||[]).forEach(function(a){AVAILABILITY[a.area]=a.count;});
@@ -2172,7 +2172,7 @@ async function loadAlloc(){
   document.getElementById("alloc-list").innerHTML='<div class="loading" style="padding:20px"><div class="spin"></div></div>';
   document.getElementById("confirm-btn").disabled=false;document.getElementById("confirm-btn").textContent=t("confirm_these");
   try{
-    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_boxes",driver_email:CU.email,areas:SELAREAS,exclude_ids:getReleasedIds(),capacity_override:(NOFILL?0:TRIPCAP)})});
+    var r=await fetch(EDGE_POOL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_boxes",driver_email:CU.email,areas:SELAREAS,exclude_ids:getReleasedIds(),capacity_override:(NOFILL?0:TRIPCAP)})});
     var d=await r.json();
     ALLOC_META=d;
     (d.families||[]).forEach(function(f){KEPT[f.id]=f;});
@@ -2276,7 +2276,7 @@ async function rematchRemoved(){
   document.getElementById("alloc-areas").textContent=t("matching_replacement");
   try{
     var excludeIds=Object.keys(KEPT).concat(REMOVED);
-    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_boxes",driver_email:CU.email,areas:SELAREAS,exclude_ids:excludeIds,capacity_override:remainingCap})});
+    var r=await fetch(EDGE_POOL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"get_driver_boxes",driver_email:CU.email,areas:SELAREAS,exclude_ids:excludeIds,capacity_override:remainingCap})});
     var d=await r.json();
     (d.families||[]).forEach(function(f){KEPT[f.id]=f;});
   }catch(e){ /* keep whatever's already kept — leave the rest of this trip intact */ }
@@ -2290,7 +2290,7 @@ async function confirmAlloc(){
   var btn=document.getElementById("confirm-btn");
   btn.disabled=true;btn.textContent=t("confirming");
   try{
-    var r=await fetch(EDGE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"confirm_driver_trip",driver_email:CU.email,family_ids:fams.map(function(f){return f.id;}),areas:SELAREAS})});
+    var r=await fetch(EDGE_POOL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"confirm_driver_trip",driver_email:CU.email,family_ids:fams.map(function(f){return f.id;}),areas:SELAREAS})});
     var d=await r.json();
     if(d.error){
       // Every single one was taken by another driver in the meantime
