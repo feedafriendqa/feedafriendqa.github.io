@@ -2355,13 +2355,9 @@ function scanBluePlateAdmin(appId, input) {
     if (parsed.street) document.getElementById('ef-street').value = parsed.street;
     if (parsed.building) document.getElementById('ef-building').value = parsed.building;
     if (parsed.unit) document.getElementById('ef-unit').value = parsed.unit;
-    if (parsed.zone) {
-      var areaFromZone = ZONE_AREA[parseInt(parsed.zone)];
-      if (areaFromZone) document.getElementById('ef-area').value = areaFromZone;
-    } else if (parsed.area) {
-      document.getElementById('ef-area').value = parsed.area;
-    }
-    if (statusEl) statusEl.textContent = '✓ Scanned — check the fields below, then Save address';
+    // Area is no longer pre-filled from the zone: a zone covers several districts.
+    // The district is worked out from the pin when the address is saved.
+    if (statusEl) statusEl.textContent = '✓ Scanned — check the plate fields, then Save address. The district is set from the pin.';
   }).catch(function(e) {
     console.error('Blue plate scan error:', e);
     if (statusEl) statusEl.textContent = 'Scan failed — please fill in the fields manually.';
