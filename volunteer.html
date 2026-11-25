@@ -1687,9 +1687,47 @@ function Admin({profile:initProfile, onLogout, isSuperAdmin=true}){
 }
 
 // -- VOLUNTEER -----------------------------------------------------------------
+// ───────── Volunteer: My certificates ─────────
+function MyCerts({profile}){
+  const [items,setItems]=useState(null);
+  const [busy,setBusy]=useState("");
+  useEffect(()=>{ (async()=>{
+    try{
+      const [p,h]=await Promise.all([
+        sb.from("participation_certificates").select("id,title,activity_text,event_date,issued_at,display_name").eq("volunteer_id",profile.id).order("event_date",{ascending:false}),
+        sb.from("volunteer_certificates").select("id,milestone,issued_at,updated_at").eq("volunteer_id",profile.id).eq("status","issued").order("milestone",{ascending:false})
+      ]);
+      const name=`${profile.first_name||""} ${profile.surname||""}`.replace(/\s+/g," ").trim();
+      const list=[];
+      (p.data||[]).forEach(r=>list.push({key:"p"+r.id,icon:"🌱",title:r.title,when:r.event_date||r.issued_at,name:r.display_name,text:r.activity_text,file:r.title}));
+      (h.data||[]).forEach(r=>list.push({key:"h"+r.id,icon:"🏅",title:r.milestone+" volunteer hours",when:r.issued_at||(r.updated_at||"").slice(0,10),name,text:"in recognition of "+r.milestone+" hours of volunteering with Feed a Friend, and the generosity and commitment this represents.",file:r.milestone+" volunteer hours",subtitle:"OF ACHIEVEMENT"}));
+      setItems(list);
+    }catch(e){ console.error("Certificates failed:",e); setItems([]); }
+  })(); },[profile.id]);
+  if(items===null) return null;
+  const dl=async(it)=>{
+    setBusy(it.key);
+    try{ await window.fafCertificate.download(it); }catch(e){ console.error(e); alert("Couldn't download the certificate. Try again."); }
+    setBusy("");
+  };
+  return <div id="certificates" style={{marginBottom:16}}>
+    <h2 style={{fontFamily:HF,fontSize:17,fontWeight:900,textTransform:"uppercase",color:DK,marginBottom:10}}>My certificates</h2>
+    {items.length===0
+      ? <div style={{background:"#fff",borderRadius:14,padding:16,border:"1px solid "+BR,color:MT,fontSize:13,fontFamily:BF}}>Certificates you earn will appear here.</div>
+      : items.map(it=><div key={it.key} style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid "+BR,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:42,height:42,borderRadius:"50%",background:PL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{it.icon}</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:800,fontSize:14,fontFamily:BF,color:DK}}>{it.title}</div>
+            <div style={{fontSize:12,color:MT}}>{it.when&&window.fafCertificate?window.fafCertificate.monthYear(it.when):""}</div>
+          </div>
+          <button disabled={busy===it.key} onClick={()=>dl(it)} style={{background:GN,color:"#fff",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",opacity:busy===it.key?.6:1,whiteSpace:"nowrap"}}>{busy===it.key?"Preparing…":"Download PDF"}</button>
+        </div>)}
+  </div>;
+}
+
 function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
   const [profile,setProfile]=useState(initProfile);
-  const [view,setView]=useState("dashboard");
+  const [view,setView]=useState(()=>window.location.hash==="#certificates"?"history":"dashboard");
   const [logs,setLogs]=useState([]);
   const [opps,setOpps]=useState([]);
   const [su,setSu]=useState([]);
@@ -1944,6 +1982,7 @@ function Volunteer({profile:initProfile, onLogout, onUpdateProfile}){
       </div>}
 
       {view==="history"&&<div className="fade">
+        <MyCerts profile={profile}/>
         <div style={{background:"#fff",borderRadius:16,padding:16,border:"1px solid "+BR,marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",gap:14}}>
             <div style={{position:"relative",cursor:"pointer"}} onClick={()=>setEditingProfile(true)}>
