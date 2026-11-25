@@ -674,7 +674,7 @@
   }
 </style>
 
-<link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Mrs+Saint+Delafield&family=Poppins:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Mr+De+Haviland&family=Poppins:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
@@ -1153,7 +1153,7 @@
         await Promise.all([
           document.fonts.load('800 73px "Poppins"'), document.fonts.load('400 20px "Poppins"'),
           document.fonts.load('italic 400 19px "Poppins"'), document.fonts.load('700 16px "Poppins"'),
-          document.fonts.load('73px "Pinyon Script"'), document.fonts.load('46px "Mrs Saint Delafield"')
+          document.fonts.load('73px "Great Vibes"'), document.fonts.load('46px "Mr De Haviland"')
         ]);
         const logo = await loadImg('faf-logo.png');
         const W = 1123, H = 794, S = 2, K = 0.96;
@@ -1217,10 +1217,10 @@
         spaced('THIS AWARD IS PRESENTED TO', cx, 265, 1);
 
         let nameSize = 73;
-        g.font = nameSize + 'px "Pinyon Script", cursive';
-        while (g.measureText(c.name).width > 880 && nameSize > 30) { nameSize -= 2; g.font = nameSize + 'px "Pinyon Script", cursive'; }
+        g.font = nameSize + 'px "Great Vibes", cursive';
+        while (g.measureText(c.name).width > 880 && nameSize > 30) { nameSize -= 2; g.font = nameSize + 'px "Great Vibes", cursive'; }
         g.fillStyle = '#0d7314';
-        g.fillText(c.name, cx, 374);
+        g.fillText(c.name, cx, 398);
         g.beginPath(); g.moveTo(187, 402); g.lineTo(921, 402); g.lineWidth = 2; g.strokeStyle = DEEP; g.stroke();
 
         g.fillStyle = '#000';
@@ -1232,7 +1232,7 @@
           return lines;
         };
         const LH = 26.1;
-        let y = 448;
+        let y = 458;
         wrap(c.text, 740).forEach(l => { g.fillText(l, cx, y); y += LH; });
         y += LH;
         g.fillText('Your efforts have made a meaningful impact on our community, embodying', cx, y); y += LH;
@@ -1258,8 +1258,8 @@
 
         g.beginPath(); g.moveTo(703, 651); g.lineTo(883, 651); g.lineWidth = 2; g.strokeStyle = '#000'; g.stroke();
         g.globalAlpha = 0.85; g.fillStyle = '#000';
-        g.font = '46px "Mrs Saint Delafield", cursive';
-        g.fillText('A.Choudhury', 793, 636);
+        g.font = '60px "Mr De Haviland", cursive';
+        g.fillText('A.Choudhury', 793, 644);
         g.globalAlpha = 1;
         g.font = '700 16px "Poppins", sans-serif';
         g.fillText('Alliyah Choudhury', 797, 680);
