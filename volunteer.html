@@ -582,7 +582,7 @@ function CertsTab({hourLogs,st}){
             {r.issued_at&&<span style={pill(PL,MT)}>{r.issued_at}</span>}
           </div>
         </div>
-        <button disabled={busy===r.id} onClick={()=>dl(r.id,{name:nameOf(p),text:"in recognition of "+r.milestone+" hours of volunteering with Feed a Friend, and the generosity and commitment this represents.",when:r.issued_at||todayISO(),file:r.milestone+" volunteer hours",subtitle:"OF ACHIEVEMENT"})} style={{background:"#fff",color:DK,border:"1.5px solid "+DK,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",opacity:busy===r.id?.6:1}}>{busy===r.id?"…":"⬇ PDF"}</button>
+        <button disabled={busy===r.id} onClick={()=>dl(r.id,{name:nameOf(p),text:"in recognition of "+r.milestone+" hours of volunteering with Feed a Friend, and the generosity and commitment this represents.",when:r.issued_at||(r.updated_at||"").slice(0,10)||todayISO(),file:r.milestone+" volunteer hours",subtitle:"OF ACHIEVEMENT"})} style={{background:"#fff",color:DK,border:"1.5px solid "+DK,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",opacity:busy===r.id?.6:1}}>{busy===r.id?"…":"⬇ PDF"}</button>
         {r.status==="due"
           ? <button onClick={()=>setStatus(r,"issued")} style={{background:GN,color:"#fff",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Mark issued</button>
           : <button onClick={()=>{if(window.confirm("Mark this certificate as not yet issued?"))setStatus(r,"due");}} style={{background:PL,color:MT,border:"1px solid "+BR,borderRadius:8,padding:"6px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>Undo</button>}

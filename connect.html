@@ -63,11 +63,11 @@
   }
   .hero-photo .icon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;width:64px;height:64px;margin:auto;color:rgba(255,255,255,.5);}
 
-  .certs{margin:28px 0 0;}
+  .certs{margin:28px 0 0;grid-column:1/-1;}
   .certs-inner{background:transparent;}
   .certs-head h2{font-size:28.5px;margin:0 0 16px;}
   .certs-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
-  .cert-card{background:#fff;border-radius:18px;padding:18px 22px;display:flex;align-items:center;gap:16px;}
+  .cert-card{background:#fff;border:1px solid #DCE9E0;border-radius:18px;padding:18px 22px;display:flex;align-items:center;gap:16px;}
   .cert-ico{flex:0 0 48px;width:48px;height:48px;border-radius:50%;background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:24px;}
   .cert-txt{flex:1;min-width:0;}
   .cert-title{font-family:'League Spartan';font-weight:800;font-size:20px;color:var(--charcoal);line-height:1.2;}
@@ -1111,7 +1111,7 @@
         const uid = session.user.id;
         const [partRes, hourRes, profRes] = await Promise.all([
           sb.from('participation_certificates').select('id,title,activity_text,event_date,issued_at,display_name').eq('volunteer_id', uid).order('event_date', { ascending: false }),
-          sb.from('volunteer_certificates').select('id,milestone,issued_at').eq('volunteer_id', uid).eq('status', 'issued').order('milestone', { ascending: false }),
+          sb.from('volunteer_certificates').select('id,milestone,issued_at,updated_at').eq('volunteer_id', uid).eq('status', 'issued').order('milestone', { ascending: false }),
           sb.from('profiles').select('first_name,surname').eq('id', uid).single()
         ]);
         const prof = profRes.data || {};
@@ -1125,7 +1125,7 @@
         (hourRes.data || []).forEach(r => items.push({
           key: 'h' + r.id, kind: 'appreciation', icon: '🏅', sub: 'OF ACHIEVEMENT',
           titleEn: r.milestone + ' volunteer hours', titleAr: r.milestone + ' ساعة تطوع',
-          when: r.issued_at,
+          when: r.issued_at || (r.updated_at || '').slice(0, 10),
           name: profName,
           text: 'in recognition of ' + r.milestone + ' hours of volunteering with Feed a Friend, and the generosity and commitment this represents.',
           file: r.milestone + ' volunteer hours'
