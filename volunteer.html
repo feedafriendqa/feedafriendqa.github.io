@@ -501,6 +501,7 @@ function ProfileEdit({profile, onSave, onBack}){
 
 // -- ADMIN ---------------------------------------------------------------------
 // ───────── Certificates + Events (RSVP) admin tabs ─────────
+const EDGE_CERT_EMAILS = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/send-certificate-emails";
 const EDGE_EVENT_INVITES = "https://xbxagukdvgyaoqvbqoic.supabase.co/functions/v1/event-send-invites";
 const RSVP_BASE = "https://connect.feedafriend.org/rsvp.html";
 const todayISO = () => new Date().toISOString().slice(0,10);
@@ -517,6 +518,25 @@ function CertsTab({hourLogs,st}){
   const [loading,setLoading]=useState(true);
   const [part,setPart]=useState([]);
   const [busy,setBusy]=useState("");
+  const [mailing,setMailing]=useState(false);
+  const callCertMail=async(body)=>{
+    const {data:{session:ses}}=await sb.auth.getSession();
+    const r=await fetch(EDGE_CERT_EMAILS,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+ses.access_token},body:JSON.stringify({title:"World Food Day 2026",...body})});
+    return r.json();
+  };
+  const sendCertEmails=async()=>{
+    setMailing(true);
+    try{
+      const c=await callCertMail({dry_run:true});
+      if(c.error){st(c.error);setMailing(false);return;}
+      if(!c.unsent){st("Everyone has already been emailed");setMailing(false);return;}
+      if(!window.confirm("Email "+c.unsent+" volunteers that their World Food Day certificate is ready?"+(c.missing_email?" ("+c.missing_email+" have no email and will be skipped.)":"")+"\n\nThis sends real emails from salaam@feedafriend.org and cannot be undone.")){setMailing(false);return;}
+      const r=await callCertMail({});
+      st(r.error?r.error:"✓ Sent "+r.sent+" of "+r.attempted+(r.failed?" · "+r.failed+" failed (press again to retry)":""));
+      load();
+    }catch(e){ console.error(e); st("Could not send the emails"); }
+    setMailing(false);
+  };
   const load=async()=>{
     const pr=await sb.from("participation_certificates").select("*,profiles(id,first_name,surname,email)").order("event_date",{ascending:false});
     setPart(pr.data||[]);
@@ -568,6 +588,10 @@ function CertsTab({hourLogs,st}){
       {[["all","Any"],["20","20h"],["50","50h"],["100","100h"]].map(([k,l])=><button key={k} onClick={()=>setMs(k)} style={chip(ms===k)}>{l}</button>)}
       <button onClick={exportCsv} style={{...chip(false),marginLeft:"auto"}}>⬇ CSV</button>
     </div>
+    {filter==="part"&&<div style={{background:"#fff",border:"1px solid "+BR,borderRadius:12,padding:"10px 12px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}>
+      <div style={{flex:1,fontSize:12,color:MT}}>World Food Day 2026: {part.filter(r=>r.title==="World Food Day 2026"&&r.emailed_at).length} of {part.filter(r=>r.title==="World Food Day 2026").length} emailed</div>
+      <button disabled={mailing} onClick={sendCertEmails} style={{background:GN,color:"#fff",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",opacity:mailing?.6:1}}>{mailing?"Sending…":"✉ Send certificate emails"}</button>
+    </div>}
     <input type="text" placeholder="🔍 Search by name or email..." value={q} onChange={e=>setQ(e.target.value)} style={{...inp,marginBottom:12}}/>
     {loading&&<p style={{color:MT,fontSize:14,textAlign:"center",padding:24}}>Loading…</p>}
     {shown.map(r=>{const p=r.profiles||{};
