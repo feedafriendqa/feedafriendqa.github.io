@@ -1123,7 +1123,7 @@
           name: r.display_name, text: r.activity_text, file: r.title
         }));
         (hourRes.data || []).forEach(r => items.push({
-          key: 'h' + r.id, kind: 'appreciation', icon: '🏅',
+          key: 'h' + r.id, kind: 'appreciation', icon: '🏅', sub: 'OF ACHIEVEMENT',
           titleEn: r.milestone + ' volunteer hours', titleAr: r.milestone + ' ساعة تطوع',
           when: r.issued_at,
           name: profName,
@@ -1212,7 +1212,7 @@
 
         g.fillStyle = '#000';
         g.font = '400 24px "Poppins", sans-serif';
-        spaced('OF PARTICIPATION', cx, 205, 6);
+        spaced(c.subtitle || 'OF PARTICIPATION', cx, 205, 6);
         g.font = '400 20px "Poppins", sans-serif';
         spaced('THIS AWARD IS PRESENTED TO', cx, 265, 1);
 
@@ -1276,7 +1276,7 @@
         const label = btn.textContent;
         btn.disabled = true; btn.textContent = isAr() ? '…جارٍ التحضير' : 'Preparing…';
         try {
-          const cv = await drawCertificate({ name: it.name, text: it.text, date: monthYear(it.when) });
+          const cv = await drawCertificate({ name: it.name, text: it.text, date: monthYear(it.when), subtitle: it.sub });
           const { jsPDF } = window.jspdf;
           const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1123, 794], compress: true });
           pdf.addImage(cv.toDataURL('image/png'), 'PNG', 0, 0, 1123, 794);

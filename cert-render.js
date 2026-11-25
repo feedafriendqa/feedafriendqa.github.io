@@ -67,7 +67,7 @@
 
     g.fillStyle = '#000';
     g.font = '400 24px "Poppins", sans-serif';
-    spaced('OF PARTICIPATION', cx, 205, 6);
+    spaced(c.subtitle || 'OF PARTICIPATION', cx, 205, 6);
     g.font = '400 20px "Poppins", sans-serif';
     spaced('THIS AWARD IS PRESENTED TO', cx, 265, 1);
 
@@ -125,7 +125,7 @@
 
   // c = { name, text, when:'YYYY-MM-DD', file }
   async function download(c) {
-    const cv = await drawCertificate({ name: c.name, text: c.text, date: monthYear(c.when) });
+    const cv = await drawCertificate({ name: c.name, text: c.text, date: monthYear(c.when), subtitle: c.subtitle });
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1123, 794], compress: true });
     pdf.addImage(cv.toDataURL('image/png'), 'PNG', 0, 0, 1123, 794);
