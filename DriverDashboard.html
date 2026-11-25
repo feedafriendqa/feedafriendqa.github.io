@@ -2238,7 +2238,8 @@ function renderTripAreaGrid(list,isSearch){
   });
   var visible=sorted,hiddenCount=0;
   if(!isSearch&&!EXPAND_AREAS){
-    visible=sorted.filter(function(a){return SELAREAS.indexOf(a)!==-1||AVAILABILITY[a];});
+    // Only areas that currently have unassigned boxes (the list changes as boxes are picked up).
+    visible=sorted.filter(function(a){return !!AVAILABILITY[a];});
     hiddenCount=sorted.length-visible.length;
   }
   document.getElementById("trip-agrid").innerHTML=visible.map(function(a){
@@ -2284,7 +2285,8 @@ function updTripAreaAllBtn(){
 }
 
 function updTripAreaStat(){
-  var n=SELAREAS.length,el=document.getElementById("trip-astat"),btn=document.getElementById("areas-continue-btn");
+  var allSel=ALL_AREAS.length>0&&SELAREAS.length>=ALL_AREAS.length;
+  var n=(EXPAND_AREAS||allSel)?SELAREAS.length:SELAREAS.filter(function(a){return !!AVAILABILITY[a];}).length,el=document.getElementById("trip-astat"),btn=document.getElementById("areas-continue-btn");
   if(n===0){el.textContent=t("select_at_least_1");el.className="area-stat warn";btn.disabled=true;}
   else{el.textContent=n+(n===1?t("area_selected_suffix_en_s"):t("area_selected_suffix_en_p"));el.className="area-stat ok";btn.disabled=false;}
 }
