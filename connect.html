@@ -63,6 +63,27 @@
   }
   .hero-photo .icon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;width:64px;height:64px;margin:auto;color:rgba(255,255,255,.5);}
 
+  .certs{margin:28px 0 0;}
+  .certs-inner{background:transparent;}
+  .certs-head h2{font-size:28.5px;margin:0 0 16px;}
+  .certs-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+  .cert-card{background:#fff;border-radius:18px;padding:18px 22px;display:flex;align-items:center;gap:16px;}
+  .cert-ico{flex:0 0 48px;width:48px;height:48px;border-radius:50%;background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:24px;}
+  .cert-txt{flex:1;min-width:0;}
+  .cert-title{font-family:'League Spartan';font-weight:800;font-size:20px;color:var(--charcoal);line-height:1.2;}
+  .cert-sub{font-size:15px;color:#4F5A54;margin-top:2px;}
+  .cert-btn{flex:0 0 auto;background:var(--green);color:#fff;border:0;border-radius:12px;padding:10px 16px;font-weight:800;font-size:15px;cursor:pointer;}
+  .cert-btn[disabled]{opacity:.6;cursor:default;}
+  .cert-empty{background:#fff;border-radius:18px;padding:22px 28px;color:#4F5A54;font-size:17px;}
+  @media (max-width:640px){
+    .certs{margin-top:16px;}
+    .certs-head h2{font-size:16px;margin-bottom:10px;}
+    .certs-list{grid-template-columns:1fr;gap:10px;}
+    .cert-card{padding:12px 14px;gap:12px;}
+    .cert-title{font-size:16px;}
+    .cert-sub{font-size:13px;}
+    .cert-btn{padding:8px 12px;font-size:13px;}
+  }
   .impact{margin:28px 0 0;}
   .impact-inner{
     background:var(--panel);border-radius:20px;padding:26px 30px;
@@ -653,6 +674,8 @@
   }
 </style>
 
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Mrs+Saint+Delafield&family=Poppins:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <header>
@@ -750,6 +773,12 @@
             <div class="ms-chip"><b id="msEvents">–</b><span data-en="Events attended" data-ar="الفعاليات التي تم حضورها">Events attended</span></div>
           </div>
         </div>
+      </div>
+    </div>
+    <div class="certs" id="certsSection" style="display:none;">
+      <div class="certs-inner">
+        <div class="certs-head"><h2 data-en="My certificates" data-ar="شهاداتي">My certificates</h2></div>
+        <div class="certs-list" id="certsList"></div>
       </div>
     </div>
     <div class="pk" id="whatsNew" style="display:none;">
@@ -1064,6 +1093,200 @@
       } catch (err) {
         console.error('Impact stats failed:', err);
       }
+    })();
+
+    // ===== My certificates =====
+    // Lists the volunteer's own certificates (event participation + 20/50/100-hour
+    // milestones) and draws each one in the browser as a downloadable PDF.
+    (async function loadCertificates(){
+      const sec = document.getElementById('certsSection');
+      const list = document.getElementById('certsList');
+      if (!sec || !list) return;
+      const isAr = () => document.documentElement.getAttribute('lang') === 'ar';
+      const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      const monthYear = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '';
+
+      let items = [];
+      try {
+        const uid = session.user.id;
+        const [partRes, hourRes, profRes] = await Promise.all([
+          sb.from('participation_certificates').select('id,title,activity_text,event_date,issued_at,display_name').eq('volunteer_id', uid).order('event_date', { ascending: false }),
+          sb.from('volunteer_certificates').select('id,milestone,issued_at').eq('volunteer_id', uid).eq('status', 'issued').order('milestone', { ascending: false }),
+          sb.from('profiles').select('first_name,surname').eq('id', uid).single()
+        ]);
+        const prof = profRes.data || {};
+        const profName = ((prof.first_name || '') + ' ' + (prof.surname || '')).replace(/\s+/g, ' ').trim();
+        (partRes.data || []).forEach(r => items.push({
+          key: 'p' + r.id, kind: 'appreciation', icon: '🌱',
+          titleEn: r.title, titleAr: r.title,
+          when: r.event_date || r.issued_at,
+          name: r.display_name, text: r.activity_text, file: r.title
+        }));
+        (hourRes.data || []).forEach(r => items.push({
+          key: 'h' + r.id, kind: 'appreciation', icon: '🏅',
+          titleEn: r.milestone + ' volunteer hours', titleAr: r.milestone + ' ساعة تطوع',
+          when: r.issued_at,
+          name: profName,
+          text: 'in recognition of ' + r.milestone + ' hours of volunteering with Feed a Friend, and the generosity and commitment this represents.',
+          file: r.milestone + ' volunteer hours'
+        }));
+      } catch (err) {
+        console.error('Certificates failed:', err);
+        return;
+      }
+
+      sec.style.display = '';
+      if (!items.length) {
+        list.innerHTML = '<div class="cert-empty" data-en="Certificates you earn will appear here." data-ar="الشهادات التي تحصل عليها ستظهر هنا.">' + (isAr() ? 'الشهادات التي تحصل عليها ستظهر هنا.' : 'Certificates you earn will appear here.') + '</div>';
+        return;
+      }
+      list.innerHTML = items.map((it, i) => (
+        '<div class="cert-card"><div class="cert-ico" aria-hidden="true">' + it.icon + '</div>' +
+        '<div class="cert-txt"><div class="cert-title" data-en="' + esc(it.titleEn) + '" data-ar="' + esc(it.titleAr) + '">' + esc(isAr() ? it.titleAr : it.titleEn) + '</div>' +
+        '<div class="cert-sub">' + esc(monthYear(it.when)) + '</div></div>' +
+        '<button type="button" class="cert-btn" data-i="' + i + '" data-en="Download PDF" data-ar="تحميل PDF">' + (isAr() ? 'تحميل PDF' : 'Download PDF') + '</button></div>'
+      )).join('');
+
+      const loadImg = src => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
+
+      async function drawCertificate(c) {
+        await Promise.all([
+          document.fonts.load('800 73px "Poppins"'), document.fonts.load('400 20px "Poppins"'),
+          document.fonts.load('italic 400 19px "Poppins"'), document.fonts.load('700 16px "Poppins"'),
+          document.fonts.load('73px "Great Vibes"'), document.fonts.load('46px "Mrs Saint Delafield"')
+        ]);
+        const logo = await loadImg('faf-logo.png');
+        const W = 1123, H = 794, S = 2, K = 0.96;
+        const cv = document.createElement('canvas');
+        cv.width = W * S; cv.height = H * S;
+        const g = cv.getContext('2d');
+        g.scale(S, S);
+        g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H);
+
+        const GREEN = '#07622e', LIGHT = '#5ab682', DEEP = '#044922';
+        g.strokeStyle = LIGHT; g.lineWidth = 5; g.strokeRect(50, 58, 1047, 710);
+
+        const poly = (pts, fill) => {
+          g.beginPath();
+          pts.forEach((p, i) => i ? g.lineTo(p[0] * K, p[1] * K) : g.moveTo(p[0] * K, p[1] * K));
+          g.closePath(); g.fillStyle = fill; g.fill();
+          g.lineWidth = 6; g.strokeStyle = '#fff'; g.lineJoin = 'round'; g.stroke();
+        };
+        poly([[903,0],[1040,0],[1046,72],[905,112]], GREEN);
+        poly([[1040,0],[1115,0],[1170,30],[1170,66],[1052,72]], LIGHT);
+        poly([[910,114],[1046,78],[1064,160]], LIGHT);
+        poly([[1052,78],[1170,70],[1170,170],[1070,152]], GREEN);
+        poly([[1076,172],[1170,172],[1170,252],[1118,252]], LIGHT);
+        poly([[0,628],[140,604],[50,690]], LIGHT);
+        poly([[160,602],[212,712],[50,694]], GREEN);
+        poly([[0,692],[46,696],[104,827],[0,827]], GREEN);
+        poly([[54,700],[215,724],[215,827],[128,827]], LIGHT);
+        poly([[0,760],[46,700],[96,827],[0,827]], LIGHT);
+
+        const outline = pts => {
+          g.beginPath();
+          pts.forEach((p, i) => i ? g.lineTo(p[0] * K, p[1] * K) : g.moveTo(p[0] * K, p[1] * K));
+          g.closePath(); g.lineWidth = 1.5; g.strokeStyle = GREEN; g.stroke();
+        };
+        outline([[985,196],[1010,238],[960,238]]);
+        outline([[1023,284],[1047,297],[1023,310]]);
+        outline([[85,425],[133,427],[107,468]]);
+        outline([[88,530],[64,543],[88,557]]);
+
+        const cx = W / 2;
+        g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+        const spaced = (text, x, y, sp) => {
+          const widths = [...text].map(ch => g.measureText(ch).width);
+          const total = widths.reduce((a, b) => a + b, 0) + sp * (text.length - 1);
+          let px = x - total / 2;
+          g.textAlign = 'left';
+          [...text].forEach((ch, i) => { g.fillText(ch, px, y); px += widths[i] + sp; });
+          g.textAlign = 'center';
+        };
+
+        g.font = '800 73px "Poppins", sans-serif';
+        g.lineWidth = 3; g.strokeStyle = DEEP; g.fillStyle = '#fff'; g.lineJoin = 'round';
+        const titleW = g.measureText('CERTIFICATE').width;
+        g.strokeText('CERTIFICATE', cx, 160); g.fillText('CERTIFICATE', cx, 160);
+        void titleW;
+
+        g.fillStyle = '#000';
+        g.font = '400 24px "Poppins", sans-serif';
+        spaced('OF PARTICIPATION', cx, 205, 6);
+        g.font = '400 20px "Poppins", sans-serif';
+        spaced('THIS AWARD IS PRESENTED TO', cx, 265, 1);
+
+        let nameSize = 73;
+        g.font = nameSize + 'px "Great Vibes", cursive';
+        while (g.measureText(c.name).width > 880 && nameSize > 30) { nameSize -= 2; g.font = nameSize + 'px "Great Vibes", cursive'; }
+        g.fillStyle = '#0d7314';
+        g.fillText(c.name, cx, 386);
+        g.beginPath(); g.moveTo(187, 396); g.lineTo(921, 396); g.lineWidth = 2; g.strokeStyle = DEEP; g.stroke();
+
+        g.fillStyle = '#000';
+        g.font = '400 18.67px "Poppins", sans-serif';
+        const wrap = (txt, maxW) => {
+          const words = txt.split(' '); const lines = []; let cur = '';
+          words.forEach(w => { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; });
+          if (cur) lines.push(cur);
+          return lines;
+        };
+        const LH = 26.1;
+        let y = 438;
+        wrap(c.text, 740).forEach(l => { g.fillText(l, cx, y); y += LH; });
+        y += LH;
+        g.fillText('Your efforts have made a meaningful impact on our community, embodying', cx, y); y += LH;
+        const tail = 'the spirit of generosity and compassion that drives the mission of ';
+        const wTail = g.measureText(tail).width;
+        g.font = '700 18.67px "Poppins", sans-serif';
+        const wBrand = g.measureText('Feed a Friend').width;
+        g.font = '400 18.67px "Poppins", sans-serif';
+        const wDot = g.measureText('.').width;
+        let sx = cx - (wTail + wBrand + wDot) / 2;
+        g.textAlign = 'left';
+        g.fillText(tail, sx, y); sx += wTail;
+        g.font = '700 18.67px "Poppins", sans-serif';
+        g.fillText('Feed a Friend', sx, y); sx += wBrand;
+        g.font = '400 18.67px "Poppins", sans-serif';
+        g.fillText('.', sx, y);
+        g.textAlign = 'center';
+        y += LH * 1.7;
+        g.font = 'italic 400 18.67px "Poppins", sans-serif';
+        g.fillText(c.date, cx, y);
+
+        g.drawImage(logo, 420, 240, 1180, 930, 268, 592, 130, 103);
+
+        g.beginPath(); g.moveTo(703, 651); g.lineTo(883, 651); g.lineWidth = 2; g.strokeStyle = '#000'; g.stroke();
+        g.globalAlpha = 0.85; g.fillStyle = '#000';
+        g.font = '46px "Mrs Saint Delafield", cursive';
+        g.fillText('A.Choudhury', 793, 648);
+        g.globalAlpha = 1;
+        g.font = '700 16px "Poppins", sans-serif';
+        g.fillText('Alliyah Choudhury', 797, 674);
+        g.font = '400 16px "Poppins", sans-serif';
+        g.fillText('FOUNDER', 797, 697);
+        return cv;
+      }
+
+      list.addEventListener('click', async ev => {
+        const btn = ev.target.closest('.cert-btn');
+        if (!btn) return;
+        const it = items[Number(btn.getAttribute('data-i'))];
+        if (!it || btn.disabled) return;
+        const label = btn.textContent;
+        btn.disabled = true; btn.textContent = isAr() ? '…جارٍ التحضير' : 'Preparing…';
+        try {
+          const cv = await drawCertificate({ name: it.name, text: it.text, date: monthYear(it.when) });
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1123, 794], compress: true });
+          pdf.addImage(cv.toDataURL('image/png'), 'PNG', 0, 0, 1123, 794);
+          pdf.save(('Feed a Friend - ' + it.file + ' certificate').replace(/[^\w\- ]+/g, '') + '.pdf');
+        } catch (err) {
+          console.error('Certificate download failed:', err);
+          alert(isAr() ? 'تعذّر تحميل الشهادة. حاول مرة أخرى.' : "Couldn't download the certificate. Try again.");
+        }
+        btn.disabled = false; btn.textContent = label;
+      });
     })();
 
     // ===== What's new: peek carousel =====
