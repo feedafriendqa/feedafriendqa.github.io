@@ -3415,7 +3415,7 @@ function studentTableHTML(list, dupsAll) {
     if(dupsAll.has(f.id)) flags.push('<span class="dup-flag" title="Possible duplicate">⚠️ Duplicate?</span>');
     const icons = (c.special_needs?' 🧩':'') + (c.school_place_status?` 🏫${c.school_place_status==='verified'?'':'?'}`:'');
     return `<tr onclick="openProfile('${f.id}','children','${c.id}')">
-      <td><div class="ft-name">${c.full_name||'Child'}${icons}</div><div class="ft-urn">${c.urn||f.urn||'—'}</div></td>
+      <td><div class="ft-name">${c.full_name||'Child'}${icons}</div></td>
       <td>${childAgeYears(c)}y${assessedDate?`<div class="ft-sub">Assessed ${assessedDate}</div>`:''}</td>
       <td><div>${pp&&pp.both?'⭐ ':''}${pp?pp.name:(f.father_name||f.mother_name||'—')}</div><div class="ft-sub">📞 ${(pp?pp.phone:'')||f.father_phone||f.mother_phone||'—'}</div></td>
       <td>${f.area||'—'}</td>
@@ -3475,7 +3475,6 @@ function studentCardHTML(f, c, isDup) {
   const label = STATUS_LABELS[status]||'New';
   const assessedDate = childAssessedDateStr(c);
   return `<div class="fam-card ${status}" onclick="openProfile('${f.id}','children','${c.id}')">
-    <div class="urn-badge">${c.urn||f.urn||'—'}</div>
     <div class="fam-info">
       <div class="fam-name">${c.full_name||'Child'}${c.special_needs?' <span title="Special needs">🧩</span>':''}${c.school_place_status?` <span style="font-weight:600;color:var(--gold);" title="${c.school_place_status==='verified'?'School place verified':'School place reported — needs verification'}">🏫${c.school_place_status==='verified'?'':'?'}</span>`:''}</div>
       <div class="fam-meta">
