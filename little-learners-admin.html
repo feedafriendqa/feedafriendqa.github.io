@@ -3218,7 +3218,7 @@ function renderDash() {
   document.getElementById('s-unassigned').textContent = fams.filter(f=>!f.assigned_to).length;
   document.getElementById('s-dups').textContent = dups.size;
   document.getElementById('s-learners').textContent = kids.filter(c=>c.pipeline_status==='completed' && (c.learner_status||'active')!=='archived').length;
-  document.getElementById('s-ll-total').textContent = kids.filter(c=>c.pipeline_status==='completed'||c.pipeline_status==='school_secured'||c.learner_status==='archived').length;
+  document.getElementById('s-ll-total').textContent = kids.filter(c=>c.pipeline_status==='completed'||c.pipeline_status==='school_secured'||(c.pipeline_status==='archived'&&c.learner_status==='archived')).length;
   const schoolPlaceEl = document.getElementById('s-school-place');
   if(schoolPlaceEl) schoolPlaceEl.textContent = kids.filter(c=>c.school_place_status).length;
   const recentFams = fams.filter(f => !(f.source==='Referral' && !f.assigned_to));
