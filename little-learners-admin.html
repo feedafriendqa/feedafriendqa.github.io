@@ -372,6 +372,23 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 .fam-table .ft-flags{display:flex;gap:5px;flex-wrap:wrap;}
 .fam-table .unassigned{color:var(--coral);font-weight:700;}
 @media (min-width:900px){ .fam-table-wrap{display:block;} .fam-cards-wrap{display:none;} }
+
+/* PIPELINE STAT CARDS — same style as the Food Box admin tiles */
+.pipeline.stat-row{background:none;box-shadow:none;padding:4px 2px 10px;gap:10px;}
+.stat-card{flex:0 0 118px;border:none;border-radius:14px;padding:13px 14px;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:0 4px 14px rgba(0,0,0,.13);text-align:left;font-family:'Quicksand',sans-serif;opacity:.78;}
+.stat-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.18);opacity:1;}
+.stat-card.on{opacity:1;outline:3px solid var(--forest);outline-offset:2px;transform:translateY(-2px);}
+.stat-card .num{font-size:28px;font-weight:900;color:white;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,.15);}
+.stat-card .lbl{font-size:11.5px;color:rgba(255,255,255,.92);font-weight:700;margin-top:5px;line-height:1.2;}
+.stat-card.sc-all{background:linear-gradient(135deg,#2d7a3a,#4a9e58);}
+.stat-card.sc-new{background:linear-gradient(135deg,#b45309,#f59e0b);}
+.stat-card.sc-waiting_for_assessment{background:linear-gradient(135deg,#e88c1a,#f5b942);}
+.stat-card.sc-pre_assessment_scheduled{background:linear-gradient(135deg,#0ea5c9,#38c9f0);}
+.stat-card.sc-pre_assessed{background:linear-gradient(135deg,#00a896,#00c9b5);}
+.stat-card.sc-invited_to_assessment{background:linear-gradient(135deg,#c2410c,#fb923c);}
+.stat-card.sc-referred{background:linear-gradient(135deg,#7c5cbf,#a78bdb);}
+.stat-card.sc-school_secured{background:linear-gradient(135deg,#1F7A4D,#2FA36B);}
+.stat-card.sc-archived_arabic,.stat-card.sc-archived{background:linear-gradient(135deg,#546e7a,#90a4ae);}
 </style>
 </head>
 <body>
@@ -3264,10 +3281,12 @@ function renderPipelineTabs() {
     const s = c.pipeline_status||'new';
     counts[s]=(counts[s]||0)+1;
   });
-  document.getElementById('pipeline-tabs').innerHTML = PIPELINE_STAGES.map(s=>`
-    <button class="pipe-tab ${activePipeline===s.key?'on':''}" onclick="setPipeline('${s.key}')">
-      ${s.icon} ${s.label}
-      <span class="cnt">${s.key==='all'?kids.filter(c=>c.pipeline_status!=='archived_arabic').length:(counts[s.key]||0)}</span>
+  const pt = document.getElementById('pipeline-tabs');
+  pt.classList.add('stat-row');
+  pt.innerHTML = PIPELINE_STAGES.map(s=>`
+    <button class="stat-card sc-${s.key} ${activePipeline===s.key?'on':''}" onclick="setPipeline('${s.key}')">
+      <div class="num">${s.key==='all'?kids.filter(c=>c.pipeline_status!=='archived_arabic').length:(counts[s.key]||0)}</div>
+      <div class="lbl">${s.label.replace(/^\d+\.\s*/,'')}</div>
     </button>`).join('');
 }
 
