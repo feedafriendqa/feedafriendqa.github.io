@@ -3402,9 +3402,9 @@ function sourceKey(f) {
 }
 function sourceBadgeHTML(f) {
   const k = sourceKey(f);
-  return k==='referral' ? '<span style="color:var(--teal);font-weight:700;">📋 Food Box referral</span>'
-       : k==='import'   ? '<span style="color:var(--muted);font-weight:700;">📄 Sheet import</span>'
-       :                  '<span style="color:var(--forest-mid);font-weight:700;">📝 Direct application</span>';
+  return k==='referral' ? '<span style="color:var(--teal);font-weight:700;">Food Box</span>'
+       : k==='import'   ? '<span style="color:var(--forest-mid);font-weight:700;">Direct</span>'
+       :                  '<span style="color:var(--forest-mid);font-weight:700;">Direct</span>';
 }
 
 function renderFams() {
@@ -3460,13 +3460,13 @@ function studentTableHTML(list, dupsAll) {
       <td>${childAgeYears(c)}y${assessedDate?`<div class="ft-sub">Assessed ${assessedDate}</div>`:''}</td>
       <td><div>${pp&&pp.both?'⭐ ':''}${pp?pp.name:(f.father_name||f.mother_name||'—')}</div><div class="ft-sub">📞 ${(pp?pp.phone:'')||f.father_phone||f.mother_phone||'—'}</div></td>
       <td>${f.area||'—'}</td>
-      <td><div class="ft-flags">${sourceBadgeHTML(f)}${programPillsHTML(f)}</div></td>
+      <td><div class="ft-flags">${sourceBadgeHTML(f)}</div></td>
       <td><div class="ft-flags">${flags.join('')||'<span style="color:var(--lime);font-weight:800;">✓</span>'}</div></td>
       <td>${f.assigned_to_name?'👤 '+f.assigned_to_name:'<span class="unassigned">Unassigned</span>'}</td>
       <td><span class="status-tag st-${status}">${STATUS_LABELS[status]||'New'}</span></td>
     </tr>`;
   }).join('');
-  return `<table class="fam-table"><thead><tr><th>Child</th><th>Age</th><th>Parent / contact</th><th>Area</th><th>Source / Food Box</th><th>Needs attention</th><th>Handler</th><th>Stage</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return `<table class="fam-table"><thead><tr><th>Child</th><th>Age</th><th>Parent / contact</th><th>Area</th><th>Source</th><th>Needs attention</th><th>Handler</th><th>Stage</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function programPillsHTML(f) {
