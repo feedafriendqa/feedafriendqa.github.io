@@ -4036,6 +4036,16 @@ async function assignHandler(email) {
 
 // ── PIPELINE STATUS ──
 // Pipeline stage lives on the CHILD now — siblings can be at different stages.
+// Move a child forward to `status` only if they are currently at one of the `fromStages` —
+// never drags a child who is further along (e.g. already invited to assessment) backwards.
+async function advanceChildStatus(childId, status, fromStages) {
+  const c = allChildren.find(x=>x.id===childId);
+  if(!c || !fromStages.includes(c.pipeline_status||'new')) return;
+  await setPipelineStatus(childId, status, false);
+}
+const BEFORE_CALL_SCHEDULED = ['new','waiting_for_assessment'];
+const BEFORE_CALL_COMPLETED = ['new','waiting_for_assessment','pre_assessment_scheduled'];
+
 async function setPipelineStatus(childId, status, updateUI=true) {
   const {error} = await db.from('ll_children').update({pipeline_status:status}).eq('id',childId);
   if(error) { showToast('Error: '+error.message); return; }
@@ -4371,7 +4381,7 @@ async function saveAssessment() {
   const fields = readAssessFieldsFromForm();
   await persistChildAssessment(assessSelectedChildId, fields, true);
   await addActivityLog(currentFamily.id, assessSelectedChildId, 'call_completed', fields.assess_notes, 'completed');
-  await setPipelineStatus('pre_assessed', false);
+  await advanceChildStatus(assessSelectedChildId, 'pre_assessed', BEFORE_CALL_COMPLETED);
   renderActivityLog(currentFamily.id);
   renderAssessment(currentFamily, currentChildren);
   showToast('✅ Introductory call saved for this child');
@@ -4488,8 +4498,13 @@ async function submitLog(familyId) {
   await addActivityLog(familyId, null, action, notes, outcome);
   
   // Auto-update pipeline status based on action
-  if(action==='call_scheduled') await setPipelineStatus('pre_assessment_scheduled', false);
-  if(action==='call_completed'||action==='pre_assessment_passed') await setPipelineStatus('pre_assessed', false);
+  // A scheduled family call covers every child still available for it; a completed call applies to the child selected on the Intro Call tab.
+  if(action==='call_scheduled') {
+    for(const c of (currentChildren||[])) {
+      if(!c.intro_call_status || c.intro_call_status==='Available') await advanceChildStatus(c.id, 'pre_assessment_scheduled', BEFORE_CALL_SCHEDULED);
+    }
+  }
+  if((action==='call_completed'||action==='pre_assessment_passed') && assessSelectedChildId) await advanceChildStatus(assessSelectedChildId, 'pre_assessed', BEFORE_CALL_COMPLETED);
   
   renderActivityLog(familyId);
   showToast('✅ Activity logged');
@@ -4539,7 +4554,9 @@ async function saveAndSendCallDetails() {
   }
   
   // Update pipeline + log
-  await setPipelineStatus('pre_assessment_scheduled', false);
+  for(const c of (currentChildren||[])) {
+    if(!c.intro_call_status || c.intro_call_status==='Available') await advanceChildStatus(c.id, 'pre_assessment_scheduled', BEFORE_CALL_SCHEDULED);
+  }
   await addActivityLog(currentFamily.id, null, 'call_scheduled', 'Video call: '+dtFormatted, '');
   renderActivityLog(currentFamily.id);
 }
