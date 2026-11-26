@@ -388,6 +388,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 .stat-card.sc-invited_to_assessment{background:linear-gradient(135deg,#c2410c,#fb923c);}
 .stat-card.sc-referred{background:linear-gradient(135deg,#7c5cbf,#a78bdb);}
 .stat-card.sc-school_secured{background:linear-gradient(135deg,#1F7A4D,#2FA36B);}
+.stat-card.sc-qid{background:linear-gradient(135deg,#0A3D1F,#145C30);margin-left:6px;}
 .stat-card.sc-yg{background:linear-gradient(135deg,#3B8DC8,#6FB3E6);}
 .stat-card.sc-archived_arabic,.stat-card.sc-archived{background:linear-gradient(135deg,#546e7a,#90a4ae);}
 </style>
@@ -450,7 +451,6 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
   <button class="bb-item" id="bb-fams" onclick="showPg('fams',this)"><div class="bb-ic">👪</div><div class="bb-tx">Pipeline</div></button>
   <button class="bb-item" id="bb-learners" onclick="goToLearners()"><div class="bb-ic">🌟</div><div class="bb-tx">Learners</div></button>
   <button class="bb-item" id="bb-assess-days" onclick="showPg('assess-days',this)"><div class="bb-ic">📅</div><div class="bb-tx">Events</div></button>
-  <button class="bb-item" id="bb-qid-signin" onclick="showPg('qid-signin',this)"><div class="bb-ic">🪪</div><div class="bb-tx">QID Sign-In</div></button>
   <button class="bb-item" id="bb-sponsorships" style="display:none;" onclick="goToSponsorships(this)"><div class="bb-ic">💚</div><div class="bb-tx">Sponsors</div></button>
   <button class="bb-item" onclick="toggleProfileMenu()"><div class="bb-ic">👤</div><div class="bb-tx" id="bb-profile-name">Profile</div></button>
 </div>
@@ -3306,7 +3306,11 @@ function renderPipelineTabs() {
     <button class="stat-card sc-${s.key} ${activePipeline===s.key?'on':''}" onclick="setPipeline('${s.key}')">
       <div class="num">${s.key==='all'?kids.filter(c=>c.pipeline_status!=='archived_arabic').length:(counts[s.key]||0)}</div>
       <div class="lbl">${s.label.replace(/^\d+\.\s*/,'')}</div>
-    </button>`).join('');
+    </button>`).join('') +
+  `<button class="stat-card sc-qid" onclick="showPg('qid-signin', document.getElementById('bb-fams')); renderQidSignin();">
+      <div class="num">${allChildren.filter(c=>!c.qid||String(c.qid).trim()==='').length}</div>
+      <div class="lbl">🪪 QID Sign-In</div>
+    </button>`;
 }
 
 function setPipeline(key) {
