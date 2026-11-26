@@ -352,6 +352,8 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 .sp-row-in input{padding:7px 10px;border-radius:8px;border:2px solid var(--border);font-family:'Quicksand',sans-serif;font-size:12.5px;}
 .sp-need{background:#fff;border-radius:var(--rs);padding:10px 12px;margin-bottom:6px;font-size:12.5px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
 .sp-need b{color:var(--forest);} .sp-need span{color:var(--coral);font-weight:700;font-size:11.5px;}
+.qid-warn{background:#FDE8E4;color:#B3321F;border:1.5px solid #E8715E;border-radius:8px;padding:1px 7px;font-weight:700;}
+.qid-banner{background:#FDE8E4;border:2px solid #E8715E;color:#8E2414;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;font-weight:700;line-height:1.45;}
 </style>
 </head>
 <body>
@@ -3251,6 +3253,12 @@ function populateHandlerFilter() {
 // still backs each card (parents, phone, URN, case handler) but the stage/age/status shown
 // belongs to that one child.
 // Where a case came from: Food Box referral, a direct application, or an imported sheet.
+// A QID is exactly 11 digits. Anything else typed or imported into the QID field is flagged for the case handler.
+function qidProblem(c) {
+  const q = (c?.qid||'').trim();
+  if(!q || /^\d{11}$/.test(q)) return '';
+  return `The QID on file ("${q.replace(/"/g,'&quot;')}") is not a valid 11-digit QID. Please check it against the child's QID card and correct it.`;
+}
 function sourceKey(f) {
   const s = f?.source||'';
   if(s==='Referral') return 'referral';
@@ -3355,6 +3363,7 @@ function studentCardHTML(f, c, isDup) {
         ${f.area?`<span>📍 ${f.area}</span>`:''}
         ${programPillsHTML(f)}
         ${sourceBadgeHTML(f)}
+        ${qidProblem(c)?'<span class="qid-warn" title="QID is not 11 digits">⚠️ Check QID</span>':''}
         ${f.assigned_to_name?`<span>👤 ${f.assigned_to_name}</span>`:'<span style="color:var(--coral);font-weight:700;">Unassigned</span>'}
       </div>
     </div>
@@ -3535,6 +3544,7 @@ function renderChildren(children, f) {
 
   // 1 ── KEY DETAILS
   const details = `
+    ${qidProblem(c)?`<div class="qid-banner">⚠️ ${qidProblem(c)}</div>`:''}
     <div class="info-grid">
       ${fld('QID number <span style="text-transform:none;font-weight:600;color:var(--muted);">(11 digits — auto-filled by Scan QID, or type it)</span>', `<input class="ival-input" placeholder="e.g. 28740400336" value="${c.qid||''}" onblur="saveChildQid('${c.id}',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">`, true)}
       ${fld('Passport number <span style="text-transform:none;font-weight:600;color:var(--muted);">(only if there is no QID yet)</span>', `<input class="ival-input" placeholder="e.g. AR757068" value="${c.passport_number||''}" onblur="saveChildField('${c.id}','passport_number',this.value.toUpperCase())" onkeydown="if(event.key==='Enter'){this.blur();}">`)}
@@ -3704,7 +3714,7 @@ function renderModalHeader() {
   strip.innerHTML = `
     <div class="cs-item cs-dob"><div class="cs-k">Date of birth</div><div class="cs-v">${c.dob?fmtDob(c.dob):'—'}${age!==null?` <span class="cs-sub">${age} yrs</span>`:''}</div></div>
     <div class="cs-item"><div class="cs-k">Gender</div><div class="cs-v">${c.gender||'—'}</div></div>
-    <div class="cs-item"><div class="cs-k">QID</div><div class="cs-v">${c.qid?c.qid:'<span style="color:var(--coral);">Missing</span>'}${!c.qid&&c.passport_number?` <span class="cs-sub">Passport ${c.passport_number}</span>`:''}</div></div>
+    <div class="cs-item"><div class="cs-k">QID</div><div class="cs-v">${c.qid?(qidProblem(c)?`<span style="color:var(--coral);">⚠️ ${c.qid}</span> <span class="cs-sub">not a valid QID</span>`:c.qid):'<span style="color:var(--coral);">Missing</span>'}${!c.qid&&c.passport_number?` <span class="cs-sub">Passport ${c.passport_number}</span>`:''}</div></div>
     <div class="cs-item"><div class="cs-k">Year group</div><div class="cs-v">${yg}</div></div>
     <div class="cs-item cs-status"><div class="cs-k">Status</div>
       <select class="cs-select st-${st}" onchange="setPipelineStatus('${c.id}', this.value)">${opts}</select>
