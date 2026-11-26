@@ -3259,6 +3259,22 @@ function qidProblem(c) {
   if(!q || /^\d{11}$/.test(q)) return '';
   return `The QID on file ("${q.replace(/"/g,'&quot;')}") is not a valid 11-digit QID. Please check it against the child's QID card and correct it.`;
 }
+// Who to contact for this family. Uses the chosen primary contact; if there is only one parent on file, that parent.
+function primaryParent(f) {
+  if(!f) return null;
+  const has = {father: !!(f.father_name && f.father_name!=='Unknown'), mother: !!f.mother_name};
+  let role = f.primary_contact && has[f.primary_contact] ? f.primary_contact : null;
+  if(!role && has.father !== has.mother) role = has.father ? 'father' : 'mother';
+  if(!role) return null;
+  return {
+    role,
+    name: role==='father' ? (f.father_preferred_name||f.father_name) : (f.mother_preferred_name||f.mother_name),
+    phone: role==='father' ? f.father_phone : f.mother_phone,
+    both: has.father && has.mother,
+    chosen: !!f.primary_contact,
+  };
+}
+
 // Key information the case handler still needs to collect for this child's case.
 function missingInfo(c, f) {
   const m = [];
@@ -3271,6 +3287,7 @@ function missingInfo(c, f) {
     if(hasFather && !(f.father_qid||'').trim()) m.push('Father / Guardian 1 QID');
     if(hasMother && !(f.mother_qid||'').trim()) m.push('Mother / Guardian 2 QID');
     if(!(f.father_phone||'').trim() && !(f.mother_phone||'').trim()) m.push('Parent phone number');
+    if(hasFather && hasMother && !f.primary_contact) m.push('Primary contact (who to call)');
   }
   return m;
 }
@@ -3373,8 +3390,7 @@ function studentCardHTML(f, c, isDup) {
       <div class="fam-meta">
         <span>🎂 ${childAgeYears(c)}y</span>
         <span>📅 Assessed: ${assessedDate||'—'}</span>
-        <span>👪 ${f.father_name||f.mother_name||'—'}</span>
-        <span>📞 ${f.father_phone||f.mother_phone||'—'}</span>
+        ${(()=>{const pp=primaryParent(f); return `<span>${pp&&pp.both?'⭐ ':'👪 '}${pp?pp.name:(f.father_name||f.mother_name||'—')}</span><span>📞 ${(pp?pp.phone:'')||f.father_phone||f.mother_phone||'—'}</span>`;})()}
         ${f.area?`<span>📍 ${f.area}</span>`:''}
         ${programPillsHTML(f)}
         ${sourceBadgeHTML(f)}
@@ -3709,10 +3725,12 @@ function renderModalHeader() {
   if(!f) return;
   const name = c ? (c.full_name||'Child') : (f.father_name||'Family');
   document.getElementById('m-title').innerHTML = `${name}${c&&c.preferred_name?` <span style="font-size:12px;font-weight:700;color:var(--gold);">"${c.preferred_name}"</span>`:''}`;
-  const phone = f.father_phone||f.mother_phone||'';
+  const pp = primaryParent(f);
+  const phone = pp ? (pp.phone||'') : (f.father_phone||f.mother_phone||'');
   const parents = [f.father_name,f.mother_name].filter(Boolean).join(' & ');
   document.getElementById('m-sub').innerHTML = `
     ${parents?`<span>👪 ${parents}</span>`:''}
+    ${pp&&pp.both?`<span>⭐ Contact: ${pp.name}</span>`:''}
     ${phone?`<span>📞 ${phone}</span>`:''}
     ${programPillsHTML(f)}
     ${f.assigned_to_name?`<span>👤 ${f.assigned_to_name}</span>`:'<span style="color:rgba(255,255,255,.5);">Unassigned</span>'}
@@ -3732,6 +3750,18 @@ function renderModalHeader() {
     <div class="cs-item cs-dob"><div class="cs-k">Date of birth</div><div class="cs-v">${c.dob?fmtDob(c.dob):'—'}${age!==null?` <span class="cs-sub">${age} yrs</span>`:''}</div></div>
     <div class="cs-item"><div class="cs-k">Gender</div><div class="cs-v">${c.gender||'—'}</div></div>
     <div class="cs-item"><div class="cs-k">QID</div><div class="cs-v">${c.qid?(qidProblem(c)?`<span style="color:var(--coral);">⚠️ ${c.qid}</span> <span class="cs-sub">not a valid QID</span>`:c.qid):'<span style="color:var(--coral);">Missing</span>'}${!c.qid&&c.passport_number?` <span class="cs-sub">Passport ${c.passport_number}</span>`:''}</div></div>
+    ${(()=>{
+      const pp = primaryParent(f);
+      if(f.father_name && f.father_name!=='Unknown' && f.mother_name) {
+        const cur = f.primary_contact||'';
+        return `<div class="cs-item"><div class="cs-k">⭐ Primary contact</div><div class="cs-v"><select class="cs-select" style="${cur?'':'border-color:var(--coral);'}" onchange="setPrimaryContact('${f.id}', this.value)">
+          <option value="" ${cur?'':'selected'} disabled>Choose who to contact…</option>
+          <option value="father" ${cur==='father'?'selected':''}>${f.father_preferred_name||f.father_name}</option>
+          <option value="mother" ${cur==='mother'?'selected':''}>${f.mother_preferred_name||f.mother_name}</option>
+        </select></div></div>`;
+      }
+      return pp ? `<div class="cs-item"><div class="cs-k">⭐ Contact</div><div class="cs-v">${pp.name}${pp.phone?` <span class="cs-sub">${pp.phone}</span>`:''}</div></div>` : '';
+    })()}
     <div class="cs-item"><div class="cs-k">Year group</div><div class="cs-v">${yg}</div></div>
     <div class="cs-item cs-status"><div class="cs-k">Status</div>
       <select class="cs-select st-${st}" onchange="setPipelineStatus('${c.id}', this.value)">${opts}</select>
@@ -4721,6 +4751,7 @@ async function setPrimaryContact(familyId, role) {
     currentFamily.primary_contact = role;
     renderParentsTab(currentFamily);
   }
+  renderModalHeader(); renderFams();
   showToast('✅ Primary contact set');
 }
 
