@@ -466,6 +466,12 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
     <select class="fsel" id="filter-age" onchange="renderFams()">
       <option value="">All Ages</option>
     </select>
+    <select class="fsel" id="filter-source" onchange="renderFams()">
+      <option value="">All Sources</option>
+      <option value="referral">Food Box referral</option>
+      <option value="direct">Direct application</option>
+      <option value="import">Sheet import</option>
+    </select>
     <select class="fsel" id="filter-assigned" onchange="renderFams()">
       <option value="">All Handlers</option>
       <option value="unassigned">Unassigned</option>
@@ -2563,6 +2569,20 @@ async function saveAspirationAr(childId, val) {
   showToast('✅ Arabic dream saved');
 }
 
+// The QID field must hold an 11-digit QID. A passport-style number typed here is moved to the
+// passport field instead, so the child stays on the QID Sign-In queue until a real QID is scanned.
+async function saveChildQid(childId, val) {
+  const v = (val||'').replace(/[\s-]/g,'');
+  if(!v) { await saveChildField(childId,'qid',''); return; }
+  if(/^[A-Za-z]{1,2}\d{6,8}$/.test(v)) {
+    await saveChildField(childId,'passport_number',v.toUpperCase(), true);
+    showToast('That looks like a passport number — saved in the Passport field. QID still needed.');
+    return;
+  }
+  if(!/^\d{11}$/.test(v)) showToast('⚠️ A QID is 11 digits — saved, but please double-check it');
+  await saveChildField(childId,'qid',v, true);
+}
+
 async function saveChildField(childId, field, val, refresh) {
   const value = (typeof val === 'string') ? val.trim() : val;
   const {error} = await db.from('ll_children').update({[field]: value||null}).eq('id', childId);
@@ -3215,10 +3235,25 @@ function populateHandlerFilter() {
 // their own pipeline stage, so siblings at different stages show up separately. A family
 // still backs each card (parents, phone, URN, case handler) but the stage/age/status shown
 // belongs to that one child.
+// Where a case came from: Food Box referral, a direct application, or an imported sheet.
+function sourceKey(f) {
+  const s = f?.source||'';
+  if(s==='Referral') return 'referral';
+  if(/_sheet_import$/.test(s)) return 'import';
+  return 'direct';
+}
+function sourceBadgeHTML(f) {
+  const k = sourceKey(f);
+  return k==='referral' ? '<span style="color:var(--teal);font-weight:700;">📋 Food Box referral</span>'
+       : k==='import'   ? '<span style="color:var(--muted);font-weight:700;">📄 Sheet import</span>'
+       :                  '<span style="color:var(--forest-mid);font-weight:700;">📝 Direct application</span>';
+}
+
 function renderFams() {
   const q = (document.getElementById('search-input')?.value||'').toLowerCase();
   const ageBand = document.getElementById('filter-age')?.value||'';
   const assigned = document.getElementById('filter-assigned')?.value||'';
+  const srcFilter = document.getElementById('filter-source')?.value||'';
   const dupsAll = detectDups();
 
   let list = visibleChildren().filter(c=>c.pipeline_status!=='completed').map(c=>{
@@ -3228,10 +3263,11 @@ function renderFams() {
     const matchQ = !q||text.includes(q);
     const matchPipe = activePipeline==='all'||(c.pipeline_status||'new')===activePipeline;
     const matchAssigned = !assigned||(assigned==='unassigned'?!f.assigned_to:f.assigned_to===assigned);
+    const matchSource = !srcFilter||sourceKey(f)===srcFilter;
     const matchDup = !showDupOnly||dupsAll.has(f.id);
     const matchAge = !ageBand || ageBandForChild(c)?.key===ageBand;
-    return {f, c, matchQ, matchPipe, matchAssigned, matchAge, matchDup};
-  }).filter(x=>x && x.matchQ&&x.matchPipe&&x.matchAssigned&&x.matchAge&&x.matchDup);
+    return {f, c, matchQ, matchPipe, matchAssigned, matchAge, matchDup, matchSource};
+  }).filter(x=>x && x.matchQ&&x.matchPipe&&x.matchAssigned&&x.matchAge&&x.matchDup&&x.matchSource);
 
   const banner = document.getElementById('dup-filter-banner');
   if(banner) {
@@ -3303,7 +3339,7 @@ function studentCardHTML(f, c, isDup) {
         <span>📞 ${f.father_phone||f.mother_phone||'—'}</span>
         ${f.area?`<span>📍 ${f.area}</span>`:''}
         ${programPillsHTML(f)}
-        ${f.source==='Referral'?'<span style="color:var(--teal);font-weight:700;">📋 From Referral</span>':''}
+        ${sourceBadgeHTML(f)}
         ${f.assigned_to_name?`<span>👤 ${f.assigned_to_name}</span>`:'<span style="color:var(--coral);font-weight:700;">Unassigned</span>'}
       </div>
     </div>
@@ -3485,7 +3521,8 @@ function renderChildren(children, f) {
   // 1 ── KEY DETAILS
   const details = `
     <div class="info-grid">
-      ${fld('QID number <span style="text-transform:none;font-weight:600;color:var(--muted);">(auto-filled by Scan QID, or type it)</span>', `<input class="ival-input" placeholder="e.g. 28740400336" value="${c.qid||''}" onblur="saveChildField('${c.id}','qid',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">`, true)}
+      ${fld('QID number <span style="text-transform:none;font-weight:600;color:var(--muted);">(11 digits — auto-filled by Scan QID, or type it)</span>', `<input class="ival-input" placeholder="e.g. 28740400336" value="${c.qid||''}" onblur="saveChildQid('${c.id}',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">`, true)}
+      ${fld('Passport number <span style="text-transform:none;font-weight:600;color:var(--muted);">(only if there is no QID yet)</span>', `<input class="ival-input" placeholder="e.g. AR757068" value="${c.passport_number||''}" onblur="saveChildField('${c.id}','passport_number',this.value.toUpperCase())" onkeydown="if(event.key==='Enter'){this.blur();}">`)}
       ${c.qid_expiry?fld('QID expiry', `<div class="ival">${c.qid_expiry}</div>`):''}
       ${c.qid_sponsor?fld('Sponsor', `<div class="ival">${c.qid_sponsor}</div>`):''}
       ${fld('Nationality', inp('nationality','e.g. Kenyan'))}
@@ -3652,7 +3689,7 @@ function renderModalHeader() {
   strip.innerHTML = `
     <div class="cs-item cs-dob"><div class="cs-k">Date of birth</div><div class="cs-v">${c.dob?fmtDob(c.dob):'—'}${age!==null?` <span class="cs-sub">${age} yrs</span>`:''}</div></div>
     <div class="cs-item"><div class="cs-k">Gender</div><div class="cs-v">${c.gender||'—'}</div></div>
-    <div class="cs-item"><div class="cs-k">QID</div><div class="cs-v">${c.qid?c.qid:'<span style="color:var(--coral);">Missing</span>'}</div></div>
+    <div class="cs-item"><div class="cs-k">QID</div><div class="cs-v">${c.qid?c.qid:'<span style="color:var(--coral);">Missing</span>'}${!c.qid&&c.passport_number?` <span class="cs-sub">Passport ${c.passport_number}</span>`:''}</div></div>
     <div class="cs-item"><div class="cs-k">Year group</div><div class="cs-v">${yg}</div></div>
     <div class="cs-item cs-status"><div class="cs-k">Status</div>
       <select class="cs-select st-${st}" onchange="setPipelineStatus('${c.id}', this.value)">${opts}</select>
