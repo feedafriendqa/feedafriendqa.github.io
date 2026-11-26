@@ -3252,7 +3252,7 @@ function renderPipelineTabs() {
   document.getElementById('pipeline-tabs').innerHTML = PIPELINE_STAGES.map(s=>`
     <button class="pipe-tab ${activePipeline===s.key?'on':''}" onclick="setPipeline('${s.key}')">
       ${s.icon} ${s.label}
-      <span class="cnt">${s.key==='all'?kids.length:(counts[s.key]||0)}</span>
+      <span class="cnt">${s.key==='all'?kids.filter(c=>c.pipeline_status!=='archived_arabic').length:(counts[s.key]||0)}</span>
     </button>`).join('');
 }
 
@@ -3345,7 +3345,7 @@ function renderFams() {
     if(!f) return null;
     const text = ((f.father_name||'')+(f.mother_name||'')+(f.urn||'')+(f.father_phone||'')+(f.mother_phone||'')+' '+(c.full_name||'')+' '+(c.qid||'')).toLowerCase();
     const matchQ = !q||text.includes(q);
-    const matchPipe = activePipeline==='all'||(c.pipeline_status||'new')===activePipeline;
+    const matchPipe = activePipeline==='all' ? (c.pipeline_status||'new')!=='archived_arabic' : (c.pipeline_status||'new')===activePipeline; // Arabic-speaking families sit in their own tab, not in All
     const matchAssigned = !assigned||(assigned==='unassigned'?!f.assigned_to:f.assigned_to===assigned);
     const matchSource = !srcFilter||sourceKey(f)===srcFilter;
     const matchFb = !fbFilter||(fbFilter==='none'?!fbStatusByFamily[f.id]:fbStatusByFamily[f.id]===fbFilter);
