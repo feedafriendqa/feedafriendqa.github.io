@@ -388,6 +388,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 .stat-card.sc-invited_to_assessment{background:linear-gradient(135deg,#c2410c,#fb923c);}
 .stat-card.sc-referred{background:linear-gradient(135deg,#7c5cbf,#a78bdb);}
 .stat-card.sc-school_secured{background:linear-gradient(135deg,#1F7A4D,#2FA36B);}
+.stat-card.sc-yg{background:linear-gradient(135deg,#3B8DC8,#6FB3E6);}
 .stat-card.sc-archived_arabic,.stat-card.sc-archived{background:linear-gradient(135deg,#546e7a,#90a4ae);}
 </style>
 </head>
@@ -535,6 +536,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
       <input class="search" id="learners-search" placeholder="🔍 Search Little Learner, URN…" oninput="renderLearners()">
     </div>
   </div>
+  <div class="pipeline stat-row" id="learners-yg-cards"></div>
   <div id="learners-list"><div class="loading">Loading…</div></div>
 </div>
 
@@ -3242,7 +3244,6 @@ function learnerCardHTML(c, f) {
   const overdue = packStatus==='given' && daysSince(anchor)!==null && daysSince(anchor)>=90;
   const lstatus = c.learner_status || 'active';
   return `<div class="fam-card" onclick="openProfile('${f.id}','profile','${c.id}')">
-    <div class="urn-badge">${f.urn||'—'}</div>
     <div class="fam-info">
       <div class="fam-name">${c.full_name||c.preferred_name||'Child'}${(f.father_name||f.mother_name)?` <small style="font-weight:600;font-size:11px;color:var(--muted);">· 👪 ${f.father_name||f.mother_name}</small>`:''}</div>
       <div class="fam-meta">
@@ -3257,6 +3258,14 @@ function learnerCardHTML(c, f) {
   </div>`;
 }
 
+let learnersYG = 'all';
+function learnerYG(c) { return c.final_year_group || c.year_group_override || 'Not set'; }
+function ygSortKey(y) {
+  if(y==='FS1') return 1; if(y==='FS2') return 2;
+  const m = /^Year (\d+)/.exec(y); if(m) return 2+Number(m[1]);
+  return 99;
+}
+function setLearnersYG(y) { learnersYG = y; renderLearners(); }
 function renderLearners() {
   const q = (document.getElementById('learners-search')?.value||'').toLowerCase();
   let kids = visibleChildren().filter(isPostAssessChild);
@@ -3267,6 +3276,16 @@ function renderLearners() {
       return text.includes(q);
     });
   }
+  // Year-group cards (counts reflect the search, so the numbers always match the list)
+  const counts = {};
+  kids.forEach(c => { const y = learnerYG(c); counts[y] = (counts[y]||0)+1; });
+  const groups = Object.keys(counts).sort((a,b)=>ygSortKey(a)-ygSortKey(b)||a.localeCompare(b));
+  if(learnersYG!=='all' && !counts[learnersYG]) learnersYG = 'all';
+  const cardsEl = document.getElementById('learners-yg-cards');
+  if(cardsEl) cardsEl.innerHTML =
+    `<button class="stat-card sc-all ${learnersYG==='all'?'on':''}" onclick="setLearnersYG('all')"><div class="num">${kids.length}</div><div class="lbl">All learners</div></button>` +
+    groups.map(y => `<button class="stat-card sc-yg ${learnersYG===y?'on':''}" onclick="setLearnersYG('${y.replace(/'/g,"\\'")}')"><div class="num">${counts[y]}</div><div class="lbl">${y}</div></button>`).join('');
+  if(learnersYG!=='all') kids = kids.filter(c => learnerYG(c)===learnersYG);
   document.getElementById('learners-count').textContent = kids.length;
   document.getElementById('learners-list').innerHTML = kids.length
     ? kids.map(c => { const f=allFamilies.find(x=>x.id===c.family_id); return f?learnerCardHTML(c,f):''; }).join('')
