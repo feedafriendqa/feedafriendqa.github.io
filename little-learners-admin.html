@@ -406,6 +406,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 .stats .stat.coral{background:linear-gradient(135deg,#c2410c,#fb923c);}
 .stats .stat.sky{background:linear-gradient(135deg,#3B8DC8,#6FB3E6);}
 .stats .stat.gold{background:linear-gradient(135deg,#1F7A4D,#2FA36B);color:#fff;}
+.stats .stat.navy{background:linear-gradient(135deg,#1e3a8a,#3b6fd4);color:#fff;}
 .stats .stat:nth-child(5){background:linear-gradient(135deg,#7c5cbf,#a78bdb);}
 </style>
 </head>
@@ -482,6 +483,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
     <div class="stat coral" onclick="goToFamilies({assigned:'unassigned'})"><span class="stat-ic">❗</span><div class="stat-num" id="s-unassigned">—</div><div class="stat-lbl">Unassigned</div></div>
     <div class="stat forest" onclick="goToFamilies({dupOnly:true})"><span class="stat-ic">⚠️</span><div class="stat-num" id="s-dups">—</div><div class="stat-lbl">Duplicates</div></div>
     <div class="stat sky" onclick="goToLearners()"><span class="stat-ic">🌟</span><div class="stat-num" id="s-learners">—</div><div class="stat-lbl">Little Learners</div></div>
+  <div class="stat navy" title="Everyone who has ever been a Little Learner: enrolled, school place secured, or moved on"><span class="stat-ic">📚</span><div class="stat-num" id="s-ll-total">—</div><div class="stat-lbl">Total LL to date</div></div>
     <div class="stat gold" onclick="toggleDashSection('schoolPlace')"><span class="stat-ic">🏫</span><div class="stat-num" id="s-school-place">—</div><div class="stat-lbl">Secured School Place</div></div>
   </div>
 
@@ -3216,6 +3218,7 @@ function renderDash() {
   document.getElementById('s-unassigned').textContent = fams.filter(f=>!f.assigned_to).length;
   document.getElementById('s-dups').textContent = dups.size;
   document.getElementById('s-learners').textContent = kids.filter(isPostAssessChild).length;
+  document.getElementById('s-ll-total').textContent = kids.filter(c=>c.pipeline_status==='completed'||c.pipeline_status==='school_secured'||c.learner_status==='archived').length;
   const schoolPlaceEl = document.getElementById('s-school-place');
   if(schoolPlaceEl) schoolPlaceEl.textContent = kids.filter(c=>c.school_place_status).length;
   const recentFams = fams.filter(f => !(f.source==='Referral' && !f.assigned_to));
