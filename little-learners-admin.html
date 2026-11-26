@@ -745,20 +745,19 @@ let showDupOnly = false;
 
 const PIPELINE_STAGES = [
   {key:'all', label:'All', icon:'📋'},
-  {key:'new', label:'New', icon:'🆕'},
-  {key:'waiting_for_assessment', label:'Waiting for Assessment', icon:'🗓️'},
-  {key:'pre_assessment_scheduled', label:'Call Scheduled', icon:'📅'},
-  {key:'pre_assessed', label:'Call Completed', icon:'✅'},
-  {key:'invited_to_assessment', label:'Invited to Assessment', icon:'✉️'},
-  {key:'completed', label:'Enrolled', icon:'🎓'},
+  {key:'new', label:'1. New', icon:'🆕'},
+  {key:'waiting_for_assessment', label:'2. Waiting for Intro Call', icon:'🗓️'},
+  {key:'pre_assessment_scheduled', label:'3. Intro Call Scheduled', icon:'📅'},
+  {key:'pre_assessed', label:'4. Intro Call Completed', icon:'✅'},
+  {key:'invited_to_assessment', label:'5. Invited to Assessment', icon:'✉️'},
   {key:'referred', label:'Referred', icon:'🤝'},
   {key:'school_secured', label:'School Secured', icon:'🏫'},
   {key:'archived_arabic', label:'Archived – Arabic', icon:'🗣️'},
 ];
 
 const STATUS_LABELS = {
-  new:'New',waiting_for_assessment:'Waiting for Assessment',pre_assessment_scheduled:'Call Scheduled',pre_assessed:'Call Completed',
-  invited_to_assessment:'Invited to Assessment',completed:'Enrolled',
+  new:'1. New',waiting_for_assessment:'2. Waiting for Intro Call',pre_assessment_scheduled:'3. Intro Call Scheduled',pre_assessed:'4. Intro Call Completed',
+  invited_to_assessment:'5. Invited to Assessment',completed:'6. Enrolled',
   referred:'Referred',school_secured:'School Secured',archived:'Archived',archived_arabic:'Archived – Arabic'
 };
 
@@ -910,7 +909,7 @@ async function loadData() {
     db.from('ll_children').select('*'),
     db.from('ll_admins').select('*'),
     db.from('ll_activity_logs').select('*').order('created_at',{ascending:false}),
-    db.from('ll_referrals').select('*').eq('status','new').order('created_at',{ascending:false}),
+    db.from('ll_referrals').select('*').in('status',['new','contacted']).order('created_at',{ascending:false}),
     db.from('ll_events').select('*').order('event_date',{ascending:true}),
     db.from('ll_event_attendees').select('*'),
     db.from('food_box_applications').select('friend_id').not('friend_id','is',null),
@@ -2985,7 +2984,9 @@ function visibleChildren() {
 
 function referralCardHTML(r) {
   const age = r.child_dob ? Math.floor((Date.now()-new Date(r.child_dob).getTime())/(1000*60*60*24*365.25)) : null;
-  return `<div class="fam-card" style="cursor:pointer;" onclick="openReferral('${r.id}')">
+  const fam = r.family_id ? allFamilies.find(f=>f.id===r.family_id) : null;
+  const contacted = r.status==='contacted';
+  return `<div class="fam-card" style="cursor:pointer;${contacted?'opacity:.65;':''}" onclick="openReferral('${r.id}')">
     <div class="fam-info">
       <div class="fam-name">${r.child_name||'—'}${age!==null?` (${age})`:''}</div>
       <div class="fam-meta">
@@ -2993,9 +2994,12 @@ function referralCardHTML(r) {
         <span>📞 ${r.parent_phone||'—'}</span>
         ${r.area?`<span>📍 ${r.area}</span>`:''}
         ${r.language?`<span>🗣 ${r.language}</span>`:''}
+        ${fam
+          ? `<span style="color:var(--teal-mid);font-weight:700;">✅ On pipeline${fam.urn?' · '+fam.urn:''}</span>`
+          : `<span style="color:var(--coral);font-weight:700;">⚠️ Not on pipeline yet — tap to open case</span>`}
       </div>
     </div>
-    <button class="btn-small" onclick="event.stopPropagation();dismissReferral('${r.id}')" style="margin-left:8px;">Mark contacted</button>
+    <button class="btn-small" onclick="event.stopPropagation();setReferralContacted('${r.id}',${!contacted})" style="margin-left:8px;">${contacted?'↩ Undo contacted':'Mark contacted'}</button>
   </div>`;
 }
 
@@ -3015,77 +3019,57 @@ function referralConvertedCardHTML(f) {
   </div>`;
 }
 
+let showContactedReferrals = false;
+function toggleContactedReferrals() { showContactedReferrals = !showContactedReferrals; renderReferrals(); }
+
 function renderReferrals() {
-  const convertedUnassigned = allFamilies.filter(f => f.source==='Referral' && !f.assigned_to);
-  const total = allReferrals.length + convertedUnassigned.length;
+  // A referral stays in this list after you open it — it only moves out when you mark it contacted.
+  const linked = new Set(allReferrals.map(r=>r.family_id).filter(Boolean));
+  const convertedUnassigned = allFamilies.filter(f => f.source==='Referral' && !f.assigned_to && !linked.has(f.id));
+  const open = allReferrals.filter(r=>r.status!=='contacted');
+  const done = allReferrals.filter(r=>r.status==='contacted');
+  const total = open.length + convertedUnassigned.length;
   document.getElementById('referrals-pill').textContent = total;
-  const combined = [...allReferrals.map(r=>({type:'referral',item:r})), ...convertedUnassigned.map(f=>({type:'converted',item:f}))];
-  document.getElementById('referrals-list').innerHTML = total
+  const combined = [
+    ...open.map(r=>({type:'referral',item:r})),
+    ...convertedUnassigned.map(f=>({type:'converted',item:f})),
+    ...(showContactedReferrals ? done.map(r=>({type:'referral',item:r})) : []),
+  ];
+  let html = combined.length
     ? capListHTML(combined, x => x.type==='referral' ? referralCardHTML(x.item) : referralConvertedCardHTML(x.item), 'referrals')
     : '<div class="empty"><div class="eicon">✅</div><p>No new referrals</p></div>';
+  if(done.length) html += `<button class="btn-small" style="width:100%;margin-top:6px;" onclick="toggleContactedReferrals()">${showContactedReferrals?'▲ Hide':'▼ Show'} contacted (${done.length})</button>`;
+  document.getElementById('referrals-list').innerHTML = html;
 }
 
-async function dismissReferral(id) {
-  await db.from('ll_referrals').update({ status: 'contacted' }).eq('id', id);
-  allReferrals = allReferrals.filter(r => r.id !== id);
+async function setReferralContacted(id, contacted) {
+  const patch = { status: contacted ? 'contacted' : 'new', contacted_at: contacted ? new Date().toISOString() : null };
+  const { error } = await db.from('ll_referrals').update(patch).eq('id', id);
+  if(error) { showToast('Error: '+error.message); return; }
+  const r = allReferrals.find(x=>x.id===id);
+  if(r) Object.assign(r, patch);
   renderReferrals();
 }
 
 function normPhone(p) { return (p||'').replace(/\D/g,'').slice(-8); }
 
+// Opens (or creates) the case for a referral. The database function copies the parent and child
+// details — names, QIDs, expiry, sponsor, DOB, phone, email, area — across from the Food Box
+// application, filling blanks only, so nothing already entered is overwritten.
 async function openReferral(referralId) {
   const r = allReferrals.find(x=>x.id===referralId);
   if(!r) return;
-
-  // 1) Look for an existing application that matches this referral (by phone or child name)
-  let match = null;
-  if(r.parent_phone) {
-    const np = normPhone(r.parent_phone);
-    match = allFamilies.find(f => np && (normPhone(f.father_phone)===np || normPhone(f.mother_phone)===np));
+  const wasLinked = !!r.family_id;
+  const { data, error } = await db.rpc('ll_open_case_from_referral', { p_referral_id: referralId });
+  if(error) { showToast('Error: '+error.message); return; }
+  if(!wasLinked) {
+    await addActivityLog(data.family_id, data.child_id, 'note',
+      (data.created ? 'Case opened from a Feed a Friend referral' : 'Linked to a Feed a Friend referral') + ' — parent and child details copied from the Food Box application.', '');
   }
-  if(!match && r.child_name) {
-    const childMatch = allChildren.find(c => (c.full_name||'').trim().toLowerCase() === r.child_name.trim().toLowerCase());
-    if(childMatch) match = allFamilies.find(f=>f.id===childMatch.family_id);
-  }
-
-  if(match) {
-    await dismissReferral(referralId);
-    openProfile(match.id, 'assess');
-    return;
-  }
-
-  // 2) No existing application — quick-create a minimal record from the referral so a case can be opened immediately
-  const familyId = crypto.randomUUID();
-  const { data: urn, error: urnErr } = await db.rpc('next_family_urn');
-  if(urnErr) { showToast('Error: '+urnErr.message); return; }
-  const familyData = {
-    id: familyId,
-    urn,
-    father_name: r.parent_name || 'Unknown',
-    father_phone: r.parent_phone || '',
-    area: r.area || '',
-    father_native_lang: r.language || '',
-    status: 'pending',
-    pipeline_status: 'new',
-    source: 'Referral',
-  };
-  const { error: fErr } = await db.from('ll_families').insert(familyData);
-  if(fErr) { showToast('Error: '+fErr.message); return; }
-  if(r.child_name) {
-    await db.from('ll_children').insert({
-      family_id: familyId,
-      urn: urn + '.1',
-      full_name: r.child_name,
-      dob: r.child_dob || null,
-      lang_home: r.language || '',
-      pipeline_status: 'new',
-    });
-  }
-  await addActivityLog(familyId, null, 'note', 'Case opened from a Feed a Friend referral.', '');
-  await dismissReferral(referralId);
+  r.family_id = data.family_id; r.child_id = data.child_id;
   await loadData();
-  openProfile(familyId, 'assess');
-  showToast('✅ Case opened from referral');
+  openProfile(data.family_id, 'assess');
+  if(!wasLinked) showToast('✅ '+(data.created?'Case opened':'Linked to existing case')+' — details copied from Food Box');
 }
 
 function detectDups() {
@@ -3194,7 +3178,7 @@ function renderLearners() {
 
 // ── PIPELINE TABS ── (pipeline stage is tracked per student, not per family — siblings can differ)
 function renderPipelineTabs() {
-  const kids = visibleChildren();
+  const kids = visibleChildren().filter(c=>c.pipeline_status!=='completed'); // Enrolled kids are Learners now, not pipeline
   const counts = {};
   kids.forEach(c=>{
     const s = c.pipeline_status||'new';
@@ -3237,7 +3221,7 @@ function renderFams() {
   const assigned = document.getElementById('filter-assigned')?.value||'';
   const dupsAll = detectDups();
 
-  let list = visibleChildren().map(c=>{
+  let list = visibleChildren().filter(c=>c.pipeline_status!=='completed').map(c=>{
     const f = allFamilies.find(x=>x.id===c.family_id);
     if(!f) return null;
     const text = ((f.father_name||'')+(f.mother_name||'')+(f.urn||'')+(f.father_phone||'')+(f.mother_phone||'')+' '+(c.full_name||'')+' '+(c.qid||'')).toLowerCase();
@@ -4202,8 +4186,7 @@ function renderAssessment(f, children) {
         <label>Method</label>
         <select id="a-method">
           <option value="">Select…</option>
-          <option ${cur.assess_method==='Video Call'?'selected':''}>Video Call</option>
-          <option ${cur.assess_method==='In-person'?'selected':''}>In-person</option>
+          <option ${cur.assess_method==='Video Call'||cur.assess_method==='In-person'?'selected':''}>Video Call</option>
         </select>
       </div>
 
