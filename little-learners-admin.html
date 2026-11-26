@@ -357,6 +357,21 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 .sp-need b{color:var(--forest);} .sp-need span{color:var(--coral);font-weight:700;font-size:11.5px;}
 .qid-warn{background:#FDE8E4;color:#B3321F;border:1.5px solid #E8715E;border-radius:8px;padding:1px 7px;font-weight:700;}
 .qid-banner{background:#FDE8E4;border:2px solid #E8715E;color:#8E2414;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;font-weight:700;line-height:1.45;}
+
+/* PIPELINE TABLE (desktop) — matches the Food Box admin portal list */
+.fam-table-wrap{display:none;background:white;border-radius:16px;box-shadow:0 4px 14px rgba(10,61,31,.08);overflow-x:auto;margin-bottom:12px;}
+.fam-table{width:100%;border-collapse:collapse;font-size:13px;min-width:980px;}
+.fam-table th{background:var(--lime-soft);padding:10px 12px;text-align:left;font-weight:800;font-size:11px;color:var(--forest);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--border);white-space:nowrap;}
+.fam-table td{padding:10px 12px;border-bottom:1px solid #f0f4f0;vertical-align:middle;}
+.fam-table tr:last-child td{border-bottom:none;}
+.fam-table tbody tr{cursor:pointer;}
+.fam-table tbody tr:hover td{background:#fafcfa;}
+.fam-table .ft-name{font-weight:800;font-size:13.5px;color:var(--forest);}
+.fam-table .ft-sub{font-size:11px;color:var(--muted);font-weight:600;margin-top:2px;}
+.fam-table .ft-urn{font-family:monospace;font-size:11.5px;font-weight:800;color:var(--forest-mid);white-space:nowrap;}
+.fam-table .ft-flags{display:flex;gap:5px;flex-wrap:wrap;}
+.fam-table .unassigned{color:var(--coral);font-weight:700;}
+@media (min-width:900px){ .fam-table-wrap{display:block;} .fam-cards-wrap{display:none;} }
 </style>
 </head>
 <body>
@@ -759,7 +774,7 @@ function childInEventBands(child, ev) {
   return eventBands(ev).some(b => age>=b.min && age<=b.max);
 }
 function findAgeBand(key) { return AGE_BANDS.find(b=>b.key===key) || LEGACY_AGE_BANDS.find(b=>b.key===key) || null; }
-let activePipeline = 'all';
+let activePipeline = 'new'; // default view: stage 1 New
 let showDupOnly = false;
 
 const PIPELINE_STAGES = [
@@ -3365,8 +3380,33 @@ function renderFams() {
   }
 
   document.getElementById('fams-list').innerHTML = list.length
-    ? list.map(x=>studentCardHTML(x.f,x.c,dupsAll.has(x.f.id))).join('')
+    ? `<div class="fam-table-wrap">${studentTableHTML(list, dupsAll)}</div><div class="fam-cards-wrap">${list.map(x=>studentCardHTML(x.f,x.c,dupsAll.has(x.f.id))).join('')}</div>`
     : '<div class="empty"><div class="eicon">🔍</div><p>No students found</p></div>';
+}
+
+function studentTableHTML(list, dupsAll) {
+  const rows = list.map(({f,c}) => {
+    const status = c.pipeline_status||'new';
+    const pp = primaryParent(f);
+    const assessedDate = childAssessedDateStr(c);
+    const m = missingInfo(c,f);
+    const flags = [];
+    if(qidProblem(c)) flags.push('<span class="qid-warn" title="QID is not 11 digits">⚠️ Check QID</span>');
+    if(m.length) flags.push(`<span class="qid-warn" title="Missing: ${m.join(', ')}">⚠️ ${m.length} missing</span>`);
+    if(dupsAll.has(f.id)) flags.push('<span class="dup-flag" title="Possible duplicate">⚠️ Duplicate?</span>');
+    const icons = (c.special_needs?' 🧩':'') + (c.school_place_status?` 🏫${c.school_place_status==='verified'?'':'?'}`:'');
+    return `<tr onclick="openProfile('${f.id}','children','${c.id}')">
+      <td><div class="ft-name">${c.full_name||'Child'}${icons}</div><div class="ft-urn">${c.urn||f.urn||'—'}</div></td>
+      <td>${childAgeYears(c)}y${assessedDate?`<div class="ft-sub">Assessed ${assessedDate}</div>`:''}</td>
+      <td><div>${pp&&pp.both?'⭐ ':''}${pp?pp.name:(f.father_name||f.mother_name||'—')}</div><div class="ft-sub">📞 ${(pp?pp.phone:'')||f.father_phone||f.mother_phone||'—'}</div></td>
+      <td>${f.area||'—'}</td>
+      <td><div class="ft-flags">${sourceBadgeHTML(f)}${programPillsHTML(f)}</div></td>
+      <td><div class="ft-flags">${flags.join('')||'<span style="color:var(--lime);font-weight:800;">✓</span>'}</div></td>
+      <td>${f.assigned_to_name?'👤 '+f.assigned_to_name:'<span class="unassigned">Unassigned</span>'}</td>
+      <td><span class="status-tag st-${status}">${STATUS_LABELS[status]||'New'}</span></td>
+    </tr>`;
+  }).join('');
+  return `<table class="fam-table"><thead><tr><th>Child</th><th>Age</th><th>Parent / contact</th><th>Area</th><th>Source / Food Box</th><th>Needs attention</th><th>Handler</th><th>Stage</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function programPillsHTML(f) {
