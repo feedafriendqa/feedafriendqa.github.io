@@ -3259,6 +3259,21 @@ function qidProblem(c) {
   if(!q || /^\d{11}$/.test(q)) return '';
   return `The QID on file ("${q.replace(/"/g,'&quot;')}") is not a valid 11-digit QID. Please check it against the child's QID card and correct it.`;
 }
+// Key information the case handler still needs to collect for this child's case.
+function missingInfo(c, f) {
+  const m = [];
+  if(!(c?.qid||'').trim()) m.push('Child QID'+(c?.passport_number?' (passport on file only)':''));
+  if(!c?.dob) m.push('Child date of birth');
+  if(f) {
+    const hasFather = !!(f.father_name && f.father_name!=='Unknown');
+    const hasMother = !!f.mother_name;
+    if(!hasFather && !hasMother) m.push('Parent name');
+    if(hasFather && !(f.father_qid||'').trim()) m.push('Father / Guardian 1 QID');
+    if(hasMother && !(f.mother_qid||'').trim()) m.push('Mother / Guardian 2 QID');
+    if(!(f.father_phone||'').trim() && !(f.mother_phone||'').trim()) m.push('Parent phone number');
+  }
+  return m;
+}
 function sourceKey(f) {
   const s = f?.source||'';
   if(s==='Referral') return 'referral';
@@ -3364,6 +3379,7 @@ function studentCardHTML(f, c, isDup) {
         ${programPillsHTML(f)}
         ${sourceBadgeHTML(f)}
         ${qidProblem(c)?'<span class="qid-warn" title="QID is not 11 digits">⚠️ Check QID</span>':''}
+        ${(()=>{const m=missingInfo(c,f); return m.length?`<span class="qid-warn" title="Missing: ${m.join(', ')}">⚠️ Missing: ${m.length>2?m.slice(0,2).join(', ')+' +'+(m.length-2):m.join(', ')}</span>`:'';})()}
         ${f.assigned_to_name?`<span>👤 ${f.assigned_to_name}</span>`:'<span style="color:var(--coral);font-weight:700;">Unassigned</span>'}
       </div>
     </div>
@@ -3545,6 +3561,7 @@ function renderChildren(children, f) {
   // 1 ── KEY DETAILS
   const details = `
     ${qidProblem(c)?`<div class="qid-banner">⚠️ ${qidProblem(c)}</div>`:''}
+    ${missingInfo(c,f).length?`<div class="qid-banner">⚠️ Still needed for this case: ${missingInfo(c,f).join(' · ')}</div>`:''}
     <div class="info-grid">
       ${fld('QID number <span style="text-transform:none;font-weight:600;color:var(--muted);">(11 digits — auto-filled by Scan QID, or type it)</span>', `<input class="ival-input" placeholder="e.g. 28740400336" value="${c.qid||''}" onblur="saveChildQid('${c.id}',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">`, true)}
       ${fld('Passport number <span style="text-transform:none;font-weight:600;color:var(--muted);">(only if there is no QID yet)</span>', `<input class="ival-input" placeholder="e.g. AR757068" value="${c.passport_number||''}" onblur="saveChildField('${c.id}','passport_number',this.value.toUpperCase())" onkeydown="if(event.key==='Enter'){this.blur();}">`)}
@@ -4727,7 +4744,7 @@ function parentFullCardHTML(role, roleKey, name, preferredName, phone, qid, expi
         <input class="preferred-name-input" type="email" inputmode="email" placeholder="e.g. parent@example.com" value="${email||''}" onblur="saveParentEmail('${familyId}','${roleKey}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
       </div>
       <div class="info-grid" style="margin-top:12px;">
-        <div class="irow"><div class="ikey">QID Number</div><div class="ival">${qid?`<span class="qid-pill" style="margin-top:0;">🪪 ${qid}</span>`:'—'}</div></div>
+        <div class="irow"><div class="ikey">QID Number</div><div class="ival">${qid?(/^\d{11}$/.test(String(qid).trim())?`<span class="qid-pill" style="margin-top:0;">🪪 ${qid}</span>`:`<span class="qid-warn">⚠️ ${qid} — not a valid 11-digit QID</span>`):'<span class="qid-warn">⚠️ Missing — scan the QID</span>'}</div></div>
         <div class="irow"><div class="ikey">QID Expiry</div><div class="ival" style="${expiryPast?'color:var(--coral);font-weight:800;':''}">${expiry?(expiryPast?'⚠️ Expired — ':'')+(expiryDate?expiryDate.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):expiry):'—'}</div></div>
         <div class="irow"><div class="ikey">Nationality</div><div class="ival">${nationality||'—'}</div></div>
         <div class="irow"><div class="ikey">Date of Birth</div><div class="ival">${dob||'—'}</div></div>
