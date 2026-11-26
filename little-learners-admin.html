@@ -414,7 +414,7 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 
 <div class="bottombar">
   <button class="bb-item on" onclick="showPg('dash',this)"><div class="bb-ic">🏠</div><div class="bb-tx">Dashboard</div></button>
-  <button class="bb-item" onclick="showPg('fams',this)"><div class="bb-ic">👪</div><div class="bb-tx">Pipeline</div></button>
+  <button class="bb-item" id="bb-pipeline" onclick="showPg('fams',this)"><div class="bb-ic">👪</div><div class="bb-tx">Pipeline</div></button>
   <button class="bb-item" onclick="goToLearners()"><div class="bb-ic">🌟</div><div class="bb-tx">Learners</div></button>
   <button class="bb-item" id="bb-assess-days" onclick="showPg('assess-days',this)"><div class="bb-ic">📅</div><div class="bb-tx">Events</div></button>
   <button class="bb-item" onclick="showPg('qid-signin',this)"><div class="bb-ic">🪪</div><div class="bb-tx">QID Sign-In</div></button>
@@ -959,6 +959,12 @@ async function loadData() {
     document.querySelectorAll('.bb-item').forEach(b => { if(b.id!=='bb-assess-days') b.style.display='none'; });
     showPg('assess-days', assessTabBtn);
   } else if(currentUserRole!=='admin' && document.getElementById('pg-assess-days')?.classList.contains('active')) {
+    showPg('dash', document.querySelector('.bb-item'));
+  }
+  // Per-user setting (ll_admins.hide_pipeline): hide the Pipeline tab for this person
+  const pipeBtn = document.getElementById('bb-pipeline');
+  if(pipeBtn) pipeBtn.style.display = me?.hide_pipeline ? 'none' : '';
+  if(me?.hide_pipeline && document.getElementById('pg-fams')?.classList.contains('active')) {
     showPg('dash', document.querySelector('.bb-item'));
   }
   await detectSuperAdmin();
