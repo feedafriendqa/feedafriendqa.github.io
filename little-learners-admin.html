@@ -809,6 +809,8 @@ function childInEventBands(child, ev) {
   return eventBands(ev).some(b => age>=b.min && age<=b.max);
 }
 function findAgeBand(key) { return AGE_BANDS.find(b=>b.key===key) || LEGACY_AGE_BANDS.find(b=>b.key===key) || null; }
+// Stages that sit in their own tab and are not counted in All
+const SEPARATE_STAGES = new Set(['archived_arabic','school_secured']);
 let activePipeline = 'new'; // default view: stage 1 New
 let showDupOnly = false;
 
@@ -3320,7 +3322,7 @@ function renderPipelineTabs() {
   pt.classList.add('stat-row');
   pt.innerHTML = PIPELINE_STAGES.map(s=>`
     <button class="stat-card sc-${s.key} ${activePipeline===s.key?'on':''}" onclick="setPipeline('${s.key}')">
-      <div class="num">${s.key==='all'?kids.filter(c=>c.pipeline_status!=='archived_arabic').length:(counts[s.key]||0)}</div>
+      <div class="num">${s.key==='all'?kids.filter(c=>!SEPARATE_STAGES.has(c.pipeline_status)).length:(counts[s.key]||0)}</div>
       <div class="lbl">${s.label.replace(/^\d+\.\s*/,'')}</div>
     </button>`).join('') +
   `<button class="stat-card sc-qid" onclick="showPg('qid-signin', document.getElementById('bb-fams')); renderQidSignin();">
@@ -3418,7 +3420,7 @@ function renderFams() {
     if(!f) return null;
     const text = ((f.father_name||'')+(f.mother_name||'')+(f.urn||'')+(f.father_phone||'')+(f.mother_phone||'')+' '+(c.full_name||'')+' '+(c.qid||'')).toLowerCase();
     const matchQ = !q||text.includes(q);
-    const matchPipe = activePipeline==='all' ? (c.pipeline_status||'new')!=='archived_arabic' : (c.pipeline_status||'new')===activePipeline; // Arabic-speaking families sit in their own tab, not in All
+    const matchPipe = activePipeline==='all' ? !SEPARATE_STAGES.has(c.pipeline_status||'new') : (c.pipeline_status||'new')===activePipeline; // Arabic-speaking families sit in their own tab, not in All
     const matchAssigned = !assigned||(assigned==='unassigned'?!f.assigned_to:f.assigned_to===assigned);
     const matchSource = !srcFilter||sourceKey(f)===srcFilter;
     const matchFb = !fbFilter||(fbFilter==='none'?!fbStatusByFamily[f.id]:fbStatusByFamily[f.id]===fbFilter);
