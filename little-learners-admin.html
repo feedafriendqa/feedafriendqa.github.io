@@ -3456,7 +3456,7 @@ function studentTableHTML(list, dupsAll) {
     if(dupsAll.has(f.id)) flags.push('<span class="dup-flag" title="Possible duplicate">⚠️ Duplicate?</span>');
     const icons = (c.special_needs?' 🧩':'') + (c.school_place_status?` 🏫${c.school_place_status==='verified'?'':'?'}`:'');
     return `<tr onclick="openProfile('${f.id}','children','${c.id}')">
-      <td><div class="ft-name">${c.full_name||'Child'}${icons}</div></td>
+      <td><div class="ft-name">${c.full_name||'Child'}${icons}${fbStatusByFamily[f.id]==='approved'?' <span class="prog-pill fb-approved" title="Food Box application approved" style="margin-left:4px;">🛡️ ✓ Food Box</span>':''}</div></td>
       <td>${childAgeYears(c)}y${assessedDate?`<div class="ft-sub">Assessed ${assessedDate}</div>`:''}</td>
       <td><div>${pp&&pp.both?'⭐ ':''}${pp?pp.name:(f.father_name||f.mother_name||'—')}</div><div class="ft-sub">📞 ${(pp?pp.phone:'')||f.father_phone||f.mother_phone||'—'}</div></td>
       <td>${f.area||'—'}</td>
