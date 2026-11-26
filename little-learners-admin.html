@@ -952,13 +952,13 @@ async function loadData() {
   const me = allAdmins.find(a => (a.email||'').toLowerCase() === currentUserEmail.toLowerCase());
   currentUserRole = me?.role || 'case_handler';
   const assessTabBtn = document.getElementById('bb-assess-days');
-  if(assessTabBtn) assessTabBtn.style.display = (currentUserRole==='admin'||currentUserRole==='assessment_lead') ? 'flex' : 'none';
+  if(assessTabBtn) assessTabBtn.style.display = (currentUserRole==='admin'||currentUserRole==='assessment_lead'||currentUserRole==='events_coordinator') ? 'flex' : 'none';
   if(currentUserRole==='assessment_lead') {
     // Assessment leads (e.g. Tanzeem) only ever see the Assessment Day tab —
     // no Dashboard, Families, or QID Sign-In access.
     document.querySelectorAll('.bb-item').forEach(b => { if(b.id!=='bb-assess-days') b.style.display='none'; });
     showPg('assess-days', assessTabBtn);
-  } else if(currentUserRole!=='admin' && document.getElementById('pg-assess-days')?.classList.contains('active')) {
+  } else if(currentUserRole!=='admin' && currentUserRole!=='events_coordinator' && document.getElementById('pg-assess-days')?.classList.contains('active')) {
     showPg('dash', document.querySelector('.bb-item'));
   }
   await detectSuperAdmin();
@@ -3024,7 +3024,7 @@ function renderCheckinsDue() {
 // anything still unassigned (so any handler can pick it up, including the
 // Referrals queue).
 function visibleFamilies() {
-  if(currentUserRole === 'admin') return allFamilies;
+  if(currentUserRole === 'admin' || currentUserRole === 'events_coordinator') return allFamilies;
   return allFamilies.filter(f => !f.assigned_to || f.assigned_to === currentUserEmail);
 }
 function visibleChildren() {
