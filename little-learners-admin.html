@@ -3076,9 +3076,24 @@ function normPhone(p) { return (p||'').replace(/\D/g,'').slice(-8); }
 // Opens (or creates) the case for a referral. The database function copies the parent and child
 // details — names, QIDs, expiry, sponsor, DOB, phone, email, area — across from the Food Box
 // application, filling blanks only, so nothing already entered is overwritten.
+const openingReferrals = new Set();
 async function openReferral(referralId) {
   const r = allReferrals.find(x=>x.id===referralId);
   if(!r) return;
+  // Ignore repeat clicks while this referral is already opening (it can take a few seconds)
+  if(openingReferrals.has(referralId)) return;
+  openingReferrals.add(referralId);
+  showToast('⏳ Opening case… one moment');
+  document.querySelectorAll(`[onclick="openReferral('${referralId}')"]`).forEach(el=>{ el.style.opacity='.5'; el.style.pointerEvents='none'; });
+  try {
+    await openReferralInner(r, referralId);
+  } finally {
+    openingReferrals.delete(referralId);
+    document.querySelectorAll(`[onclick="openReferral('${referralId}')"]`).forEach(el=>{ el.style.opacity=''; el.style.pointerEvents=''; });
+  }
+}
+
+async function openReferralInner(r, referralId) {
   const wasLinked = !!r.family_id;
   const { data, error } = await db.rpc('ll_open_case_from_referral', { p_referral_id: referralId });
   if(error) { showToast('Error: '+error.message); return; }
