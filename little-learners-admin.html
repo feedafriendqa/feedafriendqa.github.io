@@ -2692,7 +2692,7 @@ async function scanChildQidSignin(childId) {
     const child = allChildren.find(c=>c.id===childId);
     const updates = { qid_verified_at: new Date().toISOString() };
     if(data.qid_number) updates.qid = data.qid_number;
-    if(data.nationality && !child.nationality) updates.nationality = data.nationality;
+    if(data.nationality) updates.nationality = data.nationality; // scanned QID value replaces any parent-derived stand-in
     if(data.dob && !child.dob) updates.dob = data.dob;
     if(data.gender && !child.gender) updates.gender = data.gender;
     if(data.expiry) updates.qid_expiry = data.expiry;
