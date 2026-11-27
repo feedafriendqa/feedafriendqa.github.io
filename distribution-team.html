@@ -164,7 +164,7 @@ var TABS=[['outside','At the gates'],['queue','Queue'],['ready','Ready to load']
 var HINTS={
   outside:'Drivers who tapped "I\'m at the gates" in their app (location-checked, within 400 m), in the order they tapped. Look for the car, then confirm it to move it into the queue.',
   expected:'Drivers who have not arrived. If someone is at the gate without having tapped the button, you can still mark them as arrived here.',
-  queue:'First come, first served: the longest-waiting driver is at the top. Check every family, then finish the check-in.',
+  queue:'First come, first served: the longest-waiting driver is at the top. Speak to the driver, remove any box with no reply, then finish the check-in.',
   ready:'Check-in done. Loaders: load the car from the list, then tap "Car loaded".',
   loaded:'Loaded cars waiting to leave.',
   departed:'Drivers who have left with their boxes.',
@@ -314,7 +314,6 @@ function tripCard(t){
   if(m.diaN)pills+='<span class="pill b">🧷 '+m.diaN+' diaper'+(m.diaN===1?'':'s')+'</span>';
   if(m.frmN)pills+='<span class="pill b">🍼 '+m.frmN+' formula</span>';
   if(st==='expected'||st==='outside'){}
-  else if(st==='queue'){pills+=m.todo?'<span class="pill a">'+m.todo+' to check</span>':'';pills+=m.chasing?'<span class="pill r">'+m.chasing+' chasing</span>':'';pills+=(!m.todo&&!m.chasing)?'<span class="pill g">all checked</span>':'';}
   var time='';
   if(st==='outside')time='#'+t._pos+' outside · tapped '+fmtTime(t.claimed_at)+' ('+mins(t.claimed_at)+' min ago)'+(t.claimed_dist_m!=null?' · '+t.claimed_dist_m+' m from gate':'');
   else if(st==='queue')time='#'+t._pos+' in queue · here '+fmtTime(t.arrived_at)+' ('+mins(t.arrived_at)+' min)'+(t.claimed_at?' · tapped '+fmtTime(t.claimed_at):'');
@@ -332,7 +331,7 @@ function tripCard(t){
     h+='<div class="act-row"><button class="btn go big" data-act="arrive" data-t="'+t.id+'">✅ Confirmed — I can see the car at the gate</button></div>';
   }else if(st==='queue'){
     h+=stopsHtml(t,true);
-    h+='<div class="act-row"><button class="btn go big" data-act="checked" data-t="'+t.id+'">Check-in complete → ready to load</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="arrived">Not here yet</button></div>';
+    h+='<div class="act-row"><button class="btn go big" data-act="checked" data-t="'+t.id+'">Check-in done → ready to load</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="arrived">Not here yet</button></div>';
   }else if(st==='ready'){
     h+=loadSummary(t,m);h+=stopsHtml(t,false,st);
     h+='<div class="act-row"><button class="btn go big" data-act="loaded" data-t="'+t.id+'">🚚 Car loaded</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="checked">Back to check-in</button></div>';
@@ -371,15 +370,10 @@ function stopRow(t,s,controls,st){
   h+='<div>'+b+'</div>';
   if(s.driver_notes)h+='<div class="stop-meta" style="color:#8a5a00">Driver note: '+esc(s.driver_notes)+'</div>';
   h+='</div></div>';
-  if(controls&&!s.delivered){
-    h+='<div class="stop-btns"><button class="chip'+(s.state==='confirmed'?' on-c':'')+'" data-act="stop" data-a="'+s.aid+'" data-v="confirmed">✓ Spoken / confirmed</button><button class="chip'+(s.state==='chasing'?' on-h':'')+'" data-act="stop" data-a="'+s.aid+'" data-v="chasing">⏳ Chasing</button>';
-    if(s.whatsapp){h+='<a class="chip'+(isAr?'':' lang')+'" target="_blank" rel="noopener" href="'+waLink(s,'en')+'">💬 EN</a><a class="chip'+(isAr?' lang':'')+'" target="_blank" rel="noopener" href="'+waLink(s,'ar')+'">💬 AR</a><a class="chip" href="tel:+'+digits(s.whatsapp)+'">📞</a>';}
-    h+='<button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
-    h+='<input class="note" placeholder="Note (e.g. replied, pin sent, no answer after 3 calls)" value="'+esc(s.note||'')+'" data-a="'+s.aid+'" onchange="saveNote(this)">';
-  }else if(!controls&&!s.delivered&&st!=='departed'){
+  if(!s.delivered&&st!=='departed'){
     h+='<div class="stop-btns"><button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
   }
-  if(s.note&&!controls)h+='<div class="stop-meta">📝 '+esc(s.note)+'</div>';
+  if(s.note)h+='<div class="stop-meta">📝 '+esc(s.note)+'</div>';
   return h+'</div>';
 }
 function heldCard(x){
@@ -402,7 +396,7 @@ document.addEventListener('click',function(e){
   if(a==='tab')return setTab(v);
   if(a==='toggle'){var card=$('trip-'+t);var now=!card.classList.contains('open');OPEN[t]=now;card.classList.toggle('open',now);return;}
   if(a==='arrive')return mark(t,'arrived',false,el);
-  if(a==='checked')return finishCheck(t,el);
+  if(a==='checked')return mark(t,'checked',false,el,true);
   if(a==='loaded')return mark(t,'loaded',false,el);
   if(a==='departed')return mark(t,'departed',false,el);
   if(a==='undo')return mark(t,v,true,el);
@@ -421,10 +415,10 @@ async function rpc(fn,args,okMsg){
   await refresh(true);
   return r.data;
 }
-async function mark(tid,step,undo,btn){
+async function mark(tid,step,undo,btn,force){
   if(btn)btn.disabled=true;
   var msgs={arrived:'Marked as arrived',checked:'Check-in complete',loaded:'Car loaded',departed:'Driver has left'};
-  await rpc('dist_mark',{p_trip:tid,p_step:step,p_undo:!!undo,p_force:false},undo?'Undone':msgs[step]);
+  await rpc('dist_mark',{p_trip:tid,p_step:step,p_undo:!!undo,p_force:true},undo?'Undone':msgs[step]);
   if(btn)btn.disabled=false;
 }
 async function finishCheck(tid,btn){
