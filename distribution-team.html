@@ -165,7 +165,7 @@ var TABS=[['outside','At the gates'],['queue','Queue'],['desk','Check-in desk'],
 var HINTS={
   outside:'Drivers who tapped "I\'m at the gates" in their app (location-checked, within 400 m), in the order they tapped. Look for the car, then tap the driver to move them to the queue.',
   expected:'Drivers who have not arrived. If someone is at the gate without having tapped the button, you can still mark them as arrived here.',
-  queue:'First come, first served: the longest-waiting driver is at the top. Tap "Call to check-in desk" when the desk is free.',
+  queue:'First come, first served: the longest-waiting driver is at the top. Tap a driver to send them to the check-in desk.',
   desk:'Speak to the driver, tick each family Ready to load, remove any box with no reply, then tap Check-in done. Back to queue undoes it.',
   ready:'Check-in done. Loaders: load the car from the list, then tap "Car loaded".',
   loaded:'Loaded cars waiting to leave.',
@@ -314,7 +314,7 @@ function tripCard(t){
   var open=OPEN[t.id]!==undefined?OPEN[t.id]:(st==='desk'||st==='ready');
   var who=t.contact?esc(t.contact)+' <span style="font-weight:600;color:var(--muted)">(driver: '+esc(t.driver)+')</span>':esc(t.driver);
   var ph=t.contact_phone||t.phone;
-  var pills='<span class="pill n">'+m.stops+' stop'+(m.stops===1?'':'s')+'</span><span class="pill n">'+m.boxes+' box'+(m.boxes===1?'':'es')+'</span>';
+  var pills='<span class="pill n">📍 '+m.stops+' stop'+(m.stops===1?'':'s')+'</span><span class="pill n">📦 '+m.boxes+' box'+(m.boxes===1?'':'es')+'</span>';
   if(m.diaN)pills+='<span class="pill b">🧷 '+m.diaN+' diaper'+(m.diaN===1?'':'s')+'</span>';
   if(m.frmN)pills+='<span class="pill b">🍼 '+m.frmN+' formula</span>';
   if((t.loads||1)>1){who+=' <span class="pill b" style="vertical-align:middle">Load '+t.load_no+' of '+t.loads+'</span>';
@@ -326,7 +326,7 @@ function tripCard(t){
   else if(st==='ready')time='Checked '+fmtTime(t.checked_at)+' by '+esc(t.checked_by||'');
   else if(st==='loaded')time='Loaded '+fmtTime(t.loaded_at);
   else if(st==='departed')time='Left '+fmtTime(t.departed_at);
-  var h='<div class="trip '+cls+(open?' open':'')+'" id="trip-'+t.id+'"><div class="th" data-act="'+(st==='outside'?'arrive':'toggle')+'" data-t="'+t.id+'"><div class="th-main"><div class="th-name">'+who+'</div><div class="th-sub">'+(time?time+' · ':'')+esc(ph||'no phone')+'</div><div>'+pills+'</div></div>'+(st==='outside'?'<div class="go-q">➡ Queue</div>':'<div class="chev">›</div>')+'</div><div class="tb">'+(st==='outside'?'<div class="act-row"><button class="btn go big" data-act="arrive" data-t="'+t.id+'">➡ Move to queue</button></div>':'');
+  var h='<div class="trip '+cls+(open?' open':'')+'" id="trip-'+t.id+'"><div class="th" data-act="'+(st==='outside'?'arrive':st==='queue'?'desk':'toggle')+'" data-t="'+t.id+'"><div class="th-main"><div class="th-name">'+who+'</div><div class="th-sub">'+(time?time+' · ':'')+esc(ph||'no phone')+'</div><div>'+pills+'</div></div>'+(st==='outside'?'<div class="go-q">➡ Queue</div>':st==='queue'?'<div class="go-q">➡ Desk</div>':'<div class="chev">›</div>')+'</div><div class="tb">'+(st==='outside'?'<div class="act-row"><button class="btn go big" data-act="arrive" data-t="'+t.id+'">➡ Move to queue</button></div>':'');
   if(t.capacity&&m.boxes>t.capacity)h+='<div class="warn">Car capacity is '+t.capacity+' boxes but the load is '+m.boxes+'.</div>';
   if(t.notes)h+='<div class="warn" style="background:#eef1ea;color:var(--ink)">📝 '+esc(t.notes)+'</div>';
   // contact + actions
