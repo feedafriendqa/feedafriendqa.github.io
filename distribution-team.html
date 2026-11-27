@@ -406,6 +406,7 @@ function heldCard(x){
   h+='<div>'+b+'</div><div class="stop-meta">Was on '+esc(t.contact||t.driver)+'’s car · removed '+fmtTime(s.removed_at)+(s.note?' · '+esc(s.note):'')+'</div><div class="stop-btns">';
   if(d)h+='<a class="chip lang" target="_blank" rel="noopener" href="'+waLink(s,'en')+'">💬 EN</a><a class="chip" target="_blank" rel="noopener" href="'+waLink(s,'ar')+'">💬 AR</a><a class="chip" href="tel:+'+d+'">📞 Call</a>';
   if(!t.departed_at)h+='<button class="chip gr" data-act="restore" data-a="'+s.aid+'">↩ Put back on car</button>';
+  h+='<button class="chip gr" data-act="assign" data-a="'+s.aid+'">👤 Assign to a driver</button>';
   h+='<button class="chip or" data-act="release" data-a="'+s.aid+'">↗ Release to drivers</button>';
   return h+'</div></div>';
 }
@@ -427,6 +428,7 @@ document.addEventListener('click',function(e){
   if(a==='stop')return setStop(aid,v);
   if(a==='remove')return openRemove(aid,t);
   if(a==='move')return rpc('dist_move_stop',{p_assignment:aid,p_load:parseInt(v,10)},'Moved to trip '+v);
+  if(a==='assign')return openAssign(aid);
   if(a==='release')return releaseHeld(aid);
   if(a==='restore')return restore(aid);
   if(a==='msg')return openMsg(t);
@@ -500,6 +502,20 @@ async function sendMail(nid){
     var j=await res.json();
     return res.ok&&j.ok?' Driver emailed.':' (Email failed: '+(j.error||res.status)+')';
   }catch(e){return ' (Email failed)';}
+}
+function openAssign(aid){
+  var f=findStop(aid);
+  var opts=BOARD.trips.filter(function(t){return !t.departed_at&&t.id!==(f&&f.t.id);}).map(function(t){
+    var m=metrics(t),nm=(t.contact||t.driver)+((t.loads||1)>1?' · Trip '+t.load_no+' of '+t.loads:'');
+    return '<option value="'+t.id+'">'+esc(nm)+' — '+m.boxes+' box'+(m.boxes===1?'':'es')+(t.capacity?' of '+t.capacity:'')+' · '+stageLabel(stageOf(t))+'</option>';
+  }).join('');
+  if(!opts){toast('No drivers on trips today to assign to.',true);return;}
+  openModal('<h2>Assign to a driver</h2><p>'+esc(f?f.s.name:'This family')+' · '+(f?f.s.boxes:'')+' box'+(f&&f.s.boxes===1?'':'es')+'. Pick a driver who already has a trip today.</p><select id="asel" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px;font-family:inherit;font-size:14px">'+opts+'</select><div class="mrow"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn go" id="ago" onclick="doAssign(\''+aid+'\')">Assign</button></div>');
+}
+async function doAssign(aid){
+  var tid=$('asel').value;$('ago').disabled=true;
+  var r=await rpc('dist_assign_held',{p_assignment:aid,p_trip:tid},null);
+  if(r){closeModal();toast((r.family||'Box')+' added to '+r.driver+'’s trip.');}else $('ago').disabled=false;
 }
 async function releaseHeld(aid){
   var f=findStop(aid);
