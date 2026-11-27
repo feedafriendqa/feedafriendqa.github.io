@@ -36,7 +36,8 @@ header.top{background:var(--forest);color:#fff;padding:10px 14px}
 .top-right{font-size:11px;opacity:.85;text-align:right;font-weight:600}
 .top-right button{background:transparent;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;margin-top:4px}
 .progress{max-width:1100px;margin:10px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:6px}
-.stat{background:rgba(255,255,255,.09);border-radius:10px;padding:6px 8px}
+.stat{background:rgba(255,255,255,.09);border-radius:10px;padding:6px 8px;cursor:pointer}
+.stat.on{background:rgba(255,255,255,.28);box-shadow:inset 0 0 0 2px rgba(255,255,255,.7)}
 .stat b{display:block;font-family:'League Spartan',sans-serif;font-size:18px;color:var(--lime);line-height:1}
 .stat span{font-size:9.5px;opacity:.8;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 .bar{height:6px;border-radius:6px;background:rgba(255,255,255,.15);margin:10px auto 0;max-width:1100px;overflow:hidden}
@@ -174,7 +175,7 @@ var HINTS={
   expected:'Drivers who have not arrived. If someone is at the gate without having tapped the button, you can still mark them as arrived here.',
   queue:'First come, first served: the longest-waiting driver is at the top. Tap a driver to send them to the check-in desk.',
   desk:'Speak to the driver, tick each family Ready to load, remove any box with no reply, then tap Check-in done. Back to queue undoes it.',
-  ready:'Check-in done. Loaders: load the car from the list, then tap "Car loaded".',
+  ready:'Check-in done. Loaders: load the car from the list, then tap the driver or ➡ Loaded.',
   loaded:'Loaded cars waiting to leave.',
   departed:'Drivers who have left with their boxes.',
   held:'Boxes taken out of a car at check-in. They stay at base until the family replies or someone else takes them.',
@@ -291,8 +292,8 @@ function render(){
   });
   by.outside.sort(function(a,b){return new Date(a.claimed_at)-new Date(b.claimed_at);});
   by.outside.forEach(function(t,i){t._pos=i+1;});by.queue.forEach(function(t,i){t._pos=i+1;});by.desk.forEach(function(t,i){t._pos=i+1;});
-  $('stats').innerHTML=[['Drivers',trips.length],['Outside gates',by.outside.length],['In queue',by.queue.length],['At desk',by.desk.length],['Ready to load',by.ready.length],['Departed',by.departed.length],['Boxes left',(totalBoxes-leftBoxes)+' of '+totalBoxes],['Held at base',heldCount]]
-    .map(function(x){return '<div class="stat"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>';}).join('');
+  $('stats').innerHTML=[['Drivers',trips.length,'all'],['Outside gates',by.outside.length,'outside'],['In queue',by.queue.length,'queue'],['At desk',by.desk.length,'desk'],['Ready to load',by.ready.length,'ready'],['Departed',by.departed.length,'departed'],['Boxes left',(totalBoxes-leftBoxes)+' of '+totalBoxes,'all'],['Held at base',heldCount,'held']]
+    .map(function(x){return '<div class="stat'+(TAB===x[2]&&x[0]!=='Boxes left'?' on':'')+'" data-act="tab" data-v="'+x[2]+'"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>';}).join('');
   $('barfill').style.width=(totalBoxes?Math.round(leftBoxes*100/totalBoxes):0)+'%';
   var counts={outside:by.outside.length,expected:by.expected.length,queue:by.queue.length,desk:by.desk.length,ready:by.ready.length,loaded:by.loaded.length,departed:by.departed.length,held:heldCount,all:trips.length};
   $('tabs').innerHTML=TABS.map(function(x){
@@ -333,7 +334,7 @@ function tripCard(t){
   else if(st==='ready')time='Checked '+fmtTime(t.checked_at)+' by '+esc(t.checked_by||'');
   else if(st==='loaded')time='Loaded '+fmtTime(t.loaded_at);
   else if(st==='departed')time='Left '+fmtTime(t.departed_at);
-  var h='<div class="trip '+cls+(open?' open':'')+'" id="trip-'+t.id+'"><div class="th" data-act="'+(st==='outside'?'arrive':st==='queue'?'desk':'toggle')+'" data-t="'+t.id+'"><div class="th-main"><div class="th-name">'+who+'</div><div class="th-sub">'+(time?time+' · ':'')+esc(ph||'no phone')+'</div><div>'+pills+'</div></div>'+(st==='outside'?'<div class="go-q">➡ Queue</div>':st==='queue'?'<div class="go-q">➡ Desk</div>':'<div class="chev">›</div>')+'</div><div class="tb">'+(st==='outside'?'<div class="act-row"><button class="btn go big" data-act="arrive" data-t="'+t.id+'">➡ Move to queue</button></div>':'');
+  var h='<div class="trip '+cls+(open?' open':'')+'" id="trip-'+t.id+'"><div class="th" data-act="'+(st==='outside'?'arrive':st==='queue'?'desk':st==='ready'?'loaded':st==='loaded'?'departed':'toggle')+'" data-t="'+t.id+'"><div class="th-main"><div class="th-name">'+who+'</div><div class="th-sub">'+(time?time+' · ':'')+esc(ph||'no phone')+'</div><div>'+pills+'</div></div>'+(st==='outside'?'<div class="go-q">➡ Queue</div>':st==='queue'?'<div class="go-q">➡ Desk</div>':st==='ready'?'<div class="go-q">➡ Loaded</div>':st==='loaded'?'<div class="go-q">➡ Left</div>':'<div class="chev">›</div>')+'</div><div class="tb">'+(st==='outside'?'<div class="act-row"><button class="btn go big" data-act="arrive" data-t="'+t.id+'">➡ Move to queue</button></div>':'');
   if(t.capacity&&m.boxes>t.capacity)h+='<div class="warn">Car capacity is '+t.capacity+' boxes but the load is '+m.boxes+'.</div>';
   if(t.notes)h+='<div class="warn" style="background:#eef1ea;color:var(--ink)">📝 '+esc(t.notes)+'</div>';
   // contact + actions
@@ -390,7 +391,7 @@ function stopRow(t,s,controls,st){
     h+='<div class="stop-btns"><button class="chip or on-o" data-act="move" data-a="'+s.aid+'" data-v="'+t.load_no+'">↪ Moved to load '+s.moved_to+' · tap to put back</button></div>';
   }else if(s.state==='removed'){
     h+='<div class="stop-btns"><button class="chip rm on-r" data-act="restore" data-a="'+s.aid+'">✕ Box removed · tap to put back</button></div>';
-  }else if(!s.delivered&&st!=='departed'){
+  }else if(!s.delivered&&st!=='departed'&&st!=='ready'){
     h+='<div class="stop-btns">'+(st==='desk'?'<button class="chip gr'+(s.state==='confirmed'?' on-c':'')+'" data-act="stop" data-a="'+s.aid+'" data-v="'+(s.state==='confirmed'?'unchecked':'confirmed')+'">'+(s.state==='confirmed'?'✓ Ready to load · tap to undo':'Ready to load')+'</button>':'')+(st==='desk'?'<button class="chip or" data-act="move" data-a="'+s.aid+'" data-v="'+(t.load_no>1?1:2)+'">'+(t.load_no>1?'↩ Move to load 1':'↪ Move to load 2')+'</button>':'')+'<button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
   }
   if(s.note)h+='<div class="stop-meta">📝 '+esc(s.note)+'</div>';
