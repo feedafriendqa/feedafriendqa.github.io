@@ -75,6 +75,7 @@ main{max-width:1100px;margin:0 auto;padding:12px 12px 90px}
 .act-row{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
 .btn{border:0;border-radius:12px;padding:11px 16px;font-weight:800;font-size:14px}
 .btn.go{background:var(--green);color:#fff}
+.btn.off{background:#e4e8e1;color:#8a968e}
 .btn.big{padding:14px 20px;font-size:15.5px;flex:1 1 200px}
 .btn.amber{background:var(--amber);color:#fff}
 .btn.ghost{background:#eef1ea;color:var(--ink)}
@@ -345,7 +346,7 @@ function tripCard(t){
     h+='<div class="act-row"><button class="btn go big" data-act="desk" data-t="'+t.id+'">➡ Call to check-in desk</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="arrived">Not here yet</button></div>';
   }else if(st==='desk'){
     h+=stopsHtml(t,true,st);
-    h+='<div class="act-row"><button class="btn go big" data-act="checked" data-t="'+t.id+'">Check-in done → ready to load</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="desk">← Back to queue</button></div>';
+    h+='<div class="act-row">'+(live(t).every(function(x){return x.state==='confirmed'||x.delivered;})?'<button class="btn go big" data-act="checked" data-t="'+t.id+'">Check-in done → ready to load</button>':'<button class="btn off big" data-act="notyet" data-t="'+t.id+'">Check-in done → ready to load</button>')+'<button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="desk">← Back to queue</button></div>';
   }else if(st==='ready'){
     h+=loadSummary(t,m);h+=stopsHtml(t,false,st);
     h+='<div class="act-row"><button class="btn go big" data-act="loaded" data-t="'+t.id+'">🚚 Car loaded</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="checked">← Back to desk</button></div>';
@@ -411,6 +412,7 @@ document.addEventListener('click',function(e){
   if(a==='toggle'){var card=$('trip-'+t);var now=!card.classList.contains('open');OPEN[t]=now;card.classList.toggle('open',now);return;}
   if(a==='arrive')return mark(t,'arrived',false,el);
   if(a==='desk')return mark(t,'desk',false,el);
+  if(a==='notyet')return toast('Tick Ready to load on every family first (or move or remove the ones that are not going).',true);
   if(a==='checked')return mark(t,'checked',false,el,true);
   if(a==='loaded')return mark(t,'loaded',false,el);
   if(a==='departed')return mark(t,'departed',false,el);
