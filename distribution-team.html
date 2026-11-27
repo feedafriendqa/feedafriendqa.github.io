@@ -325,8 +325,8 @@ function tripCard(t){
   var pills='<span class="pill n">📍 '+m.stops+' stop'+(m.stops===1?'':'s')+'</span><span class="pill n">📦 '+m.boxes+' box'+(m.boxes===1?'':'es')+'</span>';
   if(m.diaN)pills+='<span class="pill b">🧷 '+m.diaN+' diaper'+(m.diaN===1?'':'s')+'</span>';
   if(m.frmN)pills+='<span class="pill b">🍼 '+m.frmN+' formula</span>';
-  if((t.loads||1)>1){who+=' <span class="pill b" style="vertical-align:middle">Load '+t.load_no+' of '+t.loads+'</span>';
-    (LM[t.driver+'|'+(t.phone||'')]||[]).forEach(function(o){if(o!==t){var om=metrics(o);pills+='<span class="pill n">Load '+o.load_no+': '+om.boxes+' box'+(om.boxes===1?'':'es')+' · '+stageLabel(stageOf(o))+'</span>';}});}
+  if((t.loads||1)>1){who+=' <span class="pill b" style="vertical-align:middle">Trip '+t.load_no+' of '+t.loads+'</span>';
+    (LM[t.driver+'|'+(t.phone||'')]||[]).forEach(function(o){if(o!==t){var om=metrics(o);pills+='<span class="pill n">Trip '+o.load_no+': '+om.boxes+' box'+(om.boxes===1?'':'es')+' · '+stageLabel(stageOf(o))+'</span>';}});}
   var time='';
   if(st==='outside')time='#'+t._pos+' outside · tapped '+fmtTime(t.claimed_at)+' ('+mins(t.claimed_at)+' min ago)'+(t.claimed_dist_m!=null?' · '+t.claimed_dist_m+' m from gate':'');
   else if(st==='queue')time='#'+t._pos+' in queue · here '+fmtTime(t.arrived_at)+' ('+mins(t.arrived_at)+' min)'+(t.claimed_at?' · tapped '+fmtTime(t.claimed_at):'');
@@ -351,7 +351,7 @@ function tripCard(t){
     h+='<div class="act-row">'+(live(t).every(function(x){return x.state==='confirmed'||x.delivered;})?'<button class="btn go big" data-act="checked" data-t="'+t.id+'">Check-in done → ready to load</button>':'<button class="btn off big" data-act="notyet" data-t="'+t.id+'">Check-in done → ready to load</button>')+'<button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="desk">← Back to queue</button></div>';
   }else if(st==='ready'){
     h+=loadSummary(t,m);h+=stopsHtml(t,false,st);
-    h+='<div class="act-row"><button class="btn go big" data-act="loaded" data-t="'+t.id+'">🚚 Car loaded</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="checked">← Back to desk</button></div>';
+    h+='<div class="act-row"><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="checked">← Back to desk</button></div>';
   }else if(st==='loaded'){
     h+=loadSummary(t,m);h+=stopsHtml(t,false,st);
     h+='<div class="act-row"><button class="btn go big" data-act="departed" data-t="'+t.id+'">🚗 Driver has left</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="loaded">Not loaded yet</button></div>';
@@ -392,7 +392,7 @@ function stopRow(t,s,controls,st){
   }else if(s.state==='removed'){
     h+='<div class="stop-btns"><button class="chip rm on-r" data-act="restore" data-a="'+s.aid+'">✕ Box removed · tap to put back</button></div>';
   }else if(!s.delivered&&st!=='departed'&&st!=='ready'){
-    h+='<div class="stop-btns">'+(st==='desk'?'<button class="chip gr'+(s.state==='confirmed'?' on-c':'')+'" data-act="stop" data-a="'+s.aid+'" data-v="'+(s.state==='confirmed'?'unchecked':'confirmed')+'">'+(s.state==='confirmed'?'✓ Ready to load · tap to undo':'Ready to load')+'</button>':'')+(st==='desk'?'<button class="chip or" data-act="move" data-a="'+s.aid+'" data-v="'+(t.load_no>1?1:2)+'">'+(t.load_no>1?'↩ Move to load 1':'↪ Move to load 2')+'</button>':'')+'<button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
+    h+='<div class="stop-btns">'+(st==='desk'?'<button class="chip gr'+(s.state==='confirmed'?' on-c':'')+'" data-act="stop" data-a="'+s.aid+'" data-v="'+(s.state==='confirmed'?'unchecked':'confirmed')+'">'+(s.state==='confirmed'?'✓ Ready to load · tap to undo':'Ready to load')+'</button>':'')+(st==='desk'?'<button class="chip or" data-act="move" data-a="'+s.aid+'" data-v="'+(t.load_no>1?1:2)+'">'+(t.load_no>1?'↩ Move to trip 1':'↪ Move to trip 2')+'</button>':'')+'<button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
   }
   if(s.note)h+='<div class="stop-meta">📝 '+esc(s.note)+'</div>';
   return h+'</div>';
@@ -425,7 +425,7 @@ document.addEventListener('click',function(e){
   if(a==='undo')return mark(t,v,true,el);
   if(a==='stop')return setStop(aid,v);
   if(a==='remove')return openRemove(aid,t);
-  if(a==='move')return rpc('dist_move_stop',{p_assignment:aid,p_load:parseInt(v,10)},'Moved to load '+v);
+  if(a==='move')return rpc('dist_move_stop',{p_assignment:aid,p_load:parseInt(v,10)},'Moved to trip '+v);
   if(a==='restore')return restore(aid);
   if(a==='msg')return openMsg(t);
   if(a==='tnote')return openTripNote(t);
