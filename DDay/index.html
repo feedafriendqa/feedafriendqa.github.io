@@ -20,6 +20,7 @@ h1,h2,h3{font-family:'League Spartan',Manrope,sans-serif;margin:0}
 .logo-crop{width:96px;height:77px;margin:0 auto;background:url(faf-logo.png) no-repeat;background-size:158px auto;background-position:-32px -17px}
 .login-card h1{font-size:24px;margin:16px 0 4px;color:var(--forest)}
 .login-card p{color:var(--muted);font-size:13px;margin:0 0 18px}
+.login-card select{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;font-size:15px;margin-bottom:10px;font-family:inherit;background:#fff}
 .login-card input{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;font-size:15px;margin-bottom:10px;font-family:inherit}
 .btn-primary{width:100%;background:var(--green);color:var(--gold);border:0;border-radius:30px;padding:14px;font-weight:800;font-size:15px}
 .btn-primary:disabled{opacity:.6}
@@ -135,7 +136,8 @@ a.btn{text-decoration:none;display:inline-block}
     <div class="logo-crop" role="img" aria-label="Feed a Friend"></div>
     <h1>Distribution Day</h1>
     <p>Team sign-in. This site is for the distribution team only.</p>
-    <input id="le" type="email" placeholder="Email" autocomplete="username">
+    <select id="lw" onchange="pickWho()"><option value="">Who are you?</option><option value="taki@dday.feedafriend.org">Taki</option><option value="umarb@dday.feedafriend.org">Umar B</option><option value="nassouh@dday.feedafriend.org">Nassouh</option><option value="other">Someone else (use email)</option></select>
+    <input id="le" type="email" placeholder="Email" autocomplete="username" style="display:none">
     <input id="lp" type="password" placeholder="Password" autocomplete="current-password">
     <button class="btn-primary" id="lb" onclick="doLogin()">Sign in →</button>
     <div id="login-err"></div>
@@ -192,10 +194,12 @@ function fmtTime(ts){if(!ts)return '';return new Date(ts).toLocaleTimeString('en
 function mins(ts){return Math.max(0,Math.round((Date.now()-new Date(ts).getTime())/60000));}
 
 /* ---------- auth ---------- */
+function pickWho(){var v=$('lw').value;$('le').style.display=v==='other'?'block':'none';}
 async function doLogin(){
-  var e=$('le').value.trim(),p=$('lp').value,err=$('login-err'),b=$('lb');
+  var w=$('lw').value;
+  var e=(w&&w!=='other')?w:$('le').value.trim(),p=$('lp').value,err=$('login-err'),b=$('lb');
   err.style.display='none';
-  if(!e||!p){err.textContent='Enter your email and password.';err.style.display='block';return;}
+  if(!e||!p){err.textContent=(w==='')?'Pick your name and enter the password.':'Enter your email and password.';err.style.display='block';return;}
   b.textContent='Signing in…';b.disabled=true;
   var r=await sb.auth.signInWithPassword({email:e,password:p});
   if(r.error){err.textContent=r.error.message;err.style.display='block';b.textContent='Sign in →';b.disabled=false;}
