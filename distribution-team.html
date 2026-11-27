@@ -263,8 +263,8 @@ async function loadRounds(){
   ROUNDS_LOADED=true;
   var cur=BOARD&&BOARD.round?BOARD.round.id:null;
   $('rsel').innerHTML=r.data.map(function(x){
-    var d=new Date(x.date+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
-    return '<option value="'+x.id+'"'+(x.id===cur?' selected':'')+'>'+(x.is_today?'Today · ':'')+esc(x.name)+' — '+d+'</option>';
+    var d=new Date(x.date+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});
+    return '<option value="'+x.id+'"'+(x.id===cur?' selected':'')+'>'+(x.is_today?'Today · ':'')+d+'</option>';
   }).join('');
 }
 function pickRound(id){ROUND_ID=id;OPEN={};refresh(true);}
@@ -275,7 +275,7 @@ function render(){
   var R=BOARD.round;
   if(!R){$('list').innerHTML='<div class="empty">No distribution round found for today.</div>';$('stats').innerHTML='';return;}
   $('rname').textContent=R.name;
-  $('rinfo').textContent=[new Date(R.date+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'}),R.time,R.location].filter(Boolean).join(' · ');
+  $('rinfo').textContent=[R.time,R.location].filter(Boolean).join(' · ');
   var trips=(BOARD.trips||[]).filter(function(t){return (t.stops||[]).length>0;});
   var by={outside:[],expected:[],queue:[],desk:[],ready:[],loaded:[],departed:[]};
   var totalBoxes=0,leftBoxes=0,heldCount=0,held=[];
