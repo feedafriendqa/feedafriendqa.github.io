@@ -334,6 +334,8 @@ body.lang-ar .alt-contact-actions{text-align:left}
   <!-- Active trip -->
   <div class="dash-stack" id="pnl-active" style="display:none">
     <div class="dash-hero"><img class="login-logo" alt="Feed a Friend"><div class="login-title" data-en="Your trip" data-ar="رحلتك">Your trip</div><div class="login-sub" id="active-sub" data-en="Distribution day" data-ar="يوم التوزيع">Distribution day</div></div>
+    <div id="team-notices"></div>
+    <div id="gate-card"></div>
     <div id="active-card"></div>
     <button class="act-btn" onclick="showFamilies()" data-en="View my deliveries →" data-ar="عرض توصيلاتي ←">View my deliveries →</button>
     <button class="out-btn" onclick="anotherTrip()" data-en="+ Sign up for another trip" data-ar="+ سجّل لرحلة أخرى">+ Sign up for another trip</button>
@@ -1211,7 +1213,7 @@ async function loadTrips(){
   var trips=r.data||[];
   AT=trips.find(function(t){return t.status==="confirmed"||t.status==="in_progress";});
   var past=trips.filter(function(t){return t.status==="completed";});
-  if(AT){renderActiveTrip(AT);document.getElementById("pnl-active").style.display="block";document.getElementById("pnl-none").style.display="none";}
+  if(AT){renderActiveTrip(AT);teamRefresh();document.getElementById("pnl-active").style.display="block";document.getElementById("pnl-none").style.display="none";}
   else{document.getElementById("pnl-active").style.display="none";document.getElementById("pnl-none").style.display="block";}
   document.getElementById("past-list").innerHTML=past.length?past.map(renderPastTrip).join(""):'<div style="text-align:center;color:rgba(255,255,255,.85);font-size:13px;padding:20px">'+(LANG==="ar"?"لا توجد رحلات سابقة بعد":"No past trips yet")+'</div>';
   if(document.getElementById("pnl-past").style.display==="block"){
@@ -1413,6 +1415,64 @@ function renderDeliveredSection(){
   el.innerHTML=html?'<div class="deliv-wrap">'+html+'</div>':"";
 }
 
+// ---- Distribution-day: gate check-in + notices from the distribution team ----
+var GATE_TIMER=null;
+function qatarToday(){return new Date(Date.now()+10800000).toISOString().split("T")[0];}
+function teamRefresh(){
+  clearInterval(GATE_TIMER);
+  renderGateCard();loadTeamNotices();
+  GATE_TIMER=setInterval(function(){
+    if(!AT||document.getElementById("pnl-active").style.display==="none")return;
+    renderGateCard();loadTeamNotices();
+  },20000);
+}
+async function renderGateCard(){
+  var el=document.getElementById("gate-card");if(!el)return;
+  if(!AT||String(AT.trip_date).slice(0,10)!==qatarToday()){el.innerHTML="";return;}
+  var ar=LANG==="ar",st=null;
+  try{var r=await sb.rpc("dist_driver_status",{p_trip:AT.id});if(!r.error)st=r.data;}catch(e){}
+  var head,body,btn="";
+  if(st&&st.departed_at){head=ar?"🚗 رحلة موفقة!":"🚗 Have a great delivery!";body=ar?"شكراً لك على التوصيل.":"Thank you for delivering.";}
+  else if(st&&st.loaded_at){head=ar?"✅ تم تحميل سيارتك":"✅ Your car is loaded";body=ar?"يمكنك المغادرة الآن.":"You're free to go.";}
+  else if(st&&st.checked_at){head=ar?"📦 يتم تحميل سيارتك":"📦 Your car is being loaded";body=ar?"يرجى البقاء في سيارتك.":"Please stay with your car.";}
+  else if(st&&st.arrived_at){head=ar?"✅ تم تسجيل وصولك":"✅ You're checked in";body=ar?"الفريق يراجع توصيلاتك معك الآن.":"The team is checking your deliveries with you now.";}
+  else if(st&&st.claimed_at){head=ar?"📍 أنت عند البوابة":"📍 You're at the gates";body=(ar?"دورك رقم ":"You're number ")+"<b>"+(st.position||1)+"</b>"+(ar?" في الطابور. ابقَ في سيارتك وسينادي عليك أحد أعضاء الفريق.":" in line. Please stay in your car — a team member will confirm you and call you in.");}
+  else{head=ar?"عند نقطة الاستلام؟":"Arrived at the collection point?";body=ar?"اضغط عند وصولك إلى بوابة الغالية جاردنز. يتم التحقق من موقعك (ضمن ٤٠٠ متر) ويحدد ذلك ترتيبك في الطابور.":"Tap when you're at the Al Ghalia Gardens gates. Your phone location is checked (within 400 m) and sets your place in line.";btn='<button class="act-btn" id="gate-btn" onclick="claimGate()">'+(ar?"📍 وصلت إلى البوابة":"📍 I'm at the gates")+'</button>';}
+  el.innerHTML='<div class="trip-card" style="margin:0 16px 12px"><div style="font-weight:800;font-size:15px;margin-bottom:4px">'+head+'</div><div style="font-size:13px;line-height:1.5;color:var(--muted)">'+body+'</div>'+(btn?'<div style="margin-top:10px">'+btn+'</div>':'')+'<div id="gate-err" style="color:#c0392b;font-size:12px;font-weight:700;margin-top:8px;display:none"></div></div>';
+}
+function claimGate(){
+  var ar=LANG==="ar",b=document.getElementById("gate-btn"),er=document.getElementById("gate-err");
+  er.style.display="none";
+  if(!navigator.geolocation){er.textContent=ar?"جهازك لا يدعم تحديد الموقع. أخبر الفريق عند البوابة.":"Your device can't share its location. Please tell the team at the gate.";er.style.display="block";return;}
+  b.disabled=true;b.textContent=ar?"جارٍ تحديد موقعك…":"Checking your location…";
+  navigator.geolocation.getCurrentPosition(async function(pos){
+    var r=await sb.rpc("dist_driver_claim",{p_trip:AT.id,p_lat:pos.coords.latitude,p_lng:pos.coords.longitude});
+    if(r.error){er.textContent=r.error.message;er.style.display="block";b.disabled=false;b.textContent=ar?"📍 وصلت إلى البوابة":"📍 I'm at the gates";return;}
+    renderGateCard();
+  },function(){
+    er.textContent=ar?"لم نتمكن من قراءة موقعك. فعّل خدمة الموقع للمتصفح أو أخبر الفريق عند البوابة.":"We couldn't read your location. Please allow location access for this page, or tell the team at the gate.";er.style.display="block";b.disabled=false;b.textContent=ar?"📍 وصلت إلى البوابة":"📍 I'm at the gates";
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+}
+async function loadTeamNotices(){
+  var el=document.getElementById("team-notices");if(!el||!DP)return;
+  var since=new Date(Date.now()-36*3600*1000).toISOString();
+  var r=await sb.from("trip_notices").select("id,kind,message,created_at").eq("distributor_id",DP.id).gte("created_at",since).order("created_at",{ascending:false}).limit(6);
+  if(r.error||!r.data||!r.data.length){el.innerHTML="";return;}
+  var seen={};try{seen=JSON.parse(localStorage.getItem("faf_notices_seen")||"{}");}catch(e){}
+  var rows=r.data.filter(function(n){return !seen[n.id];});
+  var ar=LANG==="ar";
+  el.innerHTML=rows.map(function(n){
+    var col=n.kind==="removed"?"#fff4dc;border:1.5px solid #d9a441":"#e6f4ea;border:1.5px solid #1D7A47";
+    return '<div class="trip-card" style="margin:0 16px 12px;background:'+col+'"><div style="font-weight:800;font-size:13px;margin-bottom:4px">'+(ar?"رسالة من فريق التوزيع":"Message from the distribution team")+' · '+new Date(n.created_at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Qatar"})+'</div><div style="font-size:13.5px;line-height:1.5;color:#222">'+String(n.message).replace(/&/g,"&amp;").replace(/</g,"&lt;")+'</div><button class="tb-out" style="margin-top:10px" onclick="dismissNotice(\''+n.id+'\')">'+(ar?"حسناً":"Got it")+'</button></div>';
+  }).join("");
+}
+function dismissNotice(id){
+  var seen={};try{seen=JSON.parse(localStorage.getItem("faf_notices_seen")||"{}");}catch(e){}
+  seen[id]=1;try{localStorage.setItem("faf_notices_seen",JSON.stringify(seen));}catch(e){}
+  loadTeamNotices();
+  if(document.getElementById("pnl-fams").style.display==="block")showFamilies();
+}
+
 async function showFamilies(){
   document.getElementById("pnl-active").style.display="none";
   document.getElementById("pnl-fams").style.display="block";
@@ -1421,7 +1481,7 @@ async function showFamilies(){
   var dvEl=document.getElementById("fams-delivered");if(dvEl)dvEl.innerHTML="";
   var r=await sb.from("trip_assignments")
     .select("*,food_box_applications(full_name_en,full_name,whatsapp,zone,street,building,unit,area,diaper_size,formula,household_size,nationality,submission_lang,driver_notes,qid_number,lat,lng,food_box_members(diaper_size,needs_formula))")
-    .eq("trip_id",AT.id);
+    .eq("trip_id",AT.id).neq("status","cancelled");
   // r.data can come back [] either because the trip genuinely has no rows,
   // or because RLS quietly filtered everything out (Postgres returns an
   // empty set for a denied read, not an error) — surfacing r.error here
