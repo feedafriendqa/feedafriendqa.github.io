@@ -169,7 +169,7 @@ var ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var sb=supabase.createClient(SUPABASE_URL,ANON_KEY);
 
 var LM={}, BOARD=null, ROUND_ID=null, ROUNDS_LOADED=false, TAB='queue', OPEN={}, BUSY=false, TIMER=null, ME='';
-var TABS=[['outside','At the gates'],['queue','Queue'],['desk','Check-in desk'],['ready','Ready to load'],['loaded','Loaded'],['departed','Departed'],['expected','Not here yet'],['held','Held boxes'],['all','All']];
+var TABS=[['outside','At the gates'],['queue','Queue'],['desk','Check-in desk'],['ready','Ready to load'],['loaded','Loaded'],['expected','Not here yet'],['held','Held boxes'],['all','All']];
 var HINTS={
   outside:'Drivers who tapped "I\'m at the gates" in their app (location-checked, within 400 m), in the order they tapped. Look for the car, then tap the driver to move them to the queue.',
   expected:'Drivers who have not arrived. If someone is at the gate without having tapped the button, you can still mark them as arrived here.',
@@ -292,7 +292,7 @@ function render(){
   });
   by.outside.sort(function(a,b){return new Date(a.claimed_at)-new Date(b.claimed_at);});
   by.outside.forEach(function(t,i){t._pos=i+1;});by.queue.forEach(function(t,i){t._pos=i+1;});by.desk.forEach(function(t,i){t._pos=i+1;});
-  $('stats').innerHTML=[['Drivers',trips.length,'all'],['Outside gates',by.outside.length,'outside'],['In queue',by.queue.length,'queue'],['At desk',by.desk.length,'desk'],['Ready to load',by.ready.length,'ready'],['Departed',by.departed.length,'departed'],['Boxes left',(totalBoxes-leftBoxes)+' of '+totalBoxes,'all'],['Held at base',heldCount,'held']]
+  $('stats').innerHTML=[['Drivers',trips.length,'all'],['Outside gates',by.outside.length,'outside'],['In queue',by.queue.length,'queue'],['At desk',by.desk.length,'desk'],['Ready to load',by.ready.length,'ready'],['Departed',by.departed.length,'all'],['Boxes left',(totalBoxes-leftBoxes)+' of '+totalBoxes,'all'],['Held at base',heldCount,'held']]
     .map(function(x){return '<div class="stat'+(TAB===x[2]&&x[0]!=='Boxes left'?' on':'')+'" data-act="tab" data-v="'+x[2]+'"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>';}).join('');
   $('barfill').style.width=(totalBoxes?Math.round(leftBoxes*100/totalBoxes):0)+'%';
   var counts={outside:by.outside.length,expected:by.expected.length,queue:by.queue.length,desk:by.desk.length,ready:by.ready.length,loaded:by.loaded.length,departed:by.departed.length,held:heldCount,all:trips.length};
