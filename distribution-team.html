@@ -160,11 +160,12 @@ var ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var sb=supabase.createClient(SUPABASE_URL,ANON_KEY);
 
 var BOARD=null, ROUND_ID=null, ROUNDS_LOADED=false, TAB='queue', OPEN={}, BUSY=false, TIMER=null, ME='';
-var TABS=[['outside','At the gates'],['queue','Queue'],['ready','Ready to load'],['loaded','Loaded'],['departed','Departed'],['expected','Not here yet'],['held','Held boxes'],['all','All']];
+var TABS=[['outside','At the gates'],['queue','Queue'],['desk','Check-in desk'],['ready','Ready to load'],['loaded','Loaded'],['departed','Departed'],['expected','Not here yet'],['held','Held boxes'],['all','All']];
 var HINTS={
   outside:'Drivers who tapped "I\'m at the gates" in their app (location-checked, within 400 m), in the order they tapped. Look for the car, then confirm it to move it into the queue.',
   expected:'Drivers who have not arrived. If someone is at the gate without having tapped the button, you can still mark them as arrived here.',
-  queue:'First come, first served: the longest-waiting driver is at the top. Speak to the driver, remove any box with no reply, then finish the check-in.',
+  queue:'First come, first served: the longest-waiting driver is at the top. Tap "Call to check-in desk" when the desk is free.',
+  desk:'Speak to the driver, tick each family Ready to load, remove any box with no reply, then tap Check-in done. Back to queue undoes it.',
   ready:'Check-in done. Loaders: load the car from the list, then tap "Car loaded".',
   loaded:'Loaded cars waiting to leave.',
   departed:'Drivers who have left with their boxes.',
@@ -225,7 +226,7 @@ async function refresh(force){
   $('upd').textContent='Updated '+new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Qatar'});
   render();
 }
-function stageOf(t){if(t.departed_at)return 'departed';if(t.loaded_at)return 'loaded';if(t.checked_at)return 'ready';if(t.arrived_at)return 'queue';if(t.claimed_at)return 'outside';return 'expected';}
+function stageOf(t){if(t.departed_at)return 'departed';if(t.loaded_at)return 'loaded';if(t.checked_at)return 'ready';if(t.desk_at)return 'desk';if(t.arrived_at)return 'queue';if(t.claimed_at)return 'outside';return 'expected';}
 function live(t){return (t.stops||[]).filter(function(s){return s.state!=='removed';});}
 function metrics(t){
   var L=live(t),m={stops:L.length,boxes:0,dia:{},diaN:0,frm:{1:0,2:0},frmN:0,noLoc:0,todo:0,chasing:0,confirmed:0};
@@ -271,7 +272,7 @@ function render(){
   $('rname').textContent=R.name;
   $('rinfo').textContent=[new Date(R.date+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'}),R.time,R.location].filter(Boolean).join(' · ');
   var trips=(BOARD.trips||[]).filter(function(t){return (t.stops||[]).length>0;});
-  var by={outside:[],expected:[],queue:[],ready:[],loaded:[],departed:[]};
+  var by={outside:[],expected:[],queue:[],desk:[],ready:[],loaded:[],departed:[]};
   var totalBoxes=0,leftBoxes=0,heldCount=0,held=[];
   trips.forEach(function(t){
     var st=stageOf(t),m=metrics(t);by[st].push(t);t._st=st;
@@ -279,11 +280,11 @@ function render(){
     (t.stops||[]).forEach(function(s){if(s.state==='removed'){heldCount++;held.push({t:t,s:s});}});
   });
   by.outside.sort(function(a,b){return new Date(a.claimed_at)-new Date(b.claimed_at);});
-  by.outside.forEach(function(t,i){t._pos=i+1;});by.queue.forEach(function(t,i){t._pos=i+1;});
-  $('stats').innerHTML=[['Drivers',trips.length],['Outside gates',by.outside.length],['In queue',by.queue.length],['Ready to load',by.ready.length],['Departed',by.departed.length],['Boxes out',leftBoxes+' / '+totalBoxes],['Held at base',heldCount]]
+  by.outside.forEach(function(t,i){t._pos=i+1;});by.queue.forEach(function(t,i){t._pos=i+1;});by.desk.forEach(function(t,i){t._pos=i+1;});
+  $('stats').innerHTML=[['Drivers',trips.length],['Outside gates',by.outside.length],['In queue',by.queue.length],['At desk',by.desk.length],['Ready to load',by.ready.length],['Departed',by.departed.length],['Boxes out',leftBoxes+' / '+totalBoxes],['Held at base',heldCount]]
     .map(function(x){return '<div class="stat"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>';}).join('');
   $('barfill').style.width=(totalBoxes?Math.round(leftBoxes*100/totalBoxes):0)+'%';
-  var counts={outside:by.outside.length,expected:by.expected.length,queue:by.queue.length,ready:by.ready.length,loaded:by.loaded.length,departed:by.departed.length,held:heldCount,all:trips.length};
+  var counts={outside:by.outside.length,expected:by.expected.length,queue:by.queue.length,desk:by.desk.length,ready:by.ready.length,loaded:by.loaded.length,departed:by.departed.length,held:heldCount,all:trips.length};
   $('tabs').innerHTML=TABS.map(function(x){
     return '<button class="tab'+(TAB===x[0]?' on':'')+((x[0]==='held'&&counts.held)||(x[0]==='outside'&&counts.outside)?' alert':'')+'" data-act="tab" data-v="'+x[0]+'">'+x[1]+'<em>'+counts[x[0]]+'</em></button>';
   }).join('');
@@ -306,8 +307,8 @@ function render(){
 
 function tripCard(t){
   var st=stageOf(t),m=metrics(t);
-  var cls={expected:'',outside:'q',queue:'q',ready:'r',loaded:'l',departed:'d'}[st];
-  var open=OPEN[t.id]!==undefined?OPEN[t.id]:(st==='queue'||st==='ready');
+  var cls={expected:'',outside:'q',queue:'q',desk:'q',ready:'r',loaded:'l',departed:'d'}[st];
+  var open=OPEN[t.id]!==undefined?OPEN[t.id]:(st==='queue'||st==='desk'||st==='ready');
   var who=t.contact?esc(t.contact)+' <span style="font-weight:600;color:var(--muted)">(driver: '+esc(t.driver)+')</span>':esc(t.driver);
   var ph=t.contact_phone||t.phone;
   var pills='<span class="pill n">'+m.stops+' stop'+(m.stops===1?'':'s')+'</span><span class="pill n">'+m.boxes+' box'+(m.boxes===1?'':'es')+'</span>';
@@ -317,6 +318,7 @@ function tripCard(t){
   var time='';
   if(st==='outside')time='#'+t._pos+' outside · tapped '+fmtTime(t.claimed_at)+' ('+mins(t.claimed_at)+' min ago)'+(t.claimed_dist_m!=null?' · '+t.claimed_dist_m+' m from gate':'');
   else if(st==='queue')time='#'+t._pos+' in queue · here '+fmtTime(t.arrived_at)+' ('+mins(t.arrived_at)+' min)'+(t.claimed_at?' · tapped '+fmtTime(t.claimed_at):'');
+  else if(st==='desk')time='At the desk since '+fmtTime(t.desk_at)+' ('+mins(t.desk_at)+' min)';
   else if(st==='ready')time='Checked '+fmtTime(t.checked_at)+' by '+esc(t.checked_by||'');
   else if(st==='loaded')time='Loaded '+fmtTime(t.loaded_at);
   else if(st==='departed')time='Left '+fmtTime(t.departed_at);
@@ -330,11 +332,14 @@ function tripCard(t){
   if(st==='expected'||st==='outside'){
     h+='<div class="act-row"><button class="btn go big" data-act="arrive" data-t="'+t.id+'">✅ Confirmed — I can see the car at the gate</button></div>';
   }else if(st==='queue'){
-    h+=stopsHtml(t,true);
-    h+='<div class="act-row"><button class="btn go big" data-act="checked" data-t="'+t.id+'">Check-in done → ready to load</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="arrived">Not here yet</button></div>';
+    h+=stopsHtml(t,false,st);
+    h+='<div class="act-row"><button class="btn go big" data-act="desk" data-t="'+t.id+'">➡ Call to check-in desk</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="arrived">Not here yet</button></div>';
+  }else if(st==='desk'){
+    h+=stopsHtml(t,true,st);
+    h+='<div class="act-row"><button class="btn go big" data-act="checked" data-t="'+t.id+'">Check-in done → ready to load</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="desk">← Back to queue</button></div>';
   }else if(st==='ready'){
     h+=loadSummary(t,m);h+=stopsHtml(t,false,st);
-    h+='<div class="act-row"><button class="btn go big" data-act="loaded" data-t="'+t.id+'">🚚 Car loaded</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="checked">Back to check-in</button></div>';
+    h+='<div class="act-row"><button class="btn go big" data-act="loaded" data-t="'+t.id+'">🚚 Car loaded</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="checked">← Back to desk</button></div>';
   }else if(st==='loaded'){
     h+=loadSummary(t,m);h+=stopsHtml(t,false,st);
     h+='<div class="act-row"><button class="btn go big" data-act="departed" data-t="'+t.id+'">🚗 Driver has left</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="loaded">Not loaded yet</button></div>';
@@ -371,7 +376,7 @@ function stopRow(t,s,controls,st){
   if(s.driver_notes)h+='<div class="stop-meta" style="color:#8a5a00">Driver note: '+esc(s.driver_notes)+'</div>';
   h+='</div></div>';
   if(!s.delivered&&st!=='departed'){
-    h+='<div class="stop-btns">'+(st==='queue'?'<button class="chip'+(s.state==='confirmed'?' on-c':'')+'" data-act="stop" data-a="'+s.aid+'" data-v="'+(s.state==='confirmed'?'unchecked':'confirmed')+'">'+(s.state==='confirmed'?'✓ Ready to load':'Ready to load')+'</button>':'')+'<button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
+    h+='<div class="stop-btns">'+(st==='desk'?'<button class="chip'+(s.state==='confirmed'?' on-c':'')+'" data-act="stop" data-a="'+s.aid+'" data-v="'+(s.state==='confirmed'?'unchecked':'confirmed')+'">'+(s.state==='confirmed'?'✓ Ready to load':'Ready to load')+'</button>':'')+'<button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
   }
   if(s.note)h+='<div class="stop-meta">📝 '+esc(s.note)+'</div>';
   return h+'</div>';
@@ -396,6 +401,7 @@ document.addEventListener('click',function(e){
   if(a==='tab')return setTab(v);
   if(a==='toggle'){var card=$('trip-'+t);var now=!card.classList.contains('open');OPEN[t]=now;card.classList.toggle('open',now);return;}
   if(a==='arrive')return mark(t,'arrived',false,el);
+  if(a==='desk')return mark(t,'desk',false,el);
   if(a==='checked')return mark(t,'checked',false,el,true);
   if(a==='loaded')return mark(t,'loaded',false,el);
   if(a==='departed')return mark(t,'departed',false,el);
@@ -417,7 +423,7 @@ async function rpc(fn,args,okMsg){
 }
 async function mark(tid,step,undo,btn,force){
   if(btn)btn.disabled=true;
-  var msgs={arrived:'Marked as arrived',checked:'Check-in complete',loaded:'Car loaded',departed:'Driver has left'};
+  var msgs={arrived:'Marked as arrived',desk:'Called to the desk',checked:'Check-in complete',loaded:'Car loaded',departed:'Driver has left'};
   await rpc('dist_mark',{p_trip:tid,p_step:step,p_undo:!!undo,p_force:true},undo?'Undone':msgs[step]);
   if(btn)btn.disabled=false;
 }
