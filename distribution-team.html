@@ -16,7 +16,7 @@ h1,h2,h3{font-family:'League Spartan',Manrope,sans-serif;margin:0}
 /* login */
 #login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0a2e1e 0%,#146c43 55%,#2fae8c 100%);padding:20px}
 .login-card{background:#fff;border-radius:20px;padding:30px 26px;width:100%;max-width:380px;box-shadow:0 20px 50px rgba(0,0,0,.25);text-align:center}
-.login-card img{height:52px;background:var(--forest);padding:8px 14px;border-radius:12px}
+.logo-crop{width:160px;height:128px;margin:0 auto;background:url(faf-logo.png) no-repeat;background-size:264px auto;background-position:-53px -29px}
 .login-card h1{font-size:24px;margin:16px 0 4px;color:var(--forest)}
 .login-card p{color:var(--muted);font-size:13px;margin:0 0 18px}
 .login-card input{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;font-size:15px;margin-bottom:10px;font-family:inherit}
@@ -31,6 +31,8 @@ header.top{background:var(--forest);color:#fff;padding:10px 14px}
 .top-title{flex:1;min-width:180px}
 .top-title h1{font-size:19px;color:var(--gold);line-height:1.1}
 .top-title div{font-size:12px;opacity:.8;font-weight:600}
+.rsel{width:100%;margin-top:6px;padding:8px 10px;border-radius:10px;border:0;font-family:inherit;font-weight:800;font-size:13px;background:rgba(255,255,255,.14);color:#fff}
+.rsel option{color:#16241c}
 .top-right{font-size:11px;opacity:.85;text-align:right;font-weight:600}
 .top-right button{background:transparent;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;margin-top:4px}
 .progress{max-width:1100px;margin:10px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:6px}
@@ -120,7 +122,7 @@ a.btn{text-decoration:none;display:inline-block}
 
 <div id="login">
   <div class="login-card">
-    <img src="faf-logo-white.png" alt="Feed a Friend">
+    <div class="logo-crop" role="img" aria-label="Feed a Friend"></div>
     <h1>Distribution Day</h1>
     <p>Team sign-in. This site is for the distribution team only.</p>
     <input id="le" type="email" placeholder="Email" autocomplete="username">
@@ -134,7 +136,7 @@ a.btn{text-decoration:none;display:inline-block}
   <header class="top">
     <div class="top-row">
       <img src="faf-logo-white.png" alt="">
-      <div class="top-title"><h1 id="rname">Distribution Day</h1><div id="rinfo"></div></div>
+      <div class="top-title"><h1 id="rname">Distribution Day</h1><div id="rinfo"></div><select class="rsel" id="rsel" onchange="pickRound(this.value)" aria-label="Distribution day"></select></div>
       <div class="top-right"><div id="me"></div><div id="upd"></div><button onclick="refresh(true)">↻ Refresh</button> <button onclick="signOut()">Sign out</button></div>
     </div>
     <div class="progress" id="stats"></div>
@@ -157,7 +159,7 @@ var SUPABASE_URL='https://xbxagukdvgyaoqvbqoic.supabase.co';
 var ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
 var sb=supabase.createClient(SUPABASE_URL,ANON_KEY);
 
-var BOARD=null, TAB='queue', OPEN={}, BUSY=false, TIMER=null, ME='';
+var BOARD=null, ROUND_ID=null, ROUNDS_LOADED=false, TAB='queue', OPEN={}, BUSY=false, TIMER=null, ME='';
 var TABS=[['outside','At the gates'],['queue','Queue'],['ready','Ready to load'],['loaded','Loaded'],['departed','Departed'],['expected','Not here yet'],['held','Held boxes'],['all','All']];
 var HINTS={
   outside:'Drivers who tapped "I\'m at the gates" in their app (location-checked, within 400 m), in the order they tapped. Look for the car, then confirm it to move it into the queue.',
@@ -216,9 +218,10 @@ async function refresh(force){
   var a=document.activeElement;
   var typing=a&&(a.tagName==='TEXTAREA'||(a.tagName==='INPUT'&&a.id!=='q'));
   if(!force&&(modalOpen||typing))return;
-  var r=await sb.rpc('dist_board');
+  var r=await sb.rpc('dist_board',{p_round_id:ROUND_ID});
   if(r.error){toast('Could not load: '+r.error.message,true);return;}
   BOARD=r.data;
+  if(!ROUNDS_LOADED)await loadRounds();
   $('upd').textContent='Updated '+new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Qatar'});
   render();
 }
@@ -248,6 +251,17 @@ function matches(t,q){
   var hay=[t.driver,t.contact,t.phone,t.contact_phone].concat((t.stops||[]).map(function(s){return s.name;})).join(' ').toLowerCase();
   return hay.indexOf(q)>-1;
 }
+async function loadRounds(){
+  var r=await sb.rpc('dist_rounds');
+  if(r.error||!r.data)return;
+  ROUNDS_LOADED=true;
+  var cur=BOARD&&BOARD.round?BOARD.round.id:null;
+  $('rsel').innerHTML=r.data.map(function(x){
+    var d=new Date(x.date+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
+    return '<option value="'+x.id+'"'+(x.id===cur?' selected':'')+'>'+(x.is_today?'Today · ':'')+esc(x.name)+' — '+d+'</option>';
+  }).join('');
+}
+function pickRound(id){ROUND_ID=id;OPEN={};refresh(true);}
 function onSearch(){render();}
 function setTab(t){TAB=t;render();window.scrollTo(0,0);}
 function render(){
