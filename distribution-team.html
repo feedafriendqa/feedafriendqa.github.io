@@ -98,7 +98,7 @@ a.btn{text-decoration:none;display:inline-block}
 .chip.on-c{background:var(--green);border-color:var(--green);color:#fff}
 .chip.on-h{background:var(--amber);border-color:var(--amber);color:#fff}
 .chip.rm{background:#fff;border:2px solid #d93a2b;color:#d93a2b}
-.chip.rm:active{background:#d93a2b;color:#fff}
+.chip.rm:active,.chip.rm.on-r{background:#d93a2b;color:#fff}
 .chip.gr{background:#fff;border:2px solid #0a8047;color:#0a8047}
 .chip.gr.on-c,.chip.gr:active{background:#0a8047;border-color:#0a8047;color:#fff}
 .chip.or{background:#fff;border:2px solid #f28a1e;color:#e07a0f}
@@ -372,7 +372,7 @@ function waLink(s,lang){
   return 'https://wa.me/'+d+'?text='+encodeURIComponent(lang==='ar'?ar:en);
 }
 function stopsHtml(t,controls,st){
-  return (t.stops||[]).filter(function(s){return s.state!=='removed';}).map(function(s){return stopRow(t,s,controls,st);}).join('');
+  return (t.stops||[]).filter(function(s){return st==='desk'||s.state!=='removed';}).map(function(s){return stopRow(t,s,controls,st);}).join('');
 }
 function stopRow(t,s,controls,st){
   var isAr=/ar/i.test(s.lang||'');
@@ -385,7 +385,9 @@ function stopRow(t,s,controls,st){
   h+='<div>'+b+'</div>';
   if(s.driver_notes)h+='<div class="stop-meta" style="color:#1d5a37">Driver note: '+esc(s.driver_notes)+'</div>';
   h+='</div></div>';
-  if(!s.delivered&&st!=='departed'){
+  if(s.state==='removed'){
+    h+='<div class="stop-btns"><button class="chip rm on-r" data-act="restore" data-a="'+s.aid+'">✕ Box removed · tap to put back</button></div>';
+  }else if(!s.delivered&&st!=='departed'){
     h+='<div class="stop-btns">'+(st==='desk'?'<button class="chip gr'+(s.state==='confirmed'?' on-c':'')+'" data-act="stop" data-a="'+s.aid+'" data-v="'+(s.state==='confirmed'?'unchecked':'confirmed')+'">'+(s.state==='confirmed'?'✓ Ready to load · tap to undo':'Ready to load')+'</button>':'')+(st==='desk'?'<button class="chip or" data-act="move" data-a="'+s.aid+'" data-v="'+(t.load_no>1?1:2)+'">'+(t.load_no>1?'↩ Move to load 1':'↪ Move to load 2')+'</button>':'')+'<button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
   }
   if(s.note)h+='<div class="stop-meta">📝 '+esc(s.note)+'</div>';
