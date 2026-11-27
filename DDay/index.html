@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<base href="/">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Distribution Day · Feed a Friend team</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#06713b;--green:#0a8047;--lime:#8fe3ae;--amber:#0a8047;--gold:#ffffff;--bg:#f3f5ef;--card:#fff;--ink:#16241c;--muted:#6b7a70;--line:#e2e7dd;--red:#c0392b;--redbg:#fdecea;--amberbg:#eaf3ec;--greenbg:#e6f4ea;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,sans-serif;font-size:15px}
+button{font-family:inherit;cursor:pointer}
+h1,h2,h3{font-family:'League Spartan',Manrope,sans-serif;margin:0}
+/* login */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0a2e1e 0%,#146c43 55%,#2fae8c 100%);padding:20px}
+.login-card{background:#fff;border-radius:20px;padding:30px 26px;width:100%;max-width:380px;box-shadow:0 20px 50px rgba(0,0,0,.25);text-align:center}
+.logo-crop{width:96px;height:77px;margin:0 auto;background:url(faf-logo.png) no-repeat;background-size:158px auto;background-position:-32px -17px}
+.login-card h1{font-size:24px;margin:16px 0 4px;color:var(--forest)}
+.login-card p{color:var(--muted);font-size:13px;margin:0 0 18px}
+.login-card input{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;font-size:15px;margin-bottom:10px;font-family:inherit}
+.btn-primary{width:100%;background:var(--green);color:var(--gold);border:0;border-radius:30px;padding:14px;font-weight:800;font-size:15px}
+.btn-primary:disabled{opacity:.6}
+#login-err{color:var(--red);font-size:13px;font-weight:700;margin-top:10px;display:none}
+/* app */
+#app{display:none}
+header.top{background:var(--forest);color:#fff;padding:10px 14px}
+.top-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;max-width:1100px;margin:0 auto}
+.top-row img{height:34px}
+.top-title{flex:1;min-width:180px}
+.top-title h1{font-size:19px;color:var(--gold);line-height:1.1}
+.top-title div{font-size:12px;opacity:.8;font-weight:600}
+.rsel{width:100%;margin-top:6px;padding:8px 10px;border-radius:10px;border:0;font-family:inherit;font-weight:800;font-size:13px;background:rgba(255,255,255,.14);color:#fff}
+.rsel option{color:#16241c}
+.top-right{font-size:11px;opacity:.85;text-align:right;font-weight:600}
+.top-right button{background:transparent;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;margin-top:4px}
+.progress{max-width:1100px;margin:10px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:6px}
+.stat{background:rgba(255,255,255,.09);border-radius:10px;padding:6px 8px;cursor:pointer}
+.stat.on{background:rgba(255,255,255,.28);box-shadow:inset 0 0 0 2px rgba(255,255,255,.7)}
+.stat b{display:block;font-family:'League Spartan',sans-serif;font-size:18px;color:var(--lime);line-height:1}
+.stat span{font-size:9.5px;opacity:.8;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.bar{height:6px;border-radius:6px;background:rgba(255,255,255,.15);margin:10px auto 0;max-width:1100px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--lime);width:0;transition:width .4s}
+main{max-width:1100px;margin:0 auto;padding:12px 12px 90px}
+.search{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:14px;font-size:16px;font-family:inherit;background:#fff;margin-bottom:10px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:6px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;border:1.5px solid var(--line);background:#fff;border-radius:22px;padding:8px 13px;font-weight:800;font-size:13px;color:var(--muted)}
+.tab.on{background:var(--forest);border-color:var(--forest);color:#fff}
+.go-q{background:var(--green);color:#fff;border-radius:12px;padding:12px 14px;font-weight:800;font-size:14px;white-space:nowrap}
+.tab em{font-style:normal;background:var(--line);color:var(--ink);border-radius:10px;padding:1px 7px;margin-left:5px;font-size:12px}
+.tab.on em{background:var(--lime);color:var(--forest)}
+.tab.alert em{background:var(--red);color:#fff}
+.hint{font-size:12.5px;color:var(--muted);margin:2px 2px 10px;font-weight:600}
+/* trip card */
+.trip{background:var(--card);border-radius:16px;border:1px solid var(--line);margin-bottom:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.trip.q{border-left:6px solid var(--amber)}
+.trip.r{border-left:6px solid var(--green)}
+.trip.l{border-left:6px solid #2f6fb3}
+.trip.d{opacity:.78}
+.th{display:flex;gap:10px;align-items:center;padding:12px 14px;cursor:pointer}
+.th-main{flex:1;min-width:0}
+.th-name{font-weight:800;font-size:16px;line-height:1.2}
+.th-sub{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:2px}
+.pill{display:inline-block;border-radius:12px;padding:2px 9px;font-size:11.5px;font-weight:800;margin:3px 4px 0 0}
+.pill.g{background:var(--greenbg);color:var(--green)}
+.pill.a{background:var(--amberbg);color:#1d5a37}
+.pill.r{background:var(--redbg);color:var(--red)}
+.pill.n{background:#eef1ea;color:#4a5a50}
+.pill.b{background:#e5eefa;color:#245a96}
+.chev{font-size:18px;color:var(--muted);transition:transform .2s}
+.trip.open .chev{transform:rotate(90deg)}
+.tb{display:none;border-top:1px solid var(--line);padding:12px 14px}
+.trip.open .tb{display:block}
+.act-row{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
+.btn{border:0;border-radius:12px;padding:11px 16px;font-weight:800;font-size:14px}
+.btn.go{background:var(--green);color:#fff}
+.btn.off{background:#e4e8e1;color:#8a968e}
+.btn.big{padding:14px 20px;font-size:15.5px;flex:1 1 200px}
+.btn.amber{background:var(--amber);color:#fff}
+.btn.ghost{background:#eef1ea;color:var(--ink)}
+.btn.red{background:var(--red);color:#fff}
+.btn.sm{padding:7px 11px;font-size:12.5px;border-radius:9px}
+.btn:disabled{opacity:.5}
+a.btn{text-decoration:none;display:inline-block}
+.summary{background:var(--greenbg);border-radius:12px;padding:10px 12px;margin:2px 0 10px;font-size:13.5px;font-weight:700;line-height:1.6}
+.summary b{color:var(--green)}
+.warn{background:var(--amberbg);color:#1d5a37;border-radius:10px;padding:8px 11px;font-size:12.5px;font-weight:700;margin:6px 0}
+/* stops */
+.stop{border:1px solid var(--line);border-radius:12px;padding:10px 11px;margin:8px 0;background:#fbfcf9}
+.stop.s-chasing{background:var(--amberbg);border-color:#bcd9c4}
+.stop.s-removed{background:var(--redbg);border-color:#f2c1bb;opacity:.9}
+.stop-top{display:flex;gap:8px;align-items:flex-start}
+.stop-name{font-weight:800;font-size:14.5px;flex:1;min-width:0}
+.stop-meta{font-size:12px;color:var(--muted);font-weight:600;margin-top:2px}
+.stop-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chip{border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:6px 11px;font-size:12.5px;font-weight:800;color:var(--ink);text-decoration:none;display:inline-block}
+.chip.on-c{background:var(--green);border-color:var(--green);color:#fff}
+.chip.on-h{background:var(--amber);border-color:var(--amber);color:#fff}
+.chip.rm{background:#fff;border:2px solid #d93a2b;color:#d93a2b}
+.chip.rm:active,.chip.rm.on-r{background:#d93a2b;color:#fff}
+.chip.gr{background:#fff;border:2px solid #0a8047;color:#0a8047}
+.chip.gr.on-c,.chip.gr:active{background:#0a8047;border-color:#0a8047;color:#fff}
+.chip.or{background:#fff;border:2px solid #f28a1e;color:#e07a0f}
+.chip.or:active,.chip.or.on-o{background:#f28a1e;color:#fff}
+.stop.s-moved{background:#fff1e0;border-color:#f28a1e}
+.stop.s-confirmed{background:#dff3e6;border:1px solid #0a8047;border-left:6px solid #0a8047}
+.chip.lang{border-color:var(--lime);background:#eaf3ec}
+.note{width:100%;margin-top:7px;border:1.5px solid var(--line);border-radius:9px;padding:7px 9px;font-size:13px;font-family:inherit;background:#fff}
+/* modal + toast */
+.ovl{position:fixed;inset:0;background:rgba(10,30,20,.55);z-index:50;display:none;align-items:center;justify-content:center;padding:16px}
+.ovl.on{display:flex}
+.modal{background:#fff;border-radius:18px;padding:20px;width:100%;max-width:440px;max-height:90vh;overflow:auto}
+.modal h2{font-size:20px;color:var(--forest);margin-bottom:6px}
+.modal p{font-size:13.5px;color:var(--muted);margin:0 0 12px;font-weight:600}
+.opt{display:flex;gap:9px;align-items:center;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:7px;font-weight:700;font-size:14px;cursor:pointer}
+.opt input{accent-color:var(--green)}
+.modal textarea{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:9px;font-family:inherit;font-size:14px;min-height:70px}
+.mrow{display:flex;gap:8px;margin-top:12px}
+.mrow .btn{flex:1}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--forest);color:#fff;padding:12px 18px;border-radius:14px;font-weight:700;font-size:14px;z-index:60;display:none;max-width:92vw;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+#toast.err{background:var(--red)}
+#toast a{color:var(--lime);margin-left:10px}
+.empty{text-align:center;color:var(--muted);padding:40px 10px;font-weight:700}
+.held{background:#fff;border:1px solid #f2c1bb;border-left:6px solid var(--red);border-radius:14px;padding:12px 14px;margin-bottom:9px}
+@media(min-width:900px){.trips-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}.trips-grid .trip{margin-bottom:0}}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="login-card">
+    <div class="logo-crop" role="img" aria-label="Feed a Friend"></div>
+    <h1>Distribution Day</h1>
+    <p>Team sign-in. This site is for the distribution team only.</p>
+    <input id="le" type="email" placeholder="Email" autocomplete="username">
+    <input id="lp" type="password" placeholder="Password" autocomplete="current-password">
+    <button class="btn-primary" id="lb" onclick="doLogin()">Sign in →</button>
+    <div id="login-err"></div>
+  </div>
+</div>
+
+<div id="app">
+  <header class="top">
+    <div class="top-row">
+      <img src="faf-logo-white.png" alt="">
+      <div class="top-title"><h1 id="rname">Distribution Day</h1><div id="rinfo"></div><select class="rsel" id="rsel" onchange="pickRound(this.value)" aria-label="Distribution day"></select></div>
+      <div class="top-right"><div id="me"></div><div id="upd"></div><button onclick="refresh(true)">↻ Refresh</button> <button onclick="signOut()">Sign out</button></div>
+    </div>
+    <div class="progress" id="stats"></div>
+    <div class="bar"><i id="barfill"></i></div>
+  </header>
+  <main>
+    <input class="search" id="q" type="search" placeholder="🔍  Find a driver, contact or family…" oninput="onSearch()">
+    <div class="tabs" id="tabs"></div>
+    <div class="hint" id="hint"></div>
+    <div id="list"></div>
+  </main>
+</div>
+
+<div class="ovl" id="ovl"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var SUPABASE_URL='https://xbxagukdvgyaoqvbqoic.supabase.co';
+var ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieGFndWtkdmd5YW9xdmJxb2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDExNDAsImV4cCI6MjA5NTYxNzE0MH0.-NifUdfkr9cZIDDtKNl5aQe9WMZab7l4boAJDAgfb-4';
+var sb=supabase.createClient(SUPABASE_URL,ANON_KEY);
+
+var LM={}, BOARD=null, ROUND_ID=null, ROUNDS_LOADED=false, TAB='queue', OPEN={}, BUSY=false, TIMER=null, ME='';
+var TABS=[['outside','At the gates'],['queue','Queue'],['desk','Check-in desk'],['ready','Ready to load'],['loaded','Loaded'],['expected','Not here yet'],['held','Held boxes'],['all','All']];
+var HINTS={
+  outside:'Drivers who tapped "I\'m at the gates" in their app (location-checked, within 400 m), in the order they tapped. Look for the car, then tap the driver to move them to the queue.',
+  expected:'Drivers who have not arrived. If someone is at the gate without having tapped the button, you can still mark them as arrived here.',
+  queue:'First come, first served: the longest-waiting driver is at the top. Tap a driver to send them to the check-in desk.',
+  desk:'Speak to the driver, tick each family Ready to load, remove any box with no reply, then tap Check-in done. Back to queue undoes it.',
+  ready:'Check-in done. Loaders: load the car from the list, then tap the driver or ➡ Loaded.',
+  loaded:'Loaded cars waiting to leave.',
+  departed:'Drivers who have left with their boxes.',
+  held:'Boxes taken out of a car at check-in. They stay at base until the family replies or someone else takes them.',
+  all:''
+};
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function $(id){return document.getElementById(id);}
+function digits(p){var d=String(p||'').replace(/\D/g,'');if(d.indexOf('00')===0)d=d.slice(2);if(d.length===8)d='974'+d;return d;}
+function toast(msg,err,link){var t=$('toast');t.className=err?'err':'';t.innerHTML=esc(msg)+(link?'<a href="'+link.href+'" target="_blank" rel="noopener">'+esc(link.label)+'</a>':'');t.style.display='block';clearTimeout(toast._t);toast._t=setTimeout(function(){t.style.display='none';},err?7000:6000);}
+function fmtTime(ts){if(!ts)return '';return new Date(ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Qatar'});}
+function mins(ts){return Math.max(0,Math.round((Date.now()-new Date(ts).getTime())/60000));}
+
+/* ---------- auth ---------- */
+async function doLogin(){
+  var e=$('le').value.trim(),p=$('lp').value,err=$('login-err'),b=$('lb');
+  err.style.display='none';
+  if(!e||!p){err.textContent='Enter your email and password.';err.style.display='block';return;}
+  b.textContent='Signing in…';b.disabled=true;
+  var r=await sb.auth.signInWithPassword({email:e,password:p});
+  if(r.error){err.textContent=r.error.message;err.style.display='block';b.textContent='Sign in →';b.disabled=false;}
+}
+$('lp').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+async function signOut(){clearInterval(TIMER);await sb.auth.signOut();location.reload();}
+async function startSession(session){
+  var ok=await sb.rpc('dist_team_ok');
+  if(ok.error||ok.data!==true){
+    await sb.auth.signOut();
+    $('app').style.display='none';$('login').style.display='flex';
+    var err=$('login-err');err.textContent='This account does not have distribution team access. Ask Alliyah to add you.';err.style.display='block';
+    $('lb').textContent='Sign in →';$('lb').disabled=false;return;
+  }
+  var me=await sb.rpc('dist_me');ME=me.data||session.user.email;
+  $('me').textContent=ME;
+  $('login').style.display='none';$('app').style.display='block';
+  await refresh(true);
+  clearInterval(TIMER);TIMER=setInterval(function(){refresh(false);},15000);
+}
+var _started=null;
+sb.auth.onAuthStateChange(function(ev,session){
+  if(session&&session.user&&_started!==session.user.id){_started=session.user.id;startSession(session);}
+  if(!session){_started=null;$('app').style.display='none';$('login').style.display='flex';}
+});
+sb.auth.getSession().then(function(r){if(r.data&&r.data.session&&_started!==r.data.session.user.id){_started=r.data.session.user.id;startSession(r.data.session);}});
+
+/* ---------- data ---------- */
+async function refresh(force){
+  if(BUSY)return;
+  var modalOpen=$('ovl').classList.contains('on');
+  var a=document.activeElement;
+  var typing=a&&(a.tagName==='TEXTAREA'||(a.tagName==='INPUT'&&a.id!=='q'));
+  if(!force&&(modalOpen||typing))return;
+  var r=await sb.rpc('dist_board',{p_round_id:ROUND_ID});
+  if(r.error){toast('Could not load: '+r.error.message,true);return;}
+  BOARD=r.data;
+  if(!ROUNDS_LOADED)await loadRounds();
+  $('upd').textContent='Updated '+new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Qatar'});
+  render();
+}
+function stageOf(t){if(t.departed_at)return 'departed';if(t.loaded_at)return 'loaded';if(t.checked_at)return 'ready';if(t.desk_at)return 'desk';if(t.arrived_at)return 'queue';if(t.claimed_at)return 'outside';return 'expected';}
+function stageLabel(st){return {expected:'not here yet',outside:'at the gates',queue:'in queue',desk:'at desk',ready:'ready to load',loaded:'loaded',departed:'left'}[st]||st;}
+function live(t){return (t.stops||[]).filter(function(s){return s.state!=='removed'&&s.state!=='moved';});}
+function metrics(t){
+  var L=live(t),m={stops:L.length,boxes:0,dia:{},diaN:0,frm:{1:0,2:0},frmN:0,noLoc:0,todo:0,chasing:0,confirmed:0};
+  L.forEach(function(s){
+    m.boxes+=s.boxes||1;
+    (s.diapers||[]).forEach(function(x){m.dia[x]=(m.dia[x]||0)+1;m.diaN++;});
+    (s.formula||[]).forEach(function(x){m.frm[x]++;m.frmN++;});
+    if(!s.has_loc)m.noLoc++;
+    if(s.delivered)return;
+    if(s.state==='unchecked')m.todo++;else if(s.state==='chasing')m.chasing++;else m.confirmed++;
+  });
+  return m;
+}
+function diaText(m){
+  var ks=Object.keys(m.dia).sort(function(a,b){var na=parseInt(a.replace(/\D/g,''))||0,nb=parseInt(b.replace(/\D/g,''))||0;return na-nb;});
+  return ks.map(function(k){return k+' ×'+m.dia[k];}).join(', ');
+}
+function frmText(m){var o=[];if(m.frm[1])o.push('Stage 1 ×'+m.frm[1]);if(m.frm[2])o.push('Stage 2 ×'+m.frm[2]);return o.join(', ');}
+
+/* ---------- render ---------- */
+function matches(t,q){
+  q=q.toLowerCase();
+  var hay=[t.driver,t.contact,t.phone,t.contact_phone].concat((t.stops||[]).map(function(s){return s.name;})).join(' ').toLowerCase();
+  return hay.indexOf(q)>-1;
+}
+async function loadRounds(){
+  var r=await sb.rpc('dist_rounds');
+  if(r.error||!r.data)return;
+  ROUNDS_LOADED=true;
+  var cur=BOARD&&BOARD.round?BOARD.round.id:null;
+  $('rsel').innerHTML=r.data.map(function(x){
+    var d=new Date(x.date+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});
+    return '<option value="'+x.id+'"'+(x.id===cur?' selected':'')+'>'+(x.is_today?'Today · ':'')+d+'</option>';
+  }).join('');
+}
+function pickRound(id){ROUND_ID=id;OPEN={};refresh(true);}
+function onSearch(){render();}
+function setTab(t){TAB=t;render();window.scrollTo(0,0);}
+function render(){
+  if(!BOARD)return;
+  var R=BOARD.round;
+  if(!R){$('list').innerHTML='<div class="empty">No distribution round found for today.</div>';$('stats').innerHTML='';return;}
+  $('rname').textContent=R.name;
+  $('rinfo').textContent=[R.time,R.location].filter(Boolean).join(' · ');
+  var trips=(BOARD.trips||[]).filter(function(t){return (t.stops||[]).length>0;});
+  var by={outside:[],expected:[],queue:[],desk:[],ready:[],loaded:[],departed:[]};
+  var totalBoxes=0,leftBoxes=0,heldCount=0,held=[];
+  LM={};trips.forEach(function(t){(LM[t.driver+'|'+(t.phone||'')]=LM[t.driver+'|'+(t.phone||'')]||[]).push(t);});
+  trips.forEach(function(t){
+    var st=stageOf(t),m=metrics(t);by[st].push(t);t._st=st;
+    totalBoxes+=m.boxes;if(st==='departed'||st==='loaded')leftBoxes+=m.boxes;
+    (t.stops||[]).forEach(function(s){if(s.state==='removed'){heldCount++;held.push({t:t,s:s});}});
+  });
+  by.outside.sort(function(a,b){return new Date(a.claimed_at)-new Date(b.claimed_at);});
+  by.outside.forEach(function(t,i){t._pos=i+1;});by.queue.forEach(function(t,i){t._pos=i+1;});by.desk.forEach(function(t,i){t._pos=i+1;});
+  $('stats').innerHTML=[['Drivers',trips.length,'all'],['Outside gates',by.outside.length,'outside'],['In queue',by.queue.length,'queue'],['At desk',by.desk.length,'desk'],['Ready to load',by.ready.length,'ready'],['Departed',by.departed.length,'all'],['Boxes left',(totalBoxes-leftBoxes)+' of '+totalBoxes,'all'],['Held at base',heldCount,'held']]
+    .map(function(x){return '<div class="stat'+(TAB===x[2]&&x[0]!=='Boxes left'?' on':'')+'" data-act="tab" data-v="'+x[2]+'"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>';}).join('');
+  $('barfill').style.width=(totalBoxes?Math.round(leftBoxes*100/totalBoxes):0)+'%';
+  var counts={outside:by.outside.length,expected:by.expected.length,queue:by.queue.length,desk:by.desk.length,ready:by.ready.length,loaded:by.loaded.length,departed:by.departed.length,held:heldCount,all:trips.length};
+  $('tabs').innerHTML=TABS.map(function(x){
+    return '<button class="tab'+(TAB===x[0]?' on':'')+((x[0]==='held'&&counts.held)||(x[0]==='outside'&&counts.outside)?' alert':'')+'" data-act="tab" data-v="'+x[0]+'">'+x[1]+'<em>'+counts[x[0]]+'</em></button>';
+  }).join('');
+  var q=$('q').value.trim();
+  var list,html;
+  if(q){
+    list=trips.filter(function(t){return matches(t,q);});
+    $('hint').textContent='Showing every driver matching "'+q+'"';
+    html=list.length?'<div class="trips-grid">'+list.map(tripCard).join('')+'</div>':'<div class="empty">No match.</div>';
+  }else if(TAB==='held'){
+    $('hint').textContent=HINTS.held;
+    html=held.length?held.map(heldCard).join(''):'<div class="empty">No boxes have been removed.</div>';
+  }else{
+    list=TAB==='all'?trips:by[TAB];
+    $('hint').textContent=HINTS[TAB];
+    html=list.length?'<div class="trips-grid">'+list.map(tripCard).join('')+'</div>':'<div class="empty">Nothing here.</div>';
+  }
+  var y=window.scrollY;$('list').innerHTML=html;window.scrollTo(0,y);
+}
+
+function tripCard(t){
+  var st=stageOf(t),m=metrics(t);
+  var cls={expected:'',outside:'q',queue:'q',desk:'q',ready:'r',loaded:'l',departed:'d'}[st];
+  var open=OPEN[t.id]!==undefined?OPEN[t.id]:(st==='desk'||st==='ready');
+  var who=t.contact?esc(t.contact)+' <span style="font-weight:600;color:var(--muted)">(driver: '+esc(t.driver)+')</span>':esc(t.driver);
+  var ph=t.contact_phone||t.phone;
+  var pills='<span class="pill n">📍 '+m.stops+' stop'+(m.stops===1?'':'s')+'</span><span class="pill n">📦 '+m.boxes+' box'+(m.boxes===1?'':'es')+'</span>';
+  if(m.diaN)pills+='<span class="pill b">🧷 '+m.diaN+' diaper'+(m.diaN===1?'':'s')+'</span>';
+  if(m.frmN)pills+='<span class="pill b">🍼 '+m.frmN+' formula</span>';
+  if((t.loads||1)>1){who+=' <span class="pill b" style="vertical-align:middle">Trip '+t.load_no+' of '+t.loads+'</span>';
+    (LM[t.driver+'|'+(t.phone||'')]||[]).forEach(function(o){if(o!==t){var om=metrics(o);pills+='<span class="pill n">Trip '+o.load_no+': '+om.boxes+' box'+(om.boxes===1?'':'es')+' · '+stageLabel(stageOf(o))+'</span>';}});}
+  var time='';
+  if(st==='outside')time='#'+t._pos+' outside · tapped '+fmtTime(t.claimed_at)+' ('+mins(t.claimed_at)+' min ago)'+(t.claimed_dist_m!=null?' · '+t.claimed_dist_m+' m from gate':'');
+  else if(st==='queue')time='#'+t._pos+' in queue · here '+fmtTime(t.arrived_at)+' ('+mins(t.arrived_at)+' min)'+(t.claimed_at?' · tapped '+fmtTime(t.claimed_at):'');
+  else if(st==='desk')time='At the desk since '+fmtTime(t.desk_at)+' ('+mins(t.desk_at)+' min)';
+  else if(st==='ready')time='Checked '+fmtTime(t.checked_at)+' by '+esc(t.checked_by||'');
+  else if(st==='loaded')time='Loaded '+fmtTime(t.loaded_at);
+  else if(st==='departed')time='Left '+fmtTime(t.departed_at);
+  var h='<div class="trip '+cls+(open?' open':'')+'" id="trip-'+t.id+'"><div class="th" data-act="'+(st==='outside'?'arrive':st==='queue'?'desk':st==='ready'?'loaded':st==='loaded'?'departed':'toggle')+'" data-t="'+t.id+'"><div class="th-main"><div class="th-name">'+who+'</div><div class="th-sub">'+(time?time+' · ':'')+esc(ph||'no phone')+'</div><div>'+pills+'</div></div>'+(st==='outside'?'<div class="go-q">➡ Queue</div>':st==='queue'?'<div class="go-q">➡ Desk</div>':st==='ready'?'<div class="go-q">➡ Loaded</div>':st==='loaded'?'<div class="go-q">➡ Left</div>':'<div class="chev">›</div>')+'</div><div class="tb">'+(st==='outside'?'<div class="act-row"><button class="btn go big" data-act="arrive" data-t="'+t.id+'">➡ Move to queue</button></div>':'');
+  if(t.capacity&&m.boxes>t.capacity)h+='<div class="warn">Car capacity is '+t.capacity+' boxes but the load is '+m.boxes+'.</div>';
+  if(t.notes)h+='<div class="warn" style="background:#eef1ea;color:var(--ink)">📝 '+esc(t.notes)+'</div>';
+  // contact + actions
+  h+='<div class="act-row">';
+  if(ph)h+='<a class="btn ghost sm" href="tel:+'+digits(ph)+'">📞 Call</a><a class="btn ghost sm" target="_blank" rel="noopener" href="https://wa.me/'+digits(ph)+'">💬 WhatsApp</a>';
+  h+='<button class="btn ghost sm" data-act="msg" data-t="'+t.id+'">✉ Message driver</button><button class="btn ghost sm" data-act="tnote" data-t="'+t.id+'">📝 Trip note</button></div>';
+  if(st==='expected'){
+    h+='<div class="act-row"><button class="btn go big" data-act="arrive" data-t="'+t.id+'">➡ Move to queue</button></div>';
+  }else if(st==='queue'){
+    h+=stopsHtml(t,false,st);
+    h+='<div class="act-row"><button class="btn go big" data-act="desk" data-t="'+t.id+'">➡ Call to check-in desk</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="arrived">Not here yet</button></div>';
+  }else if(st==='desk'){
+    h+=stopsHtml(t,true,st);
+    h+='<div class="act-row">'+(live(t).every(function(x){return x.state==='confirmed'||x.delivered;})?'<button class="btn go big" data-act="checked" data-t="'+t.id+'">Check-in done → ready to load</button>':'<button class="btn off big" data-act="notyet" data-t="'+t.id+'">Check-in done → ready to load</button>')+'<button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="desk">← Back to queue</button></div>';
+  }else if(st==='ready'){
+    h+=loadSummary(t,m);h+=stopsHtml(t,false,st);
+    h+='<div class="act-row"><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="checked">← Back to desk</button></div>';
+  }else if(st==='loaded'){
+    h+=loadSummary(t,m);h+=stopsHtml(t,false,st);
+    h+='<div class="act-row"><button class="btn go big" data-act="departed" data-t="'+t.id+'">🚗 Driver has left</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="loaded">Not loaded yet</button></div>';
+  }else{
+    h+=loadSummary(t,m);h+=stopsHtml(t,false,st);
+    h+='<div class="act-row"><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="departed">Undo departed</button></div>';
+  }
+  return h+'</div></div>';
+}
+function loadSummary(t,m){
+  var s='<div class="summary">Load: <b>'+m.boxes+' box'+(m.boxes===1?'':'es')+'</b> for '+m.stops+' famil'+(m.stops===1?'y':'ies');
+  s+='<br>Diapers: '+(m.diaN?'<b>'+esc(diaText(m))+'</b>':'none')+'<br>Formula / milk: '+(m.frmN?'<b>'+esc(frmText(m))+'</b>':'none')+'</div>';
+  return s;
+}
+function addr(s){var p=[];if(s.area)p.push(s.area);var z=[];if(s.zone)z.push('Z'+s.zone);if(s.street)z.push('St '+s.street);if(s.building)z.push('Bldg '+s.building);if(s.unit)z.push('Unit '+s.unit);if(z.length)p.push(z.join(' · '));return p.join(' — ');}
+function waLink(s,lang){
+  var d=digits(s.whatsapp);if(!d)return '';
+  var en='Salaam '+s.name+', this is Feed a Friend. Your food box is ready for delivery today. Please reply to confirm you will be home, and send your location pin on WhatsApp. Thank you!';
+  var ar='السلام عليكم '+s.name+'، معكم Feed a Friend. صندوق الغذاء الخاص بكم جاهز للتوصيل اليوم. يرجى الرد لتأكيد وجودكم في المنزل وإرسال موقعكم (Location) عبر الواتساب. شكراً لكم.';
+  return 'https://wa.me/'+d+'?text='+encodeURIComponent(lang==='ar'?ar:en);
+}
+function stopsHtml(t,controls,st){
+  return (t.stops||[]).filter(function(s){return st==='desk'||(s.state!=='removed'&&s.state!=='moved');}).map(function(s){return stopRow(t,s,controls,st);}).join('');
+}
+function stopRow(t,s,controls,st){
+  var isAr=/ar/i.test(s.lang||'');
+  var h='<div class="stop s-'+(s.delivered?'confirmed':s.state)+'"><div class="stop-top"><div style="flex:1;min-width:0"><div class="stop-name">'+esc(s.name)+'</div><div class="stop-meta">'+esc(addr(s))+' · '+s.boxes+' box'+(s.boxes===1?'':'es')+(s.lang?' · '+esc(s.lang):'')+'</div>';
+  var b='';
+  if(!s.has_loc)b+='<span class="pill r">📍 No location pin</span>';else if(s.map_url)b+='<a class="pill g" style="text-decoration:none" target="_blank" rel="noopener" href="'+esc(s.map_url)+'">📍 Map</a>';
+  (s.diapers||[]).forEach(function(d){b+='<span class="pill b">🧷 '+esc(d)+'</span>';});
+  (s.formula||[]).forEach(function(f){b+='<span class="pill b">🍼 Stage '+f+'</span>';});
+  if(s.delivered)b+='<span class="pill g">Delivered</span>';
+  h+='<div>'+b+'</div>';
+  if(s.driver_notes)h+='<div class="stop-meta" style="color:#1d5a37">Driver note: '+esc(s.driver_notes)+'</div>';
+  h+='</div></div>';
+  if(s.state==='moved'){
+    h+='<div class="stop-btns"><button class="chip or on-o" data-act="move" data-a="'+s.aid+'" data-v="'+t.load_no+'">↪ Moved to load '+s.moved_to+' · tap to put back</button></div>';
+  }else if(s.state==='removed'){
+    h+='<div class="stop-btns"><button class="chip rm on-r" data-act="restore" data-a="'+s.aid+'">✕ Box removed · tap to put back</button></div>';
+  }else if(!s.delivered&&st!=='departed'&&st!=='ready'){
+    h+='<div class="stop-btns">'+(st==='desk'?'<button class="chip gr'+(s.state==='confirmed'?' on-c':'')+'" data-act="stop" data-a="'+s.aid+'" data-v="'+(s.state==='confirmed'?'unchecked':'confirmed')+'">'+(s.state==='confirmed'?'✓ Ready to load · tap to undo':'Ready to load')+'</button>':'')+(st==='desk'?'<button class="chip or" data-act="move" data-a="'+s.aid+'" data-v="'+(t.load_no>1?1:2)+'">'+(t.load_no>1?'↩ Move to trip 1':'↪ Move to trip 2')+'</button>':'')+'<button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
+  }
+  if(s.note)h+='<div class="stop-meta">📝 '+esc(s.note)+'</div>';
+  return h+'</div>';
+}
+function heldCard(x){
+  var s=x.s,t=x.t,d=digits(s.whatsapp);
+  var h='<div class="held"><div class="stop-name">'+esc(s.name)+'</div><div class="stop-meta">'+esc(addr(s))+' · '+s.boxes+' box'+(s.boxes===1?'':'es')+'</div>';
+  var b='<span class="pill r">'+esc(s.reason||'Removed')+'</span>';
+  (s.diapers||[]).forEach(function(z){b+='<span class="pill b">🧷 '+esc(z)+'</span>';});
+  (s.formula||[]).forEach(function(f){b+='<span class="pill b">🍼 Stage '+f+'</span>';});
+  h+='<div>'+b+'</div><div class="stop-meta">Was on '+esc(t.contact||t.driver)+'’s car · removed '+fmtTime(s.removed_at)+(s.note?' · '+esc(s.note):'')+'</div><div class="stop-btns">';
+  if(d)h+='<a class="chip lang" target="_blank" rel="noopener" href="'+waLink(s,'en')+'">💬 EN</a><a class="chip" target="_blank" rel="noopener" href="'+waLink(s,'ar')+'">💬 AR</a><a class="chip" href="tel:+'+d+'">📞 Call</a>';
+  if(!t.departed_at)h+='<button class="chip gr" data-act="restore" data-a="'+s.aid+'">↩ Put back on car</button>';
+  h+='<button class="chip gr" data-act="assign" data-a="'+s.aid+'">👤 Assign to a driver</button>';
+  h+='<button class="chip or" data-act="release" data-a="'+s.aid+'">↗ Release to drivers</button>';
+  return h+'</div></div>';
+}
+
+/* ---------- actions ---------- */
+document.addEventListener('click',function(e){
+  var el=e.target.closest('[data-act]');if(!el)return;
+  var a=el.getAttribute('data-act'),t=el.getAttribute('data-t'),aid=el.getAttribute('data-a'),v=el.getAttribute('data-v');
+  if(el.tagName==='A')return;
+  if(a==='tab')return setTab(v);
+  if(a==='toggle'){var card=$('trip-'+t);var now=!card.classList.contains('open');OPEN[t]=now;card.classList.toggle('open',now);return;}
+  if(a==='arrive')return mark(t,'arrived',false,el);
+  if(a==='desk')return mark(t,'desk',false,el);
+  if(a==='notyet')return toast('Tick Ready to load on every family first (or move or remove the ones that are not going).',true);
+  if(a==='checked')return mark(t,'checked',false,el,true);
+  if(a==='loaded')return mark(t,'loaded',false,el);
+  if(a==='departed')return mark(t,'departed',false,el);
+  if(a==='undo')return mark(t,v,true,el);
+  if(a==='stop')return setStop(aid,v);
+  if(a==='remove')return openRemove(aid,t);
+  if(a==='move')return rpc('dist_move_stop',{p_assignment:aid,p_load:parseInt(v,10)},'Moved to trip '+v);
+  if(a==='assign')return openAssign(aid);
+  if(a==='release')return releaseHeld(aid);
+  if(a==='restore')return restore(aid);
+  if(a==='msg')return openMsg(t);
+  if(a==='tnote')return openTripNote(t);
+});
+async function rpc(fn,args,okMsg){
+  BUSY=true;
+  var r=await sb.rpc(fn,args);
+  BUSY=false;
+  if(r.error){toast(r.error.message,true);return null;}
+  if(okMsg)toast(okMsg);
+  await refresh(true);
+  return r.data;
+}
+async function mark(tid,step,undo,btn,force){
+  if(btn)btn.disabled=true;
+  var msgs={arrived:'Marked as arrived',desk:'Called to the desk',checked:'Check-in complete',loaded:'Car loaded',departed:'Driver has left'};
+  await rpc('dist_mark',{p_trip:tid,p_step:step,p_undo:!!undo,p_force:true},undo?'Undone':msgs[step]);
+  if(btn)btn.disabled=false;
+}
+async function finishCheck(tid,btn){
+  btn.disabled=true;BUSY=true;
+  var r=await sb.rpc('dist_mark',{p_trip:tid,p_step:'checked',p_undo:false,p_force:false});
+  BUSY=false;
+  if(r.error){
+    if(/still need/.test(r.error.message)){
+      if(confirm(r.error.message+'.\n\nFinish the check-in anyway?')){await rpc('dist_mark',{p_trip:tid,p_step:'checked',p_undo:false,p_force:true},'Check-in complete');}
+    }else toast(r.error.message,true);
+    btn.disabled=false;return;
+  }
+  toast('Check-in complete');await refresh(true);
+}
+async function setStop(aid,state){await rpc('dist_set_stop',{p_assignment:aid,p_state:state,p_note:null});}
+async function saveNote(inp){
+  var r=await sb.rpc('dist_note_stop',{p_assignment:inp.getAttribute('data-a'),p_note:inp.value});
+  if(r.error)toast(r.error.message,true);else toast('Note saved');
+}
+function findStop(aid){var tr=BOARD.trips;for(var i=0;i<tr.length;i++){var ss=tr[i].stops||[];for(var j=0;j<ss.length;j++)if(ss[j].aid===aid)return {t:tr[i],s:ss[j]};}return null;}
+function openModal(html){$('modal').innerHTML=html;$('ovl').classList.add('on');}
+function closeModal(){$('ovl').classList.remove('on');}
+$('ovl').addEventListener('click',function(e){if(e.target===$('ovl'))closeModal();});
+
+var REASONS=['No reply','No location given','Family not available','Wrong / unclear address','Other'];
+function openRemove(aid,tid){
+  var f=findStop(aid);if(!f)return;
+  openModal('<h2>Remove this box?</h2><p><b>'+esc(f.s.name)+'</b> comes off '+esc(f.t.contact||f.t.driver)+'’s car load. The driver’s trip is updated and they get a notice.</p>'+
+   REASONS.map(function(r,i){return '<label class="opt"><input type="radio" name="rr" value="'+esc(r)+'"'+(i===0?' checked':'')+'>'+esc(r)+'</label>';}).join('')+
+   '<textarea id="rnote" placeholder="Note (optional)"></textarea>'+
+   '<label class="opt" style="margin-top:8px"><input type="checkbox" id="rmail" checked>Also email the driver</label>'+
+   '<div class="mrow"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn red" id="rgo" onclick="doRemove(\''+aid+'\')">Remove box</button></div>');
+}
+async function doRemove(aid){
+  var f=findStop(aid);
+  var reason=(document.querySelector('input[name=rr]:checked')||{}).value||'No reply';
+  var note=$('rnote').value,mail=$('rmail').checked;
+  $('rgo').disabled=true;BUSY=true;
+  var r=await sb.rpc('dist_remove_stop',{p_assignment:aid,p_reason:reason,p_note:note});
+  BUSY=false;
+  if(r.error){toast(r.error.message,true);$('rgo').disabled=false;return;}
+  closeModal();
+  var mailMsg='';
+  if(mail)mailMsg=await sendMail(r.data.notice_id);
+  var dp=digits(f&&(f.t.contact_phone||f.t.phone));
+  toast('Box removed. Trip now has '+r.data.locations_left+' location'+(r.data.locations_left===1?'':'s')+'.'+mailMsg,false,dp?{href:'https://wa.me/'+dp+'?text='+encodeURIComponent(r.data.message),label:'Tell driver on WhatsApp'}:null);
+  await refresh(true);
+}
+async function sendMail(nid){
+  try{
+    var s=await sb.auth.getSession();
+    var res=await fetch(SUPABASE_URL+'/functions/v1/distday-notify',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.data.session.access_token,'apikey':ANON_KEY},body:JSON.stringify({notice_id:nid})});
+    var j=await res.json();
+    return res.ok&&j.ok?' Driver emailed.':' (Email failed: '+(j.error||res.status)+')';
+  }catch(e){return ' (Email failed)';}
+}
+function openAssign(aid){
+  var f=findStop(aid);
+  var opts=BOARD.trips.filter(function(t){return !t.departed_at&&t.id!==(f&&f.t.id);}).map(function(t){
+    var m=metrics(t),nm=(t.contact||t.driver)+((t.loads||1)>1?' · Trip '+t.load_no+' of '+t.loads:'');
+    return '<option value="'+t.id+'">'+esc(nm)+' — '+m.boxes+' box'+(m.boxes===1?'':'es')+(t.capacity?' of '+t.capacity:'')+' · '+stageLabel(stageOf(t))+'</option>';
+  }).join('');
+  if(!opts){toast('No drivers on trips today to assign to.',true);return;}
+  openModal('<h2>Assign to a driver</h2><p>'+esc(f?f.s.name:'This family')+' · '+(f?f.s.boxes:'')+' box'+(f&&f.s.boxes===1?'':'es')+'. Pick a driver who already has a trip today.</p><select id="asel" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px;font-family:inherit;font-size:14px">'+opts+'</select><div class="mrow"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn go" id="ago" onclick="doAssign(\''+aid+'\')">Assign</button></div>');
+}
+async function doAssign(aid){
+  var tid=$('asel').value;$('ago').disabled=true;
+  var r=await rpc('dist_assign_held',{p_assignment:aid,p_trip:tid},null);
+  if(r){closeModal();toast((r.family||'Box')+' added to '+r.driver+'’s trip.');}else $('ago').disabled=false;
+}
+async function releaseHeld(aid){
+  var f=findStop(aid);
+  if(!confirm('Release '+(f?f.s.name:'this family')+' back to the drivers’ pool so another driver can pick it?'))return;
+  var r=await rpc('dist_release_stop',{p_assignment:aid},null);
+  if(r)toast((r.family||'Box')+' released to the drivers’ pool.');
+}
+async function restore(aid){
+  var f=findStop(aid);
+  if(!confirm('Put the box for '+(f?f.s.name:'this family')+' back on the car?'))return;
+  BUSY=true;var r=await sb.rpc('dist_restore_stop',{p_assignment:aid});BUSY=false;
+  if(r.error){toast(r.error.message,true);return;}
+  var m=await sendMail(r.data.notice_id);
+  toast('Box put back on the trip.'+m);await refresh(true);
+}
+function openMsg(tid){
+  var t=BOARD.trips.filter(function(x){return x.id===tid;})[0];
+  openModal('<h2>Message the driver</h2><p>Shows on '+esc(t.contact||t.driver)+'’s driver dashboard and is emailed to them.</p><textarea id="mtext" placeholder="e.g. Please come to the loading bay now."></textarea><div class="mrow"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn go" id="mgo" onclick="doMsg(\''+tid+'\')">Send</button></div>');
+}
+async function doMsg(tid){
+  var txt=$('mtext').value.trim();if(!txt){toast('Write a message first',true);return;}
+  $('mgo').disabled=true;BUSY=true;
+  var r=await sb.rpc('dist_notify',{p_trip:tid,p_message:txt});BUSY=false;
+  if(r.error){toast(r.error.message,true);$('mgo').disabled=false;return;}
+  closeModal();var m=await sendMail(r.data.notice_id);toast('Message sent.'+m);await refresh(true);
+}
+function openTripNote(tid){
+  var t=BOARD.trips.filter(function(x){return x.id===tid;})[0];
+  openModal('<h2>Trip note</h2><p>Internal note for the team (the driver does not see this).</p><textarea id="tn">'+esc(t.notes||'')+'</textarea><div class="mrow"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn go" onclick="saveTripNote(\''+tid+'\')">Save</button></div>');
+}
+async function saveTripNote(tid){
+  var v=$('tn').value;closeModal();await rpc('dist_trip_note',{p_trip:tid,p_note:v},'Note saved');
+}
+</script>
+</body>
+</html>
