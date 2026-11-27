@@ -371,7 +371,7 @@ function stopRow(t,s,controls,st){
   if(s.driver_notes)h+='<div class="stop-meta" style="color:#8a5a00">Driver note: '+esc(s.driver_notes)+'</div>';
   h+='</div></div>';
   if(!s.delivered&&st!=='departed'){
-    h+='<div class="stop-btns"><button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
+    h+='<div class="stop-btns">'+(st==='queue'?'<button class="chip'+(s.state==='confirmed'?' on-c':'')+'" data-act="stop" data-a="'+s.aid+'" data-v="'+(s.state==='confirmed'?'unchecked':'confirmed')+'">'+(s.state==='confirmed'?'✓ Ready to load':'Ready to load')+'</button>':'')+'<button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
   }
   if(s.note)h+='<div class="stop-meta">📝 '+esc(s.note)+'</div>';
   return h+'</div>';
