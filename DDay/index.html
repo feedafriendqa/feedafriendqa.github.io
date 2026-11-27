@@ -170,7 +170,7 @@ var ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var sb=supabase.createClient(SUPABASE_URL,ANON_KEY);
 
 var LM={}, BOARD=null, ROUND_ID=null, ROUNDS_LOADED=false, TAB='queue', OPEN={}, BUSY=false, TIMER=null, ME='';
-var TABS=[['outside','At the gates'],['queue','Queue'],['desk','Check-in desk'],['ready','Ready to load'],['departed','Departed'],['expected','Not here yet'],['held','Held boxes'],['all','All']];
+var TABS=[['outside','At the gates'],['queue','Queue'],['desk','Check-in desk'],['ready','Ready to load'],['departed','Departed'],['expected','Not here yet'],['held','Held boxes'],['unassigned','No driver'],['all','All']];
 var HINTS={
   outside:'Drivers who tapped "I\'m at the gates" in their app (location-checked, within 400 m), in the order they tapped. Look for the car, then tap the driver to move them to the queue.',
   expected:'Drivers who have not arrived. If someone is at the gate without having tapped the button, you can still mark them as arrived here.',
@@ -179,6 +179,7 @@ var HINTS={
   ready:'Check-in done. Loaders: load the car from the list, then tap the driver or ➡ Loaded.',
   loaded:'Loaded cars waiting to leave.',
   departed:'Drivers who have loaded and left. Nothing more to do here.',
+  unassigned:'Confirmed families with no driver yet. They are not on any car, so they are not in the other tabs.',
   held:'Boxes taken out of a car at check-in. They stay at base until the family replies or someone else takes them.',
   all:''
 };
@@ -284,7 +285,8 @@ function render(){
   $('rinfo').textContent=[R.time,R.location].filter(Boolean).join(' · ');
   var trips=(BOARD.trips||[]).filter(function(t){return (t.stops||[]).length>0;});
   var by={outside:[],expected:[],queue:[],desk:[],ready:[],loaded:[],departed:[]};
-  var totalBoxes=0,leftBoxes=0,heldCount=0,held=[];
+  var UN=(BOARD.unassigned||[]),unBoxes=UN.reduce(function(a,u){return a+(u.boxes||1);},0);
+  var totalBoxes=unBoxes,leftBoxes=0,heldCount=0,held=[];
   LM={};trips.forEach(function(t){(LM[t.driver+'|'+(t.phone||'')]=LM[t.driver+'|'+(t.phone||'')]||[]).push(t);});
   trips.forEach(function(t){
     var st=stageOf(t),m=metrics(t);by[st].push(t);t._st=st;
@@ -293,10 +295,10 @@ function render(){
   });
   by.outside.sort(function(a,b){return new Date(a.claimed_at)-new Date(b.claimed_at);});
   by.outside.forEach(function(t,i){t._pos=i+1;});by.queue.forEach(function(t,i){t._pos=i+1;});by.desk.forEach(function(t,i){t._pos=i+1;});
-  $('stats').innerHTML=[['Drivers',trips.length,'all'],['Outside gates',by.outside.length,'outside'],['In queue',by.queue.length,'queue'],['At desk',by.desk.length,'desk'],['Ready to load',by.ready.length,'ready'],['Departed',by.departed.length,'departed'],['Boxes left',(totalBoxes-leftBoxes)+' of '+totalBoxes,'all'],['Held at base',heldCount,'held']]
+  $('stats').innerHTML=[['No driver',unBoxes+(unBoxes===1?' box':' boxes'),'unassigned'],['Outside gates',by.outside.length,'outside'],['In queue',by.queue.length,'queue'],['At desk',by.desk.length,'desk'],['Ready to load',by.ready.length,'ready'],['Departed',by.departed.length,'departed'],['Boxes left',(totalBoxes-leftBoxes)+' of '+totalBoxes,'all'],['Held at base',heldCount,'held']]
     .map(function(x){return '<div class="stat'+(TAB===x[2]&&x[0]!=='Boxes left'?' on':'')+'" data-act="tab" data-v="'+x[2]+'"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>';}).join('');
   $('barfill').style.width=(totalBoxes?Math.round(leftBoxes*100/totalBoxes):0)+'%';
-  var counts={outside:by.outside.length,expected:by.expected.length,queue:by.queue.length,desk:by.desk.length,ready:by.ready.length,loaded:by.loaded.length,departed:by.departed.length,held:heldCount,all:trips.length};
+  var counts={outside:by.outside.length,expected:by.expected.length,queue:by.queue.length,desk:by.desk.length,ready:by.ready.length,loaded:by.loaded.length,departed:by.departed.length,held:heldCount,unassigned:UN.length,all:trips.length};
   $('tabs').innerHTML=TABS.map(function(x){
     return '<button class="tab'+(TAB===x[0]?' on':'')+((x[0]==='held'&&counts.held)||(x[0]==='outside'&&counts.outside)?' alert':'')+'" data-act="tab" data-v="'+x[0]+'">'+x[1]+'<em>'+counts[x[0]]+'</em></button>';
   }).join('');
@@ -306,6 +308,9 @@ function render(){
     list=trips.filter(function(t){return matches(t,q);});
     $('hint').textContent='Showing every driver matching "'+q+'"';
     html=list.length?'<div class="trips-grid">'+list.map(tripCard).join('')+'</div>':'<div class="empty">No match.</div>';
+  }else if(TAB==='unassigned'){
+    $('hint').textContent=HINTS.unassigned;
+    html=UN.length?UN.map(unCard).join(''):'<div class="empty">Every family has a driver.</div>';
   }else if(TAB==='held'){
     $('hint').textContent=HINTS.held;
     html=held.length?held.map(heldCard).join(''):'<div class="empty">No boxes have been removed.</div>';
@@ -396,6 +401,13 @@ function stopRow(t,s,controls,st){
     h+='<div class="stop-btns">'+(st==='desk'?'<button class="chip gr'+(s.state==='confirmed'?' on-c':'')+'" data-act="stop" data-a="'+s.aid+'" data-v="'+(s.state==='confirmed'?'unchecked':'confirmed')+'">'+(s.state==='confirmed'?'✓ Ready to load · tap to undo':'Ready to load')+'</button>':'')+(st==='desk'?'<button class="chip or" data-act="move" data-a="'+s.aid+'" data-v="'+(t.load_no>1?1:2)+'">'+(t.load_no>1?'↩ Move to trip 1':'↪ Move to trip 2')+'</button>':'')+'<button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
   }
   if(s.note)h+='<div class="stop-meta">📝 '+esc(s.note)+'</div>';
+  return h+'</div>';
+}
+function unCard(u){
+  var d=digits(u.whatsapp);
+  var h='<div class="held"><div class="stop-name">'+esc(u.name)+'</div><div class="stop-meta">'+esc(u.area||'')+' · '+u.boxes+' box'+(u.boxes===1?'':'es')+(u.hh?' · '+u.hh+' people':'')+'</div>';
+  h+='<div><span class="pill r">No driver</span>'+(u.held?'<span class="pill b">Held by a driver in the app</span>':'')+'</div>';
+  if(d)h+='<div class="stop-btns"><a class="chip" href="tel:+'+d+'">📞 Call</a></div>';
   return h+'</div>';
 }
 function heldCard(x){
