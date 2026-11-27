@@ -170,7 +170,7 @@ var ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var sb=supabase.createClient(SUPABASE_URL,ANON_KEY);
 
 var LM={}, BOARD=null, ROUND_ID=null, ROUNDS_LOADED=false, TAB='queue', OPEN={}, BUSY=false, TIMER=null, ME='';
-var TABS=[['outside','At the gates'],['queue','Queue'],['desk','Check-in desk'],['ready','Ready to load'],['loaded','Loaded'],['expected','Not here yet'],['held','Held boxes'],['all','All']];
+var TABS=[['outside','At the gates'],['queue','Queue'],['desk','Check-in desk'],['ready','Ready to load'],['departed','Departed'],['expected','Not here yet'],['held','Held boxes'],['all','All']];
 var HINTS={
   outside:'Drivers who tapped "I\'m at the gates" in their app (location-checked, within 400 m), in the order they tapped. Look for the car, then tap the driver to move them to the queue.',
   expected:'Drivers who have not arrived. If someone is at the gate without having tapped the button, you can still mark them as arrived here.',
@@ -178,7 +178,7 @@ var HINTS={
   desk:'Speak to the driver, tick each family Ready to load, remove any box with no reply, then tap Check-in done. Back to queue undoes it.',
   ready:'Check-in done. Loaders: load the car from the list, then tap the driver or ➡ Loaded.',
   loaded:'Loaded cars waiting to leave.',
-  departed:'Drivers who have left with their boxes.',
+  departed:'Drivers who have loaded and left. Nothing more to do here.',
   held:'Boxes taken out of a car at check-in. They stay at base until the family replies or someone else takes them.',
   all:''
 };
@@ -236,7 +236,7 @@ async function refresh(force){
   $('upd').textContent='Updated '+new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Qatar'});
   render();
 }
-function stageOf(t){if(t.departed_at)return 'departed';if(t.loaded_at)return 'loaded';if(t.checked_at)return 'ready';if(t.desk_at)return 'desk';if(t.arrived_at)return 'queue';if(t.claimed_at)return 'outside';return 'expected';}
+function stageOf(t){if(t.departed_at||t.loaded_at)return 'departed';if(t.checked_at)return 'ready';if(t.desk_at)return 'desk';if(t.arrived_at)return 'queue';if(t.claimed_at)return 'outside';return 'expected';}
 function stageLabel(st){return {expected:'not here yet',outside:'at the gates',queue:'in queue',desk:'at desk',ready:'ready to load',loaded:'loaded',departed:'left'}[st]||st;}
 function live(t){return (t.stops||[]).filter(function(s){return s.state!=='removed'&&s.state!=='moved';});}
 function metrics(t){
@@ -293,7 +293,7 @@ function render(){
   });
   by.outside.sort(function(a,b){return new Date(a.claimed_at)-new Date(b.claimed_at);});
   by.outside.forEach(function(t,i){t._pos=i+1;});by.queue.forEach(function(t,i){t._pos=i+1;});by.desk.forEach(function(t,i){t._pos=i+1;});
-  $('stats').innerHTML=[['Drivers',trips.length,'all'],['Outside gates',by.outside.length,'outside'],['In queue',by.queue.length,'queue'],['At desk',by.desk.length,'desk'],['Ready to load',by.ready.length,'ready'],['Departed',by.departed.length,'all'],['Boxes left',(totalBoxes-leftBoxes)+' of '+totalBoxes,'all'],['Held at base',heldCount,'held']]
+  $('stats').innerHTML=[['Drivers',trips.length,'all'],['Outside gates',by.outside.length,'outside'],['In queue',by.queue.length,'queue'],['At desk',by.desk.length,'desk'],['Ready to load',by.ready.length,'ready'],['Departed',by.departed.length,'departed'],['Boxes left',(totalBoxes-leftBoxes)+' of '+totalBoxes,'all'],['Held at base',heldCount,'held']]
     .map(function(x){return '<div class="stat'+(TAB===x[2]&&x[0]!=='Boxes left'?' on':'')+'" data-act="tab" data-v="'+x[2]+'"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>';}).join('');
   $('barfill').style.width=(totalBoxes?Math.round(leftBoxes*100/totalBoxes):0)+'%';
   var counts={outside:by.outside.length,expected:by.expected.length,queue:by.queue.length,desk:by.desk.length,ready:by.ready.length,loaded:by.loaded.length,departed:by.departed.length,held:heldCount,all:trips.length};
@@ -334,8 +334,8 @@ function tripCard(t){
   else if(st==='desk')time='At the desk since '+fmtTime(t.desk_at)+' ('+mins(t.desk_at)+' min)';
   else if(st==='ready')time='Checked '+fmtTime(t.checked_at)+' by '+esc(t.checked_by||'');
   else if(st==='loaded')time='Loaded '+fmtTime(t.loaded_at);
-  else if(st==='departed')time='Left '+fmtTime(t.departed_at);
-  var h='<div class="trip '+cls+(open?' open':'')+'" id="trip-'+t.id+'"><div class="th" data-act="'+(st==='outside'?'arrive':st==='queue'?'desk':st==='ready'?'loaded':st==='loaded'?'departed':'toggle')+'" data-t="'+t.id+'"><div class="th-main"><div class="th-name">'+who+'</div><div class="th-sub">'+(time?time+' · ':'')+esc(ph||'no phone')+'</div><div>'+pills+'</div></div>'+(st==='outside'?'<div class="go-q">➡ Queue</div>':st==='queue'?'<div class="go-q">➡ Desk</div>':st==='ready'?'<div class="go-q">➡ Loaded</div>':st==='loaded'?'<div class="go-q">➡ Left</div>':'<div class="chev">›</div>')+'</div><div class="tb">'+(st==='outside'?'<div class="act-row"><button class="btn go big" data-act="arrive" data-t="'+t.id+'">➡ Move to queue</button></div>':'');
+  else if(st==='departed')time='Left '+fmtTime(t.departed_at||t.loaded_at);
+  var h='<div class="trip '+cls+(open?' open':'')+'" id="trip-'+t.id+'"><div class="th" data-act="'+(st==='outside'?'arrive':st==='queue'?'desk':st==='ready'?'loaded':'toggle')+'" data-t="'+t.id+'"><div class="th-main"><div class="th-name">'+who+'</div><div class="th-sub">'+(time?time+' · ':'')+esc(ph||'no phone')+'</div><div>'+pills+'</div></div>'+(st==='outside'?'<div class="go-q">➡ Queue</div>':st==='queue'?'<div class="go-q">➡ Desk</div>':st==='ready'?'<div class="go-q">➡ Loaded</div>':'<div class="chev">›</div>')+'</div><div class="tb">'+(st==='outside'?'<div class="act-row"><button class="btn go big" data-act="arrive" data-t="'+t.id+'">➡ Move to queue</button></div>':'');
   if(t.capacity&&m.boxes>t.capacity)h+='<div class="warn">Car capacity is '+t.capacity+' boxes but the load is '+m.boxes+'.</div>';
   if(t.notes)h+='<div class="warn" style="background:#eef1ea;color:var(--ink)">📝 '+esc(t.notes)+'</div>';
   // contact + actions
@@ -358,7 +358,7 @@ function tripCard(t){
     h+='<div class="act-row"><button class="btn go big" data-act="departed" data-t="'+t.id+'">🚗 Driver has left</button><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="loaded">Not loaded yet</button></div>';
   }else{
     h+=loadSummary(t,m);h+=stopsHtml(t,false,st);
-    h+='<div class="act-row"><button class="btn ghost" data-act="undo" data-t="'+t.id+'" data-v="departed">Undo departed</button></div>';
+    h+='<div class="act-row"><button class="btn ghost" data-act="undoleft" data-t="'+t.id+'">Undo departed</button></div>';
   }
   return h+'</div></div>';
 }
@@ -423,8 +423,9 @@ document.addEventListener('click',function(e){
   if(a==='desk')return mark(t,'desk',false,el);
   if(a==='notyet')return toast('Tick Ready to load on every family first (or move or remove the ones that are not going).',true);
   if(a==='checked')return mark(t,'checked',false,el,true);
-  if(a==='loaded')return mark(t,'loaded',false,el);
+  if(a==='loaded')return markLeft(t,el);
   if(a==='departed')return mark(t,'departed',false,el);
+  if(a==='undoleft')return undoLeft(t,el);
   if(a==='undo')return mark(t,v,true,el);
   if(a==='stop')return setStop(aid,v);
   if(a==='remove')return openRemove(aid,t);
@@ -443,6 +444,26 @@ async function rpc(fn,args,okMsg){
   if(okMsg)toast(okMsg);
   await refresh(true);
   return r.data;
+}
+async function markLeft(tid,btn){
+  if(btn)btn.disabled=true;
+  BUSY=true;
+  var r=await sb.rpc('dist_mark',{p_trip:tid,p_step:'loaded',p_undo:false,p_force:true});
+  if(!r.error)r=await sb.rpc('dist_mark',{p_trip:tid,p_step:'departed',p_undo:false,p_force:true});
+  BUSY=false;
+  if(r.error)toast(r.error.message,true);else toast('Loaded and left');
+  await refresh(true);
+  if(btn)btn.disabled=false;
+}
+async function undoLeft(tid,btn){
+  if(btn)btn.disabled=true;
+  BUSY=true;
+  var r=await sb.rpc('dist_mark',{p_trip:tid,p_step:'departed',p_undo:true,p_force:true});
+  if(!r.error)r=await sb.rpc('dist_mark',{p_trip:tid,p_step:'loaded',p_undo:true,p_force:true});
+  BUSY=false;
+  if(r.error)toast(r.error.message,true);else toast('Undone');
+  await refresh(true);
+  if(btn)btn.disabled=false;
 }
 async function mark(tid,step,undo,btn,force){
   if(btn)btn.disabled=true;
