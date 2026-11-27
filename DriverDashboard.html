@@ -1251,13 +1251,13 @@ function renderActiveTrip(trip){
   var loadNo=ALL_LOADS.findIndex(function(x){return x.id===trip.id;})+1;
   var sw="";
   if(ALL_LOADS.length>1){
-    sw='<div style="display:flex;gap:8px;margin:0 0 10px;flex-wrap:wrap">'+ACT_LOADS.map(function(x){
+    sw='<div style="display:flex;gap:8px;margin:0 16px 10px;flex-wrap:wrap">'+ACT_LOADS.map(function(x){
       var n=ALL_LOADS.findIndex(function(y){return y.id===x.id;})+1,on=x.id===trip.id;
-      return '<button onclick="selectLoad(\''+x.id+'\')" style="flex:1;min-width:120px;border:2px solid '+(on?'#1f5a2e':'rgba(255,255,255,.6)')+';background:'+(on?'#1f5a2e':'#fff')+';color:'+(on?'#fff':'#1f5a2e')+';border-radius:14px;padding:10px;font-weight:800;font-size:14px">'+(LANG==="ar"?"الرحلة ":"Trip ")+n+' · '+x.boxes_count+(LANG==="ar"?" توصيلة":" stops")+'</button>';
+      return '<button onclick="selectLoad(\''+x.id+'\')" style="flex:1;min-width:120px;border:2px solid '+(on?'#1f5a2e':'rgba(255,255,255,.6)')+';background:'+(on?'#1f5a2e':'#fff')+';color:'+(on?'#fff':'#1f5a2e')+';border-radius:14px;padding:10px;font-weight:800;font-size:14px">'+(LANG==="ar"?"الرحلة ":"Trip ")+n+' · '+x.boxes_count+(LANG==="ar"?" توصيلة":(x.boxes_count===1?" stop":" stops"))+'</button>';
     }).join("")+'</div>';
   }
   document.getElementById("active-card").innerHTML=sw+
-    '<div class="trip-card"><div class="trip-head"><span class="trip-ref">TRIP-'+trip.id.slice(0,6).toUpperCase()+(ALL_LOADS.length>1?' · '+(LANG==="ar"?"الرحلة ":"TRIP ")+loadNo+'/'+ALL_LOADS.length:'')+'</span><span class="badge badge-ok">'+t("badge_confirmed")+'</span></div>'+
+    '<div class="trip-card"><div class="trip-head"><span class="trip-ref">'+(ALL_LOADS.length>1?(LANG==="ar"?"الرحلة ":"TRIP ")+loadNo+(LANG==="ar"?" من ":" OF ")+ALL_LOADS.length:'TRIP-'+trip.id.slice(0,6).toUpperCase())+'</span><span class="badge badge-ok">'+t("badge_confirmed")+'</span></div>'+
     '<div class="tr"><span class="tr-l">'+t("label_distribution_date")+'</span><span class="tr-v">'+date+'</span></div>'+
     '<div class="tr"><span class="tr-l">'+t("label_deliveries")+'</span><span class="tr-v">'+trip.boxes_count+t("unit_locations")+'</span></div>'+
     '<div class="tr"><span class="tr-l">'+t("label_vehicle")+'</span><span class="tr-v">'+DP.car_make+' '+DP.car_model+'</span></div></div>';

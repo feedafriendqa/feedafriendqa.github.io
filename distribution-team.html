@@ -405,7 +405,8 @@ function heldCard(x){
   (s.formula||[]).forEach(function(f){b+='<span class="pill b">🍼 Stage '+f+'</span>';});
   h+='<div>'+b+'</div><div class="stop-meta">Was on '+esc(t.contact||t.driver)+'’s car · removed '+fmtTime(s.removed_at)+(s.note?' · '+esc(s.note):'')+'</div><div class="stop-btns">';
   if(d)h+='<a class="chip lang" target="_blank" rel="noopener" href="'+waLink(s,'en')+'">💬 EN</a><a class="chip" target="_blank" rel="noopener" href="'+waLink(s,'ar')+'">💬 AR</a><a class="chip" href="tel:+'+d+'">📞 Call</a>';
-  if(!t.departed_at)h+='<button class="chip on-c" data-act="restore" data-a="'+s.aid+'">↩ Put back on car</button>';
+  if(!t.departed_at)h+='<button class="chip gr" data-act="restore" data-a="'+s.aid+'">↩ Put back on car</button>';
+  h+='<button class="chip or" data-act="release" data-a="'+s.aid+'">↗ Release to drivers</button>';
   return h+'</div></div>';
 }
 
@@ -426,6 +427,7 @@ document.addEventListener('click',function(e){
   if(a==='stop')return setStop(aid,v);
   if(a==='remove')return openRemove(aid,t);
   if(a==='move')return rpc('dist_move_stop',{p_assignment:aid,p_load:parseInt(v,10)},'Moved to trip '+v);
+  if(a==='release')return releaseHeld(aid);
   if(a==='restore')return restore(aid);
   if(a==='msg')return openMsg(t);
   if(a==='tnote')return openTripNote(t);
@@ -498,6 +500,12 @@ async function sendMail(nid){
     var j=await res.json();
     return res.ok&&j.ok?' Driver emailed.':' (Email failed: '+(j.error||res.status)+')';
   }catch(e){return ' (Email failed)';}
+}
+async function releaseHeld(aid){
+  var f=findStop(aid);
+  if(!confirm('Release '+(f?f.s.name:'this family')+' back to the drivers’ pool so another driver can pick it?'))return;
+  var r=await rpc('dist_release_stop',{p_assignment:aid},null);
+  if(r)toast((r.family||'Box')+' released to the drivers’ pool.');
 }
 async function restore(aid){
   var f=findStop(aid);
