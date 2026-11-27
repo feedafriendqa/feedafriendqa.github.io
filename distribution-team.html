@@ -102,7 +102,8 @@ a.btn{text-decoration:none;display:inline-block}
 .chip.gr{background:#fff;border:2px solid #0a8047;color:#0a8047}
 .chip.gr.on-c,.chip.gr:active{background:#0a8047;border-color:#0a8047;color:#fff}
 .chip.or{background:#fff;border:2px solid #f28a1e;color:#e07a0f}
-.chip.or:active{background:#f28a1e;color:#fff}
+.chip.or:active,.chip.or.on-o{background:#f28a1e;color:#fff}
+.stop.s-moved{background:#fff1e0;border-color:#f28a1e}
 .stop.s-confirmed{background:#dff3e6;border:1px solid #0a8047;border-left:6px solid #0a8047}
 .chip.lang{border-color:var(--lime);background:#eaf3ec}
 .note{width:100%;margin-top:7px;border:1.5px solid var(--line);border-radius:9px;padding:7px 9px;font-size:13px;font-family:inherit;background:#fff}
@@ -235,7 +236,7 @@ async function refresh(force){
 }
 function stageOf(t){if(t.departed_at)return 'departed';if(t.loaded_at)return 'loaded';if(t.checked_at)return 'ready';if(t.desk_at)return 'desk';if(t.arrived_at)return 'queue';if(t.claimed_at)return 'outside';return 'expected';}
 function stageLabel(st){return {expected:'not here yet',outside:'at the gates',queue:'in queue',desk:'at desk',ready:'ready to load',loaded:'loaded',departed:'left'}[st]||st;}
-function live(t){return (t.stops||[]).filter(function(s){return s.state!=='removed';});}
+function live(t){return (t.stops||[]).filter(function(s){return s.state!=='removed'&&s.state!=='moved';});}
 function metrics(t){
   var L=live(t),m={stops:L.length,boxes:0,dia:{},diaN:0,frm:{1:0,2:0},frmN:0,noLoc:0,todo:0,chasing:0,confirmed:0};
   L.forEach(function(s){
@@ -372,7 +373,7 @@ function waLink(s,lang){
   return 'https://wa.me/'+d+'?text='+encodeURIComponent(lang==='ar'?ar:en);
 }
 function stopsHtml(t,controls,st){
-  return (t.stops||[]).filter(function(s){return st==='desk'||s.state!=='removed';}).map(function(s){return stopRow(t,s,controls,st);}).join('');
+  return (t.stops||[]).filter(function(s){return st==='desk'||(s.state!=='removed'&&s.state!=='moved');}).map(function(s){return stopRow(t,s,controls,st);}).join('');
 }
 function stopRow(t,s,controls,st){
   var isAr=/ar/i.test(s.lang||'');
@@ -385,7 +386,9 @@ function stopRow(t,s,controls,st){
   h+='<div>'+b+'</div>';
   if(s.driver_notes)h+='<div class="stop-meta" style="color:#1d5a37">Driver note: '+esc(s.driver_notes)+'</div>';
   h+='</div></div>';
-  if(s.state==='removed'){
+  if(s.state==='moved'){
+    h+='<div class="stop-btns"><button class="chip or on-o" data-act="move" data-a="'+s.aid+'" data-v="'+t.load_no+'">↪ Moved to load '+s.moved_to+' · tap to put back</button></div>';
+  }else if(s.state==='removed'){
     h+='<div class="stop-btns"><button class="chip rm on-r" data-act="restore" data-a="'+s.aid+'">✕ Box removed · tap to put back</button></div>';
   }else if(!s.delivered&&st!=='departed'){
     h+='<div class="stop-btns">'+(st==='desk'?'<button class="chip gr'+(s.state==='confirmed'?' on-c':'')+'" data-act="stop" data-a="'+s.aid+'" data-v="'+(s.state==='confirmed'?'unchecked':'confirmed')+'">'+(s.state==='confirmed'?'✓ Ready to load · tap to undo':'Ready to load')+'</button>':'')+(st==='desk'?'<button class="chip or" data-act="move" data-a="'+s.aid+'" data-v="'+(t.load_no>1?1:2)+'">'+(t.load_no>1?'↩ Move to load 1':'↪ Move to load 2')+'</button>':'')+'<button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
