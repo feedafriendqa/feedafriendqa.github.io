@@ -287,7 +287,7 @@ function render(){
   LM={};trips.forEach(function(t){(LM[t.driver+'|'+(t.phone||'')]=LM[t.driver+'|'+(t.phone||'')]||[]).push(t);});
   trips.forEach(function(t){
     var st=stageOf(t),m=metrics(t);by[st].push(t);t._st=st;
-    totalBoxes+=m.boxes;if(st==='departed')leftBoxes+=m.boxes;
+    totalBoxes+=m.boxes;if(st==='departed'||st==='loaded')leftBoxes+=m.boxes;
     (t.stops||[]).forEach(function(s){if(s.state==='removed'){heldCount++;held.push({t:t,s:s});}});
   });
   by.outside.sort(function(a,b){return new Date(a.claimed_at)-new Date(b.claimed_at);});
