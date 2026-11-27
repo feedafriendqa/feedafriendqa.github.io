@@ -97,7 +97,10 @@ a.btn{text-decoration:none;display:inline-block}
 .chip{border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:6px 11px;font-size:12.5px;font-weight:800;color:var(--ink);text-decoration:none;display:inline-block}
 .chip.on-c{background:var(--green);border-color:var(--green);color:#fff}
 .chip.on-h{background:var(--amber);border-color:var(--amber);color:#fff}
-.chip.rm{border-color:#e9b3ac;color:var(--red)}
+.chip.rm{background:#d93a2b;border-color:#d93a2b;color:#fff}
+.chip.gr{background:#0a8047;border-color:#0a8047;color:#fff}
+.chip.gr.on-c{background:#054d2a;border-color:#054d2a}
+.chip.or{background:#f28a1e;border-color:#f28a1e;color:#fff}
 .chip.lang{border-color:var(--lime);background:#eaf3ec}
 .note{width:100%;margin-top:7px;border:1.5px solid var(--line);border-radius:9px;padding:7px 9px;font-size:13px;font-family:inherit;background:#fff}
 /* modal + toast */
@@ -380,7 +383,7 @@ function stopRow(t,s,controls,st){
   if(s.driver_notes)h+='<div class="stop-meta" style="color:#1d5a37">Driver note: '+esc(s.driver_notes)+'</div>';
   h+='</div></div>';
   if(!s.delivered&&st!=='departed'){
-    h+='<div class="stop-btns">'+(st==='desk'?'<button class="chip'+(s.state==='confirmed'?' on-c':'')+'" data-act="stop" data-a="'+s.aid+'" data-v="'+(s.state==='confirmed'?'unchecked':'confirmed')+'">'+(s.state==='confirmed'?'✓ Ready to load':'Ready to load')+'</button>':'')+(st==='desk'?'<button class="chip" data-act="move" data-a="'+s.aid+'" data-v="'+(t.load_no>1?1:2)+'">'+(t.load_no>1?'↩ Move to load 1':'↪ Move to load 2')+'</button>':'')+'<button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
+    h+='<div class="stop-btns">'+(st==='desk'?'<button class="chip gr'+(s.state==='confirmed'?' on-c':'')+'" data-act="stop" data-a="'+s.aid+'" data-v="'+(s.state==='confirmed'?'unchecked':'confirmed')+'">'+(s.state==='confirmed'?'✓ Ready to load':'Ready to load')+'</button>':'')+(st==='desk'?'<button class="chip or" data-act="move" data-a="'+s.aid+'" data-v="'+(t.load_no>1?1:2)+'">'+(t.load_no>1?'↩ Move to load 1':'↪ Move to load 2')+'</button>':'')+'<button class="chip rm" data-act="remove" data-a="'+s.aid+'" data-t="'+t.id+'">✕ Remove box</button></div>';
   }
   if(s.note)h+='<div class="stop-meta">📝 '+esc(s.note)+'</div>';
   return h+'</div>';
