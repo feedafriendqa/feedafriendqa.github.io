@@ -847,6 +847,11 @@ function isUnassessed(c) {
   const st = c.pipeline_status||'new';
   return UNASSESSED_STATUSES.has(st) || (st==='invited_to_assessment' && !c.final_year_group);
 }
+// Everyone who has ever been a Little Learner: enrolled, school place secured, or moved on.
+function isLLToDate(c) {
+  return isPostAssessChild(c) || c.pipeline_status==='completed' || c.pipeline_status==='school_secured'
+    || (c.pipeline_status==='archived' && c.learner_status==='archived');
+}
 function isPostAssessChild(c) {
   return POST_ASSESS_STATUSES.has(c.pipeline_status) && !!(c.final_year_group || c.year_group_override);
 }
@@ -3218,7 +3223,7 @@ function renderDash() {
   document.getElementById('s-unassigned').textContent = fams.filter(f=>!f.assigned_to).length;
   document.getElementById('s-dups').textContent = dups.size;
   document.getElementById('s-learners').textContent = kids.filter(c=>c.pipeline_status==='completed' && (c.learner_status||'active')!=='archived').length;
-  document.getElementById('s-ll-total').textContent = kids.filter(c=>c.pipeline_status==='completed'||c.pipeline_status==='school_secured'||(c.pipeline_status==='archived'&&c.learner_status==='archived')).length;
+  document.getElementById('s-ll-total').textContent = kids.filter(isLLToDate).length;
   const schoolPlaceEl = document.getElementById('s-school-place');
   if(schoolPlaceEl) schoolPlaceEl.textContent = kids.filter(c=>c.school_place_status).length;
   const recentFams = fams.filter(f => !(f.source==='Referral' && !f.assigned_to));
@@ -3260,7 +3265,7 @@ function learnerCardHTML(c, f) {
   const yg = c.final_year_group || c.year_group_override || '—';
   const packStatus = c.pack_status || 'pending';
   // Show the pipeline status (Enrolled once the pack is given) rather than the pack state
-  const packLabel = c.pipeline_status==='completed' ? '✅ Enrolled' : '✉️ Invited to Assessment';
+  const packLabel = c.pipeline_status==='completed' ? '✅ Enrolled' : c.pipeline_status==='school_secured' ? '🏫 School Secured' : c.pipeline_status==='archived' ? '📁 Archived' : '✉️ Invited to Assessment';
   const anchor = c.last_checkin_date || c.pack_given_date;
   const overdue = packStatus==='given' && daysSince(anchor)!==null && daysSince(anchor)>=90;
   const lstatus = c.learner_status || 'active';
@@ -3289,7 +3294,7 @@ function ygSortKey(y) {
 function setLearnersYG(y) { learnersYG = y; renderLearners(); }
 function renderLearners() {
   const q = (document.getElementById('learners-search')?.value||'').toLowerCase();
-  let kids = visibleChildren().filter(isPostAssessChild);
+  let kids = visibleChildren().filter(isLLToDate);
   if(q) {
     kids = kids.filter(c => {
       const f = allFamilies.find(x=>x.id===c.family_id);
