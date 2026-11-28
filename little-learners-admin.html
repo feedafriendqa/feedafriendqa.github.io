@@ -406,6 +406,12 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
 .stats .stat.coral{background:linear-gradient(135deg,#c2410c,#fb923c);}
 .stats .stat.sky{background:linear-gradient(135deg,#3B8DC8,#6FB3E6);}
 .stats .stat.gold{background:linear-gradient(135deg,#1F7A4D,#2FA36B);color:#fff;}
+.gsearch{margin:14px 0 6px;}
+.gsearch input{width:100%;padding:13px 16px;border:2px solid var(--forest-mid,#2d7a3a);border-radius:14px;font-size:15px;background:#fff;box-sizing:border-box;}
+.gsearch .gs-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;margin-top:6px;background:#fff;border:1px solid #e3ece5;border-radius:12px;cursor:pointer;}
+.gsearch .gs-row:hover{background:#f1f8f3;}
+.gsearch .gs-sub{font-size:12px;color:#6b7280;margin-top:2px;}
+.gsearch .gs-more{font-size:12px;color:#6b7280;margin:6px 4px;}
 .stats .stat.navy{background:linear-gradient(135deg,#1e3a8a,#3b6fd4);color:#fff;}
 .stats .stat:nth-child(5){background:linear-gradient(135deg,#7c5cbf,#a78bdb);}
 </style>
@@ -485,6 +491,11 @@ header{background:linear-gradient(120deg,var(--forest) 0%,var(--teal) 70%,var(--
     <div class="stat sky" onclick="goToLearners()"><span class="stat-ic">🌟</span><div class="stat-num" id="s-learners">—</div><div class="stat-lbl">Active Learners</div></div>
   <div class="stat navy" title="Everyone who has ever been a Little Learner: enrolled, school place secured, or moved on"><span class="stat-ic">📚</span><div class="stat-num" id="s-ll-total">—</div><div class="stat-lbl">Total LL to date</div></div>
     <div class="stat gold" onclick="toggleDashSection('schoolPlace')"><span class="stat-ic">🏫</span><div class="stat-num" id="s-school-place">—</div><div class="stat-lbl">Secured School Place</div></div>
+  </div>
+
+  <div class="gsearch">
+    <input id="gsearch-input" type="search" placeholder="🔍 Search all records — child, parent, QID, URN, phone…" oninput="renderGlobalSearch()" autocomplete="off">
+    <div id="gsearch-results"></div>
   </div>
 
   <div class="gp-sect"><div class="gp-badge">🎂</div><div class="sec-title" style="margin-bottom:0;">Turning 3 — New Cases Needed <span class="pill" id="turning3-pill">0</span></div></div>
@@ -3255,6 +3266,33 @@ function clearDupFilter() {
 }
 
 // ── LITTLE LEARNERS (post-assessment child profiles) ──
+
+// Home-page search across every record (pipeline, learners, archived, Arabic, school secured)
+function renderGlobalSearch() {
+  const box = document.getElementById('gsearch-results');
+  const q = (document.getElementById('gsearch-input')?.value||'').trim().toLowerCase();
+  if(q.length<2) { box.innerHTML=''; return; }
+  const digits = q.replace(/\D/g,'');
+  const hits = [];
+  for(const c of visibleChildren()) {
+    const f = allFamilies.find(x=>x.id===c.family_id); if(!f) continue;
+    const text = [c.full_name,c.preferred_name,c.qid,c.urn,f.urn,f.father_name,f.mother_name,f.father_email,f.mother_email].join(' ').toLowerCase();
+    const phones = [f.father_phone,f.mother_phone].join(' ').replace(/\D/g,'');
+    if(text.includes(q) || (digits.length>=4 && (phones.includes(digits) || (c.qid||'').includes(digits)))) hits.push({c,f});
+  }
+  const shown = hits.slice(0,30);
+  box.innerHTML = shown.map(({c,f})=>{
+    const st = c.pipeline_status||'new';
+    const tab = st==='completed' ? 'profile' : 'children';
+    const pp = (typeof primaryParent==='function' ? primaryParent(f) : null);
+    const parent = pp ? pp.name : (f.father_name||f.mother_name||'');
+    const yg = c.final_year_group||c.year_group_override;
+    return `<div class="gs-row" onclick="openProfile('${f.id}','${tab}','${c.id}')">
+      <div><strong>${c.full_name||'Child'}</strong><div class="gs-sub">${parent?'👪 '+parent+' · ':''}${f.urn||c.urn||''}${yg?' · 🎓 '+yg:''}</div></div>
+      <span class="status-tag st-${st}">${STATUS_LABELS[st]||st}</span></div>`;
+  }).join('') + (hits.length>30?`<div class="gs-more">Showing 30 of ${hits.length} — keep typing to narrow it down.</div>`:'') + (!hits.length?'<div class="gs-more">No records found.</div>':'');
+}
+
 function goToLearners() {
   const btn = document.querySelector('.bb-item[onclick*="goToLearners"]');
   showPg('learners', btn);
